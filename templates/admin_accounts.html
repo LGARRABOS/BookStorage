@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Administration - Comptes Utilisateurs{% endblock %}
+{% block custom_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/admin.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Administration - Gestion des Comptes Utilisateurs</h2>
+<table>
+  <thead>
+    <tr>
+      <th>ID</th>
+      <th>Nom d'utilisateur</th>
+      <th>Validé</th>
+      <th>Admin</th>
+      <th>Super-admin</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for user in users %}
+    <tr>
+      <td>{{ user.id }}</td>
+      <td>{{ user.username }}</td>
+      <td>{{ "Oui" if user.validated else "Non" }}</td>
+      <td>{{ "Oui" if user.is_admin else "Non" }}</td>
+      <td>{{ "Oui" if user.is_superadmin else "Non" }}</td>
+      <td>
+        {% if not user.validated %}
+          <a href="{{ url_for('approve_account', user_id=user.id) }}">Approuver</a>
+          {% if not user.is_admin %}
+            | <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
+          {% endif %}
+        {% else %}
+          {% if not user.is_admin %}
+            <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
+          {% else %}
+            {% if not user.is_superadmin %}
+              <a href="{{ url_for('promote_account', user_id=user.id) }}">Promouvoir en admin</a> |
+              <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
+            {% else %}
+              <span>-</span>
+            {% endif %}
+          {% endif %}
+        {% endif %}
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+{% endblock %}

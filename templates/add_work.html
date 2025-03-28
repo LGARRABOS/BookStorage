@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Ajouter une oeuvre{% endblock %}
+{% block custom_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/add_work.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Ajouter une oeuvre</h2>
+<form method="POST" enctype="multipart/form-data">
+    <label>Titre :</label>
+    <input type="text" name="title" required maxlength="30" required>
+    
+    <label>Chapitre actuel :</label>
+    <input type="number" name="chapter" min="0" value="0">
+    
+    <label>Statut :</label>
+    <select name="status">
+        <option value="En cours">En cours</option>
+        <option value="Terminé">Terminé</option>
+        <option value="En pause">En pause</option>
+        <option value="Abandonné">Abandonné</option>
+        <option value="À lire">À lire</option>
+    </select>
+    
+    <label>Lien :</label>
+    <input type="text" name="link">
+    
+    <label>Image :</label>
+    <input type="file" name="image">
+    
+    <button type="submit">Ajouter</button>
+</form>
+{% endblock %}
