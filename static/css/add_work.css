@@ -1,0 +1,40 @@
+/* add_work.css */
+h2 {
+    color: #6c757d;
+    margin-top: 0;
+  }
+  
+  form {
+    margin-top: 1em;
+  }
+  
+  label {
+    display: block;
+    margin: 0.5em 0 0.25em;
+    font-weight: bold;
+  }
+  
+  input[type="text"],
+  input[type="number"],
+  input[type="file"],
+  select {
+    width: 100%;
+    padding: 0.5em;
+    margin-bottom: 0.75em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  button {
+    background-color: #6c757d;
+    border: none;
+    padding: 0.5em 1em;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #5a6268;
+  }
+  

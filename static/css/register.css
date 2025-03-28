@@ -1,0 +1,38 @@
+/* register.css */
+h2 {
+    color: #28a745;
+    margin-top: 0;
+  }
+  
+  form {
+    margin-top: 1em;
+  }
+  
+  label {
+    display: block;
+    margin: 0.5em 0 0.25em;
+    font-weight: bold;
+  }
+  
+  input[type="text"],
+  input[type="password"] {
+    width: 100%;
+    padding: 0.5em;
+    margin-bottom: 0.75em;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+  }
+  
+  button {
+    background-color: #28a745;
+    border: none;
+    padding: 0.5em 1em;
+    color: #fff;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  
+  button:hover {
+    background-color: #1e7e34;
+  }
+  

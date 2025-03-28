@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Inscription{% endblock %}
+{% block custom_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/register.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Inscription</h2>
+<form method="POST">
+    <label>Nom d'utilisateur :</label>
+    <input type="text" name="username" required>
+    
+    <label>Mot de passe :</label>
+    <input type="password" name="password" required>
+    
+    <button type="submit">S'inscrire</button>
+</form>
+{% endblock %}

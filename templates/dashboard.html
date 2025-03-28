@@ -1,0 +1,117 @@
+{% extends "base.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block custom_css %}
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
+{% endblock %}
+{% block content %}
+<h2>Ma Bibliothèque</h2>
+<a href="{{ url_for('add_work') }}">Ajouter une nouvelle oeuvre</a>
+
+<!-- Barre de recherche et filtre -->
+<div id="search-filter" style="margin:20px 0;">
+  <input type="text" id="search-input" placeholder="Rechercher par titre..." style="padding:5px; width:200px;">
+  <select id="status-filter" style="padding:5px; margin-left:10px;">
+    <option value="">Tous les statuts</option>
+    <option value="En cours">En cours</option>
+    <option value="Terminé">Terminé</option>
+    <option value="En pause">En pause</option>
+    <option value="Abandonné">Abandonné</option>
+    <option value="À lire">À lire</option>
+  </select>
+</div>
+
+<table>
+  <thead>
+    <tr>
+      <th>Image</th>
+      <th>Titre</th>
+      <th>Chapitre</th>
+      <th>Lien</th>
+      <th>Statut</th>
+      <th>Actions</th>
+    </tr>
+  </thead>
+  <tbody>
+    {% for work in works %}
+    <tr>
+      <td>
+        {% if work.image_path %}
+          <img src="{{ url_for('static', filename=work.image_path) }}" alt="Image de {{ work.title }}">
+        {% else %}
+          Pas d'image
+        {% endif %}
+      </td>
+      <td>{{ work.title }}</td>
+      <td id="chapter-{{ work.id }}">{{ work.chapter }}</td>
+      <td>
+        {% if work.link %}
+          <a href="{{ work.link }}" target="_blank">Aller au site</a>
+        {% endif %}
+      </td>
+      <td>{{ work.status }}</td>
+      <td>
+        <a href="#" class="increment-btn" data-work-id="{{ work.id }}">+1 Chapitre</a> |
+        <a href="#" class="decrement-btn" data-work-id="{{ work.id }}">-1 Chapitre</a> |
+        <a href="{{ url_for('delete', work_id=work.id) }}">Supprimer</a>
+      </td>
+    </tr>
+    {% endfor %}
+  </tbody>
+</table>
+
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+  // Gestion des boutons d'incrémentation
+  document.querySelectorAll(".increment-btn").forEach(function(button) {
+    button.addEventListener("click", function(event) {
+      event.preventDefault();
+      const workId = this.getAttribute("data-work-id");
+      fetch(`/api/increment/${workId}`, { method: "POST" })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById(`chapter-${workId}`).innerText = data.chapter;
+          }
+        })
+        .catch(error => console.error("Erreur :", error));
+    });
+  });
+  // Gestion des boutons de décrémentation
+  document.querySelectorAll(".decrement-btn").forEach(function(button) {
+    button.addEventListener("click", function(event) {
+      event.preventDefault();
+      const workId = this.getAttribute("data-work-id");
+      fetch(`/api/decrement/${workId}`, { method: "POST" })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            document.getElementById(`chapter-${workId}`).innerText = data.chapter;
+          }
+        })
+        .catch(error => console.error("Erreur :", error));
+    });
+  });
+  
+  // Barre de recherche et filtre par statut
+  const searchInput = document.getElementById("search-input");
+  const statusFilter = document.getElementById("status-filter");
+  const tableRows = document.querySelectorAll("table tbody tr");
+  
+  function filterTable() {
+    const searchValue = searchInput.value.toLowerCase();
+    const statusValue = statusFilter.value;
+    tableRows.forEach(function(row) {
+      // Le titre se trouve dans la 2ème cellule (index 1) et le statut dans la 5ème (index 4)
+      const title = row.cells[1].innerText.toLowerCase();
+      const status = row.cells[4].innerText.trim();
+      const matchesSearch = title.includes(searchValue);
+      const matchesStatus = (statusValue === "" || status === statusValue);
+      row.style.display = (matchesSearch && matchesStatus) ? "" : "none";
+    });
+  }
+  
+  searchInput.addEventListener("input", filterTable);
+  statusFilter.addEventListener("change", filterTable);
+});
+</script>
+{% endblock %}
