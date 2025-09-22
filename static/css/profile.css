@@ -1,0 +1,195 @@
+.profile-wrapper {
+    display: grid;
+    grid-template-columns: minmax(0, 280px) minmax(0, 1fr);
+    gap: 2.5rem;
+    align-items: start;
+}
+
+@media (max-width: 960px) {
+    .profile-wrapper {
+        grid-template-columns: 1fr;
+    }
+}
+
+.profile-summary {
+    background: var(--surface-elevated);
+    border-radius: 1.5rem;
+    padding: 2rem;
+    text-align: center;
+    box-shadow: var(--shadow-lg);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+}
+
+.profile-avatar {
+    width: 160px;
+    height: 160px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 4px solid var(--accent);
+    box-shadow: var(--shadow-base);
+    background: radial-gradient(circle at top, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.2));
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    font-weight: 600;
+    color: var(--accent-contrast);
+}
+
+.profile-avatar.placeholder {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.2), rgba(147, 51, 234, 0.2));
+    color: var(--accent-contrast);
+}
+
+.summary-text {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    width: 100%;
+}
+
+.summary-username {
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.summary-email {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+}
+
+.summary-bio {
+    font-size: 0.95rem;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+.summary-email.muted,
+.summary-bio.muted {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.profile-form {
+    display: flex;
+    flex-direction: column;
+    gap: 2rem;
+}
+
+.profile-form fieldset {
+    border: 1px solid var(--border-subtle);
+    border-radius: 1.25rem;
+    padding: 1.75rem;
+    background: rgba(255, 255, 255, 0.55);
+    backdrop-filter: blur(6px);
+    box-shadow: var(--shadow-base);
+}
+
+.profile-form legend {
+    padding: 0 0.5rem;
+    font-weight: 600;
+    font-size: 1.05rem;
+    color: var(--text-primary);
+}
+
+.profile-form label {
+    display: block;
+    font-weight: 500;
+    color: var(--text-secondary);
+    margin-top: 1rem;
+    margin-bottom: 0.35rem;
+}
+
+.profile-form input[type="text"],
+.profile-form input[type="email"],
+.profile-form input[type="password"],
+.profile-form textarea,
+.profile-form input[type="file"] {
+    width: 100%;
+    border-radius: 0.9rem;
+    border: 1px solid var(--border-subtle);
+    padding: 0.85rem 1rem;
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.profile-form input[type="text"]:focus,
+.profile-form input[type="email"]:focus,
+.profile-form input[type="password"]:focus,
+.profile-form textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+
+.profile-form textarea {
+    resize: vertical;
+    min-height: 120px;
+}
+
+.profile-form .field-hint {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-top: 0.35rem;
+}
+
+.radio-group {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+}
+
+.radio-option {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    padding: 0.9rem 1rem;
+    border: 1px solid var(--border-subtle);
+    border-radius: 1rem;
+    background-color: rgba(255, 255, 255, 0.9);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.radio-option:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.15);
+}
+
+.radio-option input[type="radio"] {
+    margin-top: 0.3rem;
+}
+
+.radio-option span {
+    color: var(--text-secondary);
+    line-height: 1.4;
+}
+
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+}
+
+.form-actions .btn {
+    padding-left: 2rem;
+    padding-right: 2rem;
+}
+
+@media (max-width: 600px) {
+    .profile-summary {
+        padding: 1.5rem;
+    }
+
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+    }
+
+    .form-actions {
+        justify-content: center;
+    }
+}
