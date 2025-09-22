@@ -115,11 +115,7 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 
 ## Tests et maintenance
 - Utilisez `python -m compileall app.py` pour vérifier la syntaxe Python rapidement.
-- Lancez la suite de tests automatisés avec Pytest :
-  ```bash
-  pytest
-  ```
-  Les tests fournis valident la gestion des privilèges d'administration, le blocage des comptes non validés et la rétrocompatibilité des anciens mots de passe `scrypt`.
+- Ajoutez vos propres suites de tests (Pytest, tests d'intégration) pour couvrir les scénarios critiques avant un déploiement en production.
 
 ## Licence
-Indiquez ici la licence souhaitée (par défaut non spécifiée). Ajoutez un fichier `LICENSE` si nécessaire.
+Ce projet est open-source. Tu peux le modifier et le distribuer librement.
