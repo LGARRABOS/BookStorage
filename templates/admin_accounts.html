@@ -17,6 +17,8 @@
     </tr>
   </thead>
   <tbody>
+    {% set viewer_is_superadmin = session.get('is_superadmin') %}
+    {% set viewer_id = session.get('user_id') %}
     {% for user in users %}
     <tr>
       <td>{{ user.id }}</td>
@@ -24,24 +26,27 @@
       <td>{{ "Oui" if user.validated else "Non" }}</td>
       <td>{{ "Oui" if user.is_admin else "Non" }}</td>
       <td>{{ "Oui" if user.is_superadmin else "Non" }}</td>
-      <td>
-        {% if not user.validated %}
-          <a href="{{ url_for('approve_account', user_id=user.id) }}">Approuver</a>
-          {% if not user.is_admin %}
-            | <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
+      <td class="actions">
+        <div class="action-items">
+          {% if not user.validated %}
+            <a href="{{ url_for('approve_account', user_id=user.id) }}">Approuver</a>
           {% endif %}
-        {% else %}
+
           {% if not user.is_admin %}
+            <a href="{{ url_for('promote_account', user_id=user.id) }}">Promouvoir en admin</a>
             <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
           {% else %}
-            {% if not user.is_superadmin %}
-              <a href="{{ url_for('promote_account', user_id=user.id) }}">Promouvoir en admin</a> |
+            {% if user.is_superadmin %}
+              <span class="no-action">-</span>
+            {% elif viewer_is_superadmin and user.id != viewer_id %}
               <a href="{{ url_for('delete_account', user_id=user.id) }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>
+            {% elif user.id == viewer_id %}
+              <span class="no-action" title="Action indisponible sur votre propre compte">-</span>
             {% else %}
-              <span>-</span>
+              <span class="restricted" title="Action réservée au super-admin">Super-admin requis</span>
             {% endif %}
           {% endif %}
-        {% endif %}
+        </div>
       </td>
     </tr>
     {% endfor %}
