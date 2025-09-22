@@ -1,7 +1,8 @@
+import os
 import sqlite3
 from werkzeug.security import generate_password_hash
 
-DATABASE = "database.db"
+DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -40,7 +41,7 @@ def init_db():
     if not super_admin_exists:
         default_username = "superadmin"
         default_password = "SuperAdmin!2023"  # Mot de passe robuste par défaut ; à changer en production !
-        hashed_password = generate_password_hash(default_password)
+        hashed_password = generate_password_hash(default_password, method="pbkdf2:sha256")
         cursor.execute(
             "INSERT INTO users (username, password, validated, is_admin, is_superadmin) VALUES (?, ?, ?, ?, ?)",
             (default_username, hashed_password, 1, 1, 1)

@@ -1,5 +1,10 @@
+import binascii
+import hmac
 import os
 import sqlite3
+from functools import wraps
+from hashlib import scrypt
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -7,33 +12,77 @@ from werkzeug.utils import secure_filename
 app = Flask(__name__)
 app.secret_key = "votre_cle_secrete"  # Remplacez par une clé plus sûre
 
-DATABASE = "database.db"
+DEFAULT_DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
+app.config.setdefault("DATABASE", DEFAULT_DATABASE)
 UPLOAD_FOLDER = os.path.join("static", "images")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+
+def verify_password(stored_hash: str, password: str) -> bool:
+    """Validate a password against Werkzeug hashes, including legacy scrypt ones."""
+
+    try:
+        return check_password_hash(stored_hash, password)
+    except ValueError as exc:
+        if not stored_hash or not stored_hash.startswith("scrypt:"):
+            raise exc
+
+        try:
+            method, salt, hash_value = stored_hash.split("$", 2)
+            _, n_str, r_str, p_str = method.split(":", 3)
+            n, r, p = int(n_str), int(r_str), int(p_str)
+        except ValueError:
+            raise exc
+
+        try:
+            derived = scrypt(
+                password.encode("utf-8"),
+                salt=salt.encode("utf-8"),
+                n=n,
+                r=r,
+                p=p,
+                maxmem=64 * 1024 * 1024,
+            )
+        except ValueError:
+            raise exc
+        derived_hex = binascii.hexlify(derived).decode("ascii")
+        return hmac.compare_digest(derived_hex, hash_value)
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 def get_db_connection():
-    conn = sqlite3.connect(DATABASE)
+    conn = sqlite3.connect(app.config["DATABASE"])
     conn.row_factory = sqlite3.Row
     return conn
 
 # Décorateur pour forcer l'accès aux administrateurs
 def admin_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Veuillez vous connecter.")
             return redirect(url_for("login"))
         conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+        if not user:
+            conn.close()
+            session.clear()
+            flash("Votre session n'est plus valide. Veuillez vous reconnecter.")
+            return redirect(url_for("login"))
+
+        is_admin = bool(user["is_admin"])
+        is_superadmin = bool(user["is_superadmin"])
+        session["is_admin"] = is_admin
+        session["is_superadmin"] = is_superadmin
         conn.close()
-        if not user["is_admin"]:
+
+        if not is_admin:
             flash("Accès réservé aux administrateurs.")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
     return wrapper
 
 # Route d'inscription : les nouveaux utilisateurs sont créés avec validated=0 et is_admin=0
@@ -42,7 +91,7 @@ def register():
     if request.method == "POST":
         username = request.form["username"]
         password = request.form["password"]
-        hashed_password = generate_password_hash(password)
+        hashed_password = generate_password_hash(password, method="pbkdf2:sha256")
         conn = get_db_connection()
         try:
             conn.execute(
@@ -68,13 +117,14 @@ def login():
         conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE username = ?", (username,)).fetchone()
         conn.close()
-        if user and check_password_hash(user["password"], password):
+        if user and verify_password(user["password"], password):
             if not user["validated"] and not user["is_admin"]:
                 flash("Votre compte n'est pas encore validé par un administrateur.")
                 return redirect(url_for("login"))
             session["user_id"] = user["id"]
             session["username"] = user["username"]
-            session["is_admin"] = user["is_admin"]
+            session["is_admin"] = bool(user["is_admin"])
+            session["is_superadmin"] = bool(user["is_superadmin"])
             flash("Connexion réussie.")
             return redirect(url_for("dashboard"))
         else:
@@ -89,12 +139,12 @@ def logout():
     return redirect(url_for("login"))
 
 def login_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Veuillez vous connecter pour accéder à cette page.")
             return redirect(url_for("login"))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
     return wrapper
 
 @app.route("/")
