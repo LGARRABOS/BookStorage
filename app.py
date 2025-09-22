@@ -1,5 +1,6 @@
 import os
 import sqlite3
+from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -22,18 +23,29 @@ def get_db_connection():
 
 # Décorateur pour forcer l'accès aux administrateurs
 def admin_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Veuillez vous connecter.")
             return redirect(url_for("login"))
         conn = get_db_connection()
         user = conn.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+        if not user:
+            conn.close()
+            session.clear()
+            flash("Votre session n'est plus valide. Veuillez vous reconnecter.")
+            return redirect(url_for("login"))
+
+        is_admin = bool(user["is_admin"])
+        is_superadmin = bool(user["is_superadmin"])
+        session["is_admin"] = is_admin
+        session["is_superadmin"] = is_superadmin
         conn.close()
-        if not user["is_admin"]:
+
+        if not is_admin:
             flash("Accès réservé aux administrateurs.")
             return redirect(url_for("dashboard"))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
     return wrapper
 
 # Route d'inscription : les nouveaux utilisateurs sont créés avec validated=0 et is_admin=0
@@ -74,7 +86,8 @@ def login():
                 return redirect(url_for("login"))
             session["user_id"] = user["id"]
             session["username"] = user["username"]
-            session["is_admin"] = user["is_admin"]
+            session["is_admin"] = bool(user["is_admin"])
+            session["is_superadmin"] = bool(user["is_superadmin"])
             flash("Connexion réussie.")
             return redirect(url_for("dashboard"))
         else:
@@ -89,12 +102,12 @@ def logout():
     return redirect(url_for("login"))
 
 def login_required(func):
+    @wraps(func)
     def wrapper(*args, **kwargs):
         if "user_id" not in session:
             flash("Veuillez vous connecter pour accéder à cette page.")
             return redirect(url_for("login"))
         return func(*args, **kwargs)
-    wrapper.__name__ = func.__name__
     return wrapper
 
 @app.route("/")
