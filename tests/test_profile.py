@@ -21,7 +21,6 @@ def test_profile_update_persists_changes(client, get_user_record):
             "display_name": "Lecteur passionné",
             "email": "lecteur@example.com",
             "bio": "Fan de science-fiction et de fantasy.",
-            "is_public": "1",
         },
         follow_redirects=True,
     )
@@ -77,7 +76,6 @@ def test_password_change_allows_new_login(client, get_user_record):
             "current_password": "ReaderPass!1",
             "new_password": "MyNewPass!2",
             "confirm_password": "MyNewPass!2",
-            "is_public": "1",
         },
         follow_redirects=True,
     )
@@ -120,7 +118,6 @@ def test_avatar_upload_saves_file(client, get_user_record, tmp_path, monkeypatch
             "email": reader["email"] or "",
             "bio": reader["bio"] or "",
             "avatar": (fake_image, "avatar.png"),
-            "is_public": "1",
         },
         content_type="multipart/form-data",
         follow_redirects=True,
@@ -131,30 +128,3 @@ def test_avatar_upload_saves_file(client, get_user_record, tmp_path, monkeypatch
     assert updated["avatar_path"] is not None
     stored_file = avatar_dir / updated["avatar_path"].split("/")[-1]
     assert stored_file.exists()
-
-
-def test_user_can_toggle_profile_visibility(client, get_user_record):
-    reader = get_user_record("reader")
-    client.post(
-        "/login",
-        data={"username": "reader", "password": "ReaderPass!1"},
-        follow_redirects=True,
-    )
-
-    response = client.post(
-        "/profile",
-        data={
-            "username": "reader",
-            "display_name": reader["display_name"] or "",
-            "email": reader["email"] or "",
-            "bio": reader["bio"] or "",
-            "is_public": "0",
-        },
-        follow_redirects=True,
-    )
-
-    page = response.get_data(as_text=True)
-    assert "Profil mis à jour." in page
-
-    updated = get_user_record("reader")
-    assert updated["is_public"] == 0

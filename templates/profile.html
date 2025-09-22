@@ -50,21 +50,6 @@
         </fieldset>
 
         <fieldset>
-            <legend>Confidentialité</legend>
-            <p class="field-hint">Choisissez si d'autres lecteurs peuvent consulter votre profil et vos lectures publiques.</p>
-            <div class="radio-group">
-                <label class="radio-option">
-                    <input type="radio" name="is_public" value="1" {% if user.is_public %}checked{% endif %}>
-                    <span>Profil public &ndash; visible dans l'annuaire des lecteurs</span>
-                </label>
-                <label class="radio-option">
-                    <input type="radio" name="is_public" value="0" {% if not user.is_public %}checked{% endif %}>
-                    <span>Profil privé &ndash; accessible uniquement par vous et les administrateurs</span>
-                </label>
-            </div>
-        </fieldset>
-
-        <fieldset>
             <legend>Sécurité</legend>
             <p class="field-hint">Le changement de pseudo ou de mot de passe nécessite la confirmation du mot de passe actuel.</p>
             <label for="current_password">Mot de passe actuel</label>
