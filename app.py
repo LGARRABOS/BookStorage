@@ -2,10 +2,7 @@ import binascii
 import hmac
 import os
 import sqlite3
-import uuid
 from functools import wraps
-from hashlib import scrypt
-
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
