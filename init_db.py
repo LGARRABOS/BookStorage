@@ -20,8 +20,7 @@ def init_db():
             display_name TEXT,
             email TEXT,
             bio TEXT,
-            avatar_path TEXT,
-            is_public INTEGER DEFAULT 1
+            avatar_path TEXT
         );
     """)
 
@@ -30,7 +29,6 @@ def init_db():
         "email": "TEXT",
         "bio": "TEXT",
         "avatar_path": "TEXT",
-        "is_public": "INTEGER DEFAULT 1",
     }
 
     existing_columns = {

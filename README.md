@@ -5,14 +5,11 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 
 ## Fonctionnalités principales
 - **Gestion des comptes utilisateurs** : inscription, connexion, déconnexion et validation par un administrateur avant l'accès au tableau de bord.
-- **Gestion complète du profil** : modification du pseudo, du nom affiché, de l'adresse e-mail, de la biographie et téléversement d'un avatar avec contrôle de sécurité.
-- **Confidentialité maîtrisée** : chaque membre choisit si son profil est public ou privé directement depuis la page de gestion du compte.
 - **Rôles différenciés** : utilisateurs standard, administrateurs et super-administrateurs disposant de permissions étendues.
 - **Tableau de bord personnel** : ajout d'œuvres avec statut, lien externe, nombre de chapitres et image illustrant la fiche.
 - **Mises à jour rapides** : incrémentation/décrémentation du chapitre courant par requêtes AJAX sans recharger la page.
 - **Gestion des médias** : dépôt des images dans `static/images` et affichage automatique sur le tableau de bord.
 - **Interface d'administration** : vue consolidée des comptes pour approuver, promouvoir ou supprimer des utilisateurs, avec garde-fous selon les privilèges de l'administrateur courant.
-- **Annuaire communautaire** : liste des profils publics avec moteur de recherche, consultation des bibliothèques partagées et import d'œuvres inspirantes dans sa propre liste.
 
 ## Architecture globale
 - `app.py` : cœur de l'application Flask, contenant les routes utilisateur et administrateur, les décorateurs d'authentification et de permissions, ainsi que la logique de gestion des œuvres.
@@ -31,11 +28,6 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 | `validated` | INTEGER | 0 = compte en attente, 1 = compte validé. |
 | `is_admin` | INTEGER | 1 si l'utilisateur est administrateur. |
 | `is_superadmin` | INTEGER | 1 si l'utilisateur dispose des privilèges super-admin. |
-| `display_name` | TEXT | Nom public facultatif affiché sur le profil. |
-| `email` | TEXT | Adresse de contact facultative. |
-| `bio` | TEXT | Présentation courte affichée sur le profil. |
-| `avatar_path` | TEXT | Chemin relatif vers l'image de profil téléversée. |
-| `is_public` | INTEGER | 1 = profil visible dans l'annuaire et accessible aux autres membres. |
 
 ### Table `works`
 | Colonne | Type | Description |
@@ -93,8 +85,6 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 4. **Ajout d'œuvre** (`/add_work`) : formulaire pour saisir titre, lien, statut, chapitre et téléverser une image (formats autorisés : PNG, JPG, JPEG, GIF). Les fichiers sont stockés dans `static/images`.
 5. **Mises à jour AJAX** (`/api/increment/<id>` et `/api/decrement/<id>`) : endpoints JSON utilisés par le tableau de bord pour ajuster le chapitre courant sans rechargement.
 6. **Suppression d'œuvre** (`/delete/<id>`) : retire définitivement l'œuvre du catalogue personnel.
-7. **Gestion du profil** (`/profile`) : page dédiée pour modifier les informations personnelles, changer de mot de passe après confirmation du mot de passe actuel, déposer une image de profil sécurisée et définir la visibilité du compte (public ou privé).
-8. **Découverte communautaire** (`/users`) : annuaire filtrable des profils publics permettant de consulter le détail d'un lecteur et d'importer ses lectures dans sa propre bibliothèque.
 
 ## Administration
 - **Accès restreint** : toutes les routes préfixées par `/admin` nécessitent l'authentification et le rôle administrateur (`admin_required`).
@@ -107,7 +97,6 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 
 ## Gestion des fichiers téléversés
 - Les images sont enregistrées dans `static/images`. Assurez-vous que ce dossier existe et dispose des droits en écriture.
-- Les avatars utilisateurs sont stockés dans `static/avatars` (ou dans le dossier configuré via `PROFILE_UPLOAD_FOLDER`), avec un nom aléatoire pour éviter les collisions.
 - Les noms de fichiers sont sécurisés via `werkzeug.utils.secure_filename`.
 - Pensez à mettre en place un mécanisme de nettoyage périodique ou une limite de taille en production.
 
@@ -126,11 +115,7 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 
 ## Tests et maintenance
 - Utilisez `python -m compileall app.py` pour vérifier la syntaxe Python rapidement.
-- Lancez la suite de tests automatisés avec Pytest :
-  ```bash
-  pytest
-  ```
-  Les tests fournis valident la gestion des privilèges d'administration, le blocage des comptes non validés, la rétrocompatibilité des anciens mots de passe `scrypt`, les scénarios complets de mise à jour du profil (changement d'informations, mot de passe, avatar, confidentialité) ainsi que les parcours communautaires (recherche d'utilisateurs, accès aux profils publics/privés et import d'œuvres partagées).
+- Ajoutez vos propres suites de tests (Pytest, tests d'intégration) pour couvrir les scénarios critiques avant un déploiement en production.
 
 ## Licence
-Indiquez ici la licence souhaitée (par défaut non spécifiée). Ajoutez un fichier `LICENSE` si nécessaire.
+Ce projet est open-source. Tu peux le modifier et le distribuer librement.
