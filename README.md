@@ -118,4 +118,4 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 - Ajoutez vos propres suites de tests (Pytest, tests d'intégration) pour couvrir les scénarios critiques avant un déploiement en production.
 
 ## Licence
-Indiquez ici la licence souhaitée (par défaut non spécifiée). Ajoutez un fichier `LICENSE` si nécessaire.
+Ce projet est open-source. Tu peux le modifier et le distribuer librement.
