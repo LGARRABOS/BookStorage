@@ -16,10 +16,30 @@ def init_db():
             password TEXT NOT NULL,
             validated INTEGER DEFAULT 0,
             is_admin INTEGER DEFAULT 0,
-            is_superadmin INTEGER DEFAULT 0
+            is_superadmin INTEGER DEFAULT 0,
+            display_name TEXT,
+            email TEXT,
+            bio TEXT,
+            avatar_path TEXT
         );
     """)
-    
+
+    profile_columns = {
+        "display_name": "TEXT",
+        "email": "TEXT",
+        "bio": "TEXT",
+        "avatar_path": "TEXT",
+    }
+
+    existing_columns = {
+        info[1] for info in conn.execute("PRAGMA table_info(users)").fetchall()
+    }
+    for column_name, column_type in profile_columns.items():
+        if column_name not in existing_columns:
+            conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+
+    conn.commit()
+
     # Création de la table works
     conn.execute("""
         CREATE TABLE IF NOT EXISTS works (

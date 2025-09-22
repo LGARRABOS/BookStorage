@@ -13,7 +13,11 @@ app.secret_key = "votre_cle_secrete"  # Remplacez par une clé plus sûre
 DEFAULT_DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
 app.config.setdefault("DATABASE", DEFAULT_DATABASE)
 UPLOAD_FOLDER = os.path.join("static", "images")
+PROFILE_UPLOAD_FOLDER = os.path.join("static", "avatars")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
+app.config["PROFILE_UPLOAD_FOLDER"] = PROFILE_UPLOAD_FOLDER
+os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
+os.makedirs(os.path.join(app.root_path, PROFILE_UPLOAD_FOLDER), exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 
@@ -51,9 +55,33 @@ def verify_password(stored_hash: str, password: str) -> bool:
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
+PROFILE_COLUMNS = {
+    "display_name": "TEXT",
+    "email": "TEXT",
+    "bio": "TEXT",
+    "avatar_path": "TEXT",
+}
+
+
+def ensure_profile_columns(conn):
+    existing_columns = {
+        column_info[1] for column_info in conn.execute("PRAGMA table_info(users)").fetchall()
+    }
+    missing = {name: column_type for name, column_type in PROFILE_COLUMNS.items() if name not in existing_columns}
+    for column_name, column_type in missing.items():
+        conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+    if missing:
+        conn.commit()
+
+
 def get_db_connection():
     conn = sqlite3.connect(app.config["DATABASE"])
     conn.row_factory = sqlite3.Row
+    try:
+        ensure_profile_columns(conn)
+    except sqlite3.OperationalError:
+        # La table peut ne pas encore exister lors de l'initialisation.
+        pass
     return conn
 
 # Décorateur pour forcer l'accès aux administrateurs
@@ -161,6 +189,131 @@ def dashboard():
     conn.close()
     return render_template("dashboard.html", works=works)
 
+
+@app.route("/profile", methods=["GET", "POST"])
+@login_required
+def profile():
+    conn = get_db_connection()
+    user = conn.execute("SELECT * FROM users WHERE id = ?", (session["user_id"],)).fetchone()
+    if not user:
+        conn.close()
+        session.clear()
+        flash("Votre compte n'est plus disponible. Merci de vous reconnecter.")
+        return redirect(url_for("login"))
+
+    user_data = dict(user)
+
+    if request.method == "POST":
+        new_username = request.form.get("username", "").strip()
+        display_name = request.form.get("display_name", "").strip()
+        email = request.form.get("email", "").strip()
+        bio = request.form.get("bio", "").strip()
+        current_password = request.form.get("current_password", "")
+        new_password = request.form.get("new_password", "")
+        confirm_password = request.form.get("confirm_password", "")
+
+        if not new_username:
+            flash("Le pseudo ne peut pas être vide.")
+            conn.close()
+            return redirect(url_for("profile"))
+
+        if len(new_username) > 50:
+            flash("Le pseudo ne doit pas dépasser 50 caractères.")
+            conn.close()
+            return redirect(url_for("profile"))
+
+        updates = {}
+        requires_password_check = False
+
+        if new_username != user_data.get("username"):
+            requires_password_check = True
+            updates["username"] = new_username
+
+        if new_password or confirm_password:
+            requires_password_check = True
+            if new_password != confirm_password:
+                flash("Les nouveaux mots de passe ne correspondent pas.")
+                conn.close()
+                return redirect(url_for("profile"))
+            if len(new_password) < 8:
+                flash("Le nouveau mot de passe doit contenir au moins 8 caractères.")
+                conn.close()
+                return redirect(url_for("profile"))
+            updates["password"] = generate_password_hash(new_password, method="pbkdf2:sha256")
+
+        if requires_password_check:
+            if not current_password:
+                flash("Veuillez renseigner votre mot de passe actuel pour confirmer ces modifications.")
+                conn.close()
+                return redirect(url_for("profile"))
+            if not verify_password(user_data["password"], current_password):
+                flash("Mot de passe actuel incorrect.")
+                conn.close()
+                return redirect(url_for("profile"))
+
+        if len(display_name) > 80:
+            flash("Le nom affiché ne doit pas dépasser 80 caractères.")
+            conn.close()
+            return redirect(url_for("profile"))
+        if display_name != (user_data.get("display_name") or ""):
+            updates["display_name"] = display_name or None
+
+        if email != (user_data.get("email") or ""):
+            if email and "@" not in email:
+                flash("Veuillez saisir une adresse e-mail valide.")
+                conn.close()
+                return redirect(url_for("profile"))
+            if email and len(email) > 120:
+                flash("L'adresse e-mail est trop longue.")
+                conn.close()
+                return redirect(url_for("profile"))
+            updates["email"] = email or None
+
+        if len(bio) > 500:
+            flash("La biographie est limitée à 500 caractères.")
+            conn.close()
+            return redirect(url_for("profile"))
+        if bio != (user_data.get("bio") or ""):
+            updates["bio"] = bio or None
+
+        avatar = request.files.get("avatar")
+        if avatar and avatar.filename:
+            if not allowed_file(avatar.filename):
+                flash("Format d'image non supporté. Formats acceptés : png, jpg, jpeg, gif.")
+                conn.close()
+                return redirect(url_for("profile"))
+            avatar_filename = f"{uuid.uuid4().hex}_{secure_filename(avatar.filename)}"
+            avatar_folder = os.path.join(app.root_path, app.config["PROFILE_UPLOAD_FOLDER"])
+            os.makedirs(avatar_folder, exist_ok=True)
+            avatar_path = os.path.join(avatar_folder, avatar_filename)
+            avatar.save(avatar_path)
+            updates["avatar_path"] = f"avatars/{avatar_filename}"
+
+        if updates:
+            placeholders = ", ".join(f"{field} = ?" for field in updates.keys())
+            values = list(updates.values()) + [session["user_id"]]
+            try:
+                conn.execute(f"UPDATE users SET {placeholders} WHERE id = ?", values)
+                conn.commit()
+            except sqlite3.IntegrityError:
+                conn.rollback()
+                flash("Ce pseudo est déjà utilisé.")
+                conn.close()
+                return redirect(url_for("profile"))
+
+            if "username" in updates:
+                session["username"] = updates["username"]
+
+            flash("Profil mis à jour.")
+        else:
+            flash("Aucune modification à enregistrer.")
+        conn.close()
+        return redirect(url_for("profile"))
+
+    conn.close()
+    return render_template("profile.html", user=user_data)
+
+
 @app.route("/add_work", methods=["GET", "POST"])
 @login_required
 def add_work():
@@ -179,7 +332,9 @@ def add_work():
             file = request.files["image"]
             if file and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
-                filepath = os.path.join(app.config["UPLOAD_FOLDER"], filename)
+                storage_dir = os.path.join(app.root_path, app.config["UPLOAD_FOLDER"])
+                os.makedirs(storage_dir, exist_ok=True)
+                filepath = os.path.join(storage_dir, filename)
                 file.save(filepath)
                 image_path = f"images/{filename}"
 
