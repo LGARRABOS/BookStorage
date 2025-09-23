@@ -1,0 +1,58 @@
+{% extends "base.html" %}
+{% block title %}Profil de {{ target_user.display_name or target_user.username }}{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/users.css') }}">
+{% endblock %}
+{% block content %}
+<a href="{{ url_for('users_directory') }}" class="back-link">&larr; Retour à l'annuaire</a>
+
+<section class="user-header">
+    {% if target_user.avatar_path %}
+        <img src="{{ url_for('static', filename=target_user.avatar_path) }}" alt="Avatar de {{ target_user.display_name or target_user.username }}" class="user-avatar large">
+    {% else %}
+        <span class="user-avatar large placeholder" aria-hidden="true">{{ (target_user.display_name or target_user.username)[:1]|upper }}</span>
+    {% endif %}
+    <div class="user-header-text">
+        <h1>{{ target_user.display_name or target_user.username }}</h1>
+        <p class="user-username">@{{ target_user.username }}</p>
+        <p class="user-visibility">{{ 'Profil public' if target_user.is_public else 'Profil privé' }}</p>
+        {% if target_user.bio %}
+            <p class="user-bio">{{ target_user.bio }}</p>
+        {% endif %}
+    </div>
+</section>
+
+<section class="shared-works">
+    <h2>Lectures partagées</h2>
+    {% if works %}
+        <ul class="works-grid" role="list">
+            {% for work in works %}
+            <li class="work-card">
+                <div class="work-text">
+                    <h3>{{ work['title'] }}</h3>
+                    {% if work['reading_type'] %}
+                        <p class="work-type">Type : {{ work['reading_type'] }}</p>
+                    {% endif %}
+                    {% if work['status'] %}
+                        <p class="work-status">Statut : {{ work['status'] }}</p>
+                    {% endif %}
+                    {% if work['chapter'] is not none %}
+                        <p class="work-chapter">Chapitre {{ work['chapter'] }}</p>
+                    {% endif %}
+                    {% if work['link'] %}
+                        <p class="work-link"><a href="{{ work['link'] }}" target="_blank" rel="noopener">Voir la ressource</a></p>
+                    {% endif %}
+                </div>
+                {% if can_import %}
+                <form method="post" action="{{ url_for('import_work', user_id=target_user.id, work_id=work['id']) }}">
+                    <button type="submit" class="btn btn-secondary">Ajouter à ma liste</button>
+                </form>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <p class="empty-state">Ce lecteur n'a pas encore partagé de lectures.</p>
+    {% endif %}
+</section>
+{% endblock %}
