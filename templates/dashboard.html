@@ -1,63 +1,109 @@
 {% extends "base.html" %}
-{% block title %}Dashboard{% endblock %}
+{% block title %}Tableau de bord{% endblock %}
 {% block custom_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}">
 {% endblock %}
 {% block content %}
-<h2>Ma Bibliothèque</h2>
-<a href="{{ url_for('add_work') }}">Ajouter une nouvelle oeuvre</a>
+<section class="page-section">
+  <header class="section-header">
+    <h1>Ma bibliothèque</h1>
+    <p>Visualisez vos œuvres suivies, mettez à jour votre progression et accédez rapidement à vos lectures en ligne.</p>
+  </header>
 
-<!-- Barre de recherche et filtre -->
-<div id="search-filter" style="margin:20px 0;">
-  <input type="text" id="search-input" placeholder="Rechercher par titre..." style="padding:5px; width:200px;">
-  <select id="status-filter" style="padding:5px; margin-left:10px;">
-    <option value="">Tous les statuts</option>
-    <option value="En cours">En cours</option>
-    <option value="Terminé">Terminé</option>
-    <option value="En pause">En pause</option>
-    <option value="Abandonné">Abandonné</option>
-    <option value="À lire">À lire</option>
-  </select>
-</div>
+  <div class="dashboard-toolbar">
+    <a class="btn btn-primary" href="{{ url_for('add_work') }}">Ajouter une nouvelle œuvre</a>
+    <div class="toolbar-filters">
+      <label class="visually-hidden" for="search-input">Rechercher par titre</label>
+      <input type="text" id="search-input" placeholder="Rechercher par titre..." autocomplete="off">
 
-<table>
-  <thead>
-    <tr>
-      <th>Image</th>
-      <th>Titre</th>
-      <th>Chapitre</th>
-      <th>Lien</th>
-      <th>Statut</th>
-      <th>Actions</th>
-    </tr>
-  </thead>
-  <tbody>
-    {% for work in works %}
-    <tr>
-      <td>
-        {% if work.image_path %}
-          <img src="{{ url_for('static', filename=work.image_path) }}" alt="Image de {{ work.title }}">
-        {% else %}
-          Pas d'image
-        {% endif %}
-      </td>
-      <td>{{ work.title }}</td>
-      <td id="chapter-{{ work.id }}">{{ work.chapter }}</td>
-      <td>
-        {% if work.link %}
-          <a href="{{ work.link }}" target="_blank">Aller au site</a>
-        {% endif %}
-      </td>
-      <td>{{ work.status }}</td>
-      <td>
-        <a href="#" class="increment-btn" data-work-id="{{ work.id }}">+1 Chapitre</a> |
-        <a href="#" class="decrement-btn" data-work-id="{{ work.id }}">-1 Chapitre</a> |
-        <a href="{{ url_for('delete', work_id=work.id) }}">Supprimer</a>
-      </td>
-    </tr>
-    {% endfor %}
-  </tbody>
-</table>
+      <label class="visually-hidden" for="status-filter">Filtrer par statut</label>
+      <select id="status-filter">
+        <option value="">Tous les statuts</option>
+        <option value="En cours">En cours</option>
+        <option value="Terminé">Terminé</option>
+        <option value="En pause">En pause</option>
+        <option value="Abandonné">Abandonné</option>
+        <option value="À lire">À lire</option>
+      </select>
+    </div>
+  </div>
+
+  <div class="dashboard-shortcuts" role="region" aria-label="Actions rapides">
+    <article class="shortcut-card">
+      <h2>Gérer mon profil</h2>
+      <p>Personnalisez votre identité, mettez à jour vos informations et choisissez la visibilité de votre bibliothèque.</p>
+      <a class="btn btn-secondary" href="{{ url_for('profile') }}">Accéder à mon profil</a>
+    </article>
+    <article class="shortcut-card">
+      <h2>Explorer les lecteurs</h2>
+      <p>Recherchez les autres membres publics et importez leurs lectures partagées dans votre propre liste.</p>
+      <a class="btn btn-secondary" href="{{ url_for('users_directory') }}">Ouvrir l'annuaire</a>
+    </article>
+  </div>
+
+  {% if works %}
+  <div class="table-wrapper library-table">
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>Visuel</th>
+          <th>Titre</th>
+          <th>Chapitre</th>
+          <th>Lien</th>
+          <th>Statut</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for work in works %}
+        <tr>
+          <td class="cover-cell">
+            {% if work.image_path %}
+              <img src="{{ url_for('static', filename=work.image_path) }}" alt="Image de {{ work.title }}">
+            {% else %}
+              <span class="badge info">Pas d'image</span>
+            {% endif %}
+          </td>
+          <td>
+            <div class="work-title">{{ work.title }}</div>
+          </td>
+          <td>
+            <span id="chapter-{{ work.id }}" class="chapter-count">{{ work.chapter }}</span>
+          </td>
+          <td>
+            {% if work.link %}
+              <a class="external-link" href="{{ work.link }}" target="_blank" rel="noopener">Ouvrir</a>
+            {% else %}
+              <span class="text-muted">—</span>
+            {% endif %}
+          </td>
+          <td>
+            <span class="badge status-badge" data-status="{{ work.status }}">{{ work.status }}</span>
+          </td>
+          <td class="actions">
+            <div class="action-buttons">
+              <button type="button" class="btn btn-icon accent increment-btn" data-work-id="{{ work.id }}" aria-label="Ajouter un chapitre">
+                +1
+              </button>
+              <button type="button" class="btn btn-icon neutral decrement-btn" data-work-id="{{ work.id }}" aria-label="Retirer un chapitre">
+                −1
+              </button>
+              <a class="btn btn-icon danger" href="{{ url_for('delete', work_id=work.id) }}" onclick="return confirm('Supprimer cette œuvre de la bibliothèque ?');">Supprimer</a>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+    <div class="empty-state">
+      <h2>Votre bibliothèque est prête</h2>
+      <p>Ajoutez votre première œuvre pour commencer à suivre vos lectures et chapitres préférés.</p>
+      <a class="btn btn-primary" href="{{ url_for('add_work') }}">Ajouter une œuvre</a>
+    </div>
+  {% endif %}
+</section>
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
@@ -91,25 +137,24 @@ document.addEventListener("DOMContentLoaded", function() {
         .catch(error => console.error("Erreur :", error));
     });
   });
-  
+
   // Barre de recherche et filtre par statut
   const searchInput = document.getElementById("search-input");
   const statusFilter = document.getElementById("status-filter");
-  const tableRows = document.querySelectorAll("table tbody tr");
-  
+  const tableRows = document.querySelectorAll(".library-table tbody tr");
+
   function filterTable() {
     const searchValue = searchInput.value.toLowerCase();
     const statusValue = statusFilter.value;
     tableRows.forEach(function(row) {
-      // Le titre se trouve dans la 2ème cellule (index 1) et le statut dans la 5ème (index 4)
-      const title = row.cells[1].innerText.toLowerCase();
-      const status = row.cells[4].innerText.trim();
+      const title = row.querySelector(".work-title").innerText.toLowerCase();
+      const status = row.querySelector(".badge").innerText.trim();
       const matchesSearch = title.includes(searchValue);
       const matchesStatus = (statusValue === "" || status === statusValue);
       row.style.display = (matchesSearch && matchesStatus) ? "" : "none";
     });
   }
-  
+
   searchInput.addEventListener("input", filterTable);
   statusFilter.addEventListener("change", filterTable);
 });
