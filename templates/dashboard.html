@@ -28,6 +28,19 @@
     </div>
   </div>
 
+  <div class="dashboard-shortcuts" role="region" aria-label="Actions rapides">
+    <article class="shortcut-card">
+      <h2>Gérer mon profil</h2>
+      <p>Personnalisez votre identité, mettez à jour vos informations et choisissez la visibilité de votre bibliothèque.</p>
+      <a class="btn btn-nav" href="{{ url_for('profile') }}">Accéder à mon profil</a>
+    </article>
+    <article class="shortcut-card">
+      <h2>Explorer les lecteurs</h2>
+      <p>Recherchez les autres membres publics et importez leurs lectures partagées dans votre propre liste.</p>
+      <a class="btn btn-secondary" href="{{ url_for('users_directory') }}">Ouvrir l'annuaire</a>
+    </article>
+  </div>
+
   {% if works %}
   <div class="table-wrapper library-table">
     <table class="data-table">

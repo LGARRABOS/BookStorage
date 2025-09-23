@@ -2,7 +2,10 @@ import binascii
 import hmac
 import os
 import sqlite3
+import uuid
 from functools import wraps
+from hashlib import scrypt
+
 from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
@@ -60,6 +63,7 @@ PROFILE_COLUMNS = {
     "email": "TEXT",
     "bio": "TEXT",
     "avatar_path": "TEXT",
+    "is_public": "INTEGER DEFAULT 1",
 }
 
 
@@ -190,6 +194,130 @@ def dashboard():
     return render_template("dashboard.html", works=works)
 
 
+@app.route("/users")
+@login_required
+def users_directory():
+    query = request.args.get("q", "").strip()
+    viewer_id = session["user_id"]
+    conn = get_db_connection()
+    sql = (
+        "SELECT id, username, display_name, bio, avatar_path FROM users "
+        "WHERE validated = 1 AND is_public = 1 AND id != ?"
+    )
+    params = [viewer_id]
+    if query:
+        like_pattern = f"%{query.lower()}%"
+        sql += " AND (LOWER(username) LIKE ? OR LOWER(COALESCE(display_name, '')) LIKE ?)"
+        params.extend([like_pattern, like_pattern])
+    sql += " ORDER BY LOWER(COALESCE(display_name, username))"
+    users = [dict(row) for row in conn.execute(sql, params).fetchall()]
+    conn.close()
+    return render_template("users.html", users=users, query=query)
+
+
+def _can_view_profile(target_user):
+    if target_user is None:
+        return False
+    if session.get("user_id") == target_user["id"]:
+        return True
+    if session.get("is_admin"):
+        return True
+    return bool(target_user["is_public"])
+
+
+@app.route("/users/<int:user_id>")
+@login_required
+def user_detail(user_id):
+    conn = get_db_connection()
+    target_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target_user:
+        conn.close()
+        flash("Utilisateur introuvable.")
+        return redirect(url_for("users_directory"))
+
+    if not _can_view_profile(target_user):
+        conn.close()
+        flash("Ce profil est privé.")
+        return redirect(url_for("users_directory"))
+
+    works = conn.execute(
+        "SELECT * FROM works WHERE user_id = ? ORDER BY LOWER(title)", (user_id,)
+    ).fetchall()
+    conn.close()
+    target = dict(target_user)
+    target["is_public"] = bool(target_user["is_public"])
+    can_import = session.get("user_id") != target_user["id"]
+    return render_template(
+        "user_detail.html",
+        target_user=target,
+        works=works,
+        can_import=can_import,
+    )
+
+
+@app.route("/users/<int:user_id>/import/<int:work_id>", methods=["POST"])
+@login_required
+def import_work(user_id, work_id):
+    viewer_id = session["user_id"]
+    conn = get_db_connection()
+    target_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+    if not target_user:
+        conn.close()
+        flash("Utilisateur introuvable.")
+        return redirect(url_for("users_directory"))
+
+    if not _can_view_profile(target_user):
+        conn.close()
+        flash("Ce profil est privé.")
+        return redirect(url_for("users_directory"))
+
+    if viewer_id == target_user["id"]:
+        conn.close()
+        flash("Cette œuvre appartient déjà à votre bibliothèque.")
+        return redirect(url_for("user_detail", user_id=user_id))
+
+    work = conn.execute(
+        "SELECT * FROM works WHERE id = ? AND user_id = ?", (work_id, user_id)
+    ).fetchone()
+    if not work:
+        conn.close()
+        flash("Œuvre introuvable.")
+        return redirect(url_for("user_detail", user_id=user_id))
+
+    existing = conn.execute(
+        """
+        SELECT id FROM works
+        WHERE user_id = ?
+          AND title = ?
+          AND COALESCE(link, '') = COALESCE(?, '')
+        """,
+        (viewer_id, work["title"], work["link"]),
+    ).fetchone()
+    if existing:
+        conn.close()
+        flash("Cette œuvre est déjà présente dans votre bibliothèque.")
+        return redirect(url_for("user_detail", user_id=user_id))
+
+    conn.execute(
+        """
+        INSERT INTO works (title, chapter, link, status, image_path, user_id)
+        VALUES (?, ?, ?, ?, ?, ?)
+        """,
+        (
+            work["title"],
+            work["chapter"],
+            work["link"],
+            work["status"],
+            work["image_path"],
+            viewer_id,
+        ),
+    )
+    conn.commit()
+    conn.close()
+    flash("Œuvre ajoutée à votre liste de lecture.")
+    return redirect(url_for("user_detail", user_id=user_id))
+
+
 @app.route("/profile", methods=["GET", "POST"])
 @login_required
 def profile():
@@ -202,6 +330,7 @@ def profile():
         return redirect(url_for("login"))
 
     user_data = dict(user)
+    user_data["is_public"] = bool(user_data.get("is_public", 1))
 
     if request.method == "POST":
         new_username = request.form.get("username", "").strip()
@@ -275,6 +404,12 @@ def profile():
             return redirect(url_for("profile"))
         if bio != (user_data.get("bio") or ""):
             updates["bio"] = bio or None
+
+        visibility = request.form.get("is_public")
+        if visibility is not None:
+            desired_public = 1 if visibility == "1" else 0
+            if desired_public != int(user_data.get("is_public", True)):
+                updates["is_public"] = desired_public
 
         avatar = request.files.get("avatar")
         if avatar and avatar.filename:

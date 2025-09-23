@@ -27,6 +27,9 @@
                 <p class="summary-bio muted">Complétez votre biographie pour personnaliser votre profil.</p>
             {% endif %}
         </div>
+        <span class="privacy-status {{ 'public' if user.is_public else 'private' }}">
+            Profil {{ 'public' if user.is_public else 'privé' }}
+        </span>
     </aside>
 
     <form method="post" enctype="multipart/form-data" class="profile-form">
@@ -50,6 +53,21 @@
         </fieldset>
 
         <fieldset>
+            <legend>Confidentialité</legend>
+            <p class="field-hint">Choisissez si d'autres lecteurs peuvent consulter votre profil et vos lectures publiques.</p>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="is_public" value="1" {% if user.is_public %}checked{% endif %}>
+                    <span>Profil public &ndash; visible dans l'annuaire des lecteurs</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="is_public" value="0" {% if not user.is_public %}checked{% endif %}>
+                    <span>Profil privé &ndash; accessible uniquement par vous et les administrateurs</span>
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset>
             <legend>Sécurité</legend>
             <p class="field-hint">Le changement de pseudo ou de mot de passe nécessite la confirmation du mot de passe actuel.</p>
             <label for="current_password">Mot de passe actuel</label>
@@ -67,4 +85,27 @@
         </div>
     </form>
 </section>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const options = document.querySelectorAll(".radio-option");
+    const refreshSelection = () => {
+        options.forEach((option) => {
+            const input = option.querySelector("input[type='radio']");
+            if (input && input.checked) {
+                option.classList.add("is-selected");
+            } else {
+                option.classList.remove("is-selected");
+            }
+        });
+    };
+    options.forEach((option) => {
+        const input = option.querySelector("input[type='radio']");
+        if (!input) {
+            return;
+        }
+        input.addEventListener("change", refreshSelection);
+    });
+    refreshSelection();
+});
+</script>
 {% endblock %}

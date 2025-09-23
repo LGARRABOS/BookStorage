@@ -27,7 +27,8 @@ def _bootstrap_database(db_path: str) -> None:
             display_name TEXT,
             email TEXT,
             bio TEXT,
-            avatar_path TEXT
+            avatar_path TEXT,
+            is_public INTEGER DEFAULT 1
         );
 
         CREATE TABLE IF NOT EXISTS works (
@@ -44,22 +45,116 @@ def _bootstrap_database(db_path: str) -> None:
     )
 
     fixtures = [
-        ("superadmin", "SuperSecure!1", 1, 1, 1, "Super Administrateur"),
-        ("admin", "AdminPower!1", 1, 1, 0, "Administrateur"),
-        ("reader", "ReaderPass!1", 1, 0, 0, "Lecteur"),
-        ("pending", "PendingPass!1", 0, 0, 0, "En attente"),
+        {
+            "username": "superadmin",
+            "password": "SuperSecure!1",
+            "validated": 1,
+            "is_admin": 1,
+            "is_superadmin": 1,
+            "display_name": "Super Administrateur",
+            "is_public": 0,
+        },
+        {
+            "username": "admin",
+            "password": "AdminPower!1",
+            "validated": 1,
+            "is_admin": 1,
+            "is_superadmin": 0,
+            "display_name": "Administrateur",
+            "is_public": 1,
+        },
+        {
+            "username": "reader",
+            "password": "ReaderPass!1",
+            "validated": 1,
+            "is_admin": 0,
+            "is_superadmin": 0,
+            "display_name": "Lecteur",
+            "is_public": 1,
+        },
+        {
+            "username": "sharer",
+            "password": "SharerPass!1",
+            "validated": 1,
+            "is_admin": 0,
+            "is_superadmin": 0,
+            "display_name": "Partageur",
+            "bio": "Toujours partant pour découvrir de nouveaux mangas.",
+            "is_public": 1,
+        },
+        {
+            "username": "private",
+            "password": "SecretPass!1",
+            "validated": 1,
+            "is_admin": 0,
+            "is_superadmin": 0,
+            "display_name": "Confidentiel",
+            "is_public": 0,
+        },
+        {
+            "username": "pending",
+            "password": "PendingPass!1",
+            "validated": 0,
+            "is_admin": 0,
+            "is_superadmin": 0,
+            "display_name": "En attente",
+            "is_public": 1,
+        },
     ]
 
-    for username, password, validated, is_admin, is_superadmin, display_name in fixtures:
-        conn.execute(
-            "INSERT INTO users (username, password, validated, is_admin, is_superadmin, display_name) VALUES (?, ?, ?, ?, ?, ?)",
+    user_ids = {}
+    for fixture in fixtures:
+        cursor = conn.execute(
+            """
+            INSERT INTO users (
+                username, password, validated, is_admin, is_superadmin, display_name, is_public, bio
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+            """,
             (
-                username,
-                generate_password_hash(password, method="pbkdf2:sha256"),
-                validated,
-                is_admin,
-                is_superadmin,
-                display_name,
+                fixture["username"],
+                generate_password_hash(fixture["password"], method="pbkdf2:sha256"),
+                fixture["validated"],
+                fixture["is_admin"],
+                fixture["is_superadmin"],
+                fixture.get("display_name"),
+                fixture.get("is_public", 1),
+                fixture.get("bio"),
+            ),
+        )
+        user_ids[fixture["username"]] = cursor.lastrowid
+
+    works = [
+        {
+            "title": "One Piece",
+            "chapter": 1023,
+            "link": "https://onepiece.example",
+            "status": "En cours",
+            "image_path": None,
+            "owner": "sharer",
+        },
+        {
+            "title": "Fullmetal Alchemist",
+            "chapter": 27,
+            "link": None,
+            "status": "Terminé",
+            "image_path": None,
+            "owner": "sharer",
+        },
+    ]
+
+    for work in works:
+        conn.execute(
+            """
+            INSERT INTO works (title, chapter, link, status, image_path, user_id)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (
+                work["title"],
+                work["chapter"],
+                work["link"],
+                work["status"],
+                work["image_path"],
+                user_ids[work["owner"]],
             ),
         )
 

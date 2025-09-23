@@ -7,6 +7,19 @@ def test_users_directory_requires_login(client):
     assert "/login" in response.headers["Location"]
 
 
+def test_dashboard_exposes_profile_and_directory_shortcuts(client):
+    client.post(
+        "/login",
+        data={"username": "reader", "password": "ReaderPass!1"},
+        follow_redirects=True,
+    )
+
+    response = client.get("/dashboard")
+    page = response.get_data(as_text=True)
+    assert "Accéder à mon profil" in page
+    assert "Ouvrir l'annuaire" in page
+
+
 def test_users_directory_lists_public_users(client):
     client.post(
         "/login",
