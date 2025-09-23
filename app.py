@@ -15,6 +15,8 @@ app.secret_key = "votre_cle_secrete"  # Remplacez par une clé plus sûre
 
 DEFAULT_DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
 app.config.setdefault("DATABASE", DEFAULT_DATABASE)
+DEFAULT_SUPERADMIN_USERNAME = os.environ.get("BOOKSTORAGE_SUPERADMIN_USERNAME", "superadmin")
+DEFAULT_SUPERADMIN_PASSWORD = os.environ.get("BOOKSTORAGE_SUPERADMIN_PASSWORD", "SuperAdmin!2023")
 UPLOAD_FOLDER = os.path.join("static", "images")
 PROFILE_UPLOAD_FOLDER = os.path.join("static", "avatars")
 app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
@@ -22,6 +24,33 @@ app.config["PROFILE_UPLOAD_FOLDER"] = PROFILE_UPLOAD_FOLDER
 os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
 os.makedirs(os.path.join(app.root_path, PROFILE_UPLOAD_FOLDER), exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+
+
+def _resolve_media_path(stored_path, config_key):
+    if not stored_path:
+        return None
+
+    filename = os.path.basename(stored_path)
+    if not filename:
+        return None
+
+    storage_dir = app.config.get(config_key)
+    if not storage_dir:
+        return None
+
+    if not os.path.isabs(storage_dir):
+        storage_dir = os.path.join(app.root_path, storage_dir)
+
+    return os.path.join(storage_dir, filename)
+
+
+def _delete_media_file(stored_path, config_key):
+    file_path = _resolve_media_path(stored_path, config_key)
+    if file_path and os.path.exists(file_path):
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
 
 CREATE_USERS_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS users (
@@ -107,11 +136,37 @@ def ensure_profile_columns(conn):
         conn.commit()
 
 
+def ensure_super_admin(conn):
+    existing = conn.execute(
+        "SELECT 1 FROM users WHERE is_superadmin = 1 LIMIT 1"
+    ).fetchone()
+    if existing:
+        return
+
+    cursor = conn.execute(
+        "UPDATE users SET validated = 1, is_admin = 1, is_superadmin = 1 WHERE username = ?",
+        (DEFAULT_SUPERADMIN_USERNAME,),
+    )
+    if cursor.rowcount:
+        conn.commit()
+        return
+
+    hashed_password = generate_password_hash(
+        DEFAULT_SUPERADMIN_PASSWORD, method="pbkdf2:sha256"
+    )
+    conn.execute(
+        "INSERT INTO users (username, password, validated, is_admin, is_superadmin) VALUES (?, ?, 1, 1, 1)",
+        (DEFAULT_SUPERADMIN_USERNAME, hashed_password),
+    )
+    conn.commit()
+
+
 def ensure_schema(conn):
     conn.execute("PRAGMA foreign_keys = ON;")
     conn.execute(CREATE_USERS_TABLE_SQL)
     conn.execute(CREATE_WORKS_TABLE_SQL)
     ensure_profile_columns(conn)
+    ensure_super_admin(conn)
 
 
 def get_db_connection():
@@ -123,6 +178,18 @@ def get_db_connection():
         # La table peut ne pas encore exister lors de l'initialisation.
         pass
     return conn
+
+
+def bootstrap_database():
+    conn = None
+    try:
+        conn = get_db_connection()
+    finally:
+        if conn is not None:
+            conn.close()
+
+
+bootstrap_database()
 
 # Décorateur pour forcer l'accès aux administrateurs
 def admin_required(func):
@@ -369,6 +436,8 @@ def profile():
     user_data["is_public"] = bool(user_data.get("is_public", 1))
 
     if request.method == "POST":
+        previous_avatar = user_data.get("avatar_path")
+        new_avatar_rel = None
         new_username = request.form.get("username", "").strip()
         display_name = request.form.get("display_name", "").strip()
         email = request.form.get("email", "").strip()
@@ -453,12 +522,18 @@ def profile():
                 flash("Format d'image non supporté. Formats acceptés : png, jpg, jpeg, gif.")
                 conn.close()
                 return redirect(url_for("profile"))
-            avatar_filename = f"{uuid.uuid4().hex}_{secure_filename(avatar.filename)}"
-            avatar_folder = os.path.join(app.root_path, app.config["PROFILE_UPLOAD_FOLDER"])
+            safe_name = secure_filename(avatar.filename)
+            if not safe_name:
+                safe_name = "avatar"
+            avatar_filename = f"{uuid.uuid4().hex}_{safe_name}"
+            avatar_folder = app.config["PROFILE_UPLOAD_FOLDER"]
+            if not os.path.isabs(avatar_folder):
+                avatar_folder = os.path.join(app.root_path, avatar_folder)
             os.makedirs(avatar_folder, exist_ok=True)
-            avatar_path = os.path.join(avatar_folder, avatar_filename)
-            avatar.save(avatar_path)
-            updates["avatar_path"] = f"avatars/{avatar_filename}"
+            avatar_full_path = os.path.join(avatar_folder, avatar_filename)
+            avatar.save(avatar_full_path)
+            new_avatar_rel = f"avatars/{avatar_filename}"
+            updates["avatar_path"] = new_avatar_rel
 
         if updates:
             placeholders = ", ".join(f"{field} = ?" for field in updates.keys())
@@ -468,12 +543,22 @@ def profile():
                 conn.commit()
             except sqlite3.IntegrityError:
                 conn.rollback()
+                if new_avatar_rel:
+                    _delete_media_file(new_avatar_rel, "PROFILE_UPLOAD_FOLDER")
                 flash("Ce pseudo est déjà utilisé.")
                 conn.close()
                 return redirect(url_for("profile"))
 
             if "username" in updates:
                 session["username"] = updates["username"]
+
+            if new_avatar_rel and previous_avatar and previous_avatar != new_avatar_rel:
+                remaining = conn.execute(
+                    "SELECT COUNT(*) FROM users WHERE avatar_path = ? AND id != ?",
+                    (previous_avatar, session["user_id"]),
+                ).fetchone()[0]
+                if remaining == 0:
+                    _delete_media_file(previous_avatar, "PROFILE_UPLOAD_FOLDER")
 
             flash("Profil mis à jour.")
         else:
@@ -502,8 +587,13 @@ def add_work():
         if "image" in request.files:
             file = request.files["image"]
             if file and allowed_file(file.filename):
-                filename = secure_filename(file.filename)
-                storage_dir = os.path.join(app.root_path, app.config["UPLOAD_FOLDER"])
+                safe_name = secure_filename(file.filename)
+                if not safe_name:
+                    safe_name = "work"
+                filename = f"{uuid.uuid4().hex}_{safe_name}"
+                storage_dir = app.config["UPLOAD_FOLDER"]
+                if not os.path.isabs(storage_dir):
+                    storage_dir = os.path.join(app.root_path, storage_dir)
                 os.makedirs(storage_dir, exist_ok=True)
                 filepath = os.path.join(storage_dir, filename)
                 file.save(filepath)
@@ -549,9 +639,25 @@ def api_decrement(work_id):
 def delete(work_id):
     user_id = session["user_id"]
     conn = get_db_connection()
+    work = conn.execute(
+        "SELECT image_path FROM works WHERE id = ? AND user_id = ?",
+        (work_id, user_id),
+    ).fetchone()
+
+    image_path = work["image_path"] if work else None
+    remaining_references = 0
+    if image_path:
+        remaining_references = conn.execute(
+            "SELECT COUNT(*) FROM works WHERE image_path = ? AND id != ?",
+            (image_path, work_id),
+        ).fetchone()[0]
+
     conn.execute("DELETE FROM works WHERE id = ? AND user_id = ?", (work_id, user_id))
     conn.commit()
     conn.close()
+
+    if image_path and remaining_references == 0:
+        _delete_media_file(image_path, "UPLOAD_FOLDER")
     flash("Oeuvre supprimée.")
     return redirect(url_for("dashboard"))
 

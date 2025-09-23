@@ -1,4 +1,5 @@
 import io
+from pathlib import Path
 
 
 def test_profile_requires_login(client):
@@ -143,6 +144,71 @@ def test_avatar_upload_saves_file(client, get_user_record, tmp_path, monkeypatch
     assert updated["avatar_path"] is not None
     stored_file = avatar_dir / updated["avatar_path"].split("/")[-1]
     assert stored_file.exists()
+
+
+def test_avatar_replacement_deletes_previous_file(client, get_user_record, tmp_path, monkeypatch):
+    reader = get_user_record("reader")
+    avatar_dir = tmp_path / "avatars"
+    avatar_dir.mkdir()
+
+    monkeypatch.setitem(
+        client.application.config,
+        "PROFILE_UPLOAD_FOLDER",
+        str(avatar_dir),
+    )
+
+    client.post(
+        "/login",
+        data={"username": "reader", "password": "ReaderPass!1"},
+        follow_redirects=True,
+    )
+
+    first_image = io.BytesIO(b"first avatar")
+    first_image.name = "first.png"
+
+    client.post(
+        "/profile",
+        data={
+            "username": "reader",
+            "display_name": reader["display_name"] or "",
+            "email": reader["email"] or "",
+            "bio": reader["bio"] or "",
+            "avatar": (first_image, "first.png"),
+            "is_public": str(reader["is_public"]),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    first_update = get_user_record("reader")
+    assert first_update["avatar_path"] is not None
+    first_file = avatar_dir / Path(first_update["avatar_path"]).name
+    assert first_file.exists()
+
+    second_image = io.BytesIO(b"second avatar")
+    second_image.name = "second.png"
+
+    client.post(
+        "/profile",
+        data={
+            "username": "reader",
+            "display_name": first_update["display_name"] or "",
+            "email": first_update["email"] or "",
+            "bio": first_update["bio"] or "",
+            "avatar": (second_image, "second.png"),
+            "is_public": str(first_update["is_public"]),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+
+    second_update = get_user_record("reader")
+    assert second_update["avatar_path"] is not None
+    second_file = avatar_dir / Path(second_update["avatar_path"]).name
+
+    assert second_update["avatar_path"] != first_update["avatar_path"]
+    assert second_file.exists()
+    assert not first_file.exists()
 
 
 def test_user_can_toggle_profile_visibility(client, get_user_record):
