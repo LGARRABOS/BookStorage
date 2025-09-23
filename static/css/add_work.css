@@ -1,40 +1,50 @@
 /* add_work.css */
-h2 {
-    color: #6c757d;
-    margin-top: 0;
-  }
-  
-  form {
-    margin-top: 1em;
-  }
-  
-  label {
-    display: block;
-    margin: 0.5em 0 0.25em;
-    font-weight: bold;
-  }
-  
-  input[type="text"],
-  input[type="number"],
-  input[type="file"],
-  select {
-    width: 100%;
-    padding: 0.5em;
-    margin-bottom: 0.75em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  button {
-    background-color: #6c757d;
-    border: none;
-    padding: 0.5em 1em;
-    color: #fff;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #5a6268;
-  }
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: clamp(2rem, 4vw, 2.75rem);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+.card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top left, rgba(79, 70, 229, 0.08), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(249, 115, 22, 0.1), transparent 55%);
+  z-index: -1;
+}
+
+.form-grid {
+  display: grid;
+  gap: 1.4rem 1.2rem;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.form-grid .form-field:last-child {
+  grid-column: 1 / -1;
+}
+
+.field-hint {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.form-actions {
+  justify-content: flex-end;
+  margin-top: 1.75rem;
+}
+
+.btn-secondary {
+  background: rgba(15, 23, 42, 0.06);
+  color: var(--text);
+}
+
+.btn-secondary:hover,
+.btn-secondary:focus-visible {
+  background: rgba(15, 23, 42, 0.12);
+}
   
