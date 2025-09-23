@@ -1,38 +1,36 @@
 /* login.css */
-h2 {
-    color: #007bff;
-    margin-top: 0;
-  }
-  
-  form {
-    margin-top: 1em;
-  }
-  
-  label {
-    display: block;
-    margin: 0.5em 0 0.25em;
-    font-weight: bold;
-  }
-  
-  input[type="text"],
-  input[type="password"] {
-    width: 100%;
-    padding: 0.5em;
-    margin-bottom: 0.75em;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-  }
-  
-  button {
-    background-color: #007bff;
-    border: none;
-    padding: 0.5em 1em;
-    color: #fff;
-    border-radius: 4px;
-    cursor: pointer;
-  }
-  
-  button:hover {
-    background-color: #0056b3;
-  }
+.auth-card {
+  background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15), transparent 55%),
+    radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.18), transparent 45%),
+    var(--surface);
+  border-radius: var(--radius);
+  padding: clamp(2rem, 5vw, 2.75rem);
+  box-shadow: var(--shadow-soft);
+}
+
+.auth-card .section-header {
+  text-align: center;
+}
+
+.auth-card p {
+  max-width: 36ch;
+  margin: 0.5rem auto 0;
+}
+
+.auth-card .form-layout {
+  margin-top: 2rem;
+}
+
+.auth-card .form-actions {
+  justify-content: center;
+}
+
+.auth-card .btn-text {
+  color: var(--text-muted);
+}
+
+.auth-card .btn-text:hover,
+.auth-card .btn-text:focus-visible {
+  color: var(--primary);
+}
   
