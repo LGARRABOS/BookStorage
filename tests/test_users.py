@@ -1,4 +1,6 @@
+import io
 import sqlite3
+from pathlib import Path
 
 
 def test_users_directory_requires_login(client):
@@ -128,3 +130,106 @@ def test_import_work_from_public_profile(client, get_user_record, database_path)
     assert imported is not None
     assert imported["chapter"] == work["chapter"]
     assert imported["link"] == work["link"]
+
+
+def test_deleting_work_removes_image_file(client, get_user_record, database_path):
+    reader = get_user_record("reader")
+    client.post(
+        "/login",
+        data={"username": "reader", "password": "ReaderPass!1"},
+        follow_redirects=True,
+    )
+
+    image = io.BytesIO(b"cover image")
+    image.name = "cover.png"
+
+    response = client.post(
+        "/add_work",
+        data={
+            "title": "Nouvelle lecture",
+            "status": "En cours",
+            "chapter": "1",
+            "link": "",
+            "image": (image, "cover.png"),
+        },
+        content_type="multipart/form-data",
+        follow_redirects=True,
+    )
+    assert "Oeuvre ajoutée" in response.get_data(as_text=True)
+
+    conn = sqlite3.connect(database_path)
+    conn.row_factory = sqlite3.Row
+    try:
+        work = conn.execute(
+            "SELECT * FROM works WHERE user_id = ? AND title = ?",
+            (reader["id"], "Nouvelle lecture"),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert work is not None
+    assert work["image_path"] is not None
+
+    works_dir = Path(client.application.config["UPLOAD_FOLDER"])
+    stored_file = works_dir / Path(work["image_path"]).name
+    assert stored_file.exists()
+
+    delete_response = client.get(f"/delete/{work['id']}", follow_redirects=True)
+    assert "Oeuvre supprimée." in delete_response.get_data(as_text=True)
+    assert not stored_file.exists()
+
+    conn = sqlite3.connect(database_path)
+    try:
+        deleted = conn.execute(
+            "SELECT * FROM works WHERE id = ?",
+            (work["id"],),
+        ).fetchone()
+    finally:
+        conn.close()
+
+    assert deleted is None
+
+
+def test_deleting_work_preserves_shared_image(client, get_user_record, database_path):
+    reader = get_user_record("reader")
+    works_dir = Path(client.application.config["UPLOAD_FOLDER"])
+    works_dir.mkdir(parents=True, exist_ok=True)
+    shared_file = works_dir / "shared.png"
+    shared_file.write_bytes(b"shared image")
+
+    conn = sqlite3.connect(database_path)
+    try:
+        inserted_ids = []
+        for title in ("Lecture partagée A", "Lecture partagée B"):
+            cursor = conn.execute(
+                """
+                INSERT INTO works (title, chapter, link, status, image_path, user_id)
+                VALUES (?, ?, ?, ?, ?, ?)
+                """,
+                (title, 0, None, "En cours", "images/shared.png", reader["id"]),
+            )
+            inserted_ids.append(cursor.lastrowid)
+        conn.commit()
+    finally:
+        conn.close()
+
+    client.post(
+        "/login",
+        data={"username": "reader", "password": "ReaderPass!1"},
+        follow_redirects=True,
+    )
+
+    client.get(f"/delete/{inserted_ids[0]}", follow_redirects=True)
+
+    assert shared_file.exists()
+
+    conn = sqlite3.connect(database_path)
+    try:
+        remaining = conn.execute(
+            "SELECT COUNT(*) FROM works WHERE image_path = ?",
+            ("images/shared.png",),
+        ).fetchone()[0]
+    finally:
+        conn.close()
+
+    assert remaining == 1
