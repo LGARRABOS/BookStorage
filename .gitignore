@@ -161,3 +161,7 @@ cython_debug/
 
 # database
 *.db
+
+# images
+./static/images/
+./static/avatars/
