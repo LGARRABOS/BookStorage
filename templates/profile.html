@@ -1,0 +1,111 @@
+{% extends "base.html" %}
+{% block title %}Mon profil{% endblock %}
+{% block custom_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/profile.css') }}">
+{% endblock %}
+{% block content %}
+<h1 class="page-title">Gestion du profil</h1>
+<p class="page-intro">Retrouvez ici toutes les informations associées à votre compte et mettez-les à jour selon vos besoins.</p>
+
+<section class="profile-wrapper">
+    <aside class="profile-summary" aria-label="Résumé du compte">
+        {% if user.avatar_path %}
+            <img src="{{ url_for('static', filename=user.avatar_path) }}" alt="Photo de profil de {{ user.display_name or user.username }}" class="profile-avatar">
+        {% else %}
+            <div class="profile-avatar placeholder" aria-hidden="true">{{ (user.display_name or user.username or '?')[:1]|upper }}</div>
+        {% endif %}
+        <div class="summary-text">
+            <p class="summary-username">{{ user.display_name or user.username }}</p>
+            {% if user.email %}
+                <p class="summary-email">{{ user.email }}</p>
+            {% else %}
+                <p class="summary-email muted">Adresse e-mail non renseignée</p>
+            {% endif %}
+            {% if user.bio %}
+                <p class="summary-bio">{{ user.bio }}</p>
+            {% else %}
+                <p class="summary-bio muted">Complétez votre biographie pour personnaliser votre profil.</p>
+            {% endif %}
+        </div>
+        <span class="privacy-status {{ 'public' if user.is_public else 'private' }}">
+            Profil {{ 'public' if user.is_public else 'privé' }}
+        </span>
+    </aside>
+
+    <form method="post" enctype="multipart/form-data" class="profile-form">
+        <fieldset>
+            <legend>Informations générales</legend>
+            <label for="username">Pseudo (identifiant de connexion)</label>
+            <input type="text" id="username" name="username" value="{{ user.username }}" maxlength="50" autocomplete="username" required>
+
+            <label for="display_name">Nom affiché</label>
+            <input type="text" id="display_name" name="display_name" value="{{ user.display_name or '' }}" maxlength="80" autocomplete="name" placeholder="Votre nom public">
+
+            <label for="email">Adresse e-mail</label>
+            <input type="email" id="email" name="email" value="{{ user.email or '' }}" maxlength="120" autocomplete="email" placeholder="vous@example.com">
+
+            <label for="bio">Biographie</label>
+            <textarea id="bio" name="bio" rows="4" maxlength="500" placeholder="Parlez de vos lectures préférées...">{{ user.bio or '' }}</textarea>
+
+            <label for="avatar">Image de profil</label>
+            <input type="file" id="avatar" name="avatar" accept="image/png,image/jpeg,image/gif">
+            <p class="field-hint">Formats acceptés : PNG, JPG ou GIF (taille recommandée 512×512px).</p>
+        </fieldset>
+
+        <fieldset>
+            <legend>Confidentialité</legend>
+            <p class="field-hint">Choisissez si d'autres lecteurs peuvent consulter votre profil et vos lectures publiques.</p>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="is_public" value="1" {% if user.is_public %}checked{% endif %}>
+                    <span>Profil public &ndash; visible dans l'annuaire des lecteurs</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="is_public" value="0" {% if not user.is_public %}checked{% endif %}>
+                    <span>Profil privé &ndash; accessible uniquement par vous et les administrateurs</span>
+                </label>
+            </div>
+        </fieldset>
+
+        <fieldset>
+            <legend>Sécurité</legend>
+            <p class="field-hint">Le changement de pseudo ou de mot de passe nécessite la confirmation du mot de passe actuel.</p>
+            <label for="current_password">Mot de passe actuel</label>
+            <input type="password" id="current_password" name="current_password" autocomplete="current-password" placeholder="Requis pour modifier les informations sensibles">
+
+            <label for="new_password">Nouveau mot de passe</label>
+            <input type="password" id="new_password" name="new_password" autocomplete="new-password" minlength="8" placeholder="Minimum 8 caractères">
+
+            <label for="confirm_password">Confirmation du nouveau mot de passe</label>
+            <input type="password" id="confirm_password" name="confirm_password" autocomplete="new-password" minlength="8" placeholder="Répétez le nouveau mot de passe">
+        </fieldset>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+        </div>
+    </form>
+</section>
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const options = document.querySelectorAll(".radio-option");
+    const refreshSelection = () => {
+        options.forEach((option) => {
+            const input = option.querySelector("input[type='radio']");
+            if (input && input.checked) {
+                option.classList.add("is-selected");
+            } else {
+                option.classList.remove("is-selected");
+            }
+        });
+    };
+    options.forEach((option) => {
+        const input = option.querySelector("input[type='radio']");
+        if (!input) {
+            return;
+        }
+        input.addEventListener("change", refreshSelection);
+    });
+    refreshSelection();
+});
+</script>
+{% endblock %}
