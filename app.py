@@ -23,6 +23,35 @@ os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
 os.makedirs(os.path.join(app.root_path, PROFILE_UPLOAD_FOLDER), exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
+CREATE_USERS_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS users (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        username TEXT UNIQUE NOT NULL,
+        password TEXT NOT NULL,
+        validated INTEGER DEFAULT 0,
+        is_admin INTEGER DEFAULT 0,
+        is_superadmin INTEGER DEFAULT 0,
+        display_name TEXT,
+        email TEXT,
+        bio TEXT,
+        avatar_path TEXT,
+        is_public INTEGER DEFAULT 1
+    );
+"""
+
+CREATE_WORKS_TABLE_SQL = """
+    CREATE TABLE IF NOT EXISTS works (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL,
+        chapter INTEGER DEFAULT 0,
+        link TEXT,
+        status TEXT,
+        image_path TEXT,
+        user_id INTEGER NOT NULL,
+        FOREIGN KEY (user_id) REFERENCES users (id)
+    );
+"""
+
 
 def verify_password(stored_hash: str, password: str) -> bool:
     """Validate a password against Werkzeug hashes, including legacy scrypt ones."""
@@ -78,11 +107,18 @@ def ensure_profile_columns(conn):
         conn.commit()
 
 
+def ensure_schema(conn):
+    conn.execute("PRAGMA foreign_keys = ON;")
+    conn.execute(CREATE_USERS_TABLE_SQL)
+    conn.execute(CREATE_WORKS_TABLE_SQL)
+    ensure_profile_columns(conn)
+
+
 def get_db_connection():
     conn = sqlite3.connect(app.config["DATABASE"])
     conn.row_factory = sqlite3.Row
     try:
-        ensure_profile_columns(conn)
+        ensure_schema(conn)
     except sqlite3.OperationalError:
         # La table peut ne pas encore exister lors de l'initialisation.
         pass
