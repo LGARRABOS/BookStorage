@@ -1,0 +1,244 @@
+.page-title {
+    margin-bottom: 0.5rem;
+}
+
+.page-intro {
+    margin-bottom: 2rem;
+}
+
+.search-form {
+    margin-bottom: 2rem;
+}
+
+.search-fields {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.search-fields input[type="search"] {
+    flex: 1 1 240px;
+    border-radius: 999px;
+    border: 1px solid var(--border-subtle);
+    padding: 0.75rem 1rem;
+    font-size: 1rem;
+    background-color: rgba(255, 255, 255, 0.9);
+}
+
+.search-fields input[type="search"]:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+    outline: none;
+}
+
+.search-fields .btn {
+    padding: 0.75rem 1.25rem;
+}
+
+.btn-ghost {
+    background: transparent;
+    border: 1px solid var(--border-subtle);
+    color: var(--text-secondary);
+}
+
+.btn-ghost:hover {
+    border-color: var(--accent);
+    color: var(--accent);
+}
+
+.user-grid {
+    list-style: none;
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    padding: 0;
+    margin: 0;
+}
+
+.user-card {
+    background: rgba(255, 255, 255, 0.7);
+    border-radius: 1.5rem;
+    box-shadow: var(--shadow-base);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.user-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-lg);
+}
+
+.user-link {
+    display: flex;
+    gap: 1rem;
+    padding: 1.5rem;
+    text-decoration: none;
+    color: inherit;
+}
+
+.user-avatar {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    object-fit: cover;
+    background: var(--surface-elevated);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 600;
+    font-size: 1.5rem;
+    color: var(--accent);
+    border: 2px solid rgba(59, 130, 246, 0.35);
+}
+
+.user-avatar.large {
+    width: 120px;
+    height: 120px;
+    font-size: 2.5rem;
+}
+
+.user-avatar.placeholder {
+    background: linear-gradient(135deg, rgba(59, 130, 246, 0.15), rgba(147, 51, 234, 0.15));
+}
+
+.user-text {
+    flex: 1;
+}
+
+.user-text h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    color: var(--text-primary);
+}
+
+.user-username {
+    margin: 0.35rem 0;
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+.user-bio {
+    margin: 0;
+    color: var(--text-secondary);
+    line-height: 1.4;
+    font-size: 0.95rem;
+}
+
+.user-bio.muted {
+    font-style: italic;
+    color: var(--text-muted);
+}
+
+.empty-state {
+    text-align: center;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
+.back-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    margin-bottom: 1.5rem;
+    color: var(--accent);
+    text-decoration: none;
+}
+
+.back-link:hover {
+    text-decoration: underline;
+}
+
+.user-header {
+    display: flex;
+    gap: 1.5rem;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+    margin-bottom: 2rem;
+}
+
+.user-header-text h1 {
+    margin: 0;
+    font-size: 1.8rem;
+    color: var(--text-primary);
+}
+
+.user-visibility {
+    margin: 0.25rem 0;
+    font-weight: 600;
+    color: var(--text-secondary);
+}
+
+.shared-works h2 {
+    margin-top: 0;
+    margin-bottom: 1.25rem;
+}
+
+.works-grid {
+    list-style: none;
+    display: grid;
+    gap: 1.5rem;
+    padding: 0;
+    margin: 0;
+}
+
+.work-card {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 1rem;
+    background: rgba(255, 255, 255, 0.75);
+    border-radius: 1.5rem;
+    padding: 1.5rem;
+    box-shadow: var(--shadow-base);
+}
+
+.work-text h3 {
+    margin: 0 0 0.35rem 0;
+    color: var(--text-primary);
+}
+
+.work-type {
+    margin: 0 0 0.25rem 0;
+    font-weight: 600;
+    color: var(--accent);
+}
+
+.work-status,
+.work-chapter,
+.work-link {
+    margin: 0.25rem 0;
+    color: var(--text-secondary);
+}
+
+.work-link a {
+    color: var(--accent);
+}
+
+@media (max-width: 720px) {
+    .user-link {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .user-header {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .work-card {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .work-card form {
+        width: 100%;
+    }
+
+    .work-card .btn {
+        width: 100%;
+        text-align: center;
+    }
+}

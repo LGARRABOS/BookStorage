@@ -2,38 +2,51 @@
 <html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>{% block title %}Projet Lecture{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/base.css') }}">
     {% block custom_css %}{% endblock %}
 </head>
 <body>
-    <nav>
-        <div class="container">
-            {% if session.user_id %}
-                <a href="{{ url_for('dashboard') }}">Dashboard</a> |
-                <!-- Lien vers la page d'administration si l'utilisateur est admin -->
-                {% if session.get("is_admin") %}
-                    <a href="{{ url_for('admin_accounts') }}">Administration</a> |
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="{{ url_for('dashboard') if session.user_id else url_for('login') }}">BookStorage</a>
+            <nav class="nav-links" aria-label="Navigation principale">
+                {% if session.user_id %}
+                    <a href="{{ url_for('dashboard') }}">Tableau de bord</a>
+                    <a href="{{ url_for('community_directory') }}">Lecteurs</a>
+                    {% if session.get("is_admin") %}
+                        <a href="{{ url_for('admin_accounts') }}">Administration</a>
+                    {% endif %}
+                    <a href="{{ url_for('profile') }}" class="btn btn-nav">Mon profil</a>
+                    <a href="{{ url_for('logout') }}" class="btn btn-logout">Déconnexion</a>
+                {% else %}
+                    <a href="{{ url_for('login') }}">Connexion</a>
+                    <a href="{{ url_for('register') }}" class="btn btn-primary">Inscription</a>
                 {% endif %}
-                <a href="{{ url_for('logout') }}">Déconnexion</a>
-            {% else %}
-                <a href="{{ url_for('login') }}">Connexion</a> |
-                <a href="{{ url_for('register') }}">Inscription</a>
-            {% endif %}
+            </nav>
         </div>
-    </nav>
+    </header>
 
-    <div class="container">
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="flash-messages">
-                {% for message in messages %}
-                    <p>{{ message }}</p>
-                {% endfor %}
-                </div>
-            {% endif %}
-        {% endwith %}
-        {% block content %}{% endblock %}
-    </div>
+    <main class="page-body">
+        <div class="container content-card">
+            {% with messages = get_flashed_messages() %}
+                {% if messages %}
+                    <div class="flash-messages" role="status">
+                        {% for message in messages %}
+                            <p>{{ message }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="container">
+            <p>Gestionnaire de lectures personnelles &bull; Propulsé par Flask</p>
+        </div>
+    </footer>
 </body>
 </html>
