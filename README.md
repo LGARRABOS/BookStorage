@@ -157,7 +157,7 @@ BookStorage est une application web Flask qui aide les lecteurs à suivre leurs 
    git clone <votre-url-git>
    cd BookStorage
    ```
-2. **Créer et activer un environnement virtuel**
+2. **Créer et activer un environnement virtuel** (fortement recommandé) :
    ```bash
    python3 -m venv .venv
    source .venv/bin/activate  # Sous Windows : .venv\Scripts\activate
