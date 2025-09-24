@@ -73,6 +73,28 @@ sudo BOOKSTORAGE_SERVICE_USER=bookstorage bash setup_and_run.sh --install-servic
 
 Environment variables such as `BOOKSTORAGE_SERVICE_NAME`, `BOOKSTORAGE_SERVICE_USER`, `BOOKSTORAGE_SERVICE_GROUP`, and `BOOKSTORAGE_SERVICE_ENV_FILE` allow you to customise the generated unit. Ensure the target user owns the application folder and the media directories before enabling the service.
 
+### Container image
+BookStorage also ships with a Dockerfile so you can run the application in an isolated container.
+
+1. **Build the image**
+   ```bash
+   docker build -t bookstorage:latest .
+   ```
+2. **Run the container**
+   ```bash
+   docker run -d \
+     --name bookstorage \
+     -p 5000:5000 \
+     -e BOOKSTORAGE_SECRET_KEY="change-me" \
+     -e BOOKSTORAGE_SUPERADMIN_PASSWORD="ChooseAStrongPassword" \
+     -v $(pwd)/bookstorage-data:/data \
+     bookstorage:latest
+   ```
+
+The container starts in production mode and serves the app with Waitress on port 5000. The `/data` volume stores the SQLite database as well as uploaded covers and avatars, ensuring uploads persist across image upgrades. Adjust the host path on `-v` to match your environment or switch to a named Docker volume, for example `-v bookstorage_data:/data`.
+
+Set additional configuration through environment variables (`BOOKSTORAGE_PORT`, `BOOKSTORAGE_UPLOAD_URL_PATH`, …). `docker-entrypoint.sh` initialises the database on each boot, creating the default super-administrator when needed.
+
 ## Configuration
 All configuration is provided through environment variables. When `python-dotenv` is installed, values defined in `.env` are automatically loaded.
 
@@ -184,6 +206,28 @@ sudo BOOKSTORAGE_SERVICE_USER=bookstorage bash setup_and_run.sh --install-servic
 ```
 
 Les variables d’environnement `BOOKSTORAGE_SERVICE_NAME`, `BOOKSTORAGE_SERVICE_USER`, `BOOKSTORAGE_SERVICE_GROUP` et `BOOKSTORAGE_SERVICE_ENV_FILE` permettent d’ajuster l’unité générée. Assurez-vous que l’utilisateur ciblé possède le dossier de l’application et les répertoires média avant d’activer le service.
+
+### Image conteneurisée
+Un Dockerfile est fourni pour exécuter BookStorage dans un conteneur isolé.
+
+1. **Construire l’image**
+   ```bash
+   docker build -t bookstorage:latest .
+   ```
+2. **Lancer le conteneur**
+   ```bash
+   docker run -d \
+     --name bookstorage \
+     -p 5000:5000 \
+     -e BOOKSTORAGE_SECRET_KEY="modifiez-moi" \
+     -e BOOKSTORAGE_SUPERADMIN_PASSWORD="ChoisissezUnMotDePasseFort" \
+     -v $(pwd)/bookstorage-data:/data \
+     bookstorage:latest
+   ```
+
+Le conteneur démarre en mode production et sert l’application via Waitress sur le port 5000. Le volume `/data` conserve la base SQLite ainsi que les couvertures et avatars importés, ce qui garantit la persistance des fichiers lors d’une mise à jour de l’image. Adaptez le chemin hôte dans `-v` selon votre infrastructure ou utilisez un volume nommé comme `-v bookstorage_data:/data`.
+
+Toutes les autres variables de configuration (`BOOKSTORAGE_PORT`, `BOOKSTORAGE_UPLOAD_URL_PATH`, …) peuvent être injectées via `docker run`. Le script `docker-entrypoint.sh` initialise la base de données à chaque démarrage et crée le super-administrateur par défaut si nécessaire.
 
 ## Configuration
 Toute la configuration passe par des variables d’environnement. Avec `python-dotenv`, les valeurs définies dans `.env` sont chargées automatiquement.
