@@ -329,7 +329,7 @@ def dashboard():
 
 @app.route("/users")
 @login_required
-def users_directory():
+def community_directory():
     query = request.args.get("q", "").strip()
     viewer_id = session["user_id"]
     conn = get_db_connection()
@@ -366,12 +366,12 @@ def user_detail(user_id):
     if not target_user:
         conn.close()
         flash("Utilisateur introuvable.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if not _can_view_profile(target_user):
         conn.close()
         flash("Ce profil est privé.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     works = conn.execute(
         "SELECT * FROM works WHERE user_id = ? ORDER BY LOWER(title)", (user_id,)
@@ -397,12 +397,12 @@ def import_work(user_id, work_id):
     if not target_user:
         conn.close()
         flash("Utilisateur introuvable.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if not _can_view_profile(target_user):
         conn.close()
         flash("Ce profil est privé.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if viewer_id == target_user["id"]:
         conn.close()
