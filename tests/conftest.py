@@ -38,6 +38,7 @@ def _bootstrap_database(db_path: str) -> None:
             link TEXT,
             status TEXT,
             image_path TEXT,
+            reading_type TEXT,
             user_id INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id)
         );
@@ -130,6 +131,7 @@ def _bootstrap_database(db_path: str) -> None:
             "link": "https://onepiece.example",
             "status": "En cours",
             "image_path": None,
+            "reading_type": "Manga",
             "owner": "sharer",
         },
         {
@@ -138,6 +140,7 @@ def _bootstrap_database(db_path: str) -> None:
             "link": None,
             "status": "Terminé",
             "image_path": None,
+            "reading_type": "Roman",
             "owner": "sharer",
         },
     ]
@@ -145,8 +148,8 @@ def _bootstrap_database(db_path: str) -> None:
     for work in works:
         conn.execute(
             """
-            INSERT INTO works (title, chapter, link, status, image_path, user_id)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
             (
                 work["title"],
@@ -154,6 +157,7 @@ def _bootstrap_database(db_path: str) -> None:
                 work["link"],
                 work["status"],
                 work["image_path"],
+                work["reading_type"],
                 user_ids[work["owner"]],
             ),
         )

@@ -9,6 +9,7 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 - **Confidentialité maîtrisée** : chaque membre choisit si son profil est public ou privé directement depuis la page de gestion du compte.
 - **Rôles différenciés** : utilisateurs standard, administrateurs et super-administrateurs disposant de permissions étendues.
 - **Tableau de bord personnel** : ajout d'œuvres avec statut, lien externe, nombre de chapitres et image illustrant la fiche.
+- **Typologie des lectures** : chaque ajout comporte un type (roman, manga, BD, manhwa, etc.) pour catégoriser facilement ses lectures.
 - **Mises à jour rapides** : incrémentation/décrémentation du chapitre courant par requêtes AJAX sans recharger la page.
 - **Gestion des médias** : dépôt des images dans `static/images` et affichage automatique sur le tableau de bord.
 - **Interface d'administration** : vue consolidée des comptes pour approuver, promouvoir ou supprimer des utilisateurs, avec garde-fous selon les privilèges de l'administrateur courant.
@@ -46,6 +47,7 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 | `link` | TEXT | Lien externe optionnel (site de lecture, fiche détaillée, etc.). |
 | `status` | TEXT | Statut de lecture (En cours, Terminé, etc.). |
 | `image_path` | TEXT | Chemin relatif vers l'image téléversée. |
+| `reading_type` | TEXT | Type de lecture sélectionné (Roman, Manga, BD, Manhwa, etc.). |
 | `user_id` | INTEGER (FK) | Identifiant de l'utilisateur propriétaire. |
 
 ## Prérequis
@@ -89,8 +91,8 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
 ## Parcours utilisateur
 1. **Inscription** (`/register`) : le compte est créé avec `validated=0` et ne peut pas se connecter tant qu'un administrateur ne l'a pas approuvé.
 2. **Connexion** (`/login`) : seules les identifiants valides sont autorisés. Les administrateurs et super-admins peuvent se connecter même si `validated=0`.
-3. **Tableau de bord** (`/dashboard`) : liste des œuvres de l'utilisateur connecté avec options d'ajout, de mise à jour rapide des chapitres et de suppression.
-4. **Ajout d'œuvre** (`/add_work`) : formulaire pour saisir titre, lien, statut, chapitre et téléverser une image (formats autorisés : PNG, JPG, JPEG, GIF). Les fichiers sont stockés dans `static/images`.
+3. **Tableau de bord** (`/dashboard`) : liste des œuvres de l'utilisateur connecté avec options d'ajout, de filtrage par statut/type, de mise à jour rapide des chapitres et de suppression.
+4. **Ajout d'œuvre** (`/add_work`) : formulaire pour saisir titre, lien, statut, type de lecture, chapitre et téléverser une image (formats autorisés : PNG, JPG, JPEG, GIF). Les fichiers sont stockés dans `static/images`.
 5. **Mises à jour AJAX** (`/api/increment/<id>` et `/api/decrement/<id>`) : endpoints JSON utilisés par le tableau de bord pour ajuster le chapitre courant sans rechargement.
 6. **Suppression d'œuvre** (`/delete/<id>`) : retire définitivement l'œuvre du catalogue personnel.
 7. **Gestion du profil** (`/profile`) : page dédiée pour modifier les informations personnelles, changer de mot de passe après confirmation du mot de passe actuel, déposer une image de profil sécurisée et définir la visibilité du compte (public ou privé).
@@ -131,6 +133,7 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
   pytest
   ```
   Les tests fournis valident la gestion des privilèges d'administration, le blocage des comptes non validés, la rétrocompatibilité des anciens mots de passe `scrypt`, les scénarios complets de mise à jour du profil (changement d'informations, mot de passe, avatar, confidentialité) ainsi que les parcours communautaires (recherche d'utilisateurs, accès aux profils publics/privés et import d'œuvres partagées).
+  Des cas vérifient également la conservation du type de lecture lors d'un import et la présence des filtres côté tableau de bord.
 
 ## Licence
 Indiquez ici la licence souhaitée (par défaut non spécifiée). Ajoutez un fichier `LICENSE` si nécessaire.
