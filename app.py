@@ -25,6 +25,19 @@ os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
 os.makedirs(os.path.join(app.root_path, PROFILE_UPLOAD_FOLDER), exist_ok=True)
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
+READING_TYPES = [
+    "Roman",
+    "Manga",
+    "BD",
+    "Manhwa",
+    "Light Novel",
+    "Comics",
+    "Webtoon",
+    "Essai",
+    "Poésie",
+    "Autre",
+]
+
 
 def _resolve_media_path(stored_path, config_key):
     if not stored_path:
@@ -76,6 +89,7 @@ CREATE_WORKS_TABLE_SQL = """
         link TEXT,
         status TEXT,
         image_path TEXT,
+        reading_type TEXT,
         user_id INTEGER NOT NULL,
         FOREIGN KEY (user_id) REFERENCES users (id)
     );
@@ -124,6 +138,10 @@ PROFILE_COLUMNS = {
     "is_public": "INTEGER DEFAULT 1",
 }
 
+WORK_COLUMNS = {
+    "reading_type": "TEXT",
+}
+
 
 def ensure_profile_columns(conn):
     existing_columns = {
@@ -132,6 +150,17 @@ def ensure_profile_columns(conn):
     missing = {name: column_type for name, column_type in PROFILE_COLUMNS.items() if name not in existing_columns}
     for column_name, column_type in missing.items():
         conn.execute(f"ALTER TABLE users ADD COLUMN {column_name} {column_type}")
+    if missing:
+        conn.commit()
+
+
+def ensure_work_columns(conn):
+    existing_columns = {
+        column_info[1] for column_info in conn.execute("PRAGMA table_info(works)").fetchall()
+    }
+    missing = {name: column_type for name, column_type in WORK_COLUMNS.items() if name not in existing_columns}
+    for column_name, column_type in missing.items():
+        conn.execute(f"ALTER TABLE works ADD COLUMN {column_name} {column_type}")
     if missing:
         conn.commit()
 
@@ -166,6 +195,7 @@ def ensure_schema(conn):
     conn.execute(CREATE_USERS_TABLE_SQL)
     conn.execute(CREATE_WORKS_TABLE_SQL)
     ensure_profile_columns(conn)
+    ensure_work_columns(conn)
     ensure_super_admin(conn)
 
 
@@ -294,12 +324,12 @@ def dashboard():
     conn = get_db_connection()
     works = conn.execute("SELECT * FROM works WHERE user_id = ?", (user_id,)).fetchall()
     conn.close()
-    return render_template("dashboard.html", works=works)
+    return render_template("dashboard.html", works=works, reading_types=READING_TYPES)
 
 
 @app.route("/users")
 @login_required
-def users_directory():
+def community_directory():
     query = request.args.get("q", "").strip()
     viewer_id = session["user_id"]
     conn = get_db_connection()
@@ -330,18 +360,18 @@ def _can_view_profile(target_user):
 
 @app.route("/users/<int:user_id>")
 @login_required
-def user_detail(user_id):
+def community_profile(user_id):
     conn = get_db_connection()
     target_user = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
     if not target_user:
         conn.close()
         flash("Utilisateur introuvable.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if not _can_view_profile(target_user):
         conn.close()
         flash("Ce profil est privé.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     works = conn.execute(
         "SELECT * FROM works WHERE user_id = ? ORDER BY LOWER(title)", (user_id,)
@@ -367,17 +397,17 @@ def import_work(user_id, work_id):
     if not target_user:
         conn.close()
         flash("Utilisateur introuvable.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if not _can_view_profile(target_user):
         conn.close()
         flash("Ce profil est privé.")
-        return redirect(url_for("users_directory"))
+        return redirect(url_for("community_directory"))
 
     if viewer_id == target_user["id"]:
         conn.close()
         flash("Cette œuvre appartient déjà à votre bibliothèque.")
-        return redirect(url_for("user_detail", user_id=user_id))
+        return redirect(url_for("community_profile", user_id=user_id))
 
     work = conn.execute(
         "SELECT * FROM works WHERE id = ? AND user_id = ?", (work_id, user_id)
@@ -385,7 +415,7 @@ def import_work(user_id, work_id):
     if not work:
         conn.close()
         flash("Œuvre introuvable.")
-        return redirect(url_for("user_detail", user_id=user_id))
+        return redirect(url_for("community_profile", user_id=user_id))
 
     existing = conn.execute(
         """
@@ -399,12 +429,14 @@ def import_work(user_id, work_id):
     if existing:
         conn.close()
         flash("Cette œuvre est déjà présente dans votre bibliothèque.")
-        return redirect(url_for("user_detail", user_id=user_id))
+        return redirect(url_for("community_profile", user_id=user_id))
+
+    reading_type = work["reading_type"] if work["reading_type"] else READING_TYPES[0]
 
     conn.execute(
         """
-        INSERT INTO works (title, chapter, link, status, image_path, user_id)
-        VALUES (?, ?, ?, ?, ?, ?)
+        INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
         """,
         (
             work["title"],
@@ -412,13 +444,14 @@ def import_work(user_id, work_id):
             work["link"],
             work["status"],
             work["image_path"],
+            reading_type,
             viewer_id,
         ),
     )
     conn.commit()
     conn.close()
     flash("Œuvre ajoutée à votre liste de lecture.")
-    return redirect(url_for("user_detail", user_id=user_id))
+    return redirect(url_for("community_profile", user_id=user_id))
 
 
 @app.route("/profile", methods=["GET", "POST"])
@@ -582,6 +615,12 @@ def add_work():
         status = request.form["status"]
         chapter = request.form.get("chapter", 0)
         chapter = int(chapter) if chapter else 0
+        reading_type = request.form.get("reading_type", "").strip()
+        if not reading_type:
+            reading_type = READING_TYPES[0]
+        elif reading_type not in READING_TYPES:
+            flash("Type de lecture invalide.")
+            return redirect(url_for("add_work"))
 
         image_path = None
         if "image" in request.files:
@@ -601,15 +640,15 @@ def add_work():
 
         conn = get_db_connection()
         conn.execute("""
-            INSERT INTO works (title, chapter, link, status, image_path, user_id)
-            VALUES (?, ?, ?, ?, ?, ?)
-        """, (title, chapter, link, status, image_path, session["user_id"]))
+            INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+        """, (title, chapter, link, status, image_path, reading_type, session["user_id"]))
         conn.commit()
         conn.close()
 
         flash("Oeuvre ajoutée avec succès !")
         return redirect(url_for("dashboard"))
-    return render_template("add_work.html")
+    return render_template("add_work.html", reading_types=READING_TYPES)
 
 # Endpoints API pour incrémenter/décrémenter les chapitres (via AJAX)
 @app.route("/api/increment/<int:work_id>", methods=["POST"])

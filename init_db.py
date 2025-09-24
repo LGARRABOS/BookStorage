@@ -51,10 +51,24 @@ def init_db():
             link TEXT,
             status TEXT,
             image_path TEXT,
+            reading_type TEXT,
             user_id INTEGER NOT NULL,
             FOREIGN KEY (user_id) REFERENCES users (id)
         );
     """)
+
+    work_columns = {
+        "reading_type": "TEXT",
+    }
+
+    existing_work_columns = {
+        info[1] for info in conn.execute("PRAGMA table_info(works)").fetchall()
+    }
+    for column_name, column_type in work_columns.items():
+        if column_name not in existing_work_columns:
+            conn.execute(f"ALTER TABLE works ADD COLUMN {column_name} {column_type}")
+
+    conn.commit()
     
     # Insertion d'un compte super‑admin par défaut s'il n'existe pas
     cursor = conn.cursor()
