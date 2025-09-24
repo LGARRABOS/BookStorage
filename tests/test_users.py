@@ -20,7 +20,6 @@ def test_dashboard_exposes_profile_and_directory_shortcuts(client):
     page = response.get_data(as_text=True)
     assert "Accéder à mon profil" in page
     assert "Ouvrir l'annuaire" in page
-    assert "Tous les types" in page
 
 
 def test_users_directory_lists_public_users(client):
@@ -131,7 +130,6 @@ def test_import_work_from_public_profile(client, get_user_record, database_path)
     assert imported is not None
     assert imported["chapter"] == work["chapter"]
     assert imported["link"] == work["link"]
-    assert imported["reading_type"] == work["reading_type"]
 
 
 def test_deleting_work_removes_image_file(client, get_user_record, database_path):
@@ -152,7 +150,6 @@ def test_deleting_work_removes_image_file(client, get_user_record, database_path
             "status": "En cours",
             "chapter": "1",
             "link": "",
-            "reading_type": "BD",
             "image": (image, "cover.png"),
         },
         content_type="multipart/form-data",
@@ -172,7 +169,6 @@ def test_deleting_work_removes_image_file(client, get_user_record, database_path
 
     assert work is not None
     assert work["image_path"] is not None
-    assert work["reading_type"] == "BD"
 
     works_dir = Path(client.application.config["UPLOAD_FOLDER"])
     stored_file = works_dir / Path(work["image_path"]).name
@@ -207,10 +203,10 @@ def test_deleting_work_preserves_shared_image(client, get_user_record, database_
         for title in ("Lecture partagée A", "Lecture partagée B"):
             cursor = conn.execute(
                 """
-                INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
-                VALUES (?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO works (title, chapter, link, status, image_path, user_id)
+                VALUES (?, ?, ?, ?, ?, ?)
                 """,
-                (title, 0, None, "En cours", "images/shared.png", "Manga", reader["id"]),
+                (title, 0, None, "En cours", "images/shared.png", reader["id"]),
             )
             inserted_ids.append(cursor.lastrowid)
         conn.commit()

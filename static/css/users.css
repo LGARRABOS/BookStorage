@@ -200,12 +200,6 @@
     color: var(--text-primary);
 }
 
-.work-type {
-    margin: 0 0 0.25rem 0;
-    font-weight: 600;
-    color: var(--accent);
-}
-
 .work-status,
 .work-chapter,
 .work-link {

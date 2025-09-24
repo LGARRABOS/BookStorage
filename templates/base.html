@@ -14,7 +14,7 @@
             <nav class="nav-links" aria-label="Navigation principale">
                 {% if session.user_id %}
                     <a href="{{ url_for('dashboard') }}">Tableau de bord</a>
-                    <a href="{{ url_for('community_directory') }}">Lecteurs</a>
+                    <a href="{{ url_for('users_directory') }}">Lecteurs</a>
                     {% if session.get("is_admin") %}
                         <a href="{{ url_for('admin_accounts') }}">Administration</a>
                     {% endif %}

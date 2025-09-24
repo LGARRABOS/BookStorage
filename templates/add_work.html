@@ -34,15 +34,6 @@
       </div>
 
       <div class="form-field">
-        <label for="reading_type">Type de lecture</label>
-        <select id="reading_type" name="reading_type" required>
-          {% for reading_type in reading_types %}
-          <option value="{{ reading_type }}">{{ reading_type }}</option>
-          {% endfor %}
-        </select>
-      </div>
-
-      <div class="form-field">
         <label for="link">Lien vers la ressource</label>
         <input id="link" type="url" name="link" placeholder="https://...">
       </div>

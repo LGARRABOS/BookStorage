@@ -25,14 +25,6 @@
         <option value="Abandonné">Abandonné</option>
         <option value="À lire">À lire</option>
       </select>
-
-      <label class="visually-hidden" for="type-filter">Filtrer par type</label>
-      <select id="type-filter">
-        <option value="">Tous les types</option>
-        {% for reading_type in reading_types %}
-          <option value="{{ reading_type }}">{{ reading_type }}</option>
-        {% endfor %}
-      </select>
     </div>
   </div>
 
@@ -45,7 +37,7 @@
     <article class="shortcut-card">
       <h2>Explorer les lecteurs</h2>
       <p>Recherchez les autres membres publics et importez leurs lectures partagées dans votre propre liste.</p>
-      <a class="btn btn-secondary" href="{{ url_for('community_directory') }}">Ouvrir l'annuaire</a>
+      <a class="btn btn-secondary" href="{{ url_for('users_directory') }}">Ouvrir l'annuaire</a>
     </article>
   </div>
 
@@ -59,7 +51,6 @@
           <th>Chapitre</th>
           <th>Lien</th>
           <th>Statut</th>
-          <th>Type</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -88,9 +79,6 @@
           </td>
           <td>
             <span class="badge status-badge" data-status="{{ work.status }}">{{ work.status }}</span>
-          </td>
-          <td>
-            <span class="badge type-badge">{{ work.reading_type or 'Autre' }}</span>
           </td>
           <td class="actions">
             <div class="action-buttons">
@@ -153,7 +141,6 @@ document.addEventListener("DOMContentLoaded", function() {
   // Barre de recherche et filtre par statut
   const searchInput = document.getElementById("search-input");
   const statusFilter = document.getElementById("status-filter");
-  const typeFilter = document.getElementById("type-filter");
   const tableRows = document.querySelectorAll(".library-table tbody tr");
 
   function filterTable() {
@@ -163,7 +150,6 @@ document.addEventListener("DOMContentLoaded", function() {
     tableRows.forEach(function(row) {
       const title = row.querySelector(".work-title").innerText.toLowerCase();
       const status = row.querySelector(".badge").innerText.trim();
-      const type = row.querySelector(".type-badge").innerText.trim();
       const matchesSearch = title.includes(searchValue);
       const matchesStatus = (statusValue === "" || status === statusValue);
       const matchesType = (typeValue === "" || type === typeValue);

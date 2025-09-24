@@ -29,14 +29,12 @@ def test_get_db_connection_recreates_missing_works_table(tmp_path):
             row = connection.execute(
                 "SELECT name FROM sqlite_master WHERE type='table' AND name='works'"
             ).fetchone()
-            columns = connection.execute("PRAGMA table_info(works)").fetchall()
         finally:
             connection.close()
     finally:
         flask_app.app.config["DATABASE"] = original_database
 
     assert row is not None
-    assert any(column[1] == "reading_type" for column in columns)
 
 
 def test_bootstrap_creates_super_admin(tmp_path):

@@ -4,7 +4,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/users.css') }}">
 {% endblock %}
 {% block content %}
-<a href="{{ url_for('community_directory') }}" class="back-link">&larr; Retour à l'annuaire</a>
+<a href="{{ url_for('users_directory') }}" class="back-link">&larr; Retour à l'annuaire</a>
 
 <section class="user-header">
     {% if target_user.avatar_path %}
@@ -30,9 +30,6 @@
             <li class="work-card">
                 <div class="work-text">
                     <h3>{{ work['title'] }}</h3>
-                    {% if work['reading_type'] %}
-                        <p class="work-type">Type : {{ work['reading_type'] }}</p>
-                    {% endif %}
                     {% if work['status'] %}
                         <p class="work-status">Statut : {{ work['status'] }}</p>
                     {% endif %}

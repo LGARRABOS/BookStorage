@@ -191,11 +191,6 @@
   color: #b45309;
 }
 
-.type-badge {
-  background: rgba(15, 23, 42, 0.08);
-  color: #1f2937;
-}
-
 @media (max-width: 720px) {
   .dashboard-toolbar {
     flex-direction: column;
