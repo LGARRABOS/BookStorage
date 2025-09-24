@@ -182,6 +182,8 @@ def database_path(tmp_path):
         DATABASE=str(db_path),
         PROFILE_UPLOAD_FOLDER=str(avatars_dir),
         UPLOAD_FOLDER=str(works_dir),
+        PROFILE_UPLOAD_URL_PATH="avatars",
+        UPLOAD_URL_PATH="images",
     )
     return str(db_path)
 

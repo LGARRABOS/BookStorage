@@ -10,19 +10,11 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
-app = Flask(__name__)
-app.secret_key = "votre_cle_secrete"  # Remplacez par une clé plus sûre
+from config import configure_app
 
-DEFAULT_DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
-app.config.setdefault("DATABASE", DEFAULT_DATABASE)
-DEFAULT_SUPERADMIN_USERNAME = os.environ.get("BOOKSTORAGE_SUPERADMIN_USERNAME", "superadmin")
-DEFAULT_SUPERADMIN_PASSWORD = os.environ.get("BOOKSTORAGE_SUPERADMIN_PASSWORD", "SuperAdmin!2023")
-UPLOAD_FOLDER = os.path.join("static", "images")
-PROFILE_UPLOAD_FOLDER = os.path.join("static", "avatars")
-app.config["UPLOAD_FOLDER"] = UPLOAD_FOLDER
-app.config["PROFILE_UPLOAD_FOLDER"] = PROFILE_UPLOAD_FOLDER
-os.makedirs(os.path.join(app.root_path, UPLOAD_FOLDER), exist_ok=True)
-os.makedirs(os.path.join(app.root_path, PROFILE_UPLOAD_FOLDER), exist_ok=True)
+app = Flask(__name__)
+configure_app(app)
+
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
 
 READING_TYPES = [
@@ -64,6 +56,14 @@ def _delete_media_file(stored_path, config_key):
             os.remove(file_path)
         except OSError:
             pass
+
+
+def _build_media_relative_path(filename: str, url_key: str) -> str:
+    prefix = app.config.get(url_key, "")
+    prefix = (prefix or "").strip("/")
+    if prefix:
+        return f"{prefix}/{filename}"
+    return filename
 
 CREATE_USERS_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS users (
@@ -174,18 +174,22 @@ def ensure_super_admin(conn):
 
     cursor = conn.execute(
         "UPDATE users SET validated = 1, is_admin = 1, is_superadmin = 1 WHERE username = ?",
-        (DEFAULT_SUPERADMIN_USERNAME,),
+        (app.config.get("DEFAULT_SUPERADMIN_USERNAME", "superadmin"),),
     )
     if cursor.rowcount:
         conn.commit()
         return
 
     hashed_password = generate_password_hash(
-        DEFAULT_SUPERADMIN_PASSWORD, method="pbkdf2:sha256"
+        app.config.get("DEFAULT_SUPERADMIN_PASSWORD", "SuperAdmin!2023"),
+        method="pbkdf2:sha256",
     )
     conn.execute(
         "INSERT INTO users (username, password, validated, is_admin, is_superadmin) VALUES (?, ?, 1, 1, 1)",
-        (DEFAULT_SUPERADMIN_USERNAME, hashed_password),
+        (
+            app.config.get("DEFAULT_SUPERADMIN_USERNAME", "superadmin"),
+            hashed_password,
+        ),
     )
     conn.commit()
 
@@ -565,7 +569,9 @@ def profile():
             os.makedirs(avatar_folder, exist_ok=True)
             avatar_full_path = os.path.join(avatar_folder, avatar_filename)
             avatar.save(avatar_full_path)
-            new_avatar_rel = f"avatars/{avatar_filename}"
+            new_avatar_rel = _build_media_relative_path(
+                avatar_filename, "PROFILE_UPLOAD_URL_PATH"
+            )
             updates["avatar_path"] = new_avatar_rel
 
         if updates:
@@ -636,7 +642,9 @@ def add_work():
                 os.makedirs(storage_dir, exist_ok=True)
                 filepath = os.path.join(storage_dir, filename)
                 file.save(filepath)
-                image_path = f"images/{filename}"
+                image_path = _build_media_relative_path(
+                    filename, "UPLOAD_URL_PATH"
+                )
 
         conn = get_db_connection()
         conn.execute("""
@@ -765,4 +773,18 @@ def promote_account(user_id):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    host = app.config.get("BOOKSTORAGE_HOST", "127.0.0.1")
+    port = int(app.config.get("BOOKSTORAGE_PORT", 5000))
+    environment = app.config.get("BOOKSTORAGE_ENV")
+
+    if environment == "production":
+        try:
+            from waitress import serve
+        except ImportError as exc:  # pragma: no cover - executed only when waitress is missing
+            raise RuntimeError(
+                "Waitress n'est pas installé. Ajoutez 'waitress' aux dépendances pour un usage en production."
+            ) from exc
+
+        serve(app, host=host, port=port)
+    else:
+        app.run(host=host, port=port, debug=True, use_reloader=True)
