@@ -94,6 +94,30 @@ BookStorage est une application web Flask permettant de gérer une bibliothèque
    ```
    L'application est disponible sur `http://127.0.0.1:5000/`.
 
+## Déploiement automatisé (Ubuntu ou Rocky Linux)
+Pour un serveur Linux où vous souhaitez simplement lancer un script qui prépare l'environnement et démarre le service, procédez comme suit :
+
+1. **Cloner le dépôt et se placer dans le projet**
+   ```bash
+   git clone <votre-url-git>
+   cd BookStorage
+   ```
+2. **Exécuter le script d'installation et de lancement**
+   ```bash
+   bash setup_and_run.sh
+   ```
+
+Le script réalise automatiquement les actions suivantes :
+
+- création (si nécessaire) d'un environnement virtuel Python local (`.venv`)
+- mise à jour de `pip` lorsqu'il est possible de le faire
+- installation des dépendances listées dans `requirements.txt`
+- copie de `.env.example` vers `.env` si ce dernier n'existe pas encore, avec un rappel pour définir vos propres secrets
+- initialisation de la base SQLite via `init_db.py`
+- lancement de l'application Flask avec Waitress en profil `production`
+
+> ℹ️ Après la première exécution, pensez à éditer `.env` pour personnaliser `BOOKSTORAGE_SECRET_KEY`, `BOOKSTORAGE_SUPERADMIN_PASSWORD` et les chemins des médias avant de relancer `setup_and_run.sh`. Le script respecte également les variables d'environnement déjà exportées (par exemple `BOOKSTORAGE_ENV` ou `FLASK_APP`) si vous avez besoin d'une configuration différente.
+
 ## Configuration
 Toutes les options se pilotent par variables d'environnement (chargées automatiquement depuis `.env` si `python-dotenv` est présent).
 
