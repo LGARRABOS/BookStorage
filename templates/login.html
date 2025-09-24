@@ -4,14 +4,27 @@
   <link rel="stylesheet" href="{{ url_for('static', filename='css/login.css') }}">
 {% endblock %}
 {% block content %}
-<h2>Connexion</h2>
-<form method="POST">
-    <label>Nom d'utilisateur :</label>
-    <input type="text" name="username" required>
-    
-    <label>Mot de passe :</label>
-    <input type="password" name="password" required>
-    
-    <button type="submit">Se connecter</button>
-</form>
+<section class="page-section narrow auth-card">
+  <header class="section-header">
+    <h1>Connexion</h1>
+    <p>Retrouvez instantanément vos lectures en cours et votre progression personnalisée.</p>
+  </header>
+
+  <form method="POST" class="form-layout">
+    <div class="form-field">
+      <label for="username">Nom d'utilisateur</label>
+      <input id="username" type="text" name="username" autocomplete="username" required>
+    </div>
+
+    <div class="form-field">
+      <label for="password">Mot de passe</label>
+      <input id="password" type="password" name="password" autocomplete="current-password" required>
+    </div>
+
+    <div class="form-actions">
+      <button type="submit" class="btn btn-primary">Se connecter</button>
+      <a class="btn btn-text" href="{{ url_for('register') }}">Créer un compte</a>
+    </div>
+  </form>
+</section>
 {% endblock %}
