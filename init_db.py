@@ -1,8 +1,14 @@
-import os
 import sqlite3
+from pathlib import Path
+
 from werkzeug.security import generate_password_hash
 
-DATABASE = os.environ.get("BOOKSTORAGE_DATABASE", "database.db")
+from config import get_settings
+
+
+PROJECT_ROOT = Path(__file__).resolve().parent
+SETTINGS = get_settings(PROJECT_ROOT)
+DATABASE = SETTINGS.database
 
 def init_db():
     conn = sqlite3.connect(DATABASE)
@@ -75,15 +81,17 @@ def init_db():
     cursor.execute("SELECT * FROM users WHERE is_superadmin = 1")
     super_admin_exists = cursor.fetchone()
     if not super_admin_exists:
-        default_username = "superadmin"
-        default_password = "SuperAdmin!2023"  # Mot de passe robuste par défaut ; à changer en production !
+        default_username = SETTINGS.superadmin_username
+        default_password = SETTINGS.superadmin_password
         hashed_password = generate_password_hash(default_password, method="pbkdf2:sha256")
         cursor.execute(
             "INSERT INTO users (username, password, validated, is_admin, is_superadmin) VALUES (?, ?, ?, ?, ?)",
             (default_username, hashed_password, 1, 1, 1)
         )
         conn.commit()
-        print("Compte super‑admin créé : username='superadmin', password='SuperAdmin!2023'")
+        print(f"Compte super‑admin créé : username='{default_username}'.")
+        if default_password == "SuperAdmin!2023":
+            print("Mot de passe par défaut utilisé. Pensez à le changer pour la production !")
     else:
         print("Un compte super‑admin existe déjà.")
     
