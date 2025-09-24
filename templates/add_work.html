@@ -1,32 +1,63 @@
 {% extends "base.html" %}
-{% block title %}Ajouter une oeuvre{% endblock %}
+{% block title %}Ajouter une œuvre{% endblock %}
 {% block custom_css %}
   <link rel="stylesheet" href="{{ url_for('static', filename='css/add_work.css') }}">
 {% endblock %}
 {% block content %}
-<h2>Ajouter une oeuvre</h2>
-<form method="POST" enctype="multipart/form-data">
-    <label>Titre :</label>
-    <input type="text" name="title" required maxlength="30" required>
-    
-    <label>Chapitre actuel :</label>
-    <input type="number" name="chapter" min="0" value="0">
-    
-    <label>Statut :</label>
-    <select name="status">
-        <option value="En cours">En cours</option>
-        <option value="Terminé">Terminé</option>
-        <option value="En pause">En pause</option>
-        <option value="Abandonné">Abandonné</option>
-        <option value="À lire">À lire</option>
-    </select>
-    
-    <label>Lien :</label>
-    <input type="text" name="link">
-    
-    <label>Image :</label>
-    <input type="file" name="image">
-    
-    <button type="submit">Ajouter</button>
-</form>
+<section class="page-section">
+  <header class="section-header">
+    <h1>Ajouter une œuvre</h1>
+    <p>Complétez les informations ci-dessous pour enrichir votre bibliothèque personnelle. Les champs peuvent être modifiés à tout moment depuis le tableau de bord.</p>
+  </header>
+
+  <form method="POST" enctype="multipart/form-data" class="form-layout card">
+    <div class="form-grid">
+      <div class="form-field">
+        <label for="title">Titre</label>
+        <input id="title" type="text" name="title" maxlength="60" required>
+      </div>
+
+      <div class="form-field">
+        <label for="chapter">Chapitre actuel</label>
+        <input id="chapter" type="number" name="chapter" min="0" value="0">
+      </div>
+
+      <div class="form-field">
+        <label for="status">Statut de lecture</label>
+        <select id="status" name="status">
+          <option value="En cours">En cours</option>
+          <option value="Terminé">Terminé</option>
+          <option value="En pause">En pause</option>
+          <option value="Abandonné">Abandonné</option>
+          <option value="À lire">À lire</option>
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="reading_type">Type de lecture</label>
+        <select id="reading_type" name="reading_type" required>
+          {% for reading_type in reading_types %}
+          <option value="{{ reading_type }}">{{ reading_type }}</option>
+          {% endfor %}
+        </select>
+      </div>
+
+      <div class="form-field">
+        <label for="link">Lien vers la ressource</label>
+        <input id="link" type="url" name="link" placeholder="https://...">
+      </div>
+
+      <div class="form-field">
+        <label for="image">Image de couverture</label>
+        <input id="image" type="file" name="image" accept="image/*">
+        <p class="field-hint">Formats conseillés : JPG ou PNG (taille max. 2&nbsp;Mo).</p>
+      </div>
+    </div>
+
+    <div class="form-actions">
+      <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Annuler</a>
+      <button type="submit" class="btn btn-primary">Ajouter à ma bibliothèque</button>
+    </div>
+  </form>
+</section>
 {% endblock %}
