@@ -6,7 +6,17 @@ import uuid
 from functools import wraps
 from hashlib import scrypt
 
-from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+from flask import (
+    Flask,
+    render_template,
+    request,
+    redirect,
+    url_for,
+    session,
+    flash,
+    jsonify,
+    send_from_directory,
+)
 from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
@@ -34,6 +44,86 @@ READING_STATUSES = [
     "Abandonné",
     "À lire",
 ]
+
+
+def _resolve_media_directory(config_key):
+    storage_dir = app.config.get(config_key)
+    if not storage_dir:
+        return None
+
+    if not os.path.isabs(storage_dir):
+        storage_dir = os.path.join(app.root_path, storage_dir)
+
+    return os.path.normpath(storage_dir)
+
+
+def _register_media_routes():
+    def _register(config_dir_key: str, url_key: str, endpoint: str) -> None:
+        directory = _resolve_media_directory(config_dir_key)
+        url_path = (app.config.get(url_key) or "").strip("/")
+
+        if not directory or not url_path:
+            return
+
+        rule = f"/{url_path}/<path:filename>"
+
+        if endpoint in app.view_functions:
+            return
+
+        app.add_url_rule(
+            rule,
+            endpoint,
+            lambda filename, directory=directory: send_from_directory(directory, filename),
+        )
+
+    _register("UPLOAD_FOLDER", "UPLOAD_URL_PATH", "media_uploads")
+    _register("PROFILE_UPLOAD_FOLDER", "PROFILE_UPLOAD_URL_PATH", "media_profile")
+
+
+_register_media_routes()
+
+
+@app.context_processor
+def _media_helpers():
+    upload_prefix = (app.config.get("UPLOAD_URL_PATH") or "").strip("/")
+    avatar_prefix = (app.config.get("PROFILE_UPLOAD_URL_PATH") or "").strip("/")
+
+    def work_image_url(stored_path):
+        if not stored_path:
+            return None
+
+        normalized = str(stored_path).strip()
+        if not normalized:
+            return None
+
+        if normalized.startswith(("http://", "https://", "//", "data:")):
+            return normalized
+
+        normalized = normalized.replace("\\", "/")
+
+        if normalized.startswith("/static/"):
+            normalized = normalized[len("/static/") :]
+            return url_for("static", filename=normalized)
+
+        if upload_prefix and normalized.startswith(f"{upload_prefix}/"):
+            suffix = normalized[len(upload_prefix) :].lstrip("/")
+            if suffix:
+                return url_for("media_uploads", filename=suffix)
+
+        if avatar_prefix and normalized.startswith(f"{avatar_prefix}/"):
+            suffix = normalized[len(avatar_prefix) :].lstrip("/")
+            if suffix:
+                return url_for("media_profile", filename=suffix)
+
+        if normalized.startswith("/"):
+            return normalized
+
+        if normalized.startswith("static/"):
+            normalized = normalized[len("static/") :]
+
+        return url_for("static", filename=normalized.lstrip("/"))
+
+    return {"work_image_url": work_image_url}
 
 
 def _resolve_media_path(stored_path, config_key):
