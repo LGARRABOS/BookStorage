@@ -100,6 +100,7 @@
               <button type="button" class="btn btn-icon neutral decrement-btn" data-work-id="{{ work.id }}" aria-label="Retirer un chapitre">
                 −1
               </button>
+              <a class="btn btn-icon primary" href="{{ url_for('edit_work', work_id=work.id) }}">Modifier</a>
               <a class="btn btn-icon danger" href="{{ url_for('delete', work_id=work.id) }}" onclick="return confirm('Supprimer cette œuvre de la bibliothèque ?');">Supprimer</a>
             </div>
           </td>

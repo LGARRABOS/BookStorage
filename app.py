@@ -27,6 +27,15 @@ READING_TYPES = [
 ]
 
 
+READING_STATUSES = [
+    "En cours",
+    "Terminé",
+    "En pause",
+    "Abandonné",
+    "À lire",
+]
+
+
 def _resolve_media_path(stored_path, config_key):
     if not stored_path:
         return None
@@ -614,7 +623,9 @@ def add_work():
             flash("Le titre ne doit pas dépasser 30 caractères.")
             return redirect(url_for("add_work"))
         link = request.form["link"]
-        status = request.form["status"]
+        status = request.form.get("status", READING_STATUSES[0])
+        if status not in READING_STATUSES:
+            status = READING_STATUSES[0]
         chapter = request.form.get("chapter", 0)
         chapter = int(chapter) if chapter else 0
         reading_type = request.form.get("reading_type", "").strip()
@@ -652,7 +663,123 @@ def add_work():
 
         flash("Oeuvre ajoutée avec succès !")
         return redirect(url_for("dashboard"))
-    return render_template("add_work.html", reading_types=READING_TYPES)
+    return render_template(
+        "add_work.html",
+        reading_types=READING_TYPES,
+        statuses=READING_STATUSES,
+    )
+
+
+@app.route("/edit/<int:work_id>", methods=["GET", "POST"])
+@login_required
+def edit_work(work_id):
+    user_id = session["user_id"]
+    conn = get_db_connection()
+    work = conn.execute(
+        "SELECT * FROM works WHERE id = ? AND user_id = ?",
+        (work_id, user_id),
+    ).fetchone()
+
+    if not work:
+        conn.close()
+        flash("Œuvre introuvable.")
+        return redirect(url_for("dashboard"))
+
+    work_data = dict(work)
+
+    if request.method == "POST":
+        title = request.form.get("title", "").strip()
+        if not title:
+            flash("Le titre est requis.")
+            conn.close()
+            return redirect(url_for("edit_work", work_id=work_id))
+        if len(title) > 30:
+            flash("Le titre ne doit pas dépasser 30 caractères.")
+            conn.close()
+            return redirect(url_for("edit_work", work_id=work_id))
+
+        link = request.form.get("link", "").strip()
+        status = request.form.get("status", READING_STATUSES[0])
+        if status not in READING_STATUSES:
+            status = READING_STATUSES[0]
+        chapter = request.form.get("chapter", 0)
+        chapter = int(chapter) if chapter else 0
+        if chapter < 0:
+            chapter = 0
+
+        reading_type = request.form.get("reading_type", "").strip()
+        if not reading_type:
+            reading_type = READING_TYPES[0]
+        elif reading_type not in READING_TYPES:
+            flash("Type de lecture invalide.")
+            conn.close()
+            return redirect(url_for("edit_work", work_id=work_id))
+
+        previous_image = work_data.get("image_path")
+        new_image_path = previous_image
+        new_image_uploaded = False
+
+        if "image" in request.files:
+            file = request.files["image"]
+            if file and file.filename:
+                if not allowed_file(file.filename):
+                    flash(
+                        "Format d'image non supporté. Formats acceptés : png, jpg, jpeg, gif."
+                    )
+                    conn.close()
+                    return redirect(url_for("edit_work", work_id=work_id))
+                safe_name = secure_filename(file.filename)
+                if not safe_name:
+                    safe_name = "work"
+                filename = f"{uuid.uuid4().hex}_{safe_name}"
+                storage_dir = app.config["UPLOAD_FOLDER"]
+                if not os.path.isabs(storage_dir):
+                    storage_dir = os.path.join(app.root_path, storage_dir)
+                os.makedirs(storage_dir, exist_ok=True)
+                filepath = os.path.join(storage_dir, filename)
+                file.save(filepath)
+                new_image_path = _build_media_relative_path(
+                    filename, "UPLOAD_URL_PATH"
+                )
+                new_image_uploaded = True
+
+        conn.execute(
+            """
+            UPDATE works
+               SET title = ?,
+                   chapter = ?,
+                   link = ?,
+                   status = ?,
+                   image_path = ?,
+                   reading_type = ?
+             WHERE id = ? AND user_id = ?
+            """,
+            (title, chapter, link, status, new_image_path, reading_type, work_id, user_id),
+        )
+        conn.commit()
+
+        if new_image_uploaded and previous_image and previous_image != new_image_path:
+            remaining = conn.execute(
+                "SELECT COUNT(*) FROM works WHERE image_path = ? AND id != ?",
+                (previous_image, work_id),
+            ).fetchone()[0]
+            if remaining == 0:
+                _delete_media_file(previous_image, "UPLOAD_FOLDER")
+
+        conn.close()
+        flash("Œuvre mise à jour.")
+        return redirect(url_for("dashboard"))
+
+    conn.close()
+    work_data["link"] = work_data.get("link") or ""
+    work_data["status"] = work_data.get("status") or READING_STATUSES[0]
+    work_data["reading_type"] = work_data.get("reading_type") or READING_TYPES[0]
+    return render_template(
+        "edit_work.html",
+        work=work_data,
+        reading_types=READING_TYPES,
+        statuses=READING_STATUSES,
+    )
 
 # Endpoints API pour incrémenter/décrémenter les chapitres (via AJAX)
 @app.route("/api/increment/<int:work_id>", methods=["POST"])
