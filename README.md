@@ -33,20 +33,15 @@ BookStorage is a Flask web application that helps readers track what they are cu
    cp .env.example .env
    ```
    Edit `.env` to set `BOOKSTORAGE_SECRET_KEY`, adjust the storage paths, and switch `BOOKSTORAGE_ENV` to `development` or `production` as needed.
-4. **Configure optional API keys** (skip if you do not plan to use integrations yet)
-   ```bash
-   cp api_keys.example.json api_keys.json
-   ```
-   Fill the file with the credentials you obtained from Google Books, Kitsu, AniList, Comic Vine, etc. Leave values empty when you do not have the corresponding key.
-5. **Install the dependencies**
+4. **Install the dependencies**
    ```bash
    pip install -r requirements.txt
    ```
-6. **Initialise the database**
+5. **Initialise the database**
    ```bash
    python init_db.py
    ```
-7. **Run the application**
+6. **Run the application**
    ```bash
    flask --app wsgi --debug run       # development server
    # or
@@ -117,13 +112,8 @@ All configuration is provided through environment variables. When `python-dotenv
 | `BOOKSTORAGE_SUPERADMIN_PASSWORD` | Password assigned to the default super-administrator. Change it immediately in production. | `SuperAdmin!2023` |
 | `BOOKSTORAGE_HOST` | Network interface bound by the application when run via `app.py`. | `127.0.0.1` |
 | `BOOKSTORAGE_PORT` | HTTP port exposed by the application when run via `app.py`. | `5000` |
-| `BOOKSTORAGE_API_CONFIG` | Absolute or relative path to the JSON file that stores optional third-party API keys. | `api_keys.json` |
 
 When `BOOKSTORAGE_ENV=production`, the application refuses to start if `BOOKSTORAGE_SECRET_KEY` is missing.
-
-### API keys file
-
-Third-party integrations are configured through `api_keys.json`. A template is provided as `api_keys.example.json` — copy it next to your `.env` file and fill the credentials you actually need. Any value left empty is treated as missing, so the application keeps working even without external APIs. Set `BOOKSTORAGE_API_CONFIG` if you store the file in another location.
 
 ## Testing
 Run the automated test suite with:
@@ -177,20 +167,15 @@ BookStorage est une application web Flask qui aide les lecteurs à suivre leurs 
    cp .env.example .env
    ```
    Modifiez `.env` pour définir `BOOKSTORAGE_SECRET_KEY`, ajuster les chemins de stockage et choisir `BOOKSTORAGE_ENV=development` ou `production`.
-4. **Configurer les clefs d’API facultatives** (ignorez cette étape tant que vous n’utilisez pas d’intégration)
-   ```bash
-   cp api_keys.example.json api_keys.json
-   ```
-   Renseignez le fichier avec les identifiants obtenus auprès de Google Books, Kitsu, AniList, Comic Vine, etc. Laissez les valeurs vides quand aucune clef n’est disponible.
-5. **Installer les dépendances**
+4. **Installer les dépendances**
    ```bash
    pip install -r requirements.txt
    ```
-6. **Initialiser la base de données**
+5. **Initialiser la base de données**
    ```bash
    python init_db.py
    ```
-7. **Lancer l’application**
+6. **Lancer l’application**
    ```bash
    flask --app wsgi --debug run       # serveur de développement
    # ou
@@ -261,13 +246,8 @@ Toute la configuration passe par des variables d’environnement. Avec `python-d
 | `BOOKSTORAGE_SUPERADMIN_PASSWORD` | Mot de passe associé au super-administrateur par défaut. À changer immédiatement en production. | `SuperAdmin!2023` |
 | `BOOKSTORAGE_HOST` | Interface réseau écoutée lorsque l’application est lancée via `app.py`. | `127.0.0.1` |
 | `BOOKSTORAGE_PORT` | Port HTTP exposé lorsque l’application est lancée via `app.py`. | `5000` |
-| `BOOKSTORAGE_API_CONFIG` | Chemin absolu ou relatif vers le fichier JSON contenant les clefs d’API facultatives. | `api_keys.json` |
 
 Lorsque `BOOKSTORAGE_ENV=production`, l’application refuse de démarrer si `BOOKSTORAGE_SECRET_KEY` n’est pas défini.
-
-### Fichier des clefs d’API
-
-Les intégrations tierces se configurent via `api_keys.json`. Un modèle est fourni (`api_keys.example.json`) : copiez-le à côté de votre `.env` puis renseignez uniquement les clefs nécessaires. Les champs laissés vides sont ignorés, l’application continue donc de fonctionner sans APIs externes. Utilisez `BOOKSTORAGE_API_CONFIG` si le fichier est stocké ailleurs.
 
 ## Tests
 Lancer la suite automatisée avec :
