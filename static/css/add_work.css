@@ -33,6 +33,23 @@
   margin: 0;
 }
 
+.current-cover {
+  margin-top: 0.75rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.9rem;
+  color: var(--text-muted);
+}
+
+.current-cover img {
+  width: 90px;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.15);
+}
+
 .form-actions {
   justify-content: flex-end;
   margin-top: 1.75rem;
