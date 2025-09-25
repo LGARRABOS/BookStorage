@@ -21,12 +21,8 @@ READING_TYPES = [
     "Roman",
     "Manga",
     "BD",
-    "Manhwa",
     "Light Novel",
-    "Comics",
     "Webtoon",
-    "Essai",
-    "Poésie",
     "Autre",
 ]
 
