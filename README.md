@@ -20,7 +20,7 @@ BookStorage is a Flask web application that helps readers track what they are cu
 ### Development setup
 1. **Clone the repository and enter the project directory**
    ```bash
-   git clone <your-git-url>
+   git clone https://github.com/LGARRABOS/BookStorage.git
    cd BookStorage
    ```
 2. **Create and activate a virtual environment**
@@ -154,7 +154,7 @@ BookStorage est une application web Flask qui aide les lecteurs à suivre leurs 
 ### Mise en place pour le développement
 1. **Cloner le dépôt et entrer dans le dossier**
    ```bash
-   git clone <votre-url-git>
+   git clone https://github.com/LGARRABOS/BookStorage.git
    cd BookStorage
    ```
 2. **Créer et activer un environnement virtuel** (fortement recommandé) :
