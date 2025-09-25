@@ -36,6 +36,36 @@ READING_STATUSES = [
 ]
 
 
+@app.context_processor
+def _media_helpers():
+    def work_image_url(stored_path):
+        if not stored_path:
+            return None
+
+        normalized = str(stored_path).strip()
+        if not normalized:
+            return None
+
+        if normalized.startswith(("http://", "https://", "//", "data:")):
+            return normalized
+
+        normalized = normalized.replace("\\", "/")
+
+        if normalized.startswith("/static/"):
+            normalized = normalized[len("/static/") :]
+            return url_for("static", filename=normalized)
+
+        if normalized.startswith("/"):
+            return normalized
+
+        if normalized.startswith("static/"):
+            normalized = normalized[len("static/") :]
+
+        return url_for("static", filename=normalized.lstrip("/"))
+
+    return {"work_image_url": work_image_url}
+
+
 def _resolve_media_path(stored_path, config_key):
     if not stored_path:
         return None

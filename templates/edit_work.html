@@ -49,10 +49,11 @@
         <label for="image">Image de couverture</label>
         <input id="image" type="file" name="image" accept="image/*">
         <p class="field-hint">Laissez vide pour conserver l'image actuelle.</p>
-        {% if work.image_path %}
+        {% set image_url = work_image_url(work.image_path) %}
+        {% if image_url %}
         <div class="current-cover">
           <span>Image actuelle :</span>
-          <img src="{{ url_for('static', filename=work.image_path) }}" alt="Image actuelle de {{ work.title }}">
+          <img src="{{ image_url }}" alt="Image actuelle de {{ work.title }}">
         </div>
         {% endif %}
       </div>
