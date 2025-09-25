@@ -67,8 +67,9 @@
         {% for work in works %}
         <tr>
           <td class="cover-cell">
-            {% if work.image_path %}
-              <img src="{{ url_for('static', filename=work.image_path) }}" alt="Image de {{ work.title }}">
+            {% set image_url = work_image_url(work.image_path) %}
+            {% if image_url %}
+              <img src="{{ image_url }}" alt="Image de {{ work.title }}">
             {% else %}
               <span class="badge info">Pas d'image</span>
             {% endif %}
