@@ -19,6 +19,7 @@ try:  # pragma: no cover - optional dependency
 except ImportError:  # pragma: no cover - executed when python-dotenv is absent
     load_dotenv = None  # type: ignore
 
+from api_config import APISettings, load_api_settings
 
 if load_dotenv is not None:  # pragma: no cover - simple delegation
     # Load a .env file located at the project root if present. ``override``
@@ -52,6 +53,7 @@ class Settings:
     environment: str
     host: str
     port: int
+    api_settings: APISettings
 
 
 def _resolve_directory(root: Path, candidate: Optional[str], default: str) -> Path:
@@ -150,6 +152,7 @@ def get_settings(root_path: Path | str) -> Settings:
         environment=environment,
         host=host,
         port=port,
+        api_settings=load_api_settings(root),
     )
 
 
@@ -173,6 +176,7 @@ def configure_app(app):
     app.config["BOOKSTORAGE_SECRET_FROM_ENV"] = settings.secret_from_env
     app.config.setdefault("BOOKSTORAGE_HOST", settings.host)
     app.config.setdefault("BOOKSTORAGE_PORT", settings.port)
+    app.config.setdefault("BOOKSTORAGE_API_SETTINGS", settings.api_settings)
 
     if settings.environment == "production":
         # Harden session cookies by default when the production profile is
