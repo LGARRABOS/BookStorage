@@ -12,9 +12,13 @@
 
   <form method="POST" enctype="multipart/form-data" class="form-layout card">
     <div class="form-grid">
-      <div class="form-field">
+      <div class="form-field form-field--wide">
         <label for="title">Titre</label>
-        <input id="title" type="text" name="title" maxlength="60" required>
+        <div class="metadata-input-group">
+          <input id="title" type="text" name="title" maxlength="60" required>
+          <button type="button" id="metadata-search" class="btn btn-outline">Rechercher des infos</button>
+        </div>
+        <p class="field-hint">Renseignez un titre ou un ISBN puis lancez la recherche pour préremplir les autres champs.</p>
       </div>
 
       <div class="form-field">
@@ -58,6 +62,18 @@
       <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Annuler</a>
       <button type="submit" class="btn btn-primary">Ajouter à ma bibliothèque</button>
     </div>
+    <input type="hidden" id="metadata_cover_url" name="metadata_cover_url">
+    <input type="hidden" id="metadata_info_url" name="metadata_info_url">
   </form>
+
+  <section id="metadata-results" class="metadata-results" hidden>
+    <header>
+      <h2>Suggestions d'œuvres</h2>
+      <p id="metadata-status" class="field-hint">Sélectionnez une proposition pour remplir le formulaire automatiquement.</p>
+    </header>
+    <div id="metadata-results-list" class="metadata-results-list" role="list"></div>
+  </section>
 </section>
+
+<script src="{{ url_for('static', filename='js/add_work_search.js') }}" defer></script>
 {% endblock %}

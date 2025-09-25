@@ -27,10 +27,114 @@
   grid-column: 1 / -1;
 }
 
+.form-field--wide {
+  grid-column: 1 / -1;
+}
+
+.metadata-input-group {
+  display: flex;
+  gap: 0.75rem;
+  align-items: stretch;
+}
+
+.metadata-input-group input {
+  flex: 1;
+}
+
+.metadata-input-group .btn-outline {
+  border: 1px solid var(--primary);
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--primary);
+  box-shadow: none;
+  white-space: nowrap;
+}
+
+.metadata-input-group .btn-outline:hover,
+.metadata-input-group .btn-outline:focus-visible {
+  background: rgba(79, 70, 229, 0.18);
+  color: var(--primary-dark);
+}
+
+.metadata-results {
+  margin-top: 2.5rem;
+  display: grid;
+  gap: 1.25rem;
+}
+
+.metadata-results header h2 {
+  margin-bottom: 0.25rem;
+}
+
+.metadata-results-list {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+.metadata-card {
+  background: var(--surface-elevated);
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  border-radius: var(--radius);
+  padding: 1.1rem;
+  box-shadow: var(--shadow-soft);
+  display: grid;
+  gap: 0.8rem;
+}
+
+.metadata-card header {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.metadata-cover {
+  width: 72px;
+  height: 108px;
+  border-radius: calc(var(--radius) / 2);
+  object-fit: cover;
+  box-shadow: 0 12px 22px rgba(15, 23, 42, 0.18);
+}
+
+.metadata-info h3 {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.metadata-info p {
+  margin: 0.25rem 0 0;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.metadata-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.metadata-footer .badge {
+  background: var(--primary-muted);
+  color: var(--primary-dark);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.metadata-footer .btn {
+  font-size: 0.9rem;
+  padding: 0.5rem 1.1rem;
+}
+
 .field-hint {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin: 0;
+}
+
+#metadata-status.error {
+  color: #b91c1c;
 }
 
 .form-actions {

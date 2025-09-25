@@ -1,8 +1,10 @@
 import binascii
 import hmac
+import mimetypes
 import os
 import sqlite3
 import uuid
+from urllib import parse, request as urllib_request
 from functools import wraps
 from hashlib import scrypt
 
@@ -11,11 +13,13 @@ from werkzeug.security import generate_password_hash, check_password_hash
 from werkzeug.utils import secure_filename
 
 from config import configure_app
+from metadata_providers import search_open_library
 
 app = Flask(__name__)
 configure_app(app)
 
 ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif"}
+MAX_REMOTE_IMAGE_SIZE = 2 * 1024 * 1024
 
 READING_TYPES = [
     "Roman",
@@ -64,6 +68,66 @@ def _build_media_relative_path(filename: str, url_key: str) -> str:
     if prefix:
         return f"{prefix}/{filename}"
     return filename
+
+
+def _download_remote_cover(url: str, opener=urllib_request.urlopen) -> str | None:
+    if not url:
+        return None
+
+    parsed = parse.urlparse(url)
+    if parsed.scheme not in {"http", "https"}:
+        return None
+
+    try:
+        with opener(url, timeout=5) as response:
+            status = getattr(response, "status", None)
+            if status is None and hasattr(response, "getcode"):
+                status = response.getcode()
+            if status != 200:
+                return None
+
+            data = response.read(MAX_REMOTE_IMAGE_SIZE + 1)
+            if len(data) > MAX_REMOTE_IMAGE_SIZE:
+                return None
+
+            headers = getattr(response, "headers", {}) or {}
+            content_type = headers.get("Content-Type", "")
+    except (ValueError, TimeoutError, OSError):
+        return None
+
+    main_type = content_type.split(";", 1)[0].strip().lower()
+    if main_type and not main_type.startswith("image/"):
+        return None
+
+    extension = None
+    if main_type:
+        extension = mimetypes.guess_extension(main_type)
+    if not extension and parsed.path:
+        extension = os.path.splitext(parsed.path)[1]
+
+    if extension:
+        ext = extension.lstrip(".").lower()
+    else:
+        ext = ""
+
+    if ext == "jpe":
+        ext = "jpg"
+    if ext not in ALLOWED_EXTENSIONS:
+        ext = "jpg"
+
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    storage_dir = app.config["UPLOAD_FOLDER"]
+    if not os.path.isabs(storage_dir):
+        storage_dir = os.path.join(app.root_path, storage_dir)
+    os.makedirs(storage_dir, exist_ok=True)
+    file_path = os.path.join(storage_dir, filename)
+    try:
+        with open(file_path, "wb") as handle:
+            handle.write(data)
+    except OSError:
+        return None
+
+    return _build_media_relative_path(filename, "UPLOAD_URL_PATH")
 
 CREATE_USERS_TABLE_SQL = """
     CREATE TABLE IF NOT EXISTS users (
@@ -613,11 +677,14 @@ def profile():
 @login_required
 def add_work():
     if request.method == "POST":
-        title = request.form["title"]
+        title = request.form["title"].strip()
         if len(title) > 30:
             flash("Le titre ne doit pas dépasser 30 caractères.")
             return redirect(url_for("add_work"))
-        link = request.form["link"]
+        link = request.form.get("link", "").strip()
+        metadata_info_url = request.form.get("metadata_info_url", "").strip()
+        if not link and metadata_info_url:
+            link = metadata_info_url
         status = request.form["status"]
         chapter = request.form.get("chapter", 0)
         chapter = int(chapter) if chapter else 0
@@ -629,6 +696,7 @@ def add_work():
             return redirect(url_for("add_work"))
 
         image_path = None
+        metadata_cover_url = request.form.get("metadata_cover_url", "").strip()
         if "image" in request.files:
             file = request.files["image"]
             if file and allowed_file(file.filename):
@@ -645,6 +713,8 @@ def add_work():
                 image_path = _build_media_relative_path(
                     filename, "UPLOAD_URL_PATH"
                 )
+        if not image_path and metadata_cover_url:
+            image_path = _download_remote_cover(metadata_cover_url)
 
         conn = get_db_connection()
         conn.execute("""
@@ -657,6 +727,14 @@ def add_work():
         flash("Oeuvre ajoutée avec succès !")
         return redirect(url_for("dashboard"))
     return render_template("add_work.html", reading_types=READING_TYPES)
+
+
+@app.route("/api/metadata/search")
+@login_required
+def api_metadata_search():
+    query = request.args.get("q", "")
+    suggestions = search_open_library(query, available_types=READING_TYPES)
+    return jsonify({"results": [suggestion.to_dict() for suggestion in suggestions]})
 
 # Endpoints API pour incrémenter/décrémenter les chapitres (via AJAX)
 @app.route("/api/increment/<int:work_id>", methods=["POST"])
