@@ -93,6 +93,26 @@ BookStorage also ships with a Dockerfile so you can run the application in an is
 
 The container starts in production mode and serves the app with Waitress on port 5000. The `/data` volume stores the SQLite database as well as uploaded covers and avatars, ensuring uploads persist across image upgrades. Adjust the host path on `-v` to match your environment or switch to a named Docker volume, for example `-v bookstorage_data:/data`.
 
+#### Run the published image without cloning the repository
+
+Once the image is stored on a registry (for example Docker Hub), it already contains every file required by the application. That means you can deploy it on a fresh host without checking out the Git repository—just pull the image and mount a volume dedicated to persistent data:
+
+```bash
+docker pull moncompte/bookstorage:latest
+docker volume create bookstorage_data
+docker run -d \
+  --name bookstorage \
+  -p 5000:5000 \
+  -e BOOKSTORAGE_SECRET_KEY="change-me" \
+  -e BOOKSTORAGE_SUPERADMIN_PASSWORD="ChooseAStrongPassword" \
+  -v bookstorage_data:/data \
+  moncompte/bookstorage:latest
+```
+
+Replace `moncompte/bookstorage:latest` with the name of your Docker Hub repository. The bind mount to the Git checkout is no longer necessary because the container image embeds the source code, templates, and static assets. Providing `/data` as a persistent volume keeps the database and uploaded files safe across upgrades.
+
+The application code now lives inside the container under `/srv/bookstorage`. Avoid mounting an empty host directory over that path (or `/app`), otherwise the bundled sources would be hidden and the container would fail to start.
+
 Set additional configuration through environment variables (`BOOKSTORAGE_PORT`, `BOOKSTORAGE_UPLOAD_URL_PATH`, …). `docker-entrypoint.sh` initialises the database on each boot, creating the default super-administrator when needed.
 
 ## Configuration
@@ -226,6 +246,26 @@ Un Dockerfile est fourni pour exécuter BookStorage dans un conteneur isolé.
    ```
 
 Le conteneur démarre en mode production et sert l’application via Waitress sur le port 5000. Le volume `/data` conserve la base SQLite ainsi que les couvertures et avatars importés, ce qui garantit la persistance des fichiers lors d’une mise à jour de l’image. Adaptez le chemin hôte dans `-v` selon votre infrastructure ou utilisez un volume nommé comme `-v bookstorage_data:/data`.
+
+#### Utiliser l’image publiée sans cloner le dépôt
+
+Si vous publiez l’image sur un registre (Docker Hub, par exemple), elle contient déjà tous les fichiers nécessaires au fonctionnement de BookStorage. Vous pouvez donc la déployer sur une machine vierge sans cloner le dépôt Git : récupérez l’image, créez un volume persistant et lancez le conteneur.
+
+```bash
+docker pull moncompte/bookstorage:latest
+docker volume create bookstorage_data
+docker run -d \
+  --name bookstorage \
+  -p 5000:5000 \
+  -e BOOKSTORAGE_SECRET_KEY="modifiez-moi" \
+  -e BOOKSTORAGE_SUPERADMIN_PASSWORD="ChoisissezUnMotDePasseFort" \
+  -v bookstorage_data:/data \
+  moncompte/bookstorage:latest
+```
+
+Remplacez `moncompte/bookstorage:latest` par le nom de votre dépôt Docker Hub. Le montage du code source n’est pas requis : l’image embarque le projet ainsi que les gabarits. Il suffit de fournir un volume `/data` pour préserver la base SQLite et les fichiers téléversés lors des mises à jour.
+
+Le code de l’application est désormais stocké dans le conteneur sous `/srv/bookstorage`. Évitez de monter un répertoire hôte vide à cet emplacement (ou sur `/app`), sinon les sources incluses seront masquées et le conteneur ne pourra pas démarrer.
 
 Toutes les autres variables de configuration (`BOOKSTORAGE_PORT`, `BOOKSTORAGE_UPLOAD_URL_PATH`, …) peuvent être injectées via `docker run`. Le script `docker-entrypoint.sh` initialise la base de données à chaque démarrage et crée le super-administrateur par défaut si nécessaire.
 
