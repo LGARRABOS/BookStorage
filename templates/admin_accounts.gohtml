@@ -1,0 +1,70 @@
+{{ define "admin_accounts" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Administration</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/admin/accounts">Administration</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Administration des comptes</h1>
+                    <p>Gérez la validation et les droits des utilisateurs.</p>
+                </header>
+                {{ if .Users }}
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Utilisateur</th>
+                            <th>Validé</th>
+                            <th>Admin</th>
+                            <th>Superadmin</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{ range .Users }}
+                        <tr>
+                            <td>{{ .ID }}</td>
+                            <td>{{ .Username }}</td>
+                            <td>{{ if eq .Validated 1 }}Oui{{ else }}Non{{ end }}</td>
+                            <td>{{ if eq .IsAdmin 1 }}Oui{{ else }}Non{{ end }}</td>
+                            <td>{{ if eq .IsSuperadmin 1 }}Oui{{ else }}Non{{ end }}</td>
+                            <td>
+                                <a class="btn btn-secondary" href="/admin/approve/{{ .ID }}">Valider</a>
+                                <a class="btn btn-secondary" href="/admin/promote/{{ .ID }}">Promouvoir</a>
+                                <a class="btn btn-danger" href="/admin/delete_account/{{ .ID }}">Supprimer</a>
+                            </td>
+                        </tr>
+                    {{ end }}
+                    </tbody>
+                </table>
+                {{ else }}
+                <p>Aucun utilisateur.</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

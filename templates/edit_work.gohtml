@@ -1,0 +1,83 @@
+{{ define "edit_work" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Modifier l'œuvre</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/add_work.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Modifier l'œuvre</h1>
+                    <p>Mettez à jour les informations de cette œuvre.</p>
+                </header>
+                <form method="POST" enctype="multipart/form-data" class="form-layout card">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="title">Titre</label>
+                            <input id="title" type="text" name="title" value="{{ .Work.Title }}" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="chapter">Chapitre actuel</label>
+                            <input id="chapter" type="number" name="chapter" min="0" value="{{ .Work.Chapter }}">
+                        </div>
+                        <div class="form-field">
+                            <label for="status">Statut</label>
+                            <select id="status" name="status">
+                                {{ $currentStatus := "" }}
+                                {{ if .Work.Status.Valid }}{{ $currentStatus = .Work.Status.String }}{{ end }}
+                                {{ range .Statuses }}
+                                <option value="{{ . }}" {{ if eq . $currentStatus }}selected{{ end }}>{{ . }}</option>
+                                {{ end }}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="reading_type">Type</label>
+                            <select id="reading_type" name="reading_type">
+                                {{ $currentType := "Roman" }}
+                                {{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
+                                {{ range .ReadingTypes }}
+                                <option value="{{ . }}" {{ if eq . $currentType }}selected{{ end }}>{{ . }}</option>
+                                {{ end }}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="link">Lien</label>
+                            <input id="link" type="url" name="link" placeholder="https://..." value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}">
+                        </div>
+                        <div class="form-field">
+                            <label for="image">Nouvelle image (optionnel)</label>
+                            <input id="image" type="file" name="image" accept="image/*">
+                            {{ if .Work.ImagePath.Valid }}<p class="field-hint">Image actuelle conservée si aucune nouvelle image n'est envoyée.</p>{{ end }}
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <a class="btn btn-secondary" href="/dashboard">Annuler</a>
+                        <button type="submit" class="btn btn-primary">Enregistrer les modifications</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

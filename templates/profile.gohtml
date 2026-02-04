@@ -1,0 +1,83 @@
+{{ define "profile" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Mon profil</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Mon profil</h1>
+                    <p>Personnalisez votre identité et la visibilité de votre bibliothèque.</p>
+                </header>
+                <form method="POST" enctype="multipart/form-data" class="form-layout card">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="username">Nom d'utilisateur</label>
+                            <input id="username" type="text" name="username" value="{{ .User.Username }}" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="display_name">Nom affiché</label>
+                            <input id="display_name" type="text" name="display_name" value="{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ end }}">
+                        </div>
+                        <div class="form-field">
+                            <label for="email">Email</label>
+                            <input id="email" type="email" name="email" value="{{ if .User.Email.Valid }}{{ .User.Email.String }}{{ end }}">
+                        </div>
+                        <div class="form-field">
+                            <label for="bio">Biographie</label>
+                            <textarea id="bio" name="bio" rows="4">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ end }}</textarea>
+                        </div>
+                        <div class="form-field">
+                            <label>Visibilité</label>
+                            <select name="is_public">
+                                <option value="1" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}selected{{ end }}{{ else }}selected{{ end }}>Publique</option>
+                                <option value="0" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 0 }}selected{{ end }}{{ end }}>Privée</option>
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="avatar">Avatar</label>
+                            <input id="avatar" type="file" name="avatar" accept="image/*">
+                        </div>
+                        <div class="form-field">
+                            <label for="current_password">Mot de passe actuel</label>
+                            <input id="current_password" type="password" name="current_password">
+                        </div>
+                        <div class="form-field">
+                            <label for="new_password">Nouveau mot de passe</label>
+                            <input id="new_password" type="password" name="new_password">
+                        </div>
+                        <div class="form-field">
+                            <label for="confirm_password">Confirmer</label>
+                            <input id="confirm_password" type="password" name="confirm_password">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}
