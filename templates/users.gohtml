@@ -1,0 +1,60 @@
+{{ define "users" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Lecteurs</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Lecteurs</h1>
+                    <p>Recherchez d'autres membres publics.</p>
+                </header>
+                <form method="GET" class="form-layout" style="margin-bottom: 1rem;">
+                    <div class="form-field">
+                        <label for="q">Rechercher</label>
+                        <input id="q" type="text" name="q" value="{{ .Query }}" placeholder="Nom d'utilisateur">
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Rechercher</button>
+                    </div>
+                </form>
+                {{ if .Users }}
+                <ul class="user-list">
+                    {{ range .Users }}
+                    <li class="user-card">
+                        <strong>{{ .Username }}</strong>
+                        {{ if .DisplayName.Valid }} ({{ .DisplayName.String }}){{ end }}
+                        {{ if .Bio.Valid }}<p>{{ .Bio.String }}</p>{{ end }}
+                        <a class="btn btn-secondary" href="/users/{{ .ID }}">Voir le profil</a>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p>Aucun lecteur trouvé.</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

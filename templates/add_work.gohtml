@@ -1,0 +1,73 @@
+{{ define "add_work" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Ajouter une œuvre</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Ajouter une œuvre</h1>
+                    <p>Complétez les informations ci-dessous.</p>
+                </header>
+                <form method="POST" enctype="multipart/form-data" class="form-layout card">
+                    <div class="form-grid">
+                        <div class="form-field">
+                            <label for="title">Titre</label>
+                            <input id="title" type="text" name="title" required>
+                        </div>
+                        <div class="form-field">
+                            <label for="chapter">Chapitre actuel</label>
+                            <input id="chapter" type="number" name="chapter" min="0" value="0">
+                        </div>
+                        <div class="form-field">
+                            <label for="status">Statut</label>
+                            <select id="status" name="status">
+                                {{ range .Statuses }}<option value="{{ . }}">{{ . }}</option>{{ end }}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="reading_type">Type</label>
+                            <select id="reading_type" name="reading_type">
+                                {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
+                            </select>
+                        </div>
+                        <div class="form-field">
+                            <label for="link">Lien</label>
+                            <input id="link" type="url" name="link" placeholder="https://...">
+                        </div>
+                        <div class="form-field">
+                            <label for="image">Image</label>
+                            <input id="image" type="file" name="image" accept="image/*">
+                        </div>
+                    </div>
+                    <div class="form-actions">
+                        <a class="btn btn-secondary" href="/dashboard">Annuler</a>
+                        <button type="submit" class="btn btn-primary">Ajouter</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

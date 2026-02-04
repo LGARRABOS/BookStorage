@@ -1,0 +1,71 @@
+{{ define "user_detail" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Profil de {{ .TargetUser.Username }}</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Profil de {{ .TargetUser.Username }}</h1>
+                    {{ if .TargetUser.DisplayName.Valid }}<p>Nom affiché : {{ .TargetUser.DisplayName.String }}</p>{{ end }}
+                    {{ if .TargetUser.Bio.Valid }}<p>{{ .TargetUser.Bio.String }}</p>{{ end }}
+                </header>
+                {{ if .Works }}
+                <h2>Bibliothèque partagée</h2>
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Titre</th>
+                            <th>Chapitre</th>
+                            <th>Statut</th>
+                            <th>Type</th>
+                            {{ if .CanImport }}<th>Importer</th>{{ end }}
+                        </tr>
+                    </thead>
+                    <tbody>
+                    {{ range .Works }}
+                        <tr>
+                            <td>{{ .Title }}</td>
+                            <td>{{ .Chapter }}</td>
+                            <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}—{{ end }}</td>
+                            <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</td>
+                            {{ if $.CanImport }}
+                            <td>
+                                <form method="POST" action="/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
+                                    <button type="submit" class="btn btn-primary">Importer</button>
+                                </form>
+                            </td>
+                            {{ end }}
+                        </tr>
+                    {{ end }}
+                    </tbody>
+                </table>
+                {{ else }}
+                <p>Ce lecteur n'a pas encore partagé d'œuvres.</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

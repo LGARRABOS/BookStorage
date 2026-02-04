@@ -1,0 +1,49 @@
+{{ define "login" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Connexion</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/login">Connexion</a>
+                <a href="/register" class="btn btn-primary">Inscription</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section narrow auth-card">
+                <header class="section-header">
+                    <h1>Connexion</h1>
+                    <p>Retrouvez instantanément vos lectures en cours.</p>
+                </header>
+                <form method="POST" class="form-layout">
+                    <div class="form-field">
+                        <label for="username">Nom d'utilisateur</label>
+                        <input id="username" type="text" name="username" autocomplete="username" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="password">Mot de passe</label>
+                        <input id="password" type="password" name="password" autocomplete="current-password" required>
+                    </div>
+                    <div class="form-actions">
+                        <button type="submit" class="btn btn-primary">Se connecter</button>
+                        <a class="btn btn-text" href="/register">Créer un compte</a>
+                    </div>
+                </form>
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+</body>
+</html>
+{{ end }}

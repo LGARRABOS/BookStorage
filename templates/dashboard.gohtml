@@ -1,0 +1,165 @@
+{{ define "dashboard" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tableau de bord</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/dashboard.css">
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">Tableau de bord</a>
+                <a href="/users">Lecteurs</a>
+                {{ if .IsAdmin }}<a href="/admin/accounts">Administration</a>{{ end }}
+                <a href="/profile" class="btn btn-nav">Mon profil</a>
+                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>Ma bibliothèque</h1>
+                    <p>Visualisez vos œuvres suivies et mettez à jour votre progression.</p>
+                </header>
+                <div class="dashboard-toolbar">
+                    <a class="btn btn-primary" href="/add_work">Ajouter une nouvelle œuvre</a>
+                    <div class="toolbar-filters">
+                        <label class="visually-hidden" for="search-input">Rechercher par titre</label>
+                        <input type="text" id="search-input" placeholder="Rechercher par titre..." autocomplete="off">
+                        <label class="visually-hidden" for="status-filter">Filtrer par statut</label>
+                        <select id="status-filter">
+                            <option value="">Tous les statuts</option>
+                            <option value="En cours">En cours</option>
+                            <option value="Terminé">Terminé</option>
+                            <option value="En pause">En pause</option>
+                            <option value="Abandonné">Abandonné</option>
+                            <option value="À lire">À lire</option>
+                        </select>
+                        <label class="visually-hidden" for="type-filter">Filtrer par type</label>
+                        <select id="type-filter">
+                            <option value="">Tous les types</option>
+                            {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
+                        </select>
+                        <label class="visually-hidden" for="sort-select">Trier par</label>
+                        <select id="sort-select" onchange="window.location.href='/dashboard?sort='+this.value">
+                            <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>Titre A→Z</option>
+                            <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Titre Z→A</option>
+                            <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>Chapitre ↓</option>
+                            <option value="status" {{ if eq .SortBy "status" }}selected{{ end }}>Statut</option>
+                            <option value="type" {{ if eq .SortBy "type" }}selected{{ end }}>Type</option>
+                            <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>Récent</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="dashboard-shortcuts" role="region" aria-label="Actions rapides">
+                    <article class="shortcut-card">
+                        <h2>Gérer mon profil</h2>
+                        <p>Personnalisez votre identité, mettez à jour vos informations et choisissez la visibilité de votre bibliothèque.</p>
+                        <a class="btn btn-secondary" href="/profile">Accéder à mon profil</a>
+                    </article>
+                    <article class="shortcut-card">
+                        <h2>Explorer les lecteurs</h2>
+                        <p>Recherchez les autres membres publics et importez leurs lectures partagées dans votre propre liste.</p>
+                        <a class="btn btn-secondary" href="/users">Ouvrir l'annuaire</a>
+                    </article>
+                </div>
+                {{ if .Works }}
+                <div class="table-wrapper library-table">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Visuel</th>
+                                <th>Titre</th>
+                                <th>Chapitre</th>
+                                <th>Lien</th>
+                                <th>Statut</th>
+                                <th>Type</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .Works }}
+                            <tr data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}">
+                                <td class="cover-cell">
+                                    {{ if .ImagePath.Valid }}
+                                        {{ $imgUrl := work_image_url .ImagePath.String }}
+                                        {{ if $imgUrl }}
+                                            <img src="{{ $imgUrl }}" alt="Image de {{ .Title }}" onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';">
+                                            <span class="badge info" style="display:none;">Pas d'image</span>
+                                        {{ else }}
+                                            <span class="badge info">Pas d'image</span>
+                                        {{ end }}
+                                    {{ else }}
+                                        <span class="badge info">Pas d'image</span>
+                                    {{ end }}
+                                </td>
+                                <td class="work-title">{{ .Title }}</td>
+                                <td>{{ .Chapter }}</td>
+                                <td>{{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="external-link">Ouvrir</a>{{ else }}—{{ end }}</td>
+                                <td class="work-status">{{ if .Status.Valid }}<span class="badge status-badge" data-status="{{ .Status.String }}">{{ .Status.String }}</span>{{ else }}—{{ end }}</td>
+                                <td class="work-type"><span class="badge type-badge">{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</span></td>
+                                <td>
+                                    <div class="action-buttons">
+                                        <a class="btn btn-icon primary" href="/edit/{{ .ID }}">Modifier</a>
+                                        <a class="btn btn-icon danger" href="/delete/{{ .ID }}" onclick="return confirm('Supprimer cette œuvre ?');">Supprimer</a>
+                                    </div>
+                                </td>
+                            </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </div>
+                {{ else }}
+                <div class="empty-state">
+                    <h2>Votre bibliothèque est vide</h2>
+                    <p>Ajoutez votre première œuvre pour commencer.</p>
+                    <a class="btn btn-primary" href="/add_work">Ajouter une œuvre</a>
+                </div>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer">
+        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+    </footer>
+    <script>
+    document.addEventListener("DOMContentLoaded", function() {
+        const searchInput = document.getElementById("search-input");
+        const statusFilter = document.getElementById("status-filter");
+        const typeFilter = document.getElementById("type-filter");
+        const tableRows = document.querySelectorAll(".data-table tbody tr");
+
+        function filterTable() {
+            const searchValue = searchInput.value.toLowerCase();
+            const statusValue = statusFilter.value;
+            const typeValue = typeFilter.value;
+
+            tableRows.forEach(function(row) {
+                const title = row.querySelector(".work-title").innerText.toLowerCase();
+                const status = row.getAttribute("data-status") || "";
+                const type = row.getAttribute("data-type") || "";
+
+                const matchesSearch = title.includes(searchValue);
+                const matchesStatus = (statusValue === "" || status === statusValue);
+                const matchesType = (typeValue === "" || type === typeValue);
+
+                row.style.display = (matchesSearch && matchesStatus && matchesType) ? "" : "none";
+            });
+        }
+
+        if (searchInput) searchInput.addEventListener("input", filterTable);
+        if (statusFilter) statusFilter.addEventListener("change", filterTable);
+        if (typeFilter) typeFilter.addEventListener("change", filterTable);
+    });
+    </script>
+</body>
+</html>
+{{ end }}
