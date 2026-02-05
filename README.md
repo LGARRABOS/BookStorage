@@ -7,23 +7,62 @@ Gestionnaire de lectures personnelles — version Go.
 - Go 1.22+
 - GCC (pour la compilation de SQLite)
 
-## Installation
+## Développement
 
 ```bash
+# Installer les dépendances
 go mod tidy
-```
 
-## Lancement
-
-```bash
+# Lancer en mode développement
 go run .
 ```
 
 Le serveur démarre sur `http://127.0.0.1:5000`.
 
-## Configuration (optionnelle)
+## Déploiement en Production (VM Linux)
 
-Variables d'environnement supportées :
+### Installation initiale
+
+```bash
+# Cloner le repo
+git clone https://github.com/LGARRABOS/BookStorage.git
+cd BookStorage
+
+# Lancer l'installation (en root)
+sudo ./deploy/install.sh
+
+# Démarrer le service
+sudo systemctl start bookstorage
+```
+
+### Commandes utiles
+
+```bash
+# Gérer le service
+sudo systemctl start bookstorage    # Démarrer
+sudo systemctl stop bookstorage     # Arrêter
+sudo systemctl restart bookstorage  # Redémarrer
+sudo systemctl status bookstorage   # Statut
+
+# Voir les logs
+sudo journalctl -u bookstorage -f
+```
+
+### Mise à jour
+
+```bash
+cd /opt/bookstorage
+sudo make update
+```
+
+Cette commande va :
+1. Pull les dernières modifications
+2. Recompiler l'application
+3. Redémarrer le service
+
+## Configuration
+
+Variables d'environnement (à mettre dans `/opt/bookstorage/.env` ou dans le service) :
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
@@ -38,8 +77,8 @@ Variables d'environnement supportées :
 
 Pour importer une base de données existante :
 
-1. Copiez votre fichier `database.db` de l'ancienne version
-2. Lancez le serveur avec `go run .`
+1. Copiez votre fichier `database.db` de l'ancienne version dans `/opt/bookstorage/`
+2. Redémarrez le service : `sudo systemctl restart bookstorage`
 3. Les mots de passe hashés (format Werkzeug) sont automatiquement reconnus
 
 ## Structure
@@ -51,6 +90,10 @@ BookStorage/
 ├── db.go            # Schéma SQLite et migrations
 ├── handlers.go      # Routes HTTP et logique métier
 ├── go.mod           # Dépendances Go
+├── Makefile         # Commandes de build/deploy
+├── deploy/          # Scripts et config de déploiement
+│   ├── install.sh   # Script d'installation
+│   └── bookstorage.service  # Service systemd
 ├── templates/       # Templates HTML (Go html/template)
 └── static/          # CSS et fichiers statiques
 ```
