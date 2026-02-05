@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"fmt"
@@ -8,6 +8,7 @@ import (
 	"strings"
 )
 
+// Settings holds application configuration
 type Settings struct {
 	SecretKey            string
 	Database             string
@@ -64,7 +65,16 @@ func resolveFile(root, baseDir, candidate, defaultName string) (string, error) {
 	return filePath, nil
 }
 
-func GetSettings(rootPath string) (*Settings, error) {
+func envOr(key, def string) string {
+	val := os.Getenv(key)
+	if val == "" {
+		return def
+	}
+	return val
+}
+
+// Load loads settings from environment variables
+func Load(rootPath string) (*Settings, error) {
 	root, err := filepath.Abs(rootPath)
 	if err != nil {
 		return nil, err
@@ -126,7 +136,7 @@ func GetSettings(rootPath string) (*Settings, error) {
 	}
 	port, err := strconv.Atoi(portStr)
 	if err != nil {
-		return nil, fmt.Errorf("BOOKSTORAGE_PORT doit être un entier valide: %w", err)
+		return nil, fmt.Errorf("BOOKSTORAGE_PORT must be a valid integer: %w", err)
 	}
 
 	return &Settings{
@@ -144,12 +154,3 @@ func GetSettings(rootPath string) (*Settings, error) {
 		Port:                 port,
 	}, nil
 }
-
-func envOr(key, def string) string {
-	val := os.Getenv(key)
-	if val == "" {
-		return def
-	}
-	return val
-}
-

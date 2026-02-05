@@ -17,17 +17,20 @@ import (
 	"strings"
 	"time"
 
+	"bookstorage/internal/config"
+	"bookstorage/internal/i18n"
+
 	"golang.org/x/crypto/pbkdf2"
 )
 
 type App struct {
-	Settings   *Settings
-	SiteConfig *SiteConfig
+	Settings   *config.Settings
+	SiteConfig *config.SiteConfig
 	DB         *sql.DB
 	Templates  *template.Template
 }
 
-func NewApp(settings *Settings, siteConfig *SiteConfig, db *sql.DB) *App {
+func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB) *App {
 	funcMap := template.FuncMap{
 		"work_image_url": func(stored string) string {
 			return workImageURL(settings, stored)
@@ -70,7 +73,7 @@ func NewApp(settings *Settings, siteConfig *SiteConfig, db *sql.DB) *App {
 			return a * b
 		},
 		// Translation function
-		"t": func(translations Translations, key string) string {
+		"t": func(translations i18n.Translations, key string) string {
 			if val, ok := translations[key]; ok {
 				return val
 			}
@@ -78,7 +81,7 @@ func NewApp(settings *Settings, siteConfig *SiteConfig, db *sql.DB) *App {
 		},
 		// Translate status (database stores French values)
 		"translateStatus": func(status, lang string) string {
-			if lang == LangEN {
+			if lang == i18n.LangEN {
 				switch status {
 				case "En cours":
 					return "Reading"
@@ -179,8 +182,8 @@ func (a *App) currentUserID(r *http.Request) (int, bool) {
 
 func (a *App) currentLang(r *http.Request) string {
 	c, err := r.Cookie("lang")
-	if err != nil || (c.Value != LangFR && c.Value != LangEN) {
-		return DefaultLang
+	if err != nil || (c.Value != i18n.LangFR && c.Value != i18n.LangEN) {
+		return i18n.DefaultLang
 	}
 	return c.Value
 }
@@ -197,8 +200,8 @@ func (a *App) setLang(w http.ResponseWriter, lang string) {
 
 func (a *App) handleSetLanguage(w http.ResponseWriter, r *http.Request) {
 	lang := r.PathValue("lang")
-	if lang != LangFR && lang != LangEN {
-		lang = DefaultLang
+	if lang != i18n.LangFR && lang != i18n.LangEN {
+		lang = i18n.DefaultLang
 	}
 	a.setLang(w, lang)
 	
@@ -215,7 +218,7 @@ func (a *App) baseData(r *http.Request) map[string]any {
 	lang := a.currentLang(r)
 	return map[string]any{
 		"Lang": lang,
-		"T":    T(lang),
+		"T":    i18n.T(lang),
 	}
 }
 
@@ -299,7 +302,7 @@ func buildMediaRelativePath(filename, urlPath string) string {
 	return urlPath + "/" + filename
 }
 
-func workImageURL(s *Settings, storedPath string) string {
+func workImageURL(s *config.Settings, storedPath string) string {
 	if strings.TrimSpace(storedPath) == "" {
 		return ""
 	}

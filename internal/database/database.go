@@ -1,8 +1,10 @@
-package main
+package database
 
 import (
 	"database/sql"
 	"fmt"
+
+	"bookstorage/internal/config"
 
 	_ "github.com/mattn/go-sqlite3"
 )
@@ -50,7 +52,8 @@ var workColumns = map[string]string{
 	"updated_at":   "DATETIME",
 }
 
-func openDB(settings *Settings) (*sql.DB, error) {
+// Open opens a database connection
+func Open(settings *config.Settings) (*sql.DB, error) {
 	db, err := sql.Open("sqlite3", settings.Database)
 	if err != nil {
 		return nil, err
@@ -92,14 +95,12 @@ func ensureColumns(db *sql.DB, table string, cols map[string]string) error {
 	return nil
 }
 
-func ensureSuperAdmin(db *sql.DB, s *Settings) error {
+func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
 	var exists int
 	if err := db.QueryRow("SELECT 1 FROM users WHERE is_superadmin = 1 LIMIT 1").Scan(&exists); err == nil {
 		return nil
 	}
 
-	// NOTE: pour rester simple ici, on stocke le mot de passe en clair.
-	// Pour un usage réel, remplacer par un hash sécurisé (bcrypt, argon2, ...).
 	_, err := db.Exec(
 		`INSERT INTO users (username, password, validated, is_admin, is_superadmin)
          VALUES (?, ?, 1, 1, 1)`,
@@ -109,7 +110,8 @@ func ensureSuperAdmin(db *sql.DB, s *Settings) error {
 	return err
 }
 
-func ensureSchema(db *sql.DB, s *Settings) error {
+// EnsureSchema creates tables and ensures all columns exist
+func EnsureSchema(db *sql.DB, s *config.Settings) error {
 	if _, err := db.Exec(createUsersTableSQL); err != nil {
 		return err
 	}
@@ -127,4 +129,3 @@ func ensureSchema(db *sql.DB, s *Settings) error {
 	}
 	return nil
 }
-

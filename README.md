@@ -204,13 +204,18 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series
 ```
 BookStorage/
 ├── main.go              # Entry point
-├── config.go            # Configuration
-├── site_config.go       # Site/legal config loader
-├── db.go                # SQLite schema
 ├── handlers.go          # HTTP routes
-├── i18n.go              # Translations (FR/EN)
 ├── bsctl                # Management CLI
 ├── Makefile             # Make commands
+│
+├── internal/            # Internal packages
+│   ├── config/          # Configuration handling
+│   │   ├── config.go    # App settings
+│   │   └── site.go      # Site/legal config
+│   ├── database/        # Database handling
+│   │   └── database.go  # SQLite schema & operations
+│   └── i18n/            # Internationalization
+│       └── i18n.go      # Translations (FR/EN)
 │
 ├── config/
 │   └── site.json.example  # Legal config template
@@ -220,13 +225,15 @@ BookStorage/
 │   ├── install.sh       # Installation script
 │   └── bookstorage.service
 │
-├── templates/           # HTML templates
+├── templates/           # HTML templates (.gohtml)
 └── static/
     ├── css/             # Stylesheets
     ├── avatars/         # User avatars
-    ├── icons/           # PWA icons
-    ├── manifest.json    # PWA manifest
-    └── sw.js            # Service worker
+    ├── images/          # App images
+    ├── icons/           # Favicon & icons
+    └── pwa/             # PWA files
+        ├── manifest.json
+        └── sw.js
 ```
 
 ---
