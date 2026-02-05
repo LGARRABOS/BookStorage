@@ -33,9 +33,15 @@
         .cta-section p { color: var(--text-secondary); margin-bottom: 1.5rem; }
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
         .lang-toggle:hover { background: var(--primary); color: white; }
+        .selfhost-banner { text-align: center; padding: 2rem 1rem; margin-top: 3rem; border-top: 1px solid var(--border-subtle); }
+        .selfhost-banner p { color: var(--text-muted); font-size: 0.95rem; margin: 0; }
+        .selfhost-banner a { color: var(--primary); font-weight: 600; text-decoration: none; }
+        .selfhost-banner a:hover { text-decoration: underline; }
+        .github-icon { display: inline-block; vertical-align: middle; margin-right: 0.3rem; }
         [data-theme="dark"] .feature-item { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .cta-section { background: rgba(51, 65, 85, 0.5); }
         [data-theme="dark"] .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; }
+        [data-theme="dark"] .selfhost-banner { border-color: rgba(100, 116, 139, 0.3); }
     </style>
 </head>
 <body>
@@ -105,12 +111,20 @@
                 <p>{{ t .T "landing.cta.subtitle" }}</p>
                 <a href="/register" class="btn btn-primary">{{ t .T "landing.cta.button" }}</a>
             </section>
+
+            <section class="selfhost-banner">
+                <p>
+                    {{ if eq .Lang "fr" }}🚀 Envie d'héberger votre propre instance ? BookStorage est open source !{{ else }}🚀 Want to host your own instance? BookStorage is open source!{{ end }}
+                    <br>
+                    <a href="https://github.com/LGARRABOS/BookStorage" target="_blank"><span class="github-icon">⭐</span>{{ if eq .Lang "fr" }}Voir sur GitHub{{ else }}View on GitHub{{ end }}</a>
+                </p>
+            </section>
         </div>
     </main>
 
     <footer class="page-footer">
         <div class="container">
-            <p>BookStorage — {{ if eq .Lang "fr" }}Fait avec ❤️ pour les lecteurs{{ else }}Made with ❤️ for readers{{ end }}</p>
+            <p>BookStorage — {{ if eq .Lang "fr" }}Fait avec ❤️ pour les lecteurs{{ else }}Made with ❤️ for readers{{ end }} · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p>
         </div>
     </footer>
 

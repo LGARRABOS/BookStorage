@@ -18,12 +18,13 @@ import (
 )
 
 type App struct {
-	Settings  *Settings
-	DB        *sql.DB
-	Templates *template.Template
+	Settings   *Settings
+	SiteConfig *SiteConfig
+	DB         *sql.DB
+	Templates  *template.Template
 }
 
-func NewApp(settings *Settings, db *sql.DB) *App {
+func NewApp(settings *Settings, siteConfig *SiteConfig, db *sql.DB) *App {
 	funcMap := template.FuncMap{
 		"work_image_url": func(stored string) string {
 			return workImageURL(settings, stored)
@@ -97,9 +98,10 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 		template.New("").Funcs(funcMap).ParseGlob(filepath.Join("templates", "*.gohtml")),
 	)
 	return &App{
-		Settings:  settings,
-		DB:        db,
-		Templates: tpl,
+		Settings:   settings,
+		SiteConfig: siteConfig,
+		DB:         db,
+		Templates:  tpl,
 	}
 }
 
@@ -359,6 +361,14 @@ func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 	}
 	// Landing page for non-logged in visitors
 	_ = a.Templates.ExecuteTemplate(w, "landing", a.baseData(r))
+}
+
+func (a *App) handleLegal(w http.ResponseWriter, r *http.Request) {
+	data := a.baseData(r)
+	data["Legal"] = a.SiteConfig.Legal
+	data["SiteName"] = a.SiteConfig.SiteName
+	data["SiteURL"] = a.SiteConfig.SiteURL
+	_ = a.Templates.ExecuteTemplate(w, "legal", data)
 }
 
 func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {

@@ -134,6 +134,33 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_DATABASE` | SQLite database path | `database.db` |
 | `BOOKSTORAGE_SECRET_KEY` | Session secret key | `dev-secret-change-me` |
 
+### Legal Notice / Mentions légales
+
+To customize the legal page (`/legal`), copy the example config:
+
+```bash
+cp config/site.json.example config/site.json
+```
+
+Then edit `config/site.json` with your information:
+
+```json
+{
+  "site_name": "BookStorage",
+  "site_url": "https://your-domain.com",
+  "legal": {
+    "owner_name": "Your Name",
+    "owner_email": "contact@example.com",
+    "owner_address": "Your Address",
+    "hosting_provider": "Hosting Provider Name",
+    "hosting_address": "Hosting Address",
+    "data_retention": "Data retention policy...",
+    "data_usage": "How data is used...",
+    "custom_sections": []
+  }
+}
+```
+
 ---
 
 ## 📁 Project Structure
@@ -142,11 +169,15 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 BookStorage/
 ├── main.go              # Entry point
 ├── config.go            # Configuration
+├── site_config.go       # Site/legal config loader
 ├── db.go                # SQLite schema
 ├── handlers.go          # HTTP routes
 ├── i18n.go              # Translations (FR/EN)
 ├── bsctl                # Management CLI
 ├── Makefile             # Make commands
+│
+├── config/
+│   └── site.json.example  # Legal config template
 ├── go.mod / go.sum      # Go dependencies
 │
 ├── deploy/
