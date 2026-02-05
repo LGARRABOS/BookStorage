@@ -233,6 +233,7 @@ func (a *App) setUserID(w http.ResponseWriter, userID int) {
 		Name:     "user_id",
 		Value:    strconv.Itoa(userID),
 		Path:     "/",
+		MaxAge:   3600, // 1 hour session timeout
 		HttpOnly: true,
 		// Secure:   a.Settings.Environment == "production",
 	})
@@ -251,10 +252,13 @@ func (a *App) clearSession(w http.ResponseWriter) {
 
 func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		if _, ok := a.currentUserID(r); !ok {
+		userID, ok := a.currentUserID(r)
+		if !ok {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
+		// Refresh session on each request (sliding expiration)
+		a.setUserID(w, userID)
 		next(w, r)
 	}
 }
@@ -524,7 +528,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 
 func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
 	a.clearSession(w)
-	http.Redirect(w, r, "/login", http.StatusFound)
+	http.Redirect(w, r, "/", http.StatusFound)
 }
 
 type workRow struct {
