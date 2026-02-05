@@ -1,14 +1,104 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"log"
 	"net/http"
+	"os"
 	"path/filepath"
 	"strconv"
 )
 
+// Version est définie à la compilation avec -ldflags
+var Version = "dev"
+
+const (
+	appName        = "BookStorage"
+	appDescription = "Gestionnaire de lectures personnelles"
+)
+
+func printHelp() {
+	fmt.Printf(`
+%s v%s - %s
+
+UTILISATION
+    %s [options]
+
+OPTIONS
+    -h, --help      Affiche cette aide
+    -v, --version   Affiche la version
+    -c, --config    Chemin vers le fichier .env (défaut: .env)
+
+VARIABLES D'ENVIRONNEMENT
+    BOOKSTORAGE_HOST                 Adresse d'écoute (défaut: 127.0.0.1)
+    BOOKSTORAGE_PORT                 Port (défaut: 5000)
+    BOOKSTORAGE_DATABASE             Chemin base SQLite (défaut: database.db)
+    BOOKSTORAGE_SECRET_KEY           Clé secrète pour les sessions
+    BOOKSTORAGE_SUPERADMIN_USERNAME  Nom du super admin (défaut: superadmin)
+    BOOKSTORAGE_SUPERADMIN_PASSWORD  Mot de passe super admin
+
+EXEMPLES
+    # Lancer avec les paramètres par défaut
+    %s
+
+    # Lancer avec un fichier de config personnalisé
+    %s -c /etc/bookstorage/.env
+
+    # Lancer avec des variables d'environnement
+    BOOKSTORAGE_PORT=8080 %s
+
+SERVICE SYSTEMD
+    sudo systemctl start bookstorage    # Démarrer
+    sudo systemctl stop bookstorage     # Arrêter
+    sudo systemctl status bookstorage   # Statut
+    sudo journalctl -u bookstorage -f   # Logs
+
+PLUS D'INFOS
+    https://github.com/VOTRE_USERNAME/BookStorage
+
+`, appName, Version, appDescription, os.Args[0], os.Args[0], os.Args[0], os.Args[0])
+}
+
+func printVersion() {
+	fmt.Printf("%s v%s\n", appName, Version)
+}
+
 func main() {
+	// Flags
+	var (
+		showHelp    bool
+		showVersion bool
+		configPath  string
+	)
+
+	flag.BoolVar(&showHelp, "help", false, "Affiche l'aide")
+	flag.BoolVar(&showHelp, "h", false, "Affiche l'aide")
+	flag.BoolVar(&showVersion, "version", false, "Affiche la version")
+	flag.BoolVar(&showVersion, "v", false, "Affiche la version")
+	flag.StringVar(&configPath, "config", "", "Chemin vers le fichier .env")
+	flag.StringVar(&configPath, "c", "", "Chemin vers le fichier .env")
+
+	// Parser personnalisé pour ne pas afficher l'aide par défaut
+	flag.Usage = printHelp
+	flag.Parse()
+
+	if showHelp {
+		printHelp()
+		os.Exit(0)
+	}
+
+	if showVersion {
+		printVersion()
+		os.Exit(0)
+	}
+
+	// Déterminer le répertoire racine
 	root := "."
+	if configPath != "" {
+		root = filepath.Dir(configPath)
+	}
+
 	settings, err := GetSettings(root)
 	if err != nil {
 		log.Fatalf("config error: %v", err)
@@ -55,7 +145,7 @@ func main() {
 	mux.HandleFunc("/admin/promote/{id}", app.requireAdmin(app.handlePromoteAccount))
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
-	log.Printf("BookStorage Go server listening on %s (%s)", addr, settings.Environment)
+	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
 	if err := http.ListenAndServe(addr, mux); err != nil {
 		log.Fatal(err)
 	}
