@@ -10,52 +10,52 @@ import (
 	"strconv"
 )
 
-// Version est définie à la compilation avec -ldflags
+// Version is set at compile time with -ldflags
 var Version = "dev"
 
 const (
 	appName        = "BookStorage"
-	appDescription = "Gestionnaire de lectures personnelles"
+	appDescription = "Personal reading tracker"
 )
 
 func printHelp() {
 	fmt.Printf(`
 %s v%s - %s
 
-UTILISATION
+USAGE
     %s [options]
 
 OPTIONS
-    -h, --help      Affiche cette aide
-    -v, --version   Affiche la version
-    -c, --config    Chemin vers le fichier .env (défaut: .env)
+    -h, --help      Show this help
+    -v, --version   Show version
+    -c, --config    Path to .env file (default: .env)
 
-VARIABLES D'ENVIRONNEMENT
-    BOOKSTORAGE_HOST                 Adresse d'écoute (défaut: 127.0.0.1)
-    BOOKSTORAGE_PORT                 Port (défaut: 5000)
-    BOOKSTORAGE_DATABASE             Chemin base SQLite (défaut: database.db)
-    BOOKSTORAGE_SECRET_KEY           Clé secrète pour les sessions
-    BOOKSTORAGE_SUPERADMIN_USERNAME  Nom du super admin (défaut: superadmin)
-    BOOKSTORAGE_SUPERADMIN_PASSWORD  Mot de passe super admin
+ENVIRONMENT VARIABLES
+    BOOKSTORAGE_HOST                 Listen address (default: 127.0.0.1)
+    BOOKSTORAGE_PORT                 Port (default: 5000)
+    BOOKSTORAGE_DATABASE             SQLite database path (default: database.db)
+    BOOKSTORAGE_SECRET_KEY           Secret key for sessions
+    BOOKSTORAGE_SUPERADMIN_USERNAME  Super admin username (default: superadmin)
+    BOOKSTORAGE_SUPERADMIN_PASSWORD  Super admin password
 
-EXEMPLES
-    # Lancer avec les paramètres par défaut
+EXAMPLES
+    # Run with default settings
     %s
 
-    # Lancer avec un fichier de config personnalisé
+    # Run with custom config file
     %s -c /etc/bookstorage/.env
 
-    # Lancer avec des variables d'environnement
+    # Run with environment variables
     BOOKSTORAGE_PORT=8080 %s
 
-SERVICE SYSTEMD
-    sudo systemctl start bookstorage    # Démarrer
-    sudo systemctl stop bookstorage     # Arrêter
-    sudo systemctl status bookstorage   # Statut
+SYSTEMD SERVICE
+    sudo systemctl start bookstorage    # Start
+    sudo systemctl stop bookstorage     # Stop
+    sudo systemctl status bookstorage   # Status
     sudo journalctl -u bookstorage -f   # Logs
 
-PLUS D'INFOS
-    https://github.com/VOTRE_USERNAME/BookStorage
+MORE INFO
+    https://github.com/LGARRABOS/BookStorage
 
 `, appName, Version, appDescription, os.Args[0], os.Args[0], os.Args[0], os.Args[0])
 }
@@ -72,14 +72,14 @@ func main() {
 		configPath  string
 	)
 
-	flag.BoolVar(&showHelp, "help", false, "Affiche l'aide")
-	flag.BoolVar(&showHelp, "h", false, "Affiche l'aide")
-	flag.BoolVar(&showVersion, "version", false, "Affiche la version")
-	flag.BoolVar(&showVersion, "v", false, "Affiche la version")
-	flag.StringVar(&configPath, "config", "", "Chemin vers le fichier .env")
-	flag.StringVar(&configPath, "c", "", "Chemin vers le fichier .env")
+	flag.BoolVar(&showHelp, "help", false, "Show help")
+	flag.BoolVar(&showHelp, "h", false, "Show help")
+	flag.BoolVar(&showVersion, "version", false, "Show version")
+	flag.BoolVar(&showVersion, "v", false, "Show version")
+	flag.StringVar(&configPath, "config", "", "Path to .env file")
+	flag.StringVar(&configPath, "c", "", "Path to .env file")
 
-	// Parser personnalisé pour ne pas afficher l'aide par défaut
+	// Custom parser to not show help by default
 	flag.Usage = printHelp
 	flag.Parse()
 
@@ -93,7 +93,7 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Déterminer le répertoire racine
+	// Determine root directory
 	root := "."
 	if configPath != "" {
 		root = filepath.Dir(configPath)
@@ -118,13 +118,14 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// fichiers statiques
+	// Static files
 	staticDir := filepath.Join("static")
 	fs := http.FileServer(http.Dir(staticDir))
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
-	// routes
+	// Routes
 	mux.HandleFunc("/", app.handleHome)
+	mux.HandleFunc("/lang/{lang}", app.handleSetLanguage)
 	mux.HandleFunc("/register", app.handleRegister)
 	mux.HandleFunc("/login", app.handleLogin)
 	mux.HandleFunc("/logout", app.handleLogout)

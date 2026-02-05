@@ -1,194 +1,43 @@
 {{ define "stats" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Statistiques - BookStorage</title>
+    <title>{{ t .T "stats.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
     <style>
-        .stats-hero {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-            gap: 1.25rem;
-            margin-bottom: 2rem;
-        }
-        .stat-box {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            text-align: center;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-subtle);
-        }
-        .stat-box.primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-            color: white;
-            border: none;
-        }
-        .stat-box.primary .stat-number,
-        .stat-box.primary .stat-label {
-            color: white;
-        }
-        .stat-box.accent {
-            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
-            color: white;
-            border: none;
-        }
-        .stat-box.accent .stat-number,
-        .stat-box.accent .stat-label {
-            color: white;
-        }
-        .stat-number {
-            font-size: 2.5rem;
-            font-weight: 700;
-            color: var(--primary);
-            line-height: 1;
-            margin-bottom: 0.35rem;
-        }
-        .stat-label {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-        }
-        .stats-section {
-            margin-bottom: 2rem;
-        }
-        .stats-section h2 {
-            font-size: 1.25rem;
-            margin-bottom: 1rem;
-            color: var(--text-primary);
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        .stats-section h2 .icon {
-            font-size: 1.3rem;
-        }
-        .stats-card {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 1.5rem;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-subtle);
-        }
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .stat-row:last-child {
-            border-bottom: none;
-        }
-        .stat-row-label {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-        .stat-row-value {
-            font-weight: 700;
-            color: var(--primary);
-            font-size: 1.1rem;
-        }
-        .stat-bar {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            padding: 0.6rem 0;
-        }
-        .stat-bar-label {
-            min-width: 100px;
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-        .stat-bar-track {
-            flex: 1;
-            height: 8px;
-            background: var(--border);
-            border-radius: 4px;
-            overflow: hidden;
-        }
-        .stat-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, var(--primary), var(--accent));
-            border-radius: 4px;
-            transition: width 0.5s ease;
-        }
-        .stat-bar-count {
-            min-width: 40px;
-            text-align: right;
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-        .top-list {
-            list-style: none;
-            padding: 0;
-            margin: 0;
-        }
-        .top-list li {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .top-list li:last-child {
-            border-bottom: none;
-        }
-        .top-list .title {
-            font-weight: 500;
-            color: var(--text-primary);
-        }
-        .top-list .stars {
-            color: #fbbf24;
-            font-size: 1rem;
-        }
-        .empty-stat {
-            text-align: center;
-            padding: 2rem;
-            color: var(--text-muted);
-        }
-        .two-columns {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 1.5rem;
-        }
-        
-        /* Dark Mode */
-        [data-theme="dark"] .stat-box {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        [data-theme="dark"] .stat-box.primary {
-            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
-        }
-        [data-theme="dark"] .stat-box.accent {
-            background: linear-gradient(135deg, #f97316 0%, #fb923c 100%);
-        }
-        [data-theme="dark"] .stats-card {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        [data-theme="dark"] .stat-row {
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        [data-theme="dark"] .stat-bar-track {
-            background: rgba(100, 116, 139, 0.4);
-        }
-        [data-theme="dark"] .top-list li {
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        [data-theme="dark"] .top-list .title {
-            color: #f1f5f9;
-        }
+        .stats-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
+        .stat-box { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; text-align: center; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); }
+        .stat-box.primary { background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; border: none; }
+        .stat-box.primary .stat-number, .stat-box.primary .stat-label { color: white; }
+        .stat-box.accent { background: linear-gradient(135deg, #f97316 0%, #fb923c 100%); color: white; border: none; }
+        .stat-box.accent .stat-number, .stat-box.accent .stat-label { color: white; }
+        .stat-number { font-size: 2.5rem; font-weight: 700; color: var(--primary); line-height: 1; margin-bottom: 0.35rem; }
+        .stat-label { font-size: 0.85rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.05em; }
+        .stats-section { margin-bottom: 2rem; }
+        .stats-section h2 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
+        .stats-card { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); }
+        .stat-bar { display: flex; align-items: center; gap: 1rem; padding: 0.6rem 0; }
+        .stat-bar-label { min-width: 100px; font-weight: 500; color: var(--text-primary); }
+        .stat-bar-track { flex: 1; height: 8px; background: var(--border); border-radius: 4px; overflow: hidden; }
+        .stat-bar-fill { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); border-radius: 4px; }
+        .stat-bar-count { min-width: 40px; text-align: right; font-weight: 600; color: var(--text-secondary); }
+        .top-list { list-style: none; padding: 0; margin: 0; }
+        .top-list li { display: flex; justify-content: space-between; align-items: center; padding: 0.75rem 0; border-bottom: 1px solid var(--border-subtle); }
+        .top-list li:last-child { border-bottom: none; }
+        .top-list .title { font-weight: 500; color: var(--text-primary); }
+        .top-list .stars { color: #fbbf24; }
+        .empty-stat { text-align: center; padding: 2rem; color: var(--text-muted); }
+        .two-columns { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 1.5rem; }
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        [data-theme="dark"] .stat-box { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .stats-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .stat-bar-track { background: rgba(100, 116, 139, 0.4); }
+        [data-theme="dark"] .top-list li { border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .top-list .title { color: #f1f5f9; }
     </style>
 </head>
 <body>
@@ -196,14 +45,13 @@
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
@@ -212,66 +60,61 @@
         <div class="container">
             <section class="page-section">
                 <header class="section-header">
-                    <h1 class="page-title">📊 Mes statistiques</h1>
-                    <p class="page-intro">Vue d'ensemble de votre activité de lecture.</p>
+                    <h1 class="page-title">📊 {{ t .T "stats.title" }}</h1>
                 </header>
 
                 <div class="stats-hero">
                     <div class="stat-box primary">
                         <div class="stat-number">{{ .TotalWorks }}</div>
-                        <div class="stat-label">Œuvres suivies</div>
+                        <div class="stat-label">{{ t .T "stats.total_works" }}</div>
                     </div>
                     <div class="stat-box accent">
                         <div class="stat-number">{{ .TotalChapters }}</div>
-                        <div class="stat-label">Chapitres lus</div>
+                        <div class="stat-label">{{ t .T "stats.total_chapters" }}</div>
                     </div>
                     <div class="stat-box">
-                        <div class="stat-number">{{ printf "%.1f" .AvgRating }}<small style="font-size: 0.5em;">⭐</small></div>
-                        <div class="stat-label">Note moyenne</div>
+                        <div class="stat-number">{{ printf "%.1f" .AvgRating }}⭐</div>
+                        <div class="stat-label">{{ t .T "stats.avg_rating" }}</div>
                     </div>
                     <div class="stat-box">
                         <div class="stat-number">{{ .RatedCount }}</div>
-                        <div class="stat-label">Œuvres notées</div>
+                        <div class="stat-label">{{ if eq .Lang "fr" }}Notées{{ else }}Rated{{ end }}</div>
                     </div>
                 </div>
 
                 <div class="two-columns">
                     <section class="stats-section">
-                        <h2><span class="icon">📋</span> Par statut</h2>
+                        <h2>📋 {{ t .T "stats.by_status" }}</h2>
                         <div class="stats-card">
                             {{ if .ByStatus }}
                             {{ $total := .TotalWorks }}
                             {{ range .ByStatus }}
                             <div class="stat-bar">
-                                <span class="stat-bar-label">{{ .Status }}</span>
-                                <div class="stat-bar-track">
-                                    <div class="stat-bar-fill" style="width: {{ if $total }}{{ printf "%.0f" (mulf (divf .Count $total) 100) }}%{{ else }}0%{{ end }};"></div>
-                                </div>
+                                <span class="stat-bar-label">{{ translateStatus .Status $.Lang }}</span>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: {{ if $total }}{{ printf "%.0f" (mulf (divf .Count $total) 100) }}%{{ else }}0%{{ end }};"></div></div>
                                 <span class="stat-bar-count">{{ .Count }}</span>
                             </div>
                             {{ end }}
                             {{ else }}
-                            <div class="empty-stat">Aucune donnée</div>
+                            <div class="empty-stat">{{ if eq $.Lang "fr" }}Aucune donnée{{ else }}No data{{ end }}</div>
                             {{ end }}
                         </div>
                     </section>
 
                     <section class="stats-section">
-                        <h2><span class="icon">📚</span> Par type</h2>
+                        <h2>📚 {{ t .T "stats.by_type" }}</h2>
                         <div class="stats-card">
                             {{ if .ByType }}
                             {{ $total := .TotalWorks }}
                             {{ range .ByType }}
                             <div class="stat-bar">
                                 <span class="stat-bar-label">{{ .Type }}</span>
-                                <div class="stat-bar-track">
-                                    <div class="stat-bar-fill" style="width: {{ if $total }}{{ printf "%.0f" (mulf (divf .Count $total) 100) }}%{{ else }}0%{{ end }};"></div>
-                                </div>
+                                <div class="stat-bar-track"><div class="stat-bar-fill" style="width: {{ if $total }}{{ printf "%.0f" (mulf (divf .Count $total) 100) }}%{{ else }}0%{{ end }};"></div></div>
                                 <span class="stat-bar-count">{{ .Count }}</span>
                             </div>
                             {{ end }}
                             {{ else }}
-                            <div class="empty-stat">Aucune donnée</div>
+                            <div class="empty-stat">{{ if eq $.Lang "fr" }}Aucune donnée{{ else }}No data{{ end }}</div>
                             {{ end }}
                         </div>
                     </section>
@@ -279,16 +122,13 @@
 
                 {{ if .TopRated }}
                 <section class="stats-section">
-                    <h2><span class="icon">🏆</span> Mes meilleures notes</h2>
+                    <h2>🏆 {{ t .T "stats.top_rated" }}</h2>
                     <div class="stats-card">
                         <ul class="top-list">
                             {{ range .TopRated }}
                             <li>
                                 <span class="title">{{ .Title }}</span>
-                                <span class="stars">
-                                    {{ $r := .Rating }}
-                                    {{ range seq 5 }}{{ if le . $r }}★{{ else }}☆{{ end }}{{ end }}
-                                </span>
+                                <span class="stars">{{ $r := .Rating }}{{ range seq 5 }}{{ if le . $r }}★{{ else }}☆{{ end }}{{ end }}</span>
                             </li>
                             {{ end }}
                         </ul>
@@ -299,26 +139,19 @@
         </div>
     </main>
 
-    <footer class="page-footer">
-        <p>BookStorage</p>
-    </footer>
+    <footer class="page-footer"><p>BookStorage</p></footer>
 
     <script>
         function toggleTheme() {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
+            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon();
+            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
-        
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+        });
     </script>
 </body>
 </html>

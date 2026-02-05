@@ -29,7 +29,6 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 			return workImageURL(settings, stored)
 		},
 		"url_for": func(name string, args ...string) string {
-			// Adaptation minimale de url_for de Flask pour les templates existants.
 			switch name {
 			case "static":
 				if len(args) > 0 {
@@ -38,11 +37,10 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 				}
 				return "/static/"
 			default:
-				// Pour des appels du type url_for('dashboard'), etc.
 				return "/" + strings.TrimLeft(name, "/")
 			}
 		},
-		// Fonction pour générer une séquence de nombres (pour les étoiles)
+		// Generate a sequence of numbers (for star ratings)
 		"seq": func(n int) []int {
 			s := make([]int, n)
 			for i := range s {
@@ -50,14 +48,14 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 			}
 			return s
 		},
-		// Comparaisons pour les étoiles
+		// Comparisons for star ratings
 		"le": func(a, b int) bool {
 			return a <= b
 		},
 		"ge": func(a, b int) bool {
 			return a >= b
 		},
-		// Math pour les stats
+		// Math for stats
 		"divf": func(a, b int) float64 {
 			if b == 0 {
 				return 0
@@ -66,6 +64,31 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 		},
 		"mulf": func(a, b float64) float64 {
 			return a * b
+		},
+		// Translation function
+		"t": func(translations Translations, key string) string {
+			if val, ok := translations[key]; ok {
+				return val
+			}
+			return key
+		},
+		// Translate status (database stores French values)
+		"translateStatus": func(status, lang string) string {
+			if lang == LangEN {
+				switch status {
+				case "En cours":
+					return "Reading"
+				case "Terminé":
+					return "Completed"
+				case "En pause":
+					return "On Hold"
+				case "Abandonné":
+					return "Dropped"
+				case "À lire":
+					return "Plan to Read"
+				}
+			}
+			return status
 		},
 	}
 	// On ne parse que les templates Go (extension .gohtml) pour éviter
@@ -145,6 +168,59 @@ func (a *App) currentUserID(r *http.Request) (int, bool) {
 		return 0, false
 	}
 	return id, true
+}
+
+// --- Language helpers ---
+
+func (a *App) currentLang(r *http.Request) string {
+	c, err := r.Cookie("lang")
+	if err != nil || (c.Value != LangFR && c.Value != LangEN) {
+		return DefaultLang
+	}
+	return c.Value
+}
+
+func (a *App) setLang(w http.ResponseWriter, lang string) {
+	http.SetCookie(w, &http.Cookie{
+		Name:     "lang",
+		Value:    lang,
+		Path:     "/",
+		MaxAge:   365 * 24 * 60 * 60, // 1 year
+		HttpOnly: true,
+	})
+}
+
+func (a *App) handleSetLanguage(w http.ResponseWriter, r *http.Request) {
+	lang := r.PathValue("lang")
+	if lang != LangFR && lang != LangEN {
+		lang = DefaultLang
+	}
+	a.setLang(w, lang)
+	
+	// Redirect back to referrer or dashboard
+	referer := r.Header.Get("Referer")
+	if referer == "" {
+		referer = "/dashboard"
+	}
+	http.Redirect(w, r, referer, http.StatusFound)
+}
+
+// baseData returns common template data including translations
+func (a *App) baseData(r *http.Request) map[string]any {
+	lang := a.currentLang(r)
+	return map[string]any{
+		"Lang": lang,
+		"T":    T(lang),
+	}
+}
+
+// mergeData merges additional data into base data
+func (a *App) mergeData(r *http.Request, extra map[string]any) map[string]any {
+	data := a.baseData(r)
+	for k, v := range extra {
+		data[k] = v
+	}
+	return data
 }
 
 func (a *App) setUserID(w http.ResponseWriter, userID int) {
@@ -281,8 +357,8 @@ func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 		return
 	}
-	// Page d'accueil pour les visiteurs non connectés
-	_ = a.Templates.ExecuteTemplate(w, "landing", nil)
+	// Landing page for non-logged in visitors
+	_ = a.Templates.ExecuteTemplate(w, "landing", a.baseData(r))
 }
 
 func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
@@ -348,7 +424,7 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "stats", map[string]any{
+	_ = a.Templates.ExecuteTemplate(w, "stats", a.mergeData(r, map[string]any{
 		"TotalWorks":    totalWorks,
 		"TotalChapters": totalChapters,
 		"ByStatus":      byStatus,
@@ -356,13 +432,13 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 		"AvgRating":     avgRating,
 		"RatedCount":    ratedCount,
 		"TopRated":      topRated,
-	})
+	}))
 }
 
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "register", nil)
+		_ = a.Templates.ExecuteTemplate(w, "register", a.baseData(r))
 	case http.MethodPost:
 		username := r.FormValue("username")
 		password := r.FormValue("password")
@@ -400,7 +476,7 @@ type userRow struct {
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "login", nil)
+		_ = a.Templates.ExecuteTemplate(w, "login", a.baseData(r))
 	case http.MethodPost:
 		username := r.FormValue("username")
 		password := r.FormValue("password")
@@ -511,23 +587,23 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		works = append(works, wRow)
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "dashboard", map[string]any{
+	_ = a.Templates.ExecuteTemplate(w, "dashboard", a.mergeData(r, map[string]any{
 		"Works":         works,
 		"ReadingTypes":  readingTypes,
 		"ReadingStatus": readingStatuses,
 		"IsAdmin":       isAdmin == 1,
 		"SortBy":        sortBy,
-	})
+	}))
 }
 
 // Ajout d’une œuvre (avec support basique d’upload d’image)
 func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "add_work", map[string]any{
+		_ = a.Templates.ExecuteTemplate(w, "add_work", a.mergeData(r, map[string]any{
 			"ReadingTypes": readingTypes,
 			"Statuses":     readingStatuses,
-		})
+		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
 			w.WriteHeader(http.StatusBadRequest)
@@ -623,11 +699,11 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "edit_work", map[string]any{
+		_ = a.Templates.ExecuteTemplate(w, "edit_work", a.mergeData(r, map[string]any{
 			"Work":         work,
 			"ReadingTypes": readingTypes,
 			"Statuses":     readingStatuses,
-		})
+		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -812,10 +888,9 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		data := map[string]any{
+		_ = a.Templates.ExecuteTemplate(w, "profile", a.mergeData(r, map[string]any{
 			"User": u,
-		}
-		_ = a.Templates.ExecuteTemplate(w, "profile", data)
+		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
@@ -996,11 +1071,10 @@ WHERE validated = 1 AND is_public = 1 AND id != ?`
 		users = append(users, u)
 	}
 
-	data := map[string]any{
+	_ = a.Templates.ExecuteTemplate(w, "users", a.mergeData(r, map[string]any{
 		"Users": users,
 		"Query": query,
-	}
-	_ = a.Templates.ExecuteTemplate(w, "users", data)
+	}))
 }
 
 type fullUser struct {
@@ -1094,12 +1168,11 @@ func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
 		works = append(works, wRow)
 	}
 
-	data := map[string]any{
+	_ = a.Templates.ExecuteTemplate(w, "user_detail", a.mergeData(r, map[string]any{
 		"TargetUser": u,
 		"Works":      works,
 		"CanImport":  viewerID != targetID,
-	}
-	_ = a.Templates.ExecuteTemplate(w, "user_detail", data)
+	}))
 }
 
 func (a *App) handleImportWork(w http.ResponseWriter, r *http.Request) {
@@ -1260,10 +1333,9 @@ func (a *App) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 		users = append(users, u)
 	}
 
-	data := map[string]any{
+	_ = a.Templates.ExecuteTemplate(w, "admin_accounts", a.mergeData(r, map[string]any{
 		"Users": users,
-	}
-	_ = a.Templates.ExecuteTemplate(w, "admin_accounts", data)
+	}))
 }
 
 func (a *App) handleApproveAccount(w http.ResponseWriter, r *http.Request) {

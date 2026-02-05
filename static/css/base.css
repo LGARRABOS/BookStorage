@@ -200,6 +200,7 @@ a:focus-visible {
   font-size: 1.4rem;
   color: #f8fafc;
   letter-spacing: 0.02em;
+  white-space: nowrap;
 }
 
 .nav-links {
@@ -212,6 +213,7 @@ a:focus-visible {
   color: #e2e8f0;
   font-weight: 500;
   padding: 0.45rem 0.9rem;
+  white-space: nowrap;
   border-radius: 999px;
 }
 
@@ -403,6 +405,7 @@ button:disabled,
   background: rgba(248, 250, 252, 0.16);
   color: #f8fafc;
   border: 1px solid rgba(148, 163, 184, 0.4);
+  white-space: nowrap;
   box-shadow: 0 10px 22px rgba(15, 23, 42, 0.25);
 }
 

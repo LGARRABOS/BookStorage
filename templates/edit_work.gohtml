@@ -1,398 +1,61 @@
 {{ define "edit_work" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Modifier « {{ .Work.Title }} » - BookStorage</title>
+    <title>{{ t .T "work.edit.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
     <style>
-        .form-page {
-            max-width: 900px;
-            margin: 0 auto;
-        }
-        
-        .form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-            gap: 1rem;
-        }
-        
-        .form-header-title h1 {
-            font-size: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            margin-bottom: 0.25rem;
-        }
-        
-        .form-header-title p {
-            color: var(--text-muted);
-            margin: 0;
-        }
-        
-        .form-card {
-            background: var(--surface);
-            border-radius: 1.25rem;
-            padding: 1.75rem;
-            border: 1px solid var(--border-subtle);
-            margin-bottom: 1.5rem;
-        }
-        
-        .form-card-header {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-            margin-bottom: 1.5rem;
-            padding-bottom: 1rem;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        
-        .form-card-header .icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.25rem;
-            flex-shrink: 0;
-        }
-        
+        .form-page { max-width: 900px; margin: 0 auto; }
+        .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
+        .form-header-title h1 { font-size: 1.5rem; display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem; }
+        .form-header-title p { color: var(--text-muted); margin: 0; }
+        .form-card { background: var(--surface); border-radius: 1.25rem; padding: 1.75rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; }
+        .form-card-header { display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1.5rem; padding-bottom: 1rem; border-bottom: 1px solid var(--border-subtle); }
+        .form-card-header .icon { width: 40px; height: 40px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1.25rem; }
         .form-card-header .icon.blue { background: rgba(56, 189, 248, 0.15); }
         .form-card-header .icon.purple { background: rgba(129, 140, 248, 0.15); }
         .form-card-header .icon.orange { background: rgba(251, 146, 60, 0.15); }
-        .form-card-header .icon.green { background: rgba(34, 197, 94, 0.15); }
-        
-        .form-card-header h2 {
-            font-size: 1.1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            margin: 0;
-        }
-        
-        .form-card-header span {
-            font-size: 0.85rem;
-            color: var(--text-muted);
-        }
-        
-        .form-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1.25rem;
-        }
-        
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-        
-        .form-group:last-child {
-            margin-bottom: 0;
-        }
-        
-        .form-group.full-width {
-            grid-column: 1 / -1;
-        }
-        
-        .form-group label {
-            display: block;
-            font-weight: 500;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            font-size: 0.9rem;
-        }
-        
-        .form-group label .required {
-            color: #ef4444;
-        }
-        
-        .form-group input,
-        .form-group select,
-        .form-group textarea {
-            width: 100%;
-            padding: 0.75rem 1rem;
-            border: 1px solid var(--border-subtle);
-            border-radius: 0.75rem;
-            font-size: 1rem;
-            background: var(--background);
-            color: var(--text-primary);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .form-group input:focus,
-        .form-group select:focus,
-        .form-group textarea:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        
-        .form-group textarea {
-            resize: vertical;
-            min-height: 100px;
-        }
-        
-        .form-group input[type="file"] {
-            padding: 0.6rem;
-        }
-        
-        .form-hint {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 0.35rem;
-        }
-        
-        /* Star Rating */
-        .star-rating-picker {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .star-rating-picker .stars {
-            display: flex;
-            gap: 0.25rem;
-        }
-        
-        .star-rating-picker .star {
-            font-size: 1.75rem;
-            color: #d1d5db;
-            cursor: pointer;
-            transition: color 0.15s ease, transform 0.15s ease;
-            user-select: none;
-        }
-        
-        .star-rating-picker .star:hover {
-            transform: scale(1.15);
-        }
-        
-        .star-rating-picker .star.active {
-            color: #fbbf24;
-        }
-        
-        .star-rating-picker .clear-btn {
-            padding: 0.4rem 0.75rem;
-            border: 1px solid var(--border-subtle);
-            border-radius: 0.5rem;
-            background: var(--background);
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
-        
-        .star-rating-picker .clear-btn:hover {
-            background: rgba(239, 68, 68, 0.1);
-            border-color: rgba(239, 68, 68, 0.3);
-            color: #ef4444;
-        }
-        
-        /* Image Upload */
-        .image-section {
-            display: grid;
-            grid-template-columns: auto 1fr;
-            gap: 1.5rem;
-            align-items: start;
-        }
-        
-        .current-image {
-            text-align: center;
-        }
-        
-        .current-image img {
-            width: 120px;
-            height: 160px;
-            object-fit: cover;
-            border-radius: 0.75rem;
-            box-shadow: var(--shadow-base);
-        }
-        
-        .current-image .no-image {
-            width: 120px;
-            height: 160px;
-            border-radius: 0.75rem;
-            background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 2.5rem;
-            opacity: 0.5;
-        }
-        
-        .current-image p {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 0.5rem;
-        }
-        
-        .image-upload-area {
-            border: 2px dashed var(--border-subtle);
-            border-radius: 1rem;
-            padding: 2rem;
-            text-align: center;
-            transition: all 0.2s ease;
-            cursor: pointer;
-        }
-        
-        .image-upload-area:hover {
-            border-color: var(--primary);
-            background: var(--primary-muted);
-        }
-        
-        .image-upload-area .upload-icon {
-            font-size: 2rem;
-            margin-bottom: 0.5rem;
-            opacity: 0.5;
-        }
-        
-        .image-upload-area p {
-            color: var(--text-muted);
-            margin: 0;
-            font-size: 0.9rem;
-        }
-        
-        .image-upload-area input[type="file"] {
-            display: none;
-        }
-        
-        .image-preview {
-            margin-top: 1rem;
-            display: none;
-        }
-        
-        .image-preview img {
-            max-width: 100px;
-            max-height: 140px;
-            border-radius: 0.5rem;
-            object-fit: cover;
-        }
-        
-        /* Form Actions */
-        .form-actions {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 1rem;
-            margin-top: 0.5rem;
-        }
-        
-        .form-actions-left {
-            display: flex;
-            gap: 0.75rem;
-        }
-        
-        .form-actions-right {
-            display: flex;
-            gap: 0.75rem;
-        }
-        
-        .btn-danger {
-            background: rgba(239, 68, 68, 0.1);
-            color: #dc2626;
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-        
-        .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.2);
-        }
-        
-        /* Dark mode */
-        [data-theme="dark"] .form-card {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .form-card-header {
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .form-group input,
-        [data-theme="dark"] .form-group select,
-        [data-theme="dark"] .form-group textarea {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(100, 116, 139, 0.4);
-            color: #e2e8f0;
-        }
-        
-        [data-theme="dark"] .form-group input::placeholder,
-        [data-theme="dark"] .form-group textarea::placeholder {
-            color: #94a3b8;
-        }
-        
-        [data-theme="dark"] .star-rating-picker .star {
-            color: #475569;
-        }
-        
-        [data-theme="dark"] .star-rating-picker .star.active {
-            color: #fbbf24;
-        }
-        
-        [data-theme="dark"] .star-rating-picker .clear-btn {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(100, 116, 139, 0.4);
-        }
-        
-        [data-theme="dark"] .image-upload-area {
-            border-color: rgba(100, 116, 139, 0.4);
-        }
-        
-        [data-theme="dark"] .image-upload-area:hover {
-            border-color: var(--primary);
-            background: rgba(79, 70, 229, 0.1);
-        }
-        
-        [data-theme="dark"] .btn-danger {
-            background: rgba(239, 68, 68, 0.15);
-            color: #fca5a5;
-            border-color: rgba(239, 68, 68, 0.3);
-        }
-        
-        [data-theme="dark"] .btn-danger:hover {
-            background: rgba(239, 68, 68, 0.25);
-        }
-        
-        /* Responsive */
-        @media (max-width: 600px) {
-            .form-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .form-row {
-                grid-template-columns: 1fr;
-            }
-            
-            .image-section {
-                grid-template-columns: 1fr;
-            }
-            
-            .current-image {
-                justify-self: center;
-            }
-            
-            .form-actions {
-                flex-direction: column;
-            }
-            
-            .form-actions-left,
-            .form-actions-right {
-                width: 100%;
-            }
-            
-            .form-actions-left .btn,
-            .form-actions-right .btn {
-                flex: 1;
-            }
-        }
+        .form-card-header h2 { font-size: 1.1rem; font-weight: 600; color: var(--text-primary); margin: 0; }
+        .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1.25rem; }
+        .form-group { margin-bottom: 1.25rem; }
+        .form-group label { display: block; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem; }
+        .form-group label .required { color: #ef4444; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 1rem; background: var(--background); color: var(--text-primary); }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
+        .form-group textarea { resize: vertical; min-height: 100px; }
+        .star-rating-picker { display: flex; align-items: center; gap: 0.5rem; }
+        .star-rating-picker .stars { display: flex; gap: 0.25rem; }
+        .star-rating-picker .star { font-size: 1.75rem; color: #d1d5db; cursor: pointer; user-select: none; }
+        .star-rating-picker .star.active { color: #fbbf24; }
+        .star-rating-picker .clear-btn { padding: 0.4rem 0.75rem; border: 1px solid var(--border-subtle); border-radius: 0.5rem; background: var(--background); color: var(--text-muted); font-size: 0.8rem; cursor: pointer; }
+        .image-section { display: grid; grid-template-columns: auto 1fr; gap: 1.5rem; align-items: start; }
+        .current-image { text-align: center; }
+        .current-image img { width: 120px; height: 160px; object-fit: cover; border-radius: 0.75rem; }
+        .current-image .no-image { width: 120px; height: 160px; border-radius: 0.75rem; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); display: flex; align-items: center; justify-content: center; font-size: 2.5rem; opacity: 0.5; }
+        .current-image p { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem; }
+        .image-upload-area { border: 2px dashed var(--border-subtle); border-radius: 1rem; padding: 2rem; text-align: center; cursor: pointer; }
+        .image-upload-area:hover { border-color: var(--primary); background: var(--primary-muted); }
+        .image-upload-area .upload-icon { font-size: 2rem; margin-bottom: 0.5rem; opacity: 0.5; }
+        .image-upload-area p { color: var(--text-muted); margin: 0; font-size: 0.9rem; }
+        .image-upload-area input[type="file"] { display: none; }
+        .image-preview { margin-top: 1rem; display: none; }
+        .image-preview img { max-width: 100px; max-height: 140px; border-radius: 0.5rem; object-fit: cover; }
+        .form-actions { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-top: 0.5rem; }
+        .form-actions-left, .form-actions-right { display: flex; gap: 0.75rem; }
+        .btn-danger { background: rgba(239, 68, 68, 0.1); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.2); }
+        .btn-danger:hover { background: rgba(239, 68, 68, 0.2); }
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        [data-theme="dark"] .form-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .form-card-header { border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .form-group input, [data-theme="dark"] .form-group select, [data-theme="dark"] .form-group textarea { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); color: #e2e8f0; }
+        [data-theme="dark"] .star-rating-picker .star { color: #475569; }
+        [data-theme="dark"] .star-rating-picker .star.active { color: #fbbf24; }
+        [data-theme="dark"] .btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+        @media (max-width: 600px) { .image-section { grid-template-columns: 1fr; } .form-actions { flex-direction: column; } }
     </style>
 </head>
 <body>
@@ -400,14 +63,13 @@
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
@@ -416,116 +78,69 @@
         <div class="container form-page">
             <div class="form-header">
                 <div class="form-header-title">
-                    <h1>✏️ Modifier l'œuvre</h1>
+                    <h1>✏️ {{ t .T "work.edit.title" }}</h1>
                     <p>{{ .Work.Title }}</p>
                 </div>
-                <a href="/dashboard" class="btn btn-secondary">← Retour</a>
+                <a href="/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
             <form method="POST" enctype="multipart/form-data">
-                <!-- Informations principales -->
                 <div class="form-card">
-                    <div class="form-card-header">
-                        <div class="icon blue">📖</div>
-                        <div>
-                            <h2>Informations principales</h2>
-                            <span>Titre, progression et classification</span>
-                        </div>
-                    </div>
-                    
+                    <div class="form-card-header"><div class="icon blue">📖</div><div><h2>{{ t .T "work.section.info" }}</h2></div></div>
                     <div class="form-group">
-                        <label for="title">Titre <span class="required">*</span></label>
+                        <label for="title">{{ t .T "work.form.title" }} <span class="required">*</span></label>
                         <input id="title" type="text" name="title" value="{{ .Work.Title }}" required>
                     </div>
-                    
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="chapter">Chapitre actuel</label>
+                            <label for="chapter">{{ t .T "work.form.chapter" }}</label>
                             <input id="chapter" type="number" name="chapter" min="0" value="{{ .Work.Chapter }}">
                         </div>
                         <div class="form-group">
-                            <label for="status">Statut</label>
+                            <label for="status">{{ t .T "work.form.status" }}</label>
                             <select id="status" name="status">
-                                {{ $currentStatus := "" }}
-                                {{ if .Work.Status.Valid }}{{ $currentStatus = .Work.Status.String }}{{ end }}
-                                {{ range .Statuses }}
-                                <option value="{{ . }}" {{ if eq . $currentStatus }}selected{{ end }}>{{ . }}</option>
-                                {{ end }}
+                                {{ $currentStatus := "" }}{{ if .Work.Status.Valid }}{{ $currentStatus = .Work.Status.String }}{{ end }}
+                                {{ range .Statuses }}<option value="{{ . }}" {{ if eq . $currentStatus }}selected{{ end }}>{{ translateStatus . $.Lang }}</option>{{ end }}
                             </select>
                         </div>
                         <div class="form-group">
-                            <label for="reading_type">Type</label>
+                            <label for="reading_type">{{ t .T "work.form.type" }}</label>
                             <select id="reading_type" name="reading_type">
-                                {{ $currentType := "Roman" }}
-                                {{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
-                                {{ range .ReadingTypes }}
-                                <option value="{{ . }}" {{ if eq . $currentType }}selected{{ end }}>{{ . }}</option>
-                                {{ end }}
+                                {{ $currentType := "Roman" }}{{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
+                                {{ range .ReadingTypes }}<option value="{{ . }}" {{ if eq . $currentType }}selected{{ end }}>{{ . }}</option>{{ end }}
                             </select>
                         </div>
                     </div>
                 </div>
 
-                <!-- Lien et Image -->
                 <div class="form-card">
-                    <div class="form-card-header">
-                        <div class="icon purple">🔗</div>
-                        <div>
-                            <h2>Média</h2>
-                            <span>Lien de lecture et couverture</span>
-                        </div>
-                    </div>
-                    
+                    <div class="form-card-header"><div class="icon purple">🔗</div><div><h2>{{ t .T "work.section.media" }}</h2></div></div>
                     <div class="form-group">
-                        <label for="link">Lien de lecture</label>
-                        <input id="link" type="url" name="link" placeholder="https://..." value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}">
+                        <label for="link">{{ if eq .Lang "fr" }}Lien de lecture{{ else }}Reading link{{ end }}</label>
+                        <input id="link" type="url" name="link" value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}">
                     </div>
-                    
                     <div class="form-group">
-                        <label>Image de couverture</label>
+                        <label>{{ t .T "work.form.image" }}</label>
                         <div class="image-section">
                             <div class="current-image">
-                                {{ if .Work.ImagePath.Valid }}
-                                    {{ $imgUrl := work_image_url .Work.ImagePath.String }}
-                                    {{ if $imgUrl }}
-                                        <img src="{{ $imgUrl }}" alt="Couverture actuelle">
-                                        <p>Image actuelle</p>
-                                    {{ else }}
-                                        <div class="no-image">📖</div>
-                                        <p>Pas d'image</p>
-                                    {{ end }}
-                                {{ else }}
-                                    <div class="no-image">📖</div>
-                                    <p>Pas d'image</p>
-                                {{ end }}
+                                {{ if .Work.ImagePath.Valid }}{{ $imgUrl := work_image_url .Work.ImagePath.String }}{{ if $imgUrl }}<img src="{{ $imgUrl }}" alt="Cover"><p>{{ t .T "work.form.image.current" }}</p>{{ else }}<div class="no-image">📖</div>{{ end }}{{ else }}<div class="no-image">📖</div>{{ end }}
                             </div>
                             <div>
                                 <div class="image-upload-area" onclick="document.getElementById('image').click()">
                                     <div class="upload-icon">📤</div>
-                                    <p>Cliquez pour changer l'image</p>
-                                    <p class="form-hint">Laissez vide pour conserver l'image actuelle</p>
+                                    <p>{{ t .T "work.form.image.change" }}</p>
                                     <input id="image" type="file" name="image" accept="image/*" onchange="previewImage(this)">
                                 </div>
-                                <div class="image-preview" id="image-preview">
-                                    <img src="" alt="Nouvelle image">
-                                </div>
+                                <div class="image-preview" id="image-preview"><img src="" alt="New"></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                <!-- Appréciation -->
                 <div class="form-card">
-                    <div class="form-card-header">
-                        <div class="icon orange">⭐</div>
-                        <div>
-                            <h2>Appréciation</h2>
-                            <span>Note et commentaires personnels</span>
-                        </div>
-                    </div>
-                    
+                    <div class="form-card-header"><div class="icon orange">⭐</div><div><h2>{{ t .T "work.section.rating" }}</h2></div></div>
                     <div class="form-group">
-                        <label>Votre note</label>
+                        <label>{{ t .T "work.form.rating" }}</label>
                         {{ $rating := .Work.Rating }}
                         <div class="star-rating-picker" id="star-picker">
                             <input type="hidden" name="rating" id="rating-value" value="{{ $rating }}">
@@ -536,99 +151,59 @@
                                 <span class="star {{ if ge $rating 4 }}active{{ end }}" data-value="4">★</span>
                                 <span class="star {{ if ge $rating 5 }}active{{ end }}" data-value="5">★</span>
                             </div>
-                            <button type="button" class="clear-btn" onclick="clearRating()">Effacer</button>
+                            <button type="button" class="clear-btn" onclick="clearRating()">{{ if eq .Lang "fr" }}Effacer{{ else }}Clear{{ end }}</button>
                         </div>
                     </div>
-                    
                     <div class="form-group">
-                        <label for="notes">Notes personnelles</label>
-                        <textarea id="notes" name="notes" placeholder="Vos impressions, où vous en êtes dans l'histoire, ce que vous en pensez...">{{ if .Work.Notes.Valid }}{{ .Work.Notes.String }}{{ end }}</textarea>
+                        <label for="notes">{{ t .T "work.form.notes" }}</label>
+                        <textarea id="notes" name="notes">{{ if .Work.Notes.Valid }}{{ .Work.Notes.String }}{{ end }}</textarea>
                     </div>
                 </div>
 
-                <!-- Actions -->
                 <div class="form-actions">
                     <div class="form-actions-left">
-                        <a href="/delete/{{ .Work.ID }}" class="btn btn-danger" onclick="return confirm('Êtes-vous sûr de vouloir supprimer « {{ .Work.Title }} » ?');">🗑️ Supprimer</a>
+                        <a href="/delete/{{ .Work.ID }}" class="btn btn-danger" onclick="return confirm('{{ t .T "dashboard.delete.confirm" }}');">🗑️ {{ t .T "work.form.delete" }}</a>
                     </div>
                     <div class="form-actions-right">
-                        <a href="/dashboard" class="btn btn-secondary">Annuler</a>
-                        <button type="submit" class="btn btn-primary">✓ Enregistrer</button>
+                        <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                        <button type="submit" class="btn btn-primary">✓ {{ t .T "work.form.submit.edit" }}</button>
                     </div>
                 </div>
             </form>
         </div>
     </main>
 
-    <footer class="page-footer">
-        <div class="container"><p>BookStorage</p></div>
-    </footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
 
     <script>
         function toggleTheme() {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
+            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon();
+            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
-        
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            const icon = document.getElementById('theme-icon');
-            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-
         function previewImage(input) {
             const preview = document.getElementById('image-preview');
-            const img = preview.querySelector('img');
-            
             if (input.files && input.files[0]) {
                 const reader = new FileReader();
-                reader.onload = function(e) {
-                    img.src = e.target.result;
-                    preview.style.display = 'block';
-                };
+                reader.onload = function(e) { preview.querySelector('img').src = e.target.result; preview.style.display = 'block'; };
                 reader.readAsDataURL(input.files[0]);
             }
         }
-
         function clearRating() {
             document.getElementById('rating-value').value = '0';
             document.querySelectorAll('#star-picker .star').forEach(s => s.classList.remove('active'));
         }
-
         document.addEventListener('DOMContentLoaded', function() {
-            updateThemeIcon();
-            
-            // Star picker
-            const picker = document.getElementById('star-picker');
-            const input = document.getElementById('rating-value');
-            const stars = picker.querySelectorAll('.star');
-            
-            function updateStars(rating) {
-                stars.forEach((star, index) => {
-                    star.classList.toggle('active', index < rating);
-                });
-            }
-            
+            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+            const picker = document.getElementById('star-picker'), input = document.getElementById('rating-value'), stars = picker.querySelectorAll('.star');
+            function updateStars(r) { stars.forEach((s, i) => s.classList.toggle('active', i < r)); }
             stars.forEach(star => {
-                star.addEventListener('click', function() {
-                    const value = parseInt(this.dataset.value);
-                    input.value = value;
-                    updateStars(value);
-                });
-                
-                star.addEventListener('mouseenter', function() {
-                    const value = parseInt(this.dataset.value);
-                    updateStars(value);
-                });
+                star.addEventListener('click', function() { input.value = this.dataset.value; updateStars(parseInt(this.dataset.value)); });
+                star.addEventListener('mouseenter', function() { updateStars(parseInt(this.dataset.value)); });
             });
-            
-            picker.addEventListener('mouseleave', function() {
-                updateStars(parseInt(input.value) || 0);
-            });
+            picker.addEventListener('mouseleave', function() { updateStars(parseInt(input.value) || 0); });
         });
     </script>
 </body>

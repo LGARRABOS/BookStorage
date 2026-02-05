@@ -1,32 +1,30 @@
 {{ define "user_detail" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Profil de {{ .TargetUser.Username }}</title>
+    <title>{{ t .T "user.library" }} {{ .TargetUser.Username }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/users.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
@@ -34,22 +32,21 @@
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>Profil de {{ .TargetUser.Username }}</h1>
-                    {{ if .TargetUser.DisplayName.Valid }}<p>Nom affiché : {{ .TargetUser.DisplayName.String }}</p>{{ end }}
+                    <h1>{{ t .T "user.library" }} {{ .TargetUser.Username }}</h1>
+                    {{ if .TargetUser.DisplayName.Valid }}<p>{{ .TargetUser.DisplayName.String }}</p>{{ end }}
                     {{ if .TargetUser.Bio.Valid }}<p>{{ .TargetUser.Bio.String }}</p>{{ end }}
                 </header>
                 {{ if .Works }}
-                <h2>Bibliothèque partagée</h2>
                 <div class="table-wrapper">
                     <table class="data-table">
                         <thead>
                             <tr>
-                                <th>Titre</th>
-                                <th>Chapitre</th>
-                                <th>Note</th>
-                                <th>Statut</th>
-                                <th>Type</th>
-                                {{ if .CanImport }}<th>Importer</th>{{ end }}
+                                <th>{{ t .T "work.form.title" }}</th>
+                                <th>{{ t .T "dashboard.chapter" }}</th>
+                                <th>{{ t .T "work.form.rating" }}</th>
+                                <th>{{ t .T "work.form.status" }}</th>
+                                <th>{{ t .T "work.form.type" }}</th>
+                                {{ if .CanImport }}<th>{{ t .T "user.import" }}</th>{{ end }}
                             </tr>
                         </thead>
                         <tbody>
@@ -57,20 +54,13 @@
                             <tr>
                                 <td>{{ .Title }}</td>
                                 <td>{{ .Chapter }}</td>
-                                <td>
-                                    {{ if .Rating }}
-                                    <span class="star-rating">
-                                        {{ $rating := .Rating }}
-                                        {{ range $i := seq 5 }}{{ if le $i $rating }}<span class="star filled">★</span>{{ else }}<span class="star">★</span>{{ end }}{{ end }}
-                                    </span>
-                                    {{ else }}—{{ end }}
-                                </td>
-                                <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}—{{ end }}</td>
-                                <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</td>
+                                <td>{{ if .Rating }}<span class="star-rating">{{ $rating := .Rating }}{{ range $i := seq 5 }}{{ if le $i $rating }}<span class="star filled">★</span>{{ else }}<span class="star">★</span>{{ end }}{{ end }}</span>{{ else }}—{{ end }}</td>
+                                <td>{{ if .Status.Valid }}{{ translateStatus .Status.String $.Lang }}{{ else }}—{{ end }}</td>
+                                <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}</td>
                                 {{ if $.CanImport }}
                                 <td>
                                     <form method="POST" action="/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
-                                        <button type="submit" class="btn btn-primary btn-icon">Importer</button>
+                                        <button type="submit" class="btn btn-primary btn-icon">{{ t $.T "user.import" }}</button>
                                     </form>
                                 </td>
                                 {{ end }}
@@ -80,31 +70,23 @@
                     </table>
                 </div>
                 {{ else }}
-                <p>Ce lecteur n'a pas encore partagé d'œuvres.</p>
+                <p>{{ t .T "user.empty" }}</p>
                 {{ end }}
             </section>
         </div>
     </main>
-    <footer class="page-footer">
-        <div class="container"><p>BookStorage</p></div>
-    </footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script>
         function toggleTheme() {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
+            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon();
+            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
-        
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            const icon = document.getElementById('theme-icon');
-            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+        });
     </script>
 </body>
 </html>

@@ -1,33 +1,31 @@
 {{ define "admin_accounts" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Administration</title>
+    <title>{{ t .T "admin.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/admin.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                <a href="/admin/accounts">Administration</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
@@ -35,8 +33,7 @@
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>Administration des comptes</h1>
-                    <p>Gérez la validation et les droits des utilisateurs.</p>
+                    <h1>{{ t .T "admin.accounts" }}</h1>
                 </header>
                 {{ if .Users }}
                 <div class="table-wrapper">
@@ -44,11 +41,11 @@
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>Utilisateur</th>
-                                <th>Validé</th>
+                                <th>{{ t .T "admin.username" }}</th>
+                                <th>{{ if eq .Lang "fr" }}Validé{{ else }}Validated{{ end }}</th>
                                 <th>Admin</th>
                                 <th>Superadmin</th>
-                                <th>Actions</th>
+                                <th>{{ t .T "admin.actions" }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -56,14 +53,14 @@
                             <tr>
                                 <td>{{ .ID }}</td>
                                 <td>{{ .Username }}</td>
-                                <td>{{ if eq .Validated 1 }}<span class="badge success">Oui</span>{{ else }}<span class="badge warning">Non</span>{{ end }}</td>
-                                <td>{{ if eq .IsAdmin 1 }}<span class="badge success">Oui</span>{{ else }}Non{{ end }}</td>
-                                <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">Oui</span>{{ else }}Non{{ end }}</td>
+                                <td>{{ if eq .Validated 1 }}<span class="badge success">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}<span class="badge warning">{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}</span>{{ end }}</td>
+                                <td>{{ if eq .IsAdmin 1 }}<span class="badge success">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}{{ end }}</td>
+                                <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}{{ end }}</td>
                                 <td>
                                     <div class="action-buttons">
-                                        {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">Valider</a>{{ end }}
-                                        {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">Promouvoir</a>{{ end }}
-                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger" href="/admin/delete_account/{{ .ID }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>{{ end }}
+                                        {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">{{ t $.T "admin.approve" }}</a>{{ end }}
+                                        {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">{{ t $.T "admin.promote" }}</a>{{ end }}
+                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger" href="/admin/delete_account/{{ .ID }}" onclick="return confirm('{{ if eq $.Lang "fr" }}Supprimer cet utilisateur ?{{ else }}Delete this user?{{ end }}');">{{ t $.T "admin.delete" }}</a>{{ end }}
                                     </div>
                                 </td>
                             </tr>
@@ -72,31 +69,23 @@
                     </table>
                 </div>
                 {{ else }}
-                <p>Aucun utilisateur.</p>
+                <p>{{ if eq .Lang "fr" }}Aucun utilisateur.{{ else }}No users.{{ end }}</p>
                 {{ end }}
             </section>
         </div>
     </main>
-    <footer class="page-footer">
-        <div class="container"><p>BookStorage</p></div>
-    </footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script>
         function toggleTheme() {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
+            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon();
+            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
-        
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            const icon = document.getElementById('theme-icon');
-            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+        });
     </script>
 </body>
 </html>

@@ -1,10 +1,10 @@
 {{ define "register" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Inscription</title>
+    <title>{{ t .T "register.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/register.css">
     <script>
@@ -13,17 +13,22 @@
             document.documentElement.setAttribute('data-theme', theme);
         })();
     </script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/">📚 BookStorage</a>
             <nav class="nav-links">
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
                     <span id="theme-icon">🌙</span>
                 </button>
-                <a href="/login">Connexion</a>
-                <a href="/register" class="btn btn-primary">Inscription</a>
+                <a href="/login">{{ t .T "nav.login" }}</a>
+                <a href="/register" class="btn btn-primary">{{ t .T "nav.register" }}</a>
             </nav>
         </div>
     </header>
@@ -31,21 +36,21 @@
         <div class="container content-card">
             <section class="page-section narrow auth-card">
                 <header class="section-header">
-                    <h1>Inscription</h1>
-                    <p>Créez un compte pour suivre vos lectures.</p>
+                    <h1>{{ t .T "register.title" }}</h1>
+                    <p>{{ if eq .Lang "fr" }}Créez un compte pour suivre vos lectures.{{ else }}Create an account to track your readings.{{ end }}</p>
                 </header>
                 <form method="POST" class="form-layout">
                     <div class="form-field">
-                        <label for="username">Nom d'utilisateur</label>
+                        <label for="username">{{ t .T "register.username" }}</label>
                         <input id="username" type="text" name="username" autocomplete="username" required>
                     </div>
                     <div class="form-field">
-                        <label for="password">Mot de passe</label>
+                        <label for="password">{{ t .T "register.password" }}</label>
                         <input id="password" type="password" name="password" autocomplete="new-password" required>
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Créer mon compte</button>
-                        <a class="btn btn-text" href="/login">J'ai déjà un compte</a>
+                        <button type="submit" class="btn btn-primary">{{ t .T "register.submit" }}</button>
+                        <a class="btn btn-text" href="/login">{{ t .T "register.login" }}</a>
                     </div>
                 </form>
             </section>
@@ -63,13 +68,11 @@
             localStorage.setItem('theme', next);
             updateThemeIcon();
         }
-        
         function updateThemeIcon() {
             const theme = document.documentElement.getAttribute('data-theme') || 'light';
             const icon = document.getElementById('theme-icon');
             if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
         }
-        
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
     </script>
 </body>

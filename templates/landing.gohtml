@@ -1,11 +1,11 @@
 {{ define "landing" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>BookStorage - Gérez vos lectures</title>
-    <meta name="description" content="BookStorage est une application gratuite pour suivre vos lectures : romans, mangas, webtoons et plus encore.">
+    <title>BookStorage - {{ if eq .Lang "fr" }}Gérez vos lectures{{ else }}Track your reading{{ end }}</title>
+    <meta name="description" content="{{ if eq .Lang "fr" }}BookStorage est une application gratuite pour suivre vos lectures{{ else }}BookStorage is a free app to track your reading{{ end }}">
     <link rel="stylesheet" href="/static/css/base.css">
     <script>
         (function() {
@@ -14,116 +14,28 @@
         })();
     </script>
     <style>
-        .landing-hero {
-            text-align: center;
-            padding: 5rem 1rem 4rem;
-            max-width: 800px;
-            margin: 0 auto;
-        }
-        .landing-hero h1 {
-            font-size: clamp(2.2rem, 6vw, 3.5rem);
-            margin-bottom: 1.25rem;
-            line-height: 1.1;
-        }
-        .landing-hero h1 .highlight {
-            background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .landing-hero .subtitle {
-            font-size: 1.2rem;
-            color: var(--text-secondary);
-            max-width: 550px;
-            margin: 0 auto 2.5rem;
-            line-height: 1.6;
-        }
-        .hero-buttons {
-            display: flex;
-            gap: 1rem;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-        .hero-buttons .btn {
-            padding: 0.9rem 2rem;
-            font-size: 1.05rem;
-        }
-        .features {
-            padding: 3rem 0;
-        }
-        .features-title {
-            text-align: center;
-            font-size: 1.6rem;
-            margin-bottom: 2.5rem;
-            color: var(--text-primary);
-        }
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-            gap: 1.5rem;
-        }
-        .feature-item {
-            background: var(--surface);
-            border-radius: var(--radius);
-            padding: 1.75rem;
-            box-shadow: var(--shadow-soft);
-            border: 1px solid var(--border-subtle);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        .feature-item:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-base);
-        }
-        .feature-item .icon {
-            font-size: 2.2rem;
-            margin-bottom: 0.75rem;
-            display: block;
-        }
-        .feature-item h3 {
-            font-size: 1.1rem;
-            margin-bottom: 0.5rem;
-            color: var(--text-primary);
-        }
-        .feature-item p {
-            font-size: 0.95rem;
-            color: var(--text-muted);
-            margin: 0;
-            line-height: 1.5;
-        }
-        .cta-section {
-            text-align: center;
-            padding: 4rem 1rem;
-            margin-top: 2rem;
-            background: var(--primary-muted);
-            border-radius: var(--radius);
-        }
-        .cta-section h2 {
-            font-size: 1.8rem;
-            margin-bottom: 1rem;
-        }
-        .cta-section p {
-            color: var(--text-secondary);
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Dark Mode */
-        [data-theme="dark"] .feature-item {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        [data-theme="dark"] .feature-item:hover {
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
-        }
-        [data-theme="dark"] .cta-section {
-            background: rgba(51, 65, 85, 0.5);
-        }
-        [data-theme="dark"] .btn-secondary {
-            background: rgba(148, 163, 184, 0.2);
-            color: #e2e8f0;
-        }
-        [data-theme="dark"] .btn-secondary:hover {
-            background: rgba(148, 163, 184, 0.3);
-        }
+        .landing-hero { text-align: center; padding: 5rem 1rem 4rem; max-width: 800px; margin: 0 auto; }
+        .landing-hero h1 { font-size: clamp(2.2rem, 6vw, 3.5rem); margin-bottom: 1.25rem; line-height: 1.1; }
+        .landing-hero h1 .highlight { background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .landing-hero .subtitle { font-size: 1.2rem; color: var(--text-secondary); max-width: 550px; margin: 0 auto 2.5rem; line-height: 1.6; }
+        .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
+        .hero-buttons .btn { padding: 0.9rem 2rem; font-size: 1.05rem; }
+        .features { padding: 3rem 0; }
+        .features-title { text-align: center; font-size: 1.6rem; margin-bottom: 2.5rem; color: var(--text-primary); }
+        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+        .feature-item { background: var(--surface); border-radius: var(--radius); padding: 1.75rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .feature-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-base); }
+        .feature-item .icon { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; }
+        .feature-item h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .feature-item p { font-size: 0.95rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
+        .cta-section { text-align: center; padding: 4rem 1rem; margin-top: 2rem; background: var(--primary-muted); border-radius: var(--radius); }
+        .cta-section h2 { font-size: 1.8rem; margin-bottom: 1rem; }
+        .cta-section p { color: var(--text-secondary); margin-bottom: 1.5rem; }
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        [data-theme="dark"] .feature-item { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .cta-section { background: rgba(51, 65, 85, 0.5); }
+        [data-theme="dark"] .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -131,11 +43,12 @@
         <div class="container nav-layout">
             <a class="brand" href="/">📚 BookStorage</a>
             <nav class="nav-links">
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
                     <span id="theme-icon">🌙</span>
                 </button>
-                <a href="/login" class="btn btn-nav">Connexion</a>
-                <a href="/register" class="btn btn-primary">S'inscrire</a>
+                <a href="/login" class="btn btn-nav">{{ t .T "nav.login" }}</a>
+                <a href="/register" class="btn btn-primary">{{ t .T "nav.register" }}</a>
             </nav>
         </div>
     </header>
@@ -143,64 +56,61 @@
     <main class="page-body">
         <div class="container">
             <section class="landing-hero">
-                <h1>Suivez toutes vos <span class="highlight">lectures</span> au même endroit</h1>
-                <p class="subtitle">
-                    Romans, mangas, webtoons, light novels... Organisez votre progression, 
-                    notez vos œuvres et découvrez ce que lisent les autres.
-                </p>
+                <h1>{{ t .T "landing.hero.title" }} <span class="highlight">{{ if eq .Lang "fr" }}lectures{{ else }}books{{ end }}</span></h1>
+                <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
                 <div class="hero-buttons">
-                    <a href="/register" class="btn btn-primary">Créer un compte gratuit</a>
-                    <a href="/login" class="btn btn-secondary">Se connecter</a>
+                    <a href="/register" class="btn btn-primary">{{ t .T "landing.hero.cta" }}</a>
+                    <a href="/login" class="btn btn-secondary">{{ t .T "landing.hero.login" }}</a>
                 </div>
             </section>
 
             <section class="features">
-                <h2 class="features-title">Tout ce dont vous avez besoin</h2>
+                <h2 class="features-title">{{ t .T "landing.features" }}</h2>
                 <div class="features-grid">
                     <article class="feature-item">
                         <span class="icon">📖</span>
-                        <h3>Multi-formats</h3>
-                        <p>Romans, mangas, manhwas, webtoons, light novels... Un seul endroit pour tout suivre.</p>
+                        <h3>{{ t .T "landing.feature1.title" }}</h3>
+                        <p>{{ t .T "landing.feature1.desc" }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">⭐</span>
-                        <h3>Notes & avis</h3>
-                        <p>Notez vos œuvres de 1 à 5 étoiles et gardez des notes personnelles.</p>
+                        <h3>{{ t .T "landing.feature3.title" }}</h3>
+                        <p>{{ t .T "landing.feature3.desc" }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">📊</span>
-                        <h3>Statistiques</h3>
-                        <p>Visualisez vos habitudes : chapitres lus, répartition par type, notes moyennes.</p>
+                        <h3>{{ t .T "landing.feature4.title" }}</h3>
+                        <p>{{ t .T "landing.feature4.desc" }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">👥</span>
-                        <h3>Communauté</h3>
-                        <p>Explorez les listes des autres lecteurs et importez leurs recommandations.</p>
+                        <h3>{{ if eq .Lang "fr" }}Communauté{{ else }}Community{{ end }}</h3>
+                        <p>{{ if eq .Lang "fr" }}Explorez les listes des autres lecteurs et importez leurs recommandations.{{ else }}Explore other readers' lists and import their recommendations.{{ end }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">🌓</span>
-                        <h3>Mode sombre</h3>
-                        <p>Interface claire ou sombre selon vos préférences, pour un confort optimal.</p>
+                        <h3>{{ if eq .Lang "fr" }}Mode sombre{{ else }}Dark mode{{ end }}</h3>
+                        <p>{{ if eq .Lang "fr" }}Interface claire ou sombre selon vos préférences.{{ else }}Light or dark interface according to your preferences.{{ end }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">🔐</span>
-                        <h3>Vie privée</h3>
-                        <p>Profil public ou privé : vous choisissez ce que vous partagez.</p>
+                        <h3>{{ if eq .Lang "fr" }}Vie privée{{ else }}Privacy{{ end }}</h3>
+                        <p>{{ if eq .Lang "fr" }}Profil public ou privé : vous choisissez ce que vous partagez.{{ else }}Public or private profile: you choose what to share.{{ end }}</p>
                     </article>
                 </div>
             </section>
 
             <section class="cta-section">
-                <h2>Prêt à organiser vos lectures ?</h2>
-                <p>Rejoignez BookStorage gratuitement et commencez dès maintenant.</p>
-                <a href="/register" class="btn btn-primary">Commencer maintenant</a>
+                <h2>{{ t .T "landing.cta.title" }}</h2>
+                <p>{{ t .T "landing.cta.subtitle" }}</p>
+                <a href="/register" class="btn btn-primary">{{ t .T "landing.cta.button" }}</a>
             </section>
         </div>
     </main>
 
     <footer class="page-footer">
         <div class="container">
-            <p>BookStorage — Fait avec ❤️ pour les lecteurs</p>
+            <p>BookStorage — {{ if eq .Lang "fr" }}Fait avec ❤️ pour les lecteurs{{ else }}Made with ❤️ for readers{{ end }}</p>
         </div>
     </footer>
 
@@ -213,12 +123,10 @@
             localStorage.setItem('theme', next);
             updateThemeIcon();
         }
-        
         function updateThemeIcon() {
             const theme = document.documentElement.getAttribute('data-theme') || 'light';
             document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
         }
-        
         document.addEventListener('DOMContentLoaded', updateThemeIcon);
     </script>
 </body>
