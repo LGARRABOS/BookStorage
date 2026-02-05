@@ -40,6 +40,19 @@
                     <h1>{{ t .T "login.title" }}</h1>
                     <p>{{ if eq .Lang "fr" }}Retrouvez instantanément vos lectures en cours.{{ else }}Instantly find your current readings.{{ end }}</p>
                 </header>
+                {{ if or .LoginError .LoginPending .RegisterSuccess }}
+                <div class="flash-messages">
+                    {{ if .RegisterSuccess }}
+                        <p>{{ t .T "register.success" }}</p>
+                    {{ end }}
+                    {{ if .LoginPending }}
+                        <p>{{ t .T "login.pending" }}</p>
+                    {{ end }}
+                    {{ if .LoginError }}
+                        <p>{{ t .T "login.error" }}</p>
+                    {{ end }}
+                </div>
+                {{ end }}
                 <form method="POST" class="form-layout">
                     <div class="form-field">
                         <label for="username">{{ t .T "login.username" }}</label>

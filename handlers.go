@@ -458,13 +458,19 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "register", a.baseData(r))
+		// Messages de feedback via query string
+		q := r.URL.Query()
+		data := a.mergeData(r, map[string]any{
+			"RegisterErrorEmpty":  q.Get("error") == "empty",
+			"RegisterErrorExists": q.Get("error") == "exists",
+		})
+		_ = a.Templates.ExecuteTemplate(w, "register", data)
 	case http.MethodPost:
 		username := r.FormValue("username")
 		password := r.FormValue("password")
 
 		if username == "" || password == "" {
-			http.Redirect(w, r, "/register", http.StatusFound)
+			http.Redirect(w, r, "/register?error=empty", http.StatusFound)
 			return
 		}
 
@@ -475,10 +481,11 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 		)
 		if err != nil {
 			// conflit de username, etc.
-			http.Redirect(w, r, "/register", http.StatusFound)
+			http.Redirect(w, r, "/register?error=exists", http.StatusFound)
 			return
 		}
-		http.Redirect(w, r, "/login", http.StatusFound)
+		// Succès : compte créé, en attente de validation par le staff
+		http.Redirect(w, r, "/login?registered=1", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -496,7 +503,14 @@ type userRow struct {
 func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "login", a.baseData(r))
+		// Messages de feedback via query string
+		q := r.URL.Query()
+		data := a.mergeData(r, map[string]any{
+			"LoginError":      q.Get("error") != "",
+			"LoginPending":    q.Get("pending") != "",
+			"RegisterSuccess": q.Get("registered") != "",
+		})
+		_ = a.Templates.ExecuteTemplate(w, "login", data)
 	case http.MethodPost:
 		username := r.FormValue("username")
 		password := r.FormValue("password")
@@ -508,17 +522,19 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 			username,
 		).Scan(&u.ID, &u.Username, &u.Password, &u.Validated, &u.IsAdmin, &u.IsSuperadmin)
 		if err != nil {
-			http.Redirect(w, r, "/login", http.StatusFound)
+			// Utilisateur introuvable
+			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
 
 		// Vérification du mot de passe (supporte Werkzeug et clair)
 		if !verifyPassword(u.Password, password) {
-			http.Redirect(w, r, "/login", http.StatusFound)
+			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
 		if u.Validated == 0 && u.IsAdmin == 0 {
-			http.Redirect(w, r, "/login", http.StatusFound)
+			// Compte non encore validé par le staff
+			http.Redirect(w, r, "/login?pending=1", http.StatusFound)
 			return
 		}
 
