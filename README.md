@@ -15,6 +15,8 @@
 - 🌓 **Mode sombre** : Interface claire ou sombre selon vos préférences
 - 🔐 **Vie privée** : Profil public ou privé, vous choisissez
 
+---
+
 ## 🚀 Démarrage rapide
 
 ### Prérequis
@@ -29,20 +31,11 @@
 git clone https://github.com/VOTRE_USERNAME/BookStorage.git
 cd BookStorage
 
-# Installer les dépendances
-go mod tidy
-
 # Lancer le serveur
 go run .
 ```
 
 Le serveur démarre sur **http://127.0.0.1:5000**
-
-### Voir toutes les commandes disponibles
-
-```bash
-make help
-```
 
 ---
 
@@ -51,61 +44,61 @@ make help
 ### Installation automatique
 
 ```bash
-# Cloner et installer
+# Cloner et installer (en root)
 git clone https://github.com/VOTRE_USERNAME/BookStorage.git
 cd BookStorage
 sudo ./deploy/install.sh
 ```
 
-Le script configure automatiquement :
-- Compilation de l'application
-- Service systemd
-- Configuration du firewall
-- Fichier `.env` avec clé secrète générée
+Le script installe automatiquement :
+- L'application compilée
+- Le CLI `bsctl` pour gérer le service
+- Le service systemd
+- La configuration du firewall
 
-### Commandes du service
-
-```bash
-sudo systemctl start bookstorage     # Démarrer
-sudo systemctl stop bookstorage      # Arrêter
-sudo systemctl restart bookstorage   # Redémarrer
-sudo systemctl status bookstorage    # Voir le statut
-```
-
-### Mise à jour
+### Démarrer le service
 
 ```bash
-cd /opt/bookstorage
-sudo make update
-```
-
-### Logs
-
-```bash
-# Logs en temps réel
-sudo journalctl -u bookstorage -f
-
-# Dernières 50 lignes
-sudo journalctl -u bookstorage -n 50
+bsctl start
 ```
 
 ---
 
-## 🛠️ Commandes Make
+## 🛠️ Commandes bsctl
 
-Utilisez `make help` pour voir toutes les commandes :
+`bsctl` (BookStorage Control) est le CLI pour gérer BookStorage.
+
+```bash
+bsctl help     # Afficher l'aide
+```
+
+### Service
 
 | Commande | Description |
 |----------|-------------|
-| `make build` | Compile l'application |
-| `make build-prod` | Compile en mode production (binaire optimisé) |
-| `make run` | Lance en mode développement |
-| `make clean` | Supprime les fichiers compilés |
-| `make install` | Installe le service systemd |
-| `make uninstall` | Désinstalle le service |
-| `make update` | Met à jour (pull + rebuild + restart) |
-| `make fix-perms` | Corrige les permissions des fichiers |
-| `make help` | Affiche l'aide |
+| `bsctl start` | Démarre le service |
+| `bsctl stop` | Arrête le service |
+| `bsctl restart` | Redémarre le service |
+| `bsctl status` | Affiche le statut |
+| `bsctl logs` | Affiche les logs en temps réel |
+
+### Développement
+
+| Commande | Description |
+|----------|-------------|
+| `bsctl build` | Compile l'application |
+| `bsctl build-prod` | Compile en mode production |
+| `bsctl run` | Lance le serveur de dev |
+| `bsctl clean` | Supprime les fichiers compilés |
+
+### Production
+
+| Commande | Description |
+|----------|-------------|
+| `bsctl install` | Installe le service systemd |
+| `bsctl uninstall` | Désinstalle le service |
+| `bsctl update` | Met à jour (pull + build + restart) |
+| `bsctl fix-perms` | Corrige les permissions |
 
 ---
 
@@ -113,27 +106,30 @@ Utilisez `make help` pour voir toutes les commandes :
 
 ### Variables d'environnement
 
-Créez un fichier `.env` à la racine du projet ou définissez ces variables :
+Créez un fichier `.env` à la racine ou dans `/opt/bookstorage/` :
+
+```env
+# Serveur
+BOOKSTORAGE_HOST=0.0.0.0
+BOOKSTORAGE_PORT=5000
+
+# Base de données
+BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
+
+# Sécurité (généré automatiquement à l'installation)
+BOOKSTORAGE_SECRET_KEY=votre-cle-secrete-tres-longue
+
+# Super administrateur
+BOOKSTORAGE_SUPERADMIN_USERNAME=admin
+BOOKSTORAGE_SUPERADMIN_PASSWORD=MotDePasseSecurise123!
+```
 
 | Variable | Description | Défaut |
 |----------|-------------|--------|
 | `BOOKSTORAGE_HOST` | Adresse d'écoute | `127.0.0.1` |
 | `BOOKSTORAGE_PORT` | Port | `5000` |
 | `BOOKSTORAGE_DATABASE` | Chemin base SQLite | `database.db` |
-| `BOOKSTORAGE_SECRET_KEY` | Clé secrète pour les sessions | `dev-secret-change-me` |
-| `BOOKSTORAGE_SUPERADMIN_USERNAME` | Nom du super administrateur | `superadmin` |
-| `BOOKSTORAGE_SUPERADMIN_PASSWORD` | Mot de passe super admin | `SuperAdmin!2023` |
-
-### Exemple de fichier `.env`
-
-```env
-BOOKSTORAGE_HOST=0.0.0.0
-BOOKSTORAGE_PORT=5000
-BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
-BOOKSTORAGE_SECRET_KEY=votre-cle-secrete-tres-longue-et-complexe
-BOOKSTORAGE_SUPERADMIN_USERNAME=admin
-BOOKSTORAGE_SUPERADMIN_PASSWORD=MotDePasseSecurise123!
-```
+| `BOOKSTORAGE_SECRET_KEY` | Clé secrète sessions | `dev-secret-change-me` |
 
 ---
 
@@ -141,88 +137,71 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=MotDePasseSecurise123!
 
 ```
 BookStorage/
-├── main.go              # Point d'entrée de l'application
-├── config.go            # Configuration et variables d'environnement
-├── db.go                # Schéma SQLite et migrations
-├── handlers.go          # Routes HTTP et logique métier
+├── main.go              # Point d'entrée
+├── config.go            # Configuration
+├── db.go                # Schéma SQLite
+├── handlers.go          # Routes HTTP
+├── bsctl                # CLI de gestion
+├── Makefile             # Commandes make
 ├── go.mod / go.sum      # Dépendances Go
-├── Makefile             # Commandes de build/deploy
-├── .env.example         # Exemple de configuration
 │
-├── deploy/              # Déploiement
-│   ├── install.sh       # Script d'installation Linux
-│   └── bookstorage.service  # Service systemd
+├── deploy/
+│   ├── install.sh       # Script d'installation
+│   └── bookstorage.service
 │
-├── templates/           # Templates HTML (Go html/template)
-│   ├── dashboard.gohtml
-│   ├── login.gohtml
-│   └── ...
-│
-└── static/              # Fichiers statiques
-    ├── css/             # Feuilles de style
-    ├── avatars/         # Avatars utilisateurs (uploads)
-    └── images/          # Images des œuvres (uploads)
+├── templates/           # Templates HTML
+└── static/              # CSS, images, avatars
 ```
 
 ---
 
 ## 🔄 Migration depuis Python/Flask
 
-Si vous avez une ancienne version Python de BookStorage :
+Si vous avez une ancienne version Python :
 
-1. **Copiez** votre fichier `database.db` vers `/opt/bookstorage/`
-2. **Corrigez** les permissions : `sudo make fix-perms`
-3. **Redémarrez** : `sudo systemctl restart bookstorage`
+```bash
+# Copier la base de données
+cp /ancien/chemin/database.db /opt/bookstorage/
 
-> Les mots de passe hashés avec Werkzeug (format `pbkdf2:sha256`) sont automatiquement reconnus.
+# Corriger les permissions et redémarrer
+bsctl fix-perms
+bsctl restart
+```
+
+> Les mots de passe Werkzeug (`pbkdf2:sha256`) sont automatiquement reconnus.
 
 ---
 
 ## 🐛 Dépannage
 
-### Le service ne démarre pas
+### Erreur "readonly database"
 
 ```bash
-# Vérifier les logs
-sudo journalctl -u bookstorage -n 100
-
-# Erreur "readonly database" → Corriger les permissions
-cd /opt/bookstorage
-sudo make fix-perms
-sudo systemctl restart bookstorage
+bsctl fix-perms
+bsctl restart
 ```
 
 ### Port déjà utilisé
 
 ```bash
-# Voir quel processus utilise le port 5000
+# Voir quel processus utilise le port
 sudo lsof -i :5000
 
 # Changer le port dans .env
 BOOKSTORAGE_PORT=5001
 ```
 
-### Problème de compilation (CGO)
+### Voir les logs détaillés
 
 ```bash
-# Installer GCC sur Rocky/RHEL/CentOS
-sudo dnf install gcc
-
-# Installer GCC sur Debian/Ubuntu
-sudo apt install gcc
+bsctl logs
 ```
 
 ---
 
 ## 📝 Licence
 
-MIT License - Voir [LICENSE](LICENSE) pour plus de détails.
-
----
-
-## 🤝 Contribution
-
-Les contributions sont les bienvenues ! N'hésitez pas à ouvrir une issue ou une pull request.
+MIT License
 
 ---
 
