@@ -86,7 +86,8 @@ systemctl enable $APP_NAME
 # Créer le fichier .env si nécessaire
 if [ ! -f "$APP_DIR/.env" ]; then
     echo "Création du fichier .env..."
-    SECRET=$(openssl rand -hex 32)
+    # Générer un secret avec /dev/urandom (méthode universelle)
+    SECRET=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
     cat > $APP_DIR/.env << EOF
 FLASK_ENV=production
 BOOKSTORAGE_HOST=0.0.0.0
