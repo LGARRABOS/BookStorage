@@ -114,7 +114,11 @@
                         <input id="link" type="url" name="link" placeholder="https://...">
                     </div>
                     <div class="form-group">
-                        <label>{{ t .T "work.form.image" }}</label>
+                        <label for="image_url">{{ if eq .Lang "fr" }}URL de l'image{{ else }}Image URL{{ end }}</label>
+                        <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" onchange="previewImageUrl(this)">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ if eq .Lang "fr" }}Ou télécharger une image{{ else }}Or upload an image{{ end }}</label>
                         <div class="image-upload-area" onclick="document.getElementById('image').click()">
                             <div class="upload-icon">🖼️</div>
                             <p>{{ if eq .Lang "fr" }}Cliquez pour sélectionner{{ else }}Click to select{{ end }}</p>
@@ -175,6 +179,17 @@
                 const reader = new FileReader();
                 reader.onload = function(e) { preview.querySelector('img').src = e.target.result; preview.style.display = 'block'; };
                 reader.readAsDataURL(input.files[0]);
+                document.getElementById('image_url').value = ''; // Clear URL when file selected
+            }
+        }
+        function previewImageUrl(input) {
+            const preview = document.getElementById('image-preview');
+            if (input.value) {
+                preview.querySelector('img').src = input.value;
+                preview.style.display = 'block';
+                document.getElementById('image').value = ''; // Clear file when URL entered
+            } else {
+                preview.style.display = 'none';
             }
         }
         function clearRating() {

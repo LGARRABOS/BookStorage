@@ -175,6 +175,74 @@
                         </div>
                     </div>
                 </form>
+
+                <!-- Export/Import Section -->
+                <div class="form-card" style="margin-top: 1.5rem;">
+                    <div class="form-card-header"><span class="icon">📦</span><div><h2>{{ if eq .Lang "fr" }}Exporter / Importer{{ else }}Export / Import{{ end }}</h2><p>{{ if eq .Lang "fr" }}Sauvegardez ou restaurez vos lectures{{ else }}Backup or restore your reading list{{ end }}</p></div></div>
+                    
+                    <div class="form-row" style="margin-bottom: 1.5rem;">
+                        <div class="form-group">
+                            <label>{{ if eq .Lang "fr" }}Exporter vos lectures{{ else }}Export your readings{{ end }}</label>
+                            <a href="/export" class="btn btn-primary" style="display: inline-block; margin-top: 0.5rem;">📥 {{ if eq .Lang "fr" }}Télécharger CSV{{ else }}Download CSV{{ end }}</a>
+                            <p class="form-hint">{{ if eq .Lang "fr" }}Exporte toutes vos œuvres dans un fichier CSV compatible Excel{{ else }}Exports all your works to an Excel-compatible CSV file{{ end }}</p>
+                        </div>
+                        <div class="form-group">
+                            <label>{{ if eq .Lang "fr" }}Importer des lectures{{ else }}Import readings{{ end }}</label>
+                            <form action="/import" method="POST" enctype="multipart/form-data" style="margin-top: 0.5rem;">
+                                <input type="file" name="csv_file" accept=".csv" required style="margin-bottom: 0.5rem;">
+                                <button type="submit" class="btn btn-secondary">📤 {{ if eq .Lang "fr" }}Importer{{ else }}Import{{ end }}</button>
+                            </form>
+                        </div>
+                    </div>
+
+                    <div style="background: var(--primary-muted); border-radius: 0.75rem; padding: 1rem; font-size: 0.9rem;">
+                        <strong>{{ if eq .Lang "fr" }}📋 Format du fichier CSV{{ else }}📋 CSV File Format{{ end }}</strong>
+                        <p style="margin: 0.5rem 0; color: var(--text-secondary);">
+                            {{ if eq .Lang "fr" }}Le fichier doit être au format CSV avec des points-virgules (;) comme séparateur :{{ else }}The file must be CSV format with semicolons (;) as separator:{{ end }}
+                        </p>
+                        <code style="display: block; background: var(--background); padding: 0.75rem; border-radius: 0.5rem; font-size: 0.8rem; overflow-x: auto; white-space: nowrap;">
+Title;Chapter;Link;Status;Type;Rating;Notes
+                        </code>
+                        <ul style="margin: 0.75rem 0 0; padding-left: 1.25rem; color: var(--text-secondary);">
+                            <li><strong>Title</strong> : {{ if eq .Lang "fr" }}Titre de l'œuvre (obligatoire){{ else }}Work title (required){{ end }}</li>
+                            <li><strong>Chapter</strong> : {{ if eq .Lang "fr" }}Numéro du chapitre{{ else }}Chapter number{{ end }}</li>
+                            <li><strong>Link</strong> : {{ if eq .Lang "fr" }}URL de lecture{{ else }}Reading URL{{ end }}</li>
+                            <li><strong>Status</strong> : En cours, Terminé, En pause, Abandonné, À lire</li>
+                            <li><strong>Type</strong> : Webtoon, Manga, Roman, Light Novel, Manhwa, Manhua, Autre</li>
+                            <li><strong>Rating</strong> : 0-5</li>
+                            <li><strong>Notes</strong> : {{ if eq .Lang "fr" }}Notes personnelles{{ else }}Personal notes{{ end }}</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- PWA Install Section -->
+                <div class="form-card" style="margin-top: 1.5rem;">
+                    <div class="form-card-header"><span class="icon">📱</span><div><h2>{{ if eq .Lang "fr" }}Application mobile{{ else }}Mobile App{{ end }}</h2><p>{{ if eq .Lang "fr" }}Installez BookStorage sur votre téléphone{{ else }}Install BookStorage on your phone{{ end }}</p></div></div>
+                    
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.5rem;">
+                        <div style="background: var(--primary-muted); border-radius: 0.75rem; padding: 1.25rem;">
+                            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">🍎 iPhone / iPad (Safari)</h3>
+                            <ol style="margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                                <li>{{ if eq .Lang "fr" }}Ouvrez BookStorage dans Safari{{ else }}Open BookStorage in Safari{{ end }}</li>
+                                <li>{{ if eq .Lang "fr" }}Appuyez sur l'icône de partage{{ else }}Tap the share icon{{ end }} <span style="font-size: 1.1rem;">⬆️</span></li>
+                                <li>{{ if eq .Lang "fr" }}Sélectionnez "Sur l'écran d'accueil"{{ else }}Select "Add to Home Screen"{{ end }}</li>
+                                <li>{{ if eq .Lang "fr" }}Confirmez en appuyant sur "Ajouter"{{ else }}Confirm by tapping "Add"{{ end }}</li>
+                            </ol>
+                        </div>
+                        <div style="background: var(--primary-muted); border-radius: 0.75rem; padding: 1.25rem;">
+                            <h3 style="font-size: 1rem; margin-bottom: 0.75rem;">🤖 Android (Chrome)</h3>
+                            <ol style="margin: 0; padding-left: 1.25rem; color: var(--text-secondary); font-size: 0.9rem; line-height: 1.6;">
+                                <li>{{ if eq .Lang "fr" }}Ouvrez BookStorage dans Chrome{{ else }}Open BookStorage in Chrome{{ end }}</li>
+                                <li>{{ if eq .Lang "fr" }}Appuyez sur le menu{{ else }}Tap the menu{{ end }} <span style="font-size: 1.1rem;">⋮</span></li>
+                                <li>{{ if eq .Lang "fr" }}Sélectionnez "Installer l'application"{{ else }}Select "Install app"{{ end }}</li>
+                                <li>{{ if eq .Lang "fr" }}Confirmez l'installation{{ else }}Confirm the installation{{ end }}</li>
+                            </ol>
+                        </div>
+                    </div>
+                    <p style="margin-top: 1rem; font-size: 0.85rem; color: var(--text-muted); text-align: center;">
+                        {{ if eq .Lang "fr" }}L'application fonctionne comme une app native avec une icône sur votre écran d'accueil !{{ else }}The app works like a native app with an icon on your home screen!{{ end }}
+                    </p>
+                </div>
             </section>
         </div>
     </main>

@@ -17,6 +17,9 @@
 - 🌓 **Dark mode**: Light or dark interface based on your preferences
 - 🔐 **Privacy**: Public or private profile, you choose
 - 🌍 **Multilingual**: French and English interface
+- 📱 **PWA**: Install as a mobile app on iOS/Android
+- 📦 **Export/Import**: Backup and restore your library via CSV
+- ⌨️ **Keyboard shortcuts**: Navigate quickly (N, /, S, P, ?)
 
 ---
 
@@ -163,6 +166,39 @@ Then edit `config/site.json` with your information:
 
 ---
 
+## ⌨️ Keyboard Shortcuts
+
+On the dashboard, use these keyboard shortcuts for quick navigation:
+
+| Key | Action |
+|-----|--------|
+| `N` | Add new work |
+| `/` | Focus search bar |
+| `S` | Go to Statistics |
+| `P` | Go to Profile |
+| `?` | Show help |
+| `Esc` | Close/Unfocus |
+
+---
+
+## 📦 Export/Import
+
+### Export
+Go to **Profile** → Download your library as a CSV file.
+
+### Import
+Go to **Profile** → Upload a CSV file with the following format (semicolon separator):
+
+```csv
+Title;Chapter;Link;Status;Type;Rating;Notes
+My Manga;42;https://...;En cours;Webtoon;4;Great series
+```
+
+**Status values**: En cours, Terminé, En pause, Abandonné, À lire  
+**Type values**: Webtoon, Manga, Roman, Light Novel, Manhwa, Manhua, Autre
+
+---
+
 ## 📁 Project Structure
 
 ```
@@ -185,7 +221,12 @@ BookStorage/
 │   └── bookstorage.service
 │
 ├── templates/           # HTML templates
-└── static/              # CSS, images, avatars
+└── static/
+    ├── css/             # Stylesheets
+    ├── avatars/         # User avatars
+    ├── icons/           # PWA icons
+    ├── manifest.json    # PWA manifest
+    └── sw.js            # Service worker
 ```
 
 ---
@@ -236,6 +277,9 @@ MIT License
 - 🌓 **Mode sombre** : Interface claire ou sombre selon vos préférences
 - 🔐 **Vie privée** : Profil public ou privé, vous choisissez
 - 🌍 **Multilingue** : Interface française et anglaise
+- 📱 **PWA** : Installable comme application mobile sur iOS/Android
+- 📦 **Export/Import** : Sauvegardez et restaurez votre bibliothèque via CSV
+- ⌨️ **Raccourcis clavier** : Naviguez rapidement (N, /, S, P, ?)
 
 ---
 

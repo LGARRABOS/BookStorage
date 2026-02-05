@@ -47,6 +47,7 @@ var workColumns = map[string]string{
 	"reading_type": "TEXT",
 	"rating":       "INTEGER DEFAULT 0",
 	"notes":        "TEXT",
+	"updated_at":   "DATETIME",
 }
 
 func openDB(settings *Settings) (*sql.DB, error) {
