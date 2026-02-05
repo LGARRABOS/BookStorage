@@ -1,7 +1,8 @@
 # BookStorage Makefile
 
 APP_NAME := bookstorage
-BUILD_DIR := .
+APP_USER := nobody
+APP_GROUP := nobody
 
 .PHONY: all build clean run install uninstall update
 
@@ -40,11 +41,20 @@ uninstall:
 	sudo systemctl daemon-reload
 	@echo "Service removed."
 
-# Update: pull, rebuild, restart
+# Update: pull, rebuild, restart (run from /opt/bookstorage)
 update:
-	@echo "Updating $(APP_NAME)..."
+	@echo "=== Mise à jour de $(APP_NAME) ==="
+	@echo "1. Pull des modifications..."
 	git pull
+	@echo "2. Compilation..."
 	$(MAKE) build-prod
-	sudo cp $(APP_NAME) /usr/local/bin/
-	sudo systemctl restart $(APP_NAME)
-	@echo "Update complete!"
+	@echo "3. Copie du binaire..."
+	cp $(APP_NAME) /usr/local/bin/
+	@echo "4. Permissions..."
+	chown -R $(APP_USER):$(APP_GROUP) static/
+	chown $(APP_USER):$(APP_GROUP) database.db 2>/dev/null || true
+	@echo "5. Redémarrage du service..."
+	systemctl restart $(APP_NAME)
+	@echo ""
+	@echo "=== Mise à jour terminée ==="
+	systemctl status $(APP_NAME) --no-pager
