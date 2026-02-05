@@ -1,12 +1,14 @@
 #!/bin/bash
 # BookStorage - Script d'installation initial
+# Compatible: Rocky Linux / RHEL / CentOS / AlmaLinux
 # Usage: sudo ./deploy/install.sh
 
 set -e
 
 APP_NAME="bookstorage"
 APP_DIR="/opt/bookstorage"
-APP_USER="www-data"
+APP_USER="nobody"
+APP_GROUP="nobody"
 
 echo "=== Installation de BookStorage ==="
 
@@ -16,33 +18,64 @@ if [ "$EUID" -ne 0 ]; then
     exit 1
 fi
 
+# Détecter le gestionnaire de paquets
+if command -v dnf &> /dev/null; then
+    PKG_MGR="dnf"
+elif command -v yum &> /dev/null; then
+    PKG_MGR="yum"
+elif command -v apt-get &> /dev/null; then
+    PKG_MGR="apt-get"
+else
+    echo "Erreur: Gestionnaire de paquets non supporté"
+    exit 1
+fi
+
+echo "Gestionnaire de paquets détecté: $PKG_MGR"
+
 # Installer Go si pas présent
 if ! command -v go &> /dev/null; then
     echo "Installation de Go..."
-    apt-get update
-    apt-get install -y golang-go
+    if [ "$PKG_MGR" = "dnf" ] || [ "$PKG_MGR" = "yum" ]; then
+        $PKG_MGR install -y golang
+    else
+        $PKG_MGR update
+        $PKG_MGR install -y golang-go
+    fi
 fi
 
 # Installer les dépendances pour SQLite
 echo "Installation des dépendances..."
-apt-get install -y gcc sqlite3
+if [ "$PKG_MGR" = "dnf" ] || [ "$PKG_MGR" = "yum" ]; then
+    $PKG_MGR install -y gcc sqlite make
+else
+    $PKG_MGR install -y gcc sqlite3 make
+fi
 
 # Créer le répertoire de l'application
 echo "Création du répertoire $APP_DIR..."
 mkdir -p $APP_DIR
-cp -r . $APP_DIR/
-chown -R $APP_USER:$APP_USER $APP_DIR
+
+# Copier les fichiers (en excluant .git et autres)
+echo "Copie des fichiers..."
+cp -r templates $APP_DIR/
+cp -r static $APP_DIR/
+cp -r deploy $APP_DIR/
+cp *.go $APP_DIR/
+cp go.mod $APP_DIR/
+cp go.sum $APP_DIR/ 2>/dev/null || true
+cp Makefile $APP_DIR/
 
 # Build de l'application
 echo "Compilation de l'application..."
 cd $APP_DIR
+go mod tidy
 CGO_ENABLED=1 go build -ldflags="-s -w" -o $APP_NAME .
 cp $APP_NAME /usr/local/bin/
 
 # Créer les répertoires pour les uploads
 mkdir -p $APP_DIR/static/avatars
 mkdir -p $APP_DIR/static/images
-chown -R $APP_USER:$APP_USER $APP_DIR/static
+chown -R $APP_USER:$APP_GROUP $APP_DIR
 
 # Installer le service systemd
 echo "Installation du service systemd..."
@@ -53,13 +86,22 @@ systemctl enable $APP_NAME
 # Créer le fichier .env si nécessaire
 if [ ! -f "$APP_DIR/.env" ]; then
     echo "Création du fichier .env..."
-    cat > $APP_DIR/.env << 'EOF'
+    SECRET=$(openssl rand -hex 32)
+    cat > $APP_DIR/.env << EOF
 FLASK_ENV=production
 BOOKSTORAGE_HOST=0.0.0.0
 BOOKSTORAGE_PORT=5000
-SECRET_KEY=$(openssl rand -hex 32)
+BOOKSTORAGE_SECRET_KEY=$SECRET
 EOF
-    chown $APP_USER:$APP_USER $APP_DIR/.env
+    chown $APP_USER:$APP_GROUP $APP_DIR/.env
+    chmod 600 $APP_DIR/.env
+fi
+
+# Ouvrir le port dans le firewall si firewalld est actif
+if systemctl is-active --quiet firewalld; then
+    echo "Configuration du firewall..."
+    firewall-cmd --permanent --add-port=5000/tcp
+    firewall-cmd --reload
 fi
 
 echo ""
