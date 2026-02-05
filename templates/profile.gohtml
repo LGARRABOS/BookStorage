@@ -4,80 +4,533 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Mon profil</title>
+    <title>Mon profil - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        .profile-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 2rem;
+            align-items: start;
+        }
+        
+        @media (max-width: 900px) {
+            .profile-layout {
+                grid-template-columns: 1fr;
+            }
+        }
+        
+        /* Sidebar Card */
+        .profile-sidebar {
+            background: var(--surface);
+            border-radius: 1.5rem;
+            padding: 2rem;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-subtle);
+            text-align: center;
+        }
+        
+        .avatar-section {
+            position: relative;
+            display: inline-block;
+            margin-bottom: 1.25rem;
+        }
+        
+        .current-avatar {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 4px solid var(--primary);
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
+        }
+        
+        .avatar-placeholder {
+            width: 140px;
+            height: 140px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 3.5rem;
+            color: white;
+            border: 4px solid transparent;
+            box-shadow: 0 8px 24px rgba(79, 70, 229, 0.25);
+        }
+        
+        .profile-name {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 0.25rem;
+        }
+        
+        .profile-username {
+            color: var(--text-muted);
+            font-size: 0.95rem;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-email {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
+        }
+        
+        .profile-bio {
+            color: var(--text-secondary);
+            font-size: 0.95rem;
+            line-height: 1.6;
+            padding: 1rem;
+            background: var(--primary-muted);
+            border-radius: 1rem;
+            margin-bottom: 1.25rem;
+        }
+        
+        .profile-bio.empty {
+            font-style: italic;
+            color: var(--text-muted);
+        }
+        
+        .visibility-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 2rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+        
+        .visibility-badge.public {
+            background: rgba(34, 197, 94, 0.15);
+            color: #15803d;
+        }
+        
+        .visibility-badge.private {
+            background: rgba(239, 68, 68, 0.15);
+            color: #dc2626;
+        }
+        
+        /* Main Form Area */
+        .profile-main {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+        
+        .form-card {
+            background: var(--surface);
+            border-radius: 1.25rem;
+            padding: 1.75rem;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-subtle);
+        }
+        
+        .form-card-header {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            margin-bottom: 1.5rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        
+        .form-card-header .icon {
+            font-size: 1.5rem;
+        }
+        
+        .form-card-header h2 {
+            font-size: 1.15rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin: 0;
+        }
+        
+        .form-card-header p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin: 0.25rem 0 0;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 1rem;
+        }
+        
+        .form-group {
+            margin-bottom: 1rem;
+        }
+        
+        .form-group:last-child {
+            margin-bottom: 0;
+        }
+        
+        .form-group label {
+            display: block;
+            font-weight: 500;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            font-size: 0.9rem;
+        }
+        
+        .form-group input,
+        .form-group textarea,
+        .form-group select {
+            width: 100%;
+            padding: 0.85rem 1rem;
+            border: 1px solid var(--border-subtle);
+            border-radius: 0.75rem;
+            font-size: 1rem;
+            background: var(--background);
+            color: var(--text-primary);
+            transition: border-color 0.2s ease, box-shadow 0.2s ease;
+        }
+        
+        .form-group input:focus,
+        .form-group textarea:focus,
+        .form-group select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .form-group input[type="file"] {
+            padding: 0.65rem 1rem;
+        }
+        
+        .form-hint {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 0.35rem;
+        }
+        
+        .visibility-options {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.75rem;
+        }
+        
+        .visibility-option {
+            position: relative;
+        }
+        
+        .visibility-option input {
+            position: absolute;
+            opacity: 0;
+        }
+        
+        .visibility-option label {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 1.25rem;
+            border: 2px solid var(--border-subtle);
+            border-radius: 1rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+        
+        .visibility-option label:hover {
+            border-color: var(--primary);
+        }
+        
+        .visibility-option input:checked + label {
+            border-color: var(--primary);
+            background: var(--primary-muted);
+        }
+        
+        .visibility-option .opt-icon {
+            font-size: 1.75rem;
+        }
+        
+        .visibility-option .opt-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        
+        .visibility-option .opt-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+        
+        .form-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 1rem;
+            margin-top: 0.5rem;
+        }
+        
+        /* Dark mode */
+        [data-theme="dark"] .profile-sidebar {
+            background: rgba(51, 65, 85, 0.6);
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+        
+        [data-theme="dark"] .form-card {
+            background: rgba(51, 65, 85, 0.6);
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+        
+        [data-theme="dark"] .form-card-header {
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+        
+        [data-theme="dark"] .form-group input,
+        [data-theme="dark"] .form-group textarea,
+        [data-theme="dark"] .form-group select {
+            background: rgba(15, 23, 42, 0.5);
+            border-color: rgba(100, 116, 139, 0.4);
+            color: #e2e8f0;
+        }
+        
+        [data-theme="dark"] .form-group input::placeholder,
+        [data-theme="dark"] .form-group textarea::placeholder {
+            color: #94a3b8;
+        }
+        
+        [data-theme="dark"] .profile-bio {
+            background: rgba(51, 65, 85, 0.5);
+        }
+        
+        [data-theme="dark"] .visibility-badge.public {
+            background: rgba(34, 197, 94, 0.2);
+            color: #86efac;
+        }
+        
+        [data-theme="dark"] .visibility-badge.private {
+            background: rgba(248, 113, 113, 0.2);
+            color: #fca5a5;
+        }
+        
+        [data-theme="dark"] .visibility-option label {
+            border-color: rgba(100, 116, 139, 0.4);
+        }
+        
+        [data-theme="dark"] .visibility-option input:checked + label {
+            background: rgba(79, 70, 229, 0.15);
+            border-color: var(--primary);
+        }
+    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/dashboard">BookStorage</a>
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/dashboard">Tableau de bord</a>
+                <a href="/stats">Statistiques</a>
                 <a href="/users">Lecteurs</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                    <span id="theme-icon">🌙</span>
+                </button>
                 <a href="/profile" class="btn btn-nav">Mon profil</a>
                 <a href="/logout" class="btn btn-logout">Déconnexion</a>
             </nav>
         </div>
     </header>
+
     <main class="page-body">
-        <div class="container content-card">
+        <div class="container">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>Mon profil</h1>
-                    <p>Personnalisez votre identité et la visibilité de votre bibliothèque.</p>
+                    <h1 class="page-title">👤 Mon profil</h1>
+                    <p class="page-intro">Gérez vos informations personnelles et vos préférences.</p>
                 </header>
-                <form method="POST" enctype="multipart/form-data" class="form-layout card">
-                    <div class="form-grid">
-                        <div class="form-field">
-                            <label for="username">Nom d'utilisateur</label>
-                            <input id="username" type="text" name="username" value="{{ .User.Username }}" required>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <div class="profile-layout">
+                        <!-- Sidebar -->
+                        <aside class="profile-sidebar">
+                            <div class="avatar-section">
+                                {{ if and .User.AvatarPath.Valid (ne .User.AvatarPath.String "") }}
+                                <img src="/static/avatars/{{ .User.AvatarPath.String }}" alt="Avatar" class="current-avatar">
+                                {{ else }}
+                                <div class="avatar-placeholder">👤</div>
+                                {{ end }}
+                            </div>
+                            
+                            <div class="profile-name">
+                                {{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ else }}{{ .User.Username }}{{ end }}
+                            </div>
+                            <div class="profile-username">@{{ .User.Username }}</div>
+                            
+                            {{ if .User.Email.Valid }}
+                            <div class="profile-email">
+                                <span>📧</span> {{ .User.Email.String }}
+                            </div>
+                            {{ end }}
+                            
+                            <div class="profile-bio {{ if not .User.Bio.Valid }}empty{{ end }}">
+                                {{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ else }}Aucune biographie renseignée{{ end }}
+                            </div>
+                            
+                            <div class="visibility-badge {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}public{{ else }}private{{ end }}{{ else }}public{{ end }}">
+                                {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}🌍 Profil public{{ else }}🔒 Profil privé{{ end }}{{ else }}🌍 Profil public{{ end }}
+                            </div>
+                        </aside>
+
+                        <!-- Main Content -->
+                        <div class="profile-main">
+                            <!-- Informations générales -->
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <span class="icon">✏️</span>
+                                    <div>
+                                        <h2>Informations générales</h2>
+                                        <p>Vos informations de base</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="username">Nom d'utilisateur</label>
+                                        <input id="username" type="text" name="username" value="{{ .User.Username }}" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="display_name">Nom affiché</label>
+                                        <input id="display_name" type="text" name="display_name" value="{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ end }}" placeholder="Comment voulez-vous être appelé ?">
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="email">Adresse email</label>
+                                    <input id="email" type="email" name="email" value="{{ if .User.Email.Valid }}{{ .User.Email.String }}{{ end }}" placeholder="votre@email.com">
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="bio">Biographie</label>
+                                    <textarea id="bio" name="bio" placeholder="Parlez-nous de vous et de vos goûts littéraires...">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ end }}</textarea>
+                                </div>
+                            </div>
+
+                            <!-- Avatar -->
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <span class="icon">🖼️</span>
+                                    <div>
+                                        <h2>Photo de profil</h2>
+                                        <p>Choisissez une image qui vous représente</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="avatar">Nouvel avatar</label>
+                                    <input id="avatar" type="file" name="avatar" accept="image/*">
+                                    <p class="form-hint">Formats acceptés : JPG, PNG, GIF. Taille max : 2 Mo</p>
+                                </div>
+                            </div>
+
+                            <!-- Visibilité -->
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <span class="icon">👁️</span>
+                                    <div>
+                                        <h2>Visibilité du profil</h2>
+                                        <p>Contrôlez qui peut voir votre bibliothèque</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="visibility-options">
+                                    <div class="visibility-option">
+                                        <input type="radio" id="public" name="is_public" value="1" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}checked{{ end }}{{ else }}checked{{ end }}>
+                                        <label for="public">
+                                            <span class="opt-icon">🌍</span>
+                                            <span class="opt-title">Public</span>
+                                            <span class="opt-desc">Tout le monde peut voir votre bibliothèque</span>
+                                        </label>
+                                    </div>
+                                    <div class="visibility-option">
+                                        <input type="radio" id="private" name="is_public" value="0" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 0 }}checked{{ end }}{{ end }}>
+                                        <label for="private">
+                                            <span class="opt-icon">🔒</span>
+                                            <span class="opt-title">Privé</span>
+                                            <span class="opt-desc">Seul vous pouvez voir votre bibliothèque</span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Sécurité -->
+                            <div class="form-card">
+                                <div class="form-card-header">
+                                    <span class="icon">🔐</span>
+                                    <div>
+                                        <h2>Sécurité</h2>
+                                        <p>Modifier votre mot de passe</p>
+                                    </div>
+                                </div>
+                                
+                                <div class="form-group">
+                                    <label for="current_password">Mot de passe actuel</label>
+                                    <input id="current_password" type="password" name="current_password" placeholder="Requis pour changer le mot de passe">
+                                </div>
+                                
+                                <div class="form-row">
+                                    <div class="form-group">
+                                        <label for="new_password">Nouveau mot de passe</label>
+                                        <input id="new_password" type="password" name="new_password" placeholder="Minimum 6 caractères">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="confirm_password">Confirmer le mot de passe</label>
+                                        <input id="confirm_password" type="password" name="confirm_password" placeholder="Retapez le nouveau mot de passe">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-actions">
+                                <a href="/dashboard" class="btn btn-secondary">Annuler</a>
+                                <button type="submit" class="btn btn-primary">💾 Enregistrer les modifications</button>
+                            </div>
                         </div>
-                        <div class="form-field">
-                            <label for="display_name">Nom affiché</label>
-                            <input id="display_name" type="text" name="display_name" value="{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ end }}">
-                        </div>
-                        <div class="form-field">
-                            <label for="email">Email</label>
-                            <input id="email" type="email" name="email" value="{{ if .User.Email.Valid }}{{ .User.Email.String }}{{ end }}">
-                        </div>
-                        <div class="form-field">
-                            <label for="bio">Biographie</label>
-                            <textarea id="bio" name="bio" rows="4">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ end }}</textarea>
-                        </div>
-                        <div class="form-field">
-                            <label>Visibilité</label>
-                            <select name="is_public">
-                                <option value="1" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}selected{{ end }}{{ else }}selected{{ end }}>Publique</option>
-                                <option value="0" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 0 }}selected{{ end }}{{ end }}>Privée</option>
-                            </select>
-                        </div>
-                        <div class="form-field">
-                            <label for="avatar">Avatar</label>
-                            <input id="avatar" type="file" name="avatar" accept="image/*">
-                        </div>
-                        <div class="form-field">
-                            <label for="current_password">Mot de passe actuel</label>
-                            <input id="current_password" type="password" name="current_password">
-                        </div>
-                        <div class="form-field">
-                            <label for="new_password">Nouveau mot de passe</label>
-                            <input id="new_password" type="password" name="new_password">
-                        </div>
-                        <div class="form-field">
-                            <label for="confirm_password">Confirmer</label>
-                            <input id="confirm_password" type="password" name="confirm_password">
-                        </div>
-                    </div>
-                    <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Enregistrer</button>
                     </div>
                 </form>
             </section>
         </div>
     </main>
+
     <footer class="page-footer">
-        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+        <div class="container"><p>BookStorage</p></div>
     </footer>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
 </body>
 </html>
 {{ end }}

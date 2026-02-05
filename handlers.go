@@ -42,6 +42,31 @@ func NewApp(settings *Settings, db *sql.DB) *App {
 				return "/" + strings.TrimLeft(name, "/")
 			}
 		},
+		// Fonction pour générer une séquence de nombres (pour les étoiles)
+		"seq": func(n int) []int {
+			s := make([]int, n)
+			for i := range s {
+				s[i] = i + 1
+			}
+			return s
+		},
+		// Comparaisons pour les étoiles
+		"le": func(a, b int) bool {
+			return a <= b
+		},
+		"ge": func(a, b int) bool {
+			return a >= b
+		},
+		// Math pour les stats
+		"divf": func(a, b int) float64 {
+			if b == 0 {
+				return 0
+			}
+			return float64(a) / float64(b)
+		},
+		"mulf": func(a, b float64) float64 {
+			return a * b
+		},
 	}
 	// On ne parse que les templates Go (extension .gohtml) pour éviter
 	// les erreurs de syntaxe avec les anciens templates Jinja.
@@ -256,7 +281,82 @@ func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "/login", http.StatusFound)
+	// Page d'accueil pour les visiteurs non connectés
+	_ = a.Templates.ExecuteTemplate(w, "landing", nil)
+}
+
+func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+
+	// Statistiques globales
+	var totalWorks int
+	a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
+
+	var totalChapters int
+	a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters)
+
+	// Par statut
+	type statusCount struct {
+		Status string
+		Count  int
+	}
+	var byStatus []statusCount
+	rows, _ := a.DB.Query(`SELECT COALESCE(status, 'Non défini'), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
+	if rows != nil {
+		defer rows.Close()
+		for rows.Next() {
+			var sc statusCount
+			rows.Scan(&sc.Status, &sc.Count)
+			byStatus = append(byStatus, sc)
+		}
+	}
+
+	// Par type
+	type typeCount struct {
+		Type  string
+		Count int
+	}
+	var byType []typeCount
+	rows2, _ := a.DB.Query(`SELECT COALESCE(reading_type, 'Autre'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
+	if rows2 != nil {
+		defer rows2.Close()
+		for rows2.Next() {
+			var tc typeCount
+			rows2.Scan(&tc.Type, &tc.Count)
+			byType = append(byType, tc)
+		}
+	}
+
+	// Moyenne des notes (seulement les œuvres notées)
+	var avgRating float64
+	var ratedCount int
+	a.DB.QueryRow(`SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM works WHERE user_id = ? AND rating > 0`, userID).Scan(&avgRating, &ratedCount)
+
+	// Top 5 meilleures notes
+	type ratedWork struct {
+		Title  string
+		Rating int
+	}
+	var topRated []ratedWork
+	rows3, _ := a.DB.Query(`SELECT title, rating FROM works WHERE user_id = ? AND rating > 0 ORDER BY rating DESC, title LIMIT 5`, userID)
+	if rows3 != nil {
+		defer rows3.Close()
+		for rows3.Next() {
+			var rw ratedWork
+			rows3.Scan(&rw.Title, &rw.Rating)
+			topRated = append(topRated, rw)
+		}
+	}
+
+	_ = a.Templates.ExecuteTemplate(w, "stats", map[string]any{
+		"TotalWorks":    totalWorks,
+		"TotalChapters": totalChapters,
+		"ByStatus":      byStatus,
+		"ByType":        byType,
+		"AvgRating":     avgRating,
+		"RatedCount":    ratedCount,
+		"TopRated":      topRated,
+	})
 }
 
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
@@ -346,6 +446,8 @@ type workRow struct {
 	Status      sql.NullString
 	ImagePath   sql.NullString
 	ReadingType sql.NullString
+	Rating      int
+	Notes       sql.NullString
 	UserID      int
 }
 
@@ -378,7 +480,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
          FROM works WHERE user_id = ? `+orderClause,
 		userID,
 	)
@@ -399,6 +501,8 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			&wRow.Status,
 			&wRow.ImagePath,
 			&wRow.ReadingType,
+			&wRow.Rating,
+			&wRow.Notes,
 			&wRow.UserID,
 		); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -442,6 +546,12 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		if readingType == "" {
 			readingType = readingTypes[0]
 		}
+		ratingStr := r.FormValue("rating")
+		rating, _ := strconv.Atoi(ratingStr)
+		if rating < 0 || rating > 5 {
+			rating = 0
+		}
+		notes := strings.TrimSpace(r.FormValue("notes"))
 
 		var imagePath sql.NullString
 		file, header, err := r.FormFile("image")
@@ -462,15 +572,15 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 
 		if imagePath.Valid {
 			_, err = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`,
-				title, chapter, link, status, imagePath.String, readingType, userID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, notes, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?)`,
-				title, chapter, link, status, readingType, userID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+				title, chapter, link, status, readingType, rating, notes, userID,
 			)
 		}
 		if err != nil {
@@ -491,7 +601,7 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 	// Récupérer l'œuvre
 	var work workRow
 	err := a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	).Scan(
@@ -502,6 +612,8 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 		&work.Status,
 		&work.ImagePath,
 		&work.ReadingType,
+		&work.Rating,
+		&work.Notes,
 		&work.UserID,
 	)
 	if err != nil {
@@ -541,6 +653,12 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 		if readingType == "" {
 			readingType = readingTypes[0]
 		}
+		ratingStr := r.FormValue("rating")
+		rating, _ := strconv.Atoi(ratingStr)
+		if rating < 0 || rating > 5 {
+			rating = 0
+		}
+		notes := strings.TrimSpace(r.FormValue("notes"))
 
 		// Gestion de l'image (optionnel)
 		newImagePath := work.ImagePath
@@ -562,15 +680,15 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, notes = ?
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, notes, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, notes = ?
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, workID, userID,
+				title, chapter, link, status, readingType, rating, notes, workID, userID,
 			)
 		}
 		if err != nil {
@@ -945,7 +1063,7 @@ func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
          FROM works WHERE user_id = ? ORDER BY LOWER(title)`,
 		targetID,
 	)
@@ -966,6 +1084,8 @@ func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
 			&wRow.Status,
 			&wRow.ImagePath,
 			&wRow.ReadingType,
+			&wRow.Rating,
+			&wRow.Notes,
 			&wRow.UserID,
 		); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
@@ -1026,7 +1146,7 @@ func (a *App) handleImportWork(w http.ResponseWriter, r *http.Request) {
 
 	var src workRow
 	err = a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, targetID,
 	).Scan(
@@ -1037,6 +1157,8 @@ func (a *App) handleImportWork(w http.ResponseWriter, r *http.Request) {
 		&src.Status,
 		&src.ImagePath,
 		&src.ReadingType,
+		&src.Rating,
+		&src.Notes,
 		&src.UserID,
 	)
 	if err != nil {
@@ -1061,14 +1183,16 @@ func (a *App) handleImportWork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	_, err = a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, image_path, reading_type, user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		src.Title,
 		src.Chapter,
 		nullableString(src.Link),
 		nullableString(src.Status),
 		nullableString(src.ImagePath),
 		readingType,
+		src.Rating,
+		nullableString(src.Notes),
 		viewerID,
 	)
 	if err != nil {

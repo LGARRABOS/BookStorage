@@ -39,6 +39,7 @@ func main() {
 	mux.HandleFunc("/login", app.handleLogin)
 	mux.HandleFunc("/logout", app.handleLogout)
 	mux.HandleFunc("/dashboard", app.requireLogin(app.handleDashboard))
+	mux.HandleFunc("/stats", app.requireLogin(app.handleStats))
 	mux.HandleFunc("/profile", app.requireLogin(app.handleProfile))
 	mux.HandleFunc("/users", app.requireLogin(app.handleUsers))
 	mux.HandleFunc("/users/{id}", app.requireLogin(app.handleUserDetail))

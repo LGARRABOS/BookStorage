@@ -64,4 +64,20 @@
 .btn-secondary:focus-visible {
   background: rgba(15, 23, 42, 0.12);
 }
+
+/* Dark Mode */
+[data-theme="dark"] .card::after {
+  background: radial-gradient(circle at top left, rgba(129, 140, 248, 0.1), transparent 60%),
+    radial-gradient(circle at bottom right, rgba(251, 146, 60, 0.08), transparent 55%);
+}
+
+[data-theme="dark"] .btn-secondary {
+  background: rgba(148, 163, 184, 0.15);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .btn-secondary:hover,
+[data-theme="dark"] .btn-secondary:focus-visible {
+  background: rgba(148, 163, 184, 0.25);
+}
   

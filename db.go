@@ -45,6 +45,8 @@ var profileColumns = map[string]string{
 
 var workColumns = map[string]string{
 	"reading_type": "TEXT",
+	"rating":       "INTEGER DEFAULT 0",
+	"notes":        "TEXT",
 }
 
 func openDB(settings *Settings) (*sql.DB, error) {

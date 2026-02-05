@@ -33,4 +33,11 @@
 .auth-card .btn-text:focus-visible {
   color: var(--primary);
 }
+
+/* Dark Mode */
+[data-theme="dark"] .auth-card {
+  background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.15), transparent 55%),
+    radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.12), transparent 45%),
+    var(--surface);
+}
   
