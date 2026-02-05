@@ -40,6 +40,18 @@
                     <h1>{{ t .T "register.title" }}</h1>
                     <p>{{ if eq .Lang "fr" }}Créez un compte pour suivre vos lectures.{{ else }}Create an account to track your readings.{{ end }}</p>
                 </header>
+                {{ if or .RegisterErrorEmpty .RegisterErrorExists }}
+                <div class="flash-messages">
+                    {{ if .RegisterErrorEmpty }}
+                        <p>
+                            {{ if eq .Lang "fr" }}Veuillez renseigner tous les champs.{{ else }}Please fill in all fields.{{ end }}
+                        </p>
+                    {{ end }}
+                    {{ if .RegisterErrorExists }}
+                        <p>{{ t .T "register.error.exists" }}</p>
+                    {{ end }}
+                </div>
+                {{ end }}
                 <form method="POST" class="form-layout">
                     <div class="form-field">
                         <label for="username">{{ t .T "register.username" }}</label>

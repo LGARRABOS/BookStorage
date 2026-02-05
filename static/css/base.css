@@ -277,17 +277,21 @@ a:focus-visible {
 }
 
 .flash-messages {
+  padding: 0.95rem 1.2rem;
+  margin-bottom: 1.4rem;
+  border-radius: 1rem;
   background: var(--primary-muted);
-  border: 1px solid rgba(79, 70, 229, 0.25);
-  border-radius: 14px;
-  padding: 0.85rem 1.1rem;
-  margin-bottom: 1.5rem;
+  border: 1px solid rgba(79, 70, 229, 0.35);
+  box-shadow: 0 12px 26px rgba(79, 70, 229, 0.18);
   color: var(--primary-dark);
-  font-weight: 500;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-align: center;
 }
 
 .flash-messages p {
   margin: 0;
+  color: inherit;
 }
 
 h1,
