@@ -6,15 +6,26 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Administration</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/dashboard">BookStorage</a>
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/dashboard">Tableau de bord</a>
+                <a href="/stats">Statistiques</a>
                 <a href="/users">Lecteurs</a>
                 <a href="/admin/accounts">Administration</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                    <span id="theme-icon">🌙</span>
+                </button>
                 <a href="/profile" class="btn btn-nav">Mon profil</a>
                 <a href="/logout" class="btn btn-logout">Déconnexion</a>
             </nav>
@@ -28,34 +39,38 @@
                     <p>Gérez la validation et les droits des utilisateurs.</p>
                 </header>
                 {{ if .Users }}
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Utilisateur</th>
-                            <th>Validé</th>
-                            <th>Admin</th>
-                            <th>Superadmin</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {{ range .Users }}
-                        <tr>
-                            <td>{{ .ID }}</td>
-                            <td>{{ .Username }}</td>
-                            <td>{{ if eq .Validated 1 }}Oui{{ else }}Non{{ end }}</td>
-                            <td>{{ if eq .IsAdmin 1 }}Oui{{ else }}Non{{ end }}</td>
-                            <td>{{ if eq .IsSuperadmin 1 }}Oui{{ else }}Non{{ end }}</td>
-                            <td>
-                                <a class="btn btn-secondary" href="/admin/approve/{{ .ID }}">Valider</a>
-                                <a class="btn btn-secondary" href="/admin/promote/{{ .ID }}">Promouvoir</a>
-                                <a class="btn btn-danger" href="/admin/delete_account/{{ .ID }}">Supprimer</a>
-                            </td>
-                        </tr>
-                    {{ end }}
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Utilisateur</th>
+                                <th>Validé</th>
+                                <th>Admin</th>
+                                <th>Superadmin</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .Users }}
+                            <tr>
+                                <td>{{ .ID }}</td>
+                                <td>{{ .Username }}</td>
+                                <td>{{ if eq .Validated 1 }}<span class="badge success">Oui</span>{{ else }}<span class="badge warning">Non</span>{{ end }}</td>
+                                <td>{{ if eq .IsAdmin 1 }}<span class="badge success">Oui</span>{{ else }}Non{{ end }}</td>
+                                <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">Oui</span>{{ else }}Non{{ end }}</td>
+                                <td>
+                                    <div class="action-buttons">
+                                        {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">Valider</a>{{ end }}
+                                        {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">Promouvoir</a>{{ end }}
+                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger" href="/admin/delete_account/{{ .ID }}" onclick="return confirm('Supprimer cet utilisateur ?');">Supprimer</a>{{ end }}
+                                    </div>
+                                </td>
+                            </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </div>
                 {{ else }}
                 <p>Aucun utilisateur.</p>
                 {{ end }}
@@ -63,8 +78,26 @@
         </div>
     </main>
     <footer class="page-footer">
-        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+        <div class="container"><p>BookStorage</p></div>
     </footer>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
 </body>
 </html>
 {{ end }}

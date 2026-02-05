@@ -6,14 +6,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Profil de {{ .TargetUser.Username }}</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/users.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/dashboard">BookStorage</a>
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/dashboard">Tableau de bord</a>
+                <a href="/stats">Statistiques</a>
                 <a href="/users">Lecteurs</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                    <span id="theme-icon">🌙</span>
+                </button>
                 <a href="/profile" class="btn btn-nav">Mon profil</a>
                 <a href="/logout" class="btn btn-logout">Déconnexion</a>
             </nav>
@@ -29,34 +40,45 @@
                 </header>
                 {{ if .Works }}
                 <h2>Bibliothèque partagée</h2>
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>Titre</th>
-                            <th>Chapitre</th>
-                            <th>Statut</th>
-                            <th>Type</th>
-                            {{ if .CanImport }}<th>Importer</th>{{ end }}
-                        </tr>
-                    </thead>
-                    <tbody>
-                    {{ range .Works }}
-                        <tr>
-                            <td>{{ .Title }}</td>
-                            <td>{{ .Chapter }}</td>
-                            <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}—{{ end }}</td>
-                            <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</td>
-                            {{ if $.CanImport }}
-                            <td>
-                                <form method="POST" action="/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
-                                    <button type="submit" class="btn btn-primary">Importer</button>
-                                </form>
-                            </td>
-                            {{ end }}
-                        </tr>
-                    {{ end }}
-                    </tbody>
-                </table>
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>Titre</th>
+                                <th>Chapitre</th>
+                                <th>Note</th>
+                                <th>Statut</th>
+                                <th>Type</th>
+                                {{ if .CanImport }}<th>Importer</th>{{ end }}
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .Works }}
+                            <tr>
+                                <td>{{ .Title }}</td>
+                                <td>{{ .Chapter }}</td>
+                                <td>
+                                    {{ if .Rating }}
+                                    <span class="star-rating">
+                                        {{ $rating := .Rating }}
+                                        {{ range $i := seq 5 }}{{ if le $i $rating }}<span class="star filled">★</span>{{ else }}<span class="star">★</span>{{ end }}{{ end }}
+                                    </span>
+                                    {{ else }}—{{ end }}
+                                </td>
+                                <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}—{{ end }}</td>
+                                <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</td>
+                                {{ if $.CanImport }}
+                                <td>
+                                    <form method="POST" action="/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
+                                        <button type="submit" class="btn btn-primary btn-icon">Importer</button>
+                                    </form>
+                                </td>
+                                {{ end }}
+                            </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </div>
                 {{ else }}
                 <p>Ce lecteur n'a pas encore partagé d'œuvres.</p>
                 {{ end }}
@@ -64,8 +86,26 @@
         </div>
     </main>
     <footer class="page-footer">
-        <div class="container"><p>Gestionnaire de lectures • Go</p></div>
+        <div class="container"><p>BookStorage</p></div>
     </footer>
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            const icon = document.getElementById('theme-icon');
+            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
 </body>
 </html>
 {{ end }}

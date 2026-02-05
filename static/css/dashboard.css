@@ -227,4 +227,86 @@
     justify-content: flex-start;
   }
 }
+
+/* Dark Mode Overrides */
+[data-theme="dark"] .shortcut-card {
+  background: rgba(51, 65, 85, 0.6);
+  border-color: rgba(100, 116, 139, 0.3);
+}
+
+[data-theme="dark"] .shortcut-card h2 {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .library-table thead th {
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .work-title {
+  color: #f1f5f9;
+}
+
+[data-theme="dark"] .toolbar-filters input,
+[data-theme="dark"] .toolbar-filters select {
+  background: rgba(51, 65, 85, 0.8) !important;
+  border-color: rgba(100, 116, 139, 0.5);
+  color: #f1f5f9 !important;
+}
+
+[data-theme="dark"] .toolbar-filters input::placeholder {
+  color: #cbd5e1 !important;
+  opacity: 1 !important;
+}
+
+[data-theme="dark"] .toolbar-filters input {
+  background-image: url('data:image/svg+xml,%3Csvg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"%3E%3Cpath d="M21 21L16.65 16.65M19 11.5C19 15.6421 15.6421 19 11.5 19C7.35786 19 4 15.6421 4 11.5C4 7.35786 7.35786 4 11.5 4C15.6421 4 19 7.35786 19 11.5Z" stroke="%2394a3b8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/%3E%3C/svg%3E');
+}
+
+[data-theme="dark"] .type-badge {
+  background: rgba(148, 163, 184, 0.2);
+  color: #cbd5e1;
+}
+
+[data-theme="dark"] .status-badge[data-status="En cours"] {
+  background: rgba(129, 140, 248, 0.25);
+  color: #a5b4fc;
+}
+
+[data-theme="dark"] .status-badge[data-status="Terminé"] {
+  background: rgba(34, 197, 94, 0.25);
+  color: #86efac;
+}
+
+[data-theme="dark"] .status-badge[data-status="En pause"] {
+  background: rgba(14, 165, 233, 0.25);
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .status-badge[data-status="Abandonné"] {
+  background: rgba(248, 113, 113, 0.25);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .status-badge[data-status="À lire"] {
+  background: rgba(250, 204, 21, 0.25);
+  color: #fde047;
+}
+
+[data-theme="dark"] .btn-icon.primary {
+  background: rgba(56, 189, 248, 0.2);
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .btn-icon.primary:hover {
+  background: rgba(56, 189, 248, 0.3);
+}
+
+[data-theme="dark"] .btn-icon.danger {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-icon.danger:hover {
+  background: rgba(248, 113, 113, 0.3);
+}
   

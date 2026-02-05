@@ -242,3 +242,30 @@
         text-align: center;
     }
 }
+
+/* Dark Mode */
+[data-theme="dark"] .search-fields input[type="search"] {
+    background-color: rgba(15, 23, 42, 0.6);
+    border-color: rgba(100, 116, 139, 0.4);
+    color: #e2e8f0;
+}
+
+[data-theme="dark"] .user-card {
+    background: rgba(51, 65, 85, 0.6);
+}
+
+[data-theme="dark"] .user-header {
+    background: rgba(51, 65, 85, 0.6);
+}
+
+[data-theme="dark"] .work-card {
+    background: rgba(51, 65, 85, 0.6);
+}
+
+[data-theme="dark"] .user-avatar {
+    border-color: rgba(129, 140, 248, 0.4);
+}
+
+[data-theme="dark"] .user-avatar.placeholder {
+    background: linear-gradient(135deg, rgba(129, 140, 248, 0.2), rgba(167, 139, 250, 0.2));
+}

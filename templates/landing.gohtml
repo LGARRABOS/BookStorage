@@ -1,0 +1,226 @@
+{{ define "landing" }}
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>BookStorage - Gérez vos lectures</title>
+    <meta name="description" content="BookStorage est une application gratuite pour suivre vos lectures : romans, mangas, webtoons et plus encore.">
+    <link rel="stylesheet" href="/static/css/base.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        .landing-hero {
+            text-align: center;
+            padding: 5rem 1rem 4rem;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        .landing-hero h1 {
+            font-size: clamp(2.2rem, 6vw, 3.5rem);
+            margin-bottom: 1.25rem;
+            line-height: 1.1;
+        }
+        .landing-hero h1 .highlight {
+            background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .landing-hero .subtitle {
+            font-size: 1.2rem;
+            color: var(--text-secondary);
+            max-width: 550px;
+            margin: 0 auto 2.5rem;
+            line-height: 1.6;
+        }
+        .hero-buttons {
+            display: flex;
+            gap: 1rem;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+        .hero-buttons .btn {
+            padding: 0.9rem 2rem;
+            font-size: 1.05rem;
+        }
+        .features {
+            padding: 3rem 0;
+        }
+        .features-title {
+            text-align: center;
+            font-size: 1.6rem;
+            margin-bottom: 2.5rem;
+            color: var(--text-primary);
+        }
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+            gap: 1.5rem;
+        }
+        .feature-item {
+            background: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.75rem;
+            box-shadow: var(--shadow-soft);
+            border: 1px solid var(--border-subtle);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .feature-item:hover {
+            transform: translateY(-4px);
+            box-shadow: var(--shadow-base);
+        }
+        .feature-item .icon {
+            font-size: 2.2rem;
+            margin-bottom: 0.75rem;
+            display: block;
+        }
+        .feature-item h3 {
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+            color: var(--text-primary);
+        }
+        .feature-item p {
+            font-size: 0.95rem;
+            color: var(--text-muted);
+            margin: 0;
+            line-height: 1.5;
+        }
+        .cta-section {
+            text-align: center;
+            padding: 4rem 1rem;
+            margin-top: 2rem;
+            background: var(--primary-muted);
+            border-radius: var(--radius);
+        }
+        .cta-section h2 {
+            font-size: 1.8rem;
+            margin-bottom: 1rem;
+        }
+        .cta-section p {
+            color: var(--text-secondary);
+            margin-bottom: 1.5rem;
+        }
+        
+        /* Dark Mode */
+        [data-theme="dark"] .feature-item {
+            background: rgba(51, 65, 85, 0.6);
+            border-color: rgba(100, 116, 139, 0.3);
+        }
+        [data-theme="dark"] .feature-item:hover {
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        [data-theme="dark"] .cta-section {
+            background: rgba(51, 65, 85, 0.5);
+        }
+        [data-theme="dark"] .btn-secondary {
+            background: rgba(148, 163, 184, 0.2);
+            color: #e2e8f0;
+        }
+        [data-theme="dark"] .btn-secondary:hover {
+            background: rgba(148, 163, 184, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/">📚 BookStorage</a>
+            <nav class="nav-links">
+                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                    <span id="theme-icon">🌙</span>
+                </button>
+                <a href="/login" class="btn btn-nav">Connexion</a>
+                <a href="/register" class="btn btn-primary">S'inscrire</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-body">
+        <div class="container">
+            <section class="landing-hero">
+                <h1>Suivez toutes vos <span class="highlight">lectures</span> au même endroit</h1>
+                <p class="subtitle">
+                    Romans, mangas, webtoons, light novels... Organisez votre progression, 
+                    notez vos œuvres et découvrez ce que lisent les autres.
+                </p>
+                <div class="hero-buttons">
+                    <a href="/register" class="btn btn-primary">Créer un compte gratuit</a>
+                    <a href="/login" class="btn btn-secondary">Se connecter</a>
+                </div>
+            </section>
+
+            <section class="features">
+                <h2 class="features-title">Tout ce dont vous avez besoin</h2>
+                <div class="features-grid">
+                    <article class="feature-item">
+                        <span class="icon">📖</span>
+                        <h3>Multi-formats</h3>
+                        <p>Romans, mangas, manhwas, webtoons, light novels... Un seul endroit pour tout suivre.</p>
+                    </article>
+                    <article class="feature-item">
+                        <span class="icon">⭐</span>
+                        <h3>Notes & avis</h3>
+                        <p>Notez vos œuvres de 1 à 5 étoiles et gardez des notes personnelles.</p>
+                    </article>
+                    <article class="feature-item">
+                        <span class="icon">📊</span>
+                        <h3>Statistiques</h3>
+                        <p>Visualisez vos habitudes : chapitres lus, répartition par type, notes moyennes.</p>
+                    </article>
+                    <article class="feature-item">
+                        <span class="icon">👥</span>
+                        <h3>Communauté</h3>
+                        <p>Explorez les listes des autres lecteurs et importez leurs recommandations.</p>
+                    </article>
+                    <article class="feature-item">
+                        <span class="icon">🌓</span>
+                        <h3>Mode sombre</h3>
+                        <p>Interface claire ou sombre selon vos préférences, pour un confort optimal.</p>
+                    </article>
+                    <article class="feature-item">
+                        <span class="icon">🔐</span>
+                        <h3>Vie privée</h3>
+                        <p>Profil public ou privé : vous choisissez ce que vous partagez.</p>
+                    </article>
+                </div>
+            </section>
+
+            <section class="cta-section">
+                <h2>Prêt à organiser vos lectures ?</h2>
+                <p>Rejoignez BookStorage gratuitement et commencez dès maintenant.</p>
+                <a href="/register" class="btn btn-primary">Commencer maintenant</a>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="container">
+            <p>BookStorage — Fait avec ❤️ pour les lecteurs</p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+</body>
+</html>
+{{ end }}

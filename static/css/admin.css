@@ -96,3 +96,53 @@ tbody tr:nth-child(even) {
     min-width: unset;
   }
 }
+
+/* Dark Mode */
+[data-theme="dark"] thead th {
+  background: linear-gradient(120deg, rgba(129, 140, 248, 0.2), rgba(251, 146, 60, 0.15));
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] tbody tr:nth-child(even) {
+  background: rgba(100, 116, 139, 0.1);
+}
+
+[data-theme="dark"] .badge.owner {
+  background: rgba(56, 189, 248, 0.25);
+  color: #7dd3fc;
+}
+
+[data-theme="dark"] .actions .no-action {
+  color: #64748b;
+}
+
+[data-theme="dark"] .actions .restricted {
+  color: #94a3b8;
+}
+
+[data-theme="dark"] .btn-icon.accent {
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+}
+
+[data-theme="dark"] .btn-icon.accent:hover {
+  background: rgba(34, 197, 94, 0.3);
+}
+
+[data-theme="dark"] .btn-icon.neutral {
+  background: rgba(96, 165, 250, 0.2);
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .btn-icon.neutral:hover {
+  background: rgba(96, 165, 250, 0.3);
+}
+
+[data-theme="dark"] .btn-icon.danger {
+  background: rgba(248, 113, 113, 0.2);
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .btn-icon.danger:hover {
+  background: rgba(248, 113, 113, 0.3);
+}
