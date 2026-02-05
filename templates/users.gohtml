@@ -1,32 +1,30 @@
 {{ define "users" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Lecteurs</title>
+    <title>{{ t .T "users.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/users.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
-                    <span id="theme-icon">🌙</span>
-                </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
@@ -34,16 +32,15 @@
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>Lecteurs</h1>
-                    <p>Recherchez d'autres membres publics.</p>
+                    <h1>{{ t .T "users.title" }}</h1>
                 </header>
                 <form method="GET" class="form-layout" style="margin-bottom: 1rem;">
                     <div class="form-field">
-                        <label for="q">Rechercher</label>
-                        <input id="q" type="text" name="q" value="{{ .Query }}" placeholder="Nom d'utilisateur">
+                        <label for="q">{{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</label>
+                        <input id="q" type="text" name="q" value="{{ .Query }}" placeholder="{{ t .T "users.search" }}">
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">Rechercher</button>
+                        <button type="submit" class="btn btn-primary">{{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</button>
                     </div>
                 </form>
                 {{ if .Users }}
@@ -53,36 +50,28 @@
                         <strong>{{ .Username }}</strong>
                         {{ if .DisplayName.Valid }} ({{ .DisplayName.String }}){{ end }}
                         {{ if .Bio.Valid }}<p>{{ .Bio.String }}</p>{{ end }}
-                        <a class="btn btn-secondary" href="/users/{{ .ID }}">Voir le profil</a>
+                        <a class="btn btn-secondary" href="/users/{{ .ID }}">{{ t $.T "users.view" }}</a>
                     </li>
                     {{ end }}
                 </ul>
                 {{ else }}
-                <p>Aucun lecteur trouvé.</p>
+                <p>{{ t .T "users.empty" }}</p>
                 {{ end }}
             </section>
         </div>
     </main>
-    <footer class="page-footer">
-        <div class="container"><p>BookStorage</p></div>
-    </footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script>
         function toggleTheme() {
             const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
+            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
             html.setAttribute('data-theme', next);
             localStorage.setItem('theme', next);
-            updateThemeIcon();
+            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
-        
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            const icon = document.getElementById('theme-icon');
-            if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+        document.addEventListener('DOMContentLoaded', function() {
+            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+        });
     </script>
 </body>
 </html>

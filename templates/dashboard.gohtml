@@ -1,10 +1,10 @@
 {{ define "dashboard" }}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ .Lang }}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Ma bibliothèque - BookStorage</title>
+    <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <script>
         (function() {
@@ -13,516 +13,92 @@
         })();
     </script>
     <style>
-        /* Dashboard Header */
-        .dashboard-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 1.5rem;
-            margin-bottom: 2rem;
-            flex-wrap: wrap;
-        }
-        
-        .dashboard-title h1 {
-            font-size: 1.75rem;
-            margin-bottom: 0.25rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-        
-        .dashboard-title p {
-            color: var(--text-muted);
-            margin: 0;
-        }
-        
-        .header-actions {
-            display: flex;
-            gap: 0.75rem;
-        }
-        
-        /* Quick Stats */
-        .quick-stats {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-            gap: 1rem;
-            margin-bottom: 2rem;
-        }
-        
-        .stat-card {
-            background: var(--surface);
-            border-radius: 1rem;
-            padding: 1.25rem;
-            border: 1px solid var(--border-subtle);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .stat-card:hover {
-            transform: translateY(-2px);
-            box-shadow: var(--shadow-base);
-        }
-        
-        .stat-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-        }
-        
+        .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .dashboard-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .dashboard-title p { color: var(--text-muted); margin: 0; }
+        .header-actions { display: flex; gap: 0.75rem; }
+        .quick-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
+        .stat-card { background: var(--surface); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 1rem; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-base); }
+        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
         .stat-icon.purple { background: rgba(129, 140, 248, 0.15); }
         .stat-icon.orange { background: rgba(251, 146, 60, 0.15); }
         .stat-icon.green { background: rgba(34, 197, 94, 0.15); }
         .stat-icon.blue { background: rgba(56, 189, 248, 0.15); }
-        
-        .stat-content {
-            min-width: 0;
-        }
-        
-        .stat-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: var(--text-primary);
-            line-height: 1.2;
-        }
-        
-        .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            text-transform: uppercase;
-            letter-spacing: 0.03em;
-        }
-        
-        /* Filters Bar */
-        .filters-bar {
-            background: var(--surface);
-            border-radius: 1rem;
-            padding: 1rem 1.25rem;
-            border: 1px solid var(--border-subtle);
-            margin-bottom: 1.5rem;
-            display: flex;
-            flex-wrap: wrap;
-            gap: 0.75rem;
-            align-items: center;
-        }
-        
-        .search-box {
-            flex: 1;
-            min-width: 200px;
-            position: relative;
-        }
-        
-        .search-box input {
-            width: 100%;
-            padding: 0.65rem 1rem 0.65rem 2.5rem;
-            border: 1px solid var(--border-subtle);
-            border-radius: 0.75rem;
-            font-size: 0.95rem;
-            background: var(--background);
-            transition: border-color 0.2s ease, box-shadow 0.2s ease;
-        }
-        
-        .search-box input:focus {
-            outline: none;
-            border-color: var(--primary);
-            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
-        }
-        
-        .search-box::before {
-            content: "🔍";
-            position: absolute;
-            left: 0.85rem;
-            top: 50%;
-            transform: translateY(-50%);
-            font-size: 0.9rem;
-            opacity: 0.5;
-        }
-        
-        .filter-group {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .filter-group select {
-            padding: 0.65rem 2rem 0.65rem 0.85rem;
-            border: 1px solid var(--border-subtle);
-            border-radius: 0.75rem;
-            font-size: 0.9rem;
-            background: var(--background);
-            cursor: pointer;
-            transition: border-color 0.2s ease;
-        }
-        
-        .filter-group select:focus {
-            outline: none;
-            border-color: var(--primary);
-        }
-        
-        .view-toggle {
-            display: flex;
-            border: 1px solid var(--border-subtle);
-            border-radius: 0.75rem;
-            overflow: hidden;
-        }
-        
-        .view-toggle button {
-            padding: 0.6rem 0.85rem;
-            border: none;
-            background: var(--background);
-            cursor: pointer;
-            font-size: 1rem;
-            transition: background 0.2s ease;
-        }
-        
-        .view-toggle button:hover {
-            background: var(--primary-muted);
-        }
-        
-        .view-toggle button.active {
-            background: var(--primary);
-            color: white;
-        }
-        
-        /* Works Grid */
-        .works-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-            gap: 1.25rem;
-        }
-        
-        .work-card {
-            background: var(--surface);
-            border-radius: 1rem;
-            overflow: hidden;
-            border: 1px solid var(--border-subtle);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .work-card:hover {
-            transform: translateY(-4px);
-            box-shadow: var(--shadow-lg);
-        }
-        
-        .work-cover {
-            position: relative;
-            height: 180px;
-            background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1));
-            overflow: hidden;
-        }
-        
-        .work-cover img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-        }
-        
-        .work-cover .no-image {
-            position: absolute;
-            inset: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 3rem;
-            opacity: 0.3;
-        }
-        
-        .work-badges {
-            position: absolute;
-            top: 0.75rem;
-            left: 0.75rem;
-            right: 0.75rem;
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-        }
-        
-        .work-status-badge {
-            padding: 0.35rem 0.75rem;
-            border-radius: 2rem;
-            font-size: 0.75rem;
-            font-weight: 600;
-            backdrop-filter: blur(8px);
-        }
-        
-        .work-status-badge[data-status="En cours"] {
-            background: rgba(129, 140, 248, 0.9);
-            color: white;
-        }
-        
-        .work-status-badge[data-status="Terminé"] {
-            background: rgba(34, 197, 94, 0.9);
-            color: white;
-        }
-        
-        .work-status-badge[data-status="En pause"] {
-            background: rgba(56, 189, 248, 0.9);
-            color: white;
-        }
-        
-        .work-status-badge[data-status="Abandonné"] {
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-        }
-        
-        .work-status-badge[data-status="À lire"] {
-            background: rgba(250, 204, 21, 0.9);
-            color: #1f2937;
-        }
-        
-        .work-type-badge {
-            padding: 0.35rem 0.65rem;
-            border-radius: 2rem;
-            font-size: 0.7rem;
-            font-weight: 500;
-            background: rgba(0, 0, 0, 0.5);
-            color: white;
-            backdrop-filter: blur(8px);
-        }
-        
-        .work-body {
-            padding: 1rem 1.25rem;
-            flex: 1;
-            display: flex;
-            flex-direction: column;
-        }
-        
-        .work-title-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 0.5rem;
-            margin-bottom: 0.5rem;
-        }
-        
-        .work-card-title {
-            font-size: 1rem;
-            font-weight: 600;
-            color: var(--text-primary);
-            line-height: 1.3;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-        
-        .work-chapter {
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-            font-size: 0.9rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-        }
-        
-        .work-chapter strong {
-            color: var(--primary);
-            font-weight: 700;
-            font-size: 1.1rem;
-        }
-        
-        .work-rating-display {
-            display: flex;
-            gap: 0.15rem;
-            color: #fbbf24;
-            font-size: 0.9rem;
-            margin-bottom: 0.75rem;
-        }
-        
-        .work-rating-display .empty {
-            opacity: 0.3;
-        }
-        
-        .work-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: auto;
-            padding-top: 0.75rem;
-            border-top: 1px solid var(--border-subtle);
-        }
-        
-        .work-link {
-            font-size: 0.85rem;
-            color: var(--primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.25rem;
-        }
-        
-        .work-link:hover {
-            text-decoration: underline;
-        }
-        
-        .work-actions {
-            display: flex;
-            gap: 0.5rem;
-        }
-        
-        .work-actions a {
-            width: 32px;
-            height: 32px;
-            border-radius: 0.5rem;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.9rem;
-            text-decoration: none;
-            transition: background 0.2s ease;
-        }
-        
-        .work-actions .edit-btn {
-            background: rgba(56, 189, 248, 0.15);
-            color: #0ea5e9;
-        }
-        
-        .work-actions .edit-btn:hover {
-            background: rgba(56, 189, 248, 0.25);
-        }
-        
-        .work-actions .delete-btn {
-            background: rgba(239, 68, 68, 0.15);
-            color: #ef4444;
-        }
-        
-        .work-actions .delete-btn:hover {
-            background: rgba(239, 68, 68, 0.25);
-        }
-        
-        .notes-icon {
-            cursor: help;
-        }
-        
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 4rem 2rem;
-            background: var(--surface);
-            border-radius: 1.5rem;
-            border: 2px dashed var(--border-subtle);
-        }
-        
-        .empty-state-icon {
-            font-size: 4rem;
-            margin-bottom: 1rem;
-            opacity: 0.5;
-        }
-        
-        .empty-state h2 {
-            font-size: 1.25rem;
-            color: var(--text-primary);
-            margin-bottom: 0.5rem;
-        }
-        
-        .empty-state p {
-            color: var(--text-muted);
-            margin-bottom: 1.5rem;
-        }
-        
-        /* Dark Mode */
-        [data-theme="dark"] .stat-card {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .filters-bar {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .search-box input,
-        [data-theme="dark"] .filter-group select {
-            background: rgba(15, 23, 42, 0.5);
-            border-color: rgba(100, 116, 139, 0.4);
-            color: #e2e8f0;
-        }
-        
-        [data-theme="dark"] .search-box input::placeholder {
-            color: #94a3b8;
-        }
-        
-        [data-theme="dark"] .view-toggle button {
-            background: rgba(15, 23, 42, 0.5);
-            color: #e2e8f0;
-        }
-        
-        [data-theme="dark"] .view-toggle button:hover {
-            background: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .work-card {
-            background: rgba(51, 65, 85, 0.6);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .work-meta {
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .empty-state {
-            background: rgba(51, 65, 85, 0.4);
-            border-color: rgba(100, 116, 139, 0.3);
-        }
-        
-        [data-theme="dark"] .work-actions .edit-btn {
-            background: rgba(56, 189, 248, 0.2);
-            color: #7dd3fc;
-        }
-        
-        [data-theme="dark"] .work-actions .delete-btn {
-            background: rgba(239, 68, 68, 0.2);
-            color: #fca5a5;
-        }
-        
-        /* Responsive */
+        .stat-content { min-width: 0; }
+        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
+        .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
+        .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input { width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.95rem; background: var(--background); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
+        .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .search-box::before { content: "🔍"; position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; }
+        .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); cursor: pointer; transition: border-color 0.2s ease; }
+        .filter-group select:focus { outline: none; border-color: var(--primary); }
+        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+        .work-card { background: var(--surface); border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; }
+        .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .work-cover { position: relative; height: 180px; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
+        .work-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
+        .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
+        .work-status-badge { padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px); }
+        .work-status-badge[data-status="En cours"], .work-status-badge[data-status="Reading"] { background: rgba(129, 140, 248, 0.9); color: white; }
+        .work-status-badge[data-status="Terminé"], .work-status-badge[data-status="Completed"] { background: rgba(34, 197, 94, 0.9); color: white; }
+        .work-status-badge[data-status="En pause"], .work-status-badge[data-status="On Hold"] { background: rgba(56, 189, 248, 0.9); color: white; }
+        .work-status-badge[data-status="Abandonné"], .work-status-badge[data-status="Dropped"] { background: rgba(239, 68, 68, 0.9); color: white; }
+        .work-status-badge[data-status="À lire"], .work-status-badge[data-status="Plan to Read"] { background: rgba(250, 204, 21, 0.9); color: #1f2937; }
+        .work-type-badge { padding: 0.35rem 0.65rem; border-radius: 2rem; font-size: 0.7rem; font-weight: 500; background: rgba(0, 0, 0, 0.5); color: white; backdrop-filter: blur(8px); }
+        .work-body { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
+        .work-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .work-card-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+        .work-chapter { display: flex; align-items: center; gap: 0.5rem; font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 0.5rem; }
+        .work-chapter strong { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
+        .work-rating-display { display: flex; gap: 0.15rem; color: #fbbf24; font-size: 0.9rem; margin-bottom: 0.75rem; }
+        .work-rating-display .empty { opacity: 0.3; }
+        .work-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
+        .work-link { font-size: 0.85rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 0.25rem; }
+        .work-link:hover { text-decoration: underline; }
+        .work-actions { display: flex; gap: 0.5rem; }
+        .work-actions a { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: background 0.2s ease; }
+        .work-actions .edit-btn { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
+        .work-actions .edit-btn:hover { background: rgba(56, 189, 248, 0.25); }
+        .work-actions .delete-btn { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .work-actions .delete-btn:hover { background: rgba(239, 68, 68, 0.25); }
+        .chapter-controls { display: inline-flex; align-items: center; background: var(--input-bg); border: 1px solid var(--border-subtle); border-radius: 0.5rem; overflow: hidden; }
+        .chapter-btn { width: 26px; height: 26px; border: none; background: transparent; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; color: var(--text-muted); }
+        .chapter-btn:hover { background: var(--primary-muted); color: var(--primary); }
+        .chapter-btn:active { transform: scale(0.9); }
+        .chapter-value { min-width: 2rem; text-align: center; font-size: 0.95rem; padding: 0 0.25rem; border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
+        .empty-state { text-align: center; padding: 4rem 2rem; background: var(--surface); border-radius: 1.5rem; border: 2px dashed var(--border-subtle); }
+        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+        .empty-state h2 { font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.5rem; }
+        .empty-state p { color: var(--text-muted); margin-bottom: 1.5rem; }
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        [data-theme="dark"] .stat-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .filters-bar { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .search-box input, [data-theme="dark"] .filter-group select { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); color: #e2e8f0; }
+        [data-theme="dark"] .search-box input::placeholder { color: #94a3b8; }
+        [data-theme="dark"] .work-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .work-meta { border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .empty-state { background: rgba(51, 65, 85, 0.4); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .work-actions .edit-btn { background: rgba(56, 189, 248, 0.2); color: #7dd3fc; }
+        [data-theme="dark"] .work-actions .delete-btn { background: rgba(239, 68, 68, 0.2); color: #fca5a5; }
+        [data-theme="dark"] .chapter-controls { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); }
+        [data-theme="dark"] .chapter-btn:hover { background: rgba(129, 140, 248, 0.2); color: #a5b4fc; }
+        [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
         @media (max-width: 768px) {
-            .dashboard-header {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .header-actions {
-                justify-content: stretch;
-            }
-            
-            .header-actions .btn {
-                flex: 1;
-                justify-content: center;
-            }
-            
-            .quick-stats {
-                grid-template-columns: repeat(2, 1fr);
-            }
-            
-            .filters-bar {
-                flex-direction: column;
-                align-items: stretch;
-            }
-            
-            .search-box {
-                width: 100%;
-            }
-            
-            .filter-group {
-                flex-wrap: wrap;
-            }
-            
-            .filter-group select {
-                flex: 1;
-            }
-            
-            .works-grid {
-                grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-            }
+            .dashboard-header { flex-direction: column; align-items: stretch; }
+            .header-actions { justify-content: stretch; }
+            .header-actions .btn { flex: 1; justify-content: center; }
+            .quick-stats { grid-template-columns: repeat(2, 1fr); }
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .search-box { width: 100%; }
+            .filter-group { flex-wrap: wrap; }
+            .filter-group select { flex: 1; }
+            .works-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
         }
     </style>
 </head>
@@ -531,94 +107,90 @@
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/dashboard">Tableau de bord</a>
-                <a href="/stats">Statistiques</a>
-                <a href="/users">Lecteurs</a>
-                {{ if .IsAdmin }}<a href="/admin/accounts">Administration</a>{{ end }}
-                <button class="theme-toggle" onclick="toggleTheme()" title="Changer le thème" type="button">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
                     <span id="theme-icon">🌙</span>
                 </button>
-                <a href="/profile" class="btn btn-nav">Mon profil</a>
-                <a href="/logout" class="btn btn-logout">Déconnexion</a>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>
 
     <main class="page-body">
         <div class="container">
-            <!-- Header -->
             <div class="dashboard-header">
                 <div class="dashboard-title">
-                    <h1>📖 Ma bibliothèque</h1>
-                    <p>Suivez votre progression et gérez vos lectures</p>
+                    <h1>📖 {{ t .T "dashboard.title" }}</h1>
                 </div>
                 <div class="header-actions">
-                    <a href="/stats" class="btn btn-secondary">📊 Mes stats</a>
-                    <a href="/add_work" class="btn btn-primary">+ Ajouter une œuvre</a>
+                    <a href="/stats" class="btn btn-secondary">📊 {{ t .T "nav.stats" }}</a>
+                    <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
                 </div>
             </div>
 
-            <!-- Quick Stats -->
             <div class="quick-stats">
                 <div class="stat-card">
                     <div class="stat-icon purple">📚</div>
                     <div class="stat-content">
                         <div class="stat-value">{{ len .Works }}</div>
-                        <div class="stat-label">Œuvres</div>
+                        <div class="stat-label">{{ t .T "dashboard.stats.works" }}</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon orange">📖</div>
                     <div class="stat-content">
                         <div class="stat-value" id="total-chapters">0</div>
-                        <div class="stat-label">Chapitres lus</div>
+                        <div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon green">✅</div>
                     <div class="stat-content">
                         <div class="stat-value" id="completed-count">0</div>
-                        <div class="stat-label">Terminés</div>
+                        <div class="stat-label">{{ if eq .Lang "fr" }}Terminés{{ else }}Completed{{ end }}</div>
                     </div>
                 </div>
                 <div class="stat-card">
                     <div class="stat-icon blue">▶️</div>
                     <div class="stat-content">
                         <div class="stat-value" id="reading-count">0</div>
-                        <div class="stat-label">En cours</div>
+                        <div class="stat-label">{{ if eq .Lang "fr" }}En cours{{ else }}Reading{{ end }}</div>
                     </div>
                 </div>
             </div>
 
-            <!-- Filters -->
             <div class="filters-bar">
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="Rechercher une œuvre..." autocomplete="off">
+                    <input type="text" id="search-input" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
                 </div>
                 <div class="filter-group">
                     <select id="status-filter">
-                        <option value="">Tous les statuts</option>
-                        <option value="En cours">En cours</option>
-                        <option value="Terminé">Terminé</option>
-                        <option value="En pause">En pause</option>
-                        <option value="Abandonné">Abandonné</option>
-                        <option value="À lire">À lire</option>
+                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                        <option value="En cours">{{ t .T "status.reading" }}</option>
+                        <option value="Terminé">{{ t .T "status.completed" }}</option>
+                        <option value="En pause">{{ t .T "status.on_hold" }}</option>
+                        <option value="Abandonné">{{ t .T "status.dropped" }}</option>
+                        <option value="À lire">{{ t .T "status.plan_to_read" }}</option>
                     </select>
                     <select id="type-filter">
-                        <option value="">Tous les types</option>
+                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
                     <select id="sort-select" onchange="window.location.href='/dashboard?sort='+this.value">
-                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>Titre A→Z</option>
-                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Titre Z→A</option>
-                        <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>Chapitres ↓</option>
-                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>Plus récent</option>
-                        <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>Plus ancien</option>
+                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
+                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
+                        <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
+                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
+                        <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
                     </select>
                 </div>
             </div>
 
-            <!-- Works Grid -->
             {{ if .Works }}
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
@@ -636,8 +208,8 @@
                             <span class="no-image">📖</span>
                         {{ end }}
                         <div class="work-badges">
-                            {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ .Status.String }}</span>{{ end }}
-                            <span class="work-type-badge">{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}</span>
+                            {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
+                            <span class="work-type-badge">{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}</span>
                         </div>
                     </div>
                     <div class="work-body">
@@ -646,7 +218,12 @@
                             {{ if .Notes.Valid }}{{ if .Notes.String }}<span class="notes-icon" title="{{ .Notes.String }}">📝</span>{{ end }}{{ end }}
                         </div>
                         <div class="work-chapter">
-                            Chapitre <strong>{{ .Chapter }}</strong>
+                            {{ t $.T "dashboard.chapter" }}
+                            <div class="chapter-controls">
+                                <button class="chapter-btn minus" data-id="{{ .ID }}" title="-1">−</button>
+                                <strong class="chapter-value" data-id="{{ .ID }}">{{ .Chapter }}</strong>
+                                <button class="chapter-btn plus" data-id="{{ .ID }}" title="+1">+</button>
+                            </div>
                         </div>
                         <div class="work-rating-display">
                             {{ if .Rating }}
@@ -658,13 +235,13 @@
                         </div>
                         <div class="work-meta">
                             {{ if .Link.Valid }}
-                                <a href="{{ .Link.String }}" target="_blank" class="work-link">Lire ↗</a>
+                                <a href="{{ .Link.String }}" target="_blank" class="work-link">{{ if eq $.Lang "fr" }}Lire{{ else }}Read{{ end }} ↗</a>
                             {{ else }}
                                 <span></span>
                             {{ end }}
                             <div class="work-actions">
-                                <a href="/edit/{{ .ID }}" class="edit-btn" title="Modifier">✏️</a>
-                                <a href="/delete/{{ .ID }}" class="delete-btn" title="Supprimer" onclick="return confirm('Supprimer « {{ .Title }} » ?');">🗑️</a>
+                                <a href="/edit/{{ .ID }}" class="edit-btn" title="{{ t $.T "dashboard.edit" }}">✏️</a>
+                                <a href="/delete/{{ .ID }}" class="delete-btn" title="{{ t $.T "dashboard.delete" }}" onclick="return confirm('{{ t $.T "dashboard.delete.confirm" }}');">🗑️</a>
                             </div>
                         </div>
                     </div>
@@ -674,9 +251,9 @@
             {{ else }}
             <div class="empty-state">
                 <div class="empty-state-icon">📚</div>
-                <h2>Votre bibliothèque est vide</h2>
-                <p>Commencez à suivre vos lectures en ajoutant votre première œuvre.</p>
-                <a href="/add_work" class="btn btn-primary">+ Ajouter ma première œuvre</a>
+                <h2>{{ t .T "dashboard.empty" }}</h2>
+                <p>{{ t .T "dashboard.empty.start" }}</p>
+                <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
             </div>
             {{ end }}
         </div>
@@ -705,7 +282,6 @@
     document.addEventListener('DOMContentLoaded', function() {
         updateThemeIcon();
         
-        // Calculate stats
         const cards = document.querySelectorAll('.work-card');
         let totalChapters = 0;
         let completedCount = 0;
@@ -715,15 +291,14 @@
             const chapter = parseInt(card.dataset.chapter) || 0;
             const status = card.dataset.status;
             totalChapters += chapter;
-            if (status === 'Terminé') completedCount++;
-            if (status === 'En cours') readingCount++;
+            if (status === 'Terminé' || status === 'Completed') completedCount++;
+            if (status === 'En cours' || status === 'Reading') readingCount++;
         });
         
         document.getElementById('total-chapters').textContent = totalChapters;
         document.getElementById('completed-count').textContent = completedCount;
         document.getElementById('reading-count').textContent = readingCount;
         
-        // Filtering
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
         const typeFilter = document.getElementById('type-filter');
@@ -749,6 +324,54 @@
         if (searchInput) searchInput.addEventListener('input', filterWorks);
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
+        
+        // Chapter increment/decrement buttons
+        document.querySelectorAll('.chapter-btn.plus').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const id = this.dataset.id;
+                const valueEl = document.querySelector('.chapter-value[data-id="'+id+'"]');
+                const card = this.closest('.work-card');
+                try {
+                    const resp = await fetch('/api/increment/'+id, { method: 'POST' });
+                    if (resp.ok) {
+                        const oldVal = parseInt(valueEl.textContent) || 0;
+                        const newVal = oldVal + 1;
+                        valueEl.textContent = newVal;
+                        card.dataset.chapter = newVal;
+                        updateTotalChapters();
+                    }
+                } catch (err) { console.error(err); }
+            });
+        });
+        
+        document.querySelectorAll('.chapter-btn.minus').forEach(btn => {
+            btn.addEventListener('click', async function(e) {
+                e.preventDefault();
+                const id = this.dataset.id;
+                const valueEl = document.querySelector('.chapter-value[data-id="'+id+'"]');
+                const card = this.closest('.work-card');
+                const oldVal = parseInt(valueEl.textContent) || 0;
+                if (oldVal <= 0) return;
+                try {
+                    const resp = await fetch('/api/decrement/'+id, { method: 'POST' });
+                    if (resp.ok) {
+                        const newVal = oldVal - 1;
+                        valueEl.textContent = newVal;
+                        card.dataset.chapter = newVal;
+                        updateTotalChapters();
+                    }
+                } catch (err) { console.error(err); }
+            });
+        });
+        
+        function updateTotalChapters() {
+            let total = 0;
+            document.querySelectorAll('.work-card').forEach(c => {
+                total += parseInt(c.dataset.chapter) || 0;
+            });
+            document.getElementById('total-chapters').textContent = total;
+        }
     });
     </script>
 </body>

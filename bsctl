@@ -2,8 +2,8 @@
 # ============================================================================
 # bsctl - BookStorage Control
 # ============================================================================
-# CLI pour gérer BookStorage
-# Usage: bsctl <commande>
+# CLI to manage BookStorage
+# Usage: bsctl <command>
 # ============================================================================
 
 set -e
@@ -15,7 +15,7 @@ APP_GROUP="nobody"
 INSTALL_DIR="/opt/bookstorage"
 BIN_DIR="/usr/local/bin"
 
-# Couleurs
+# Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[0;33m'
@@ -24,7 +24,7 @@ BOLD='\033[1m'
 NC='\033[0m' # No Color
 
 # ============================================================================
-# Fonctions utilitaires
+# Utility functions
 # ============================================================================
 
 print_header() {
@@ -52,47 +52,47 @@ print_step() {
 }
 
 # ============================================================================
-# Commandes
+# Commands
 # ============================================================================
 
 cmd_help() {
     printf "\n"
-    printf "${BOLD}📚 BookStorage v${APP_VERSION} - Gestionnaire de lectures${NC}\n"
+    printf "${BOLD}📚 BookStorage v${APP_VERSION} - Personal reading tracker${NC}\n"
     printf "\n"
-    printf "${BOLD}UTILISATION${NC}\n"
-    printf "    bsctl ${BLUE}<commande>${NC}\n"
+    printf "${BOLD}USAGE${NC}\n"
+    printf "    bsctl ${BLUE}<command>${NC}\n"
     printf "\n"
-    printf "${BOLD}DÉVELOPPEMENT${NC}\n"
-    printf "    ${GREEN}build${NC}        Compile l'application\n"
-    printf "    ${GREEN}build-prod${NC}   Compile en mode production (optimisé)\n"
-    printf "    ${GREEN}run${NC}          Lance le serveur de développement\n"
-    printf "    ${GREEN}clean${NC}        Supprime les fichiers compilés\n"
+    printf "${BOLD}DEVELOPMENT${NC}\n"
+    printf "    ${GREEN}build${NC}        Compile the application\n"
+    printf "    ${GREEN}build-prod${NC}   Compile for production (optimized)\n"
+    printf "    ${GREEN}run${NC}          Start the development server\n"
+    printf "    ${GREEN}clean${NC}        Remove compiled files\n"
     printf "\n"
-    printf "${BOLD}PRODUCTION${NC} (nécessite root)\n"
-    printf "    ${GREEN}install${NC}      Installe le service systemd\n"
-    printf "    ${GREEN}uninstall${NC}    Désinstalle le service\n"
-    printf "    ${GREEN}update${NC}       Met à jour (git pull + build + restart)\n"
-    printf "    ${GREEN}fix-perms${NC}    Corrige les permissions des fichiers\n"
+    printf "${BOLD}PRODUCTION${NC} (requires root)\n"
+    printf "    ${GREEN}install${NC}      Install the systemd service\n"
+    printf "    ${GREEN}uninstall${NC}    Uninstall the service\n"
+    printf "    ${GREEN}update${NC}       Update (git pull + build + restart)\n"
+    printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
     printf "\n"
     printf "${BOLD}SERVICE${NC}\n"
-    printf "    ${GREEN}start${NC}        Démarre le service\n"
-    printf "    ${GREEN}stop${NC}         Arrête le service\n"
-    printf "    ${GREEN}restart${NC}      Redémarre le service\n"
-    printf "    ${GREEN}status${NC}       Affiche le statut du service\n"
-    printf "    ${GREEN}logs${NC}         Affiche les logs en temps réel\n"
+    printf "    ${GREEN}start${NC}        Start the service\n"
+    printf "    ${GREEN}stop${NC}         Stop the service\n"
+    printf "    ${GREEN}restart${NC}      Restart the service\n"
+    printf "    ${GREEN}status${NC}       Show service status\n"
+    printf "    ${GREEN}logs${NC}         Show logs in real-time\n"
     printf "\n"
-    printf "${BOLD}EXEMPLES${NC}\n"
-    printf "    ${BLUE}bsctl run${NC}              Développement local\n"
-    printf "    ${BLUE}sudo bsctl install${NC}     Installer en production\n"
-    printf "    ${BLUE}sudo bsctl update${NC}      Mettre à jour le serveur\n"
-    printf "    ${BLUE}bsctl logs${NC}             Voir les logs\n"
+    printf "${BOLD}EXAMPLES${NC}\n"
+    printf "    ${BLUE}bsctl run${NC}              Local development\n"
+    printf "    ${BLUE}sudo bsctl install${NC}     Install in production\n"
+    printf "    ${BLUE}sudo bsctl update${NC}      Update the server\n"
+    printf "    ${BLUE}bsctl logs${NC}             View logs\n"
     printf "\n"
     printf "${BOLD}CONFIGURATION${NC}\n"
-    printf "    Variables d'environnement dans ${BLUE}.env${NC} :\n"
-    printf "    - BOOKSTORAGE_HOST         (défaut: 127.0.0.1)\n"
-    printf "    - BOOKSTORAGE_PORT         (défaut: 5000)\n"
-    printf "    - BOOKSTORAGE_DATABASE     (défaut: database.db)\n"
-    printf "    - BOOKSTORAGE_SECRET_KEY   (défaut: dev-secret-change-me)\n"
+    printf "    Environment variables in ${BLUE}.env${NC}:\n"
+    printf "    - BOOKSTORAGE_HOST         (default: 127.0.0.1)\n"
+    printf "    - BOOKSTORAGE_PORT         (default: 5000)\n"
+    printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
+    printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "\n"
 }
 
@@ -101,81 +101,81 @@ cmd_version() {
 }
 
 cmd_build() {
-    print_info "Compilation..."
+    print_info "Compiling..."
     go build -o ${APP_NAME} .
-    print_success "Compilation terminée: ./${APP_NAME}"
+    print_success "Build complete: ./${APP_NAME}"
 }
 
 cmd_build_prod() {
-    print_info "Compilation production..."
+    print_info "Compiling for production..."
     CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} .
-    print_success "Binaire optimisé créé: ./${APP_NAME}"
+    print_success "Optimized binary created: ./${APP_NAME}"
 }
 
 cmd_run() {
-    print_info "Démarrage du serveur de développement..."
+    print_info "Starting development server..."
     go run .
 }
 
 cmd_clean() {
-    print_info "Nettoyage..."
+    print_info "Cleaning up..."
     rm -f ${APP_NAME}
-    print_success "Nettoyage terminé"
+    print_success "Cleanup complete"
 }
 
 cmd_install() {
-    print_info "Installation du service ${APP_NAME}..."
+    print_info "Installing ${APP_NAME} service..."
     cmd_build_prod
     cp ${APP_NAME} ${BIN_DIR}/
     cp deploy/bookstorage.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable ${APP_NAME}
     printf "\n"
-    print_success "Service installé avec succès"
+    print_success "Service installed successfully"
     printf "\n"
-    printf "Commandes disponibles:\n"
-    printf "  ${BOLD}bsctl start${NC}   - Démarrer\n"
-    printf "  ${BOLD}bsctl stop${NC}    - Arrêter\n"
-    printf "  ${BOLD}bsctl status${NC}  - Statut\n"
+    printf "Available commands:\n"
+    printf "  ${BOLD}bsctl start${NC}   - Start\n"
+    printf "  ${BOLD}bsctl stop${NC}    - Stop\n"
+    printf "  ${BOLD}bsctl status${NC}  - Status\n"
 }
 
 cmd_uninstall() {
-    print_info "Désinstallation du service ${APP_NAME}..."
+    print_info "Uninstalling ${APP_NAME} service..."
     systemctl stop ${APP_NAME} 2>/dev/null || true
     systemctl disable ${APP_NAME} 2>/dev/null || true
     rm -f /etc/systemd/system/bookstorage.service
     rm -f ${BIN_DIR}/${APP_NAME}
     systemctl daemon-reload
-    print_success "Service désinstallé"
+    print_success "Service uninstalled"
 }
 
 cmd_update() {
     print_header
     
-    print_step "1/5" "Récupération des modifications..."
+    print_step "1/5" "Fetching updates..."
     git pull
     printf "\n"
     
-    print_step "2/5" "Compilation..."
+    print_step "2/5" "Compiling..."
     cmd_build_prod
     printf "\n"
     
-    print_step "3/5" "Installation du binaire..."
+    print_step "3/5" "Installing binary..."
     cp ${APP_NAME} ${BIN_DIR}/
-    print_success "Binaire copié"
+    print_success "Binary copied"
     printf "\n"
     
-    print_step "4/5" "Correction des permissions..."
+    print_step "4/5" "Fixing permissions..."
     cmd_fix_perms
     printf "\n"
     
-    print_step "5/5" "Redémarrage du service..."
+    print_step "5/5" "Restarting service..."
     systemctl restart ${APP_NAME}
-    print_success "Service redémarré"
+    print_success "Service restarted"
     printf "\n"
     
     printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-    printf "${GREEN}║      MISE À JOUR TERMINÉE ✓            ║${NC}\n"
+    printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
     printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
     printf "\n"
     
@@ -183,7 +183,7 @@ cmd_update() {
 }
 
 cmd_fix_perms() {
-    print_info "Correction des permissions..."
+    print_info "Fixing permissions..."
     chown ${APP_USER}:${APP_GROUP} . 2>/dev/null || true
     chmod 755 . 2>/dev/null || true
     chown ${APP_USER}:${APP_GROUP} database.db 2>/dev/null || true
@@ -191,35 +191,35 @@ cmd_fix_perms() {
     chown -R ${APP_USER}:${APP_GROUP} static/avatars/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} static/images/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} templates/ 2>/dev/null || true
-    print_success "Permissions corrigées"
+    print_success "Permissions fixed"
 }
 
 cmd_start() {
-    print_info "Démarrage du service..."
+    print_info "Starting service..."
     systemctl start ${APP_NAME}
-    print_success "Service démarré"
+    print_success "Service started"
     cmd_status
 }
 
 cmd_stop() {
-    print_info "Arrêt du service..."
+    print_info "Stopping service..."
     systemctl stop ${APP_NAME}
-    print_success "Service arrêté"
+    print_success "Service stopped"
 }
 
 cmd_restart() {
-    print_info "Redémarrage du service..."
+    print_info "Restarting service..."
     systemctl restart ${APP_NAME}
-    print_success "Service redémarré"
+    print_success "Service restarted"
     cmd_status
 }
 
 cmd_status() {
-    systemctl status ${APP_NAME} --no-pager -l 2>/dev/null || printf "${YELLOW}Service non installé${NC}\n"
+    systemctl status ${APP_NAME} --no-pager -l 2>/dev/null || printf "${YELLOW}Service not installed${NC}\n"
 }
 
 cmd_logs() {
-    print_info "Logs en temps réel (Ctrl+C pour quitter)..."
+    print_info "Real-time logs (Ctrl+C to quit)..."
     journalctl -u ${APP_NAME} -f
 }
 
@@ -274,8 +274,8 @@ case "${1:-help}" in
         cmd_logs
         ;;
     *)
-        printf "${RED}Commande inconnue: $1${NC}\n"
-        printf "Utilisez ${BOLD}bsctl help${NC} pour voir les commandes disponibles.\n"
+        printf "${RED}Unknown command: $1${NC}\n"
+        printf "Use ${BOLD}bsctl help${NC} to see available commands.\n"
         exit 1
         ;;
 esac

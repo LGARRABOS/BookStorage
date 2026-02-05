@@ -1,10 +1,200 @@
 # 📚 BookStorage
 
-**BookStorage** est une application web de suivi de lectures personnelles. Suivez vos romans, mangas, webtoons, light novels et plus encore.
+**BookStorage** is a personal reading tracker web application. Track your novels, manga, webtoons, light novels and more.
+
+*[Version française ci-dessous](#-bookstorage-fr)*
 
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
+
+## ✨ Features
+
+- 📖 **Multi-format**: Novels, manga, manhwa, webtoons, light novels...
+- ⭐ **Ratings & notes**: Rate your works from 1 to 5 stars with personal notes
+- 📊 **Statistics**: Visualize your reading habits
+- 👥 **Community**: Explore other readers' public libraries
+- 🌓 **Dark mode**: Light or dark interface based on your preferences
+- 🔐 **Privacy**: Public or private profile, you choose
+- 🌍 **Multilingual**: French and English interface
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- **Go 1.22+** 
+- **GCC** (for SQLite compilation with CGO)
+
+### Run in development
+
+```bash
+# Clone the project
+git clone https://github.com/LGARRABOS/BookStorage.git
+cd BookStorage
+
+# Start the server
+go run .
+```
+
+Server starts on **http://127.0.0.1:5000**
+
+---
+
+## 📦 Production Installation (Linux)
+
+### Automatic installation
+
+```bash
+# Clone and install (as root)
+git clone https://github.com/LGARRABOS/BookStorage.git
+cd BookStorage
+sudo ./deploy/install.sh
+```
+
+The script automatically installs:
+- Compiled application
+- `bsctl` CLI to manage the service
+- systemd service
+- Firewall configuration
+
+### Start the service
+
+```bash
+bsctl start
+```
+
+---
+
+## 🛠️ bsctl Commands
+
+`bsctl` (BookStorage Control) is the CLI to manage BookStorage.
+
+```bash
+bsctl help     # Show help
+```
+
+### Service
+
+| Command | Description |
+|---------|-------------|
+| `bsctl start` | Start the service |
+| `bsctl stop` | Stop the service |
+| `bsctl restart` | Restart the service |
+| `bsctl status` | Show status |
+| `bsctl logs` | Show real-time logs |
+
+### Development
+
+| Command | Description |
+|---------|-------------|
+| `bsctl build` | Compile the application |
+| `bsctl build-prod` | Compile for production |
+| `bsctl run` | Start dev server |
+| `bsctl clean` | Remove compiled files |
+
+### Production
+
+| Command | Description |
+|---------|-------------|
+| `bsctl install` | Install systemd service |
+| `bsctl uninstall` | Uninstall service |
+| `bsctl update` | Update (pull + build + restart) |
+| `bsctl fix-perms` | Fix file permissions |
+
+---
+
+## ⚙️ Configuration
+
+### Environment variables
+
+Create a `.env` file at the root or in `/opt/bookstorage/`:
+
+```env
+# Server
+BOOKSTORAGE_HOST=0.0.0.0
+BOOKSTORAGE_PORT=5000
+
+# Database
+BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
+
+# Security (auto-generated during installation)
+BOOKSTORAGE_SECRET_KEY=your-very-long-secret-key
+
+# Super administrator
+BOOKSTORAGE_SUPERADMIN_USERNAME=admin
+BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
+```
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `BOOKSTORAGE_HOST` | Listen address | `127.0.0.1` |
+| `BOOKSTORAGE_PORT` | Port | `5000` |
+| `BOOKSTORAGE_DATABASE` | SQLite database path | `database.db` |
+| `BOOKSTORAGE_SECRET_KEY` | Session secret key | `dev-secret-change-me` |
+
+---
+
+## 📁 Project Structure
+
+```
+BookStorage/
+├── main.go              # Entry point
+├── config.go            # Configuration
+├── db.go                # SQLite schema
+├── handlers.go          # HTTP routes
+├── i18n.go              # Translations (FR/EN)
+├── bsctl                # Management CLI
+├── Makefile             # Make commands
+├── go.mod / go.sum      # Go dependencies
+│
+├── deploy/
+│   ├── install.sh       # Installation script
+│   └── bookstorage.service
+│
+├── templates/           # HTML templates
+└── static/              # CSS, images, avatars
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### "readonly database" error
+
+```bash
+bsctl fix-perms
+bsctl restart
+```
+
+### Port already in use
+
+```bash
+# See which process uses the port
+sudo lsof -i :5000
+
+# Change port in .env
+BOOKSTORAGE_PORT=5001
+```
+
+### View detailed logs
+
+```bash
+bsctl logs
+```
+
+---
+
+## 📝 License
+
+MIT License
+
+---
+
+# 📚 BookStorage (FR)
+
+**BookStorage** est une application web de suivi de lectures personnelles. Suivez vos romans, mangas, webtoons, light novels et plus encore.
 
 ## ✨ Fonctionnalités
 
@@ -14,6 +204,7 @@
 - 👥 **Communauté** : Explorez les bibliothèques publiques des autres lecteurs
 - 🌓 **Mode sombre** : Interface claire ou sombre selon vos préférences
 - 🔐 **Vie privée** : Profil public ou privé, vous choisissez
+- 🌍 **Multilingue** : Interface française et anglaise
 
 ---
 
@@ -28,7 +219,7 @@
 
 ```bash
 # Cloner le projet
-git clone https://github.com/VOTRE_USERNAME/BookStorage.git
+git clone https://github.com/LGARRABOS/BookStorage.git
 cd BookStorage
 
 # Lancer le serveur
@@ -41,170 +232,20 @@ Le serveur démarre sur **http://127.0.0.1:5000**
 
 ## 📦 Installation en Production (Linux)
 
-### Installation automatique
-
 ```bash
 # Cloner et installer (en root)
-git clone https://github.com/VOTRE_USERNAME/BookStorage.git
+git clone https://github.com/LGARRABOS/BookStorage.git
 cd BookStorage
 sudo ./deploy/install.sh
-```
 
-Le script installe automatiquement :
-- L'application compilée
-- Le CLI `bsctl` pour gérer le service
-- Le service systemd
-- La configuration du firewall
-
-### Démarrer le service
-
-```bash
+# Démarrer le service
 bsctl start
 ```
 
----
-
-## 🛠️ Commandes bsctl
-
-`bsctl` (BookStorage Control) est le CLI pour gérer BookStorage.
-
-```bash
-bsctl help     # Afficher l'aide
-```
-
-### Service
-
-| Commande | Description |
-|----------|-------------|
-| `bsctl start` | Démarre le service |
-| `bsctl stop` | Arrête le service |
-| `bsctl restart` | Redémarre le service |
-| `bsctl status` | Affiche le statut |
-| `bsctl logs` | Affiche les logs en temps réel |
-
-### Développement
-
-| Commande | Description |
-|----------|-------------|
-| `bsctl build` | Compile l'application |
-| `bsctl build-prod` | Compile en mode production |
-| `bsctl run` | Lance le serveur de dev |
-| `bsctl clean` | Supprime les fichiers compilés |
-
-### Production
-
-| Commande | Description |
-|----------|-------------|
-| `bsctl install` | Installe le service systemd |
-| `bsctl uninstall` | Désinstalle le service |
-| `bsctl update` | Met à jour (pull + build + restart) |
-| `bsctl fix-perms` | Corrige les permissions |
-
----
-
-## ⚙️ Configuration
-
-### Variables d'environnement
-
-Créez un fichier `.env` à la racine ou dans `/opt/bookstorage/` :
-
-```env
-# Serveur
-BOOKSTORAGE_HOST=0.0.0.0
-BOOKSTORAGE_PORT=5000
-
-# Base de données
-BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
-
-# Sécurité (généré automatiquement à l'installation)
-BOOKSTORAGE_SECRET_KEY=votre-cle-secrete-tres-longue
-
-# Super administrateur
-BOOKSTORAGE_SUPERADMIN_USERNAME=admin
-BOOKSTORAGE_SUPERADMIN_PASSWORD=MotDePasseSecurise123!
-```
-
-| Variable | Description | Défaut |
-|----------|-------------|--------|
-| `BOOKSTORAGE_HOST` | Adresse d'écoute | `127.0.0.1` |
-| `BOOKSTORAGE_PORT` | Port | `5000` |
-| `BOOKSTORAGE_DATABASE` | Chemin base SQLite | `database.db` |
-| `BOOKSTORAGE_SECRET_KEY` | Clé secrète sessions | `dev-secret-change-me` |
-
----
-
-## 📁 Structure du projet
-
-```
-BookStorage/
-├── main.go              # Point d'entrée
-├── config.go            # Configuration
-├── db.go                # Schéma SQLite
-├── handlers.go          # Routes HTTP
-├── bsctl                # CLI de gestion
-├── Makefile             # Commandes make
-├── go.mod / go.sum      # Dépendances Go
-│
-├── deploy/
-│   ├── install.sh       # Script d'installation
-│   └── bookstorage.service
-│
-├── templates/           # Templates HTML
-└── static/              # CSS, images, avatars
-```
-
----
-
-## 🔄 Migration depuis Python/Flask
-
-Si vous avez une ancienne version Python :
-
-```bash
-# Copier la base de données
-cp /ancien/chemin/database.db /opt/bookstorage/
-
-# Corriger les permissions et redémarrer
-bsctl fix-perms
-bsctl restart
-```
-
-> Les mots de passe Werkzeug (`pbkdf2:sha256`) sont automatiquement reconnus.
-
----
-
-## 🐛 Dépannage
-
-### Erreur "readonly database"
-
-```bash
-bsctl fix-perms
-bsctl restart
-```
-
-### Port déjà utilisé
-
-```bash
-# Voir quel processus utilise le port
-sudo lsof -i :5000
-
-# Changer le port dans .env
-BOOKSTORAGE_PORT=5001
-```
-
-### Voir les logs détaillés
-
-```bash
-bsctl logs
-```
-
----
-
-## 📝 Licence
-
-MIT License
+Utilisez `bsctl help` pour voir toutes les commandes disponibles.
 
 ---
 
 <p align="center">
-  Fait avec ❤️ pour les lecteurs
+  Made with ❤️ for readers / Fait avec ❤️ pour les lecteurs
 </p>
