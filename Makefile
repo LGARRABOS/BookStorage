@@ -4,7 +4,7 @@ APP_NAME := bookstorage
 APP_USER := nobody
 APP_GROUP := nobody
 
-.PHONY: all build clean run install uninstall update
+.PHONY: all build clean run install uninstall update fix-perms
 
 # Build the application
 build:
@@ -50,11 +50,32 @@ update:
 	$(MAKE) build-prod
 	@echo "3. Copie du binaire..."
 	cp $(APP_NAME) /usr/local/bin/
-	@echo "4. Permissions..."
-	chown -R $(APP_USER):$(APP_GROUP) static/
+	@echo "4. Correction des permissions..."
+	@# Dossier principal (nécessaire pour SQLite WAL/journal)
+	chown $(APP_USER):$(APP_GROUP) .
+	chmod 755 .
+	@# Base de données
 	chown $(APP_USER):$(APP_GROUP) database.db 2>/dev/null || true
+	chmod 664 database.db 2>/dev/null || true
+	@# Dossiers static (uploads)
+	chown -R $(APP_USER):$(APP_GROUP) static/avatars/ 2>/dev/null || true
+	chown -R $(APP_USER):$(APP_GROUP) static/images/ 2>/dev/null || true
+	@# Templates (lecture seule suffit)
+	chown -R $(APP_USER):$(APP_GROUP) templates/ 2>/dev/null || true
 	@echo "5. Redémarrage du service..."
 	systemctl restart $(APP_NAME)
 	@echo ""
 	@echo "=== Mise à jour terminée ==="
 	systemctl status $(APP_NAME) --no-pager
+
+# Fix permissions only (without update)
+fix-perms:
+	@echo "Correction des permissions..."
+	chown $(APP_USER):$(APP_GROUP) .
+	chmod 755 .
+	chown $(APP_USER):$(APP_GROUP) database.db 2>/dev/null || true
+	chmod 664 database.db 2>/dev/null || true
+	chown -R $(APP_USER):$(APP_GROUP) static/avatars/ 2>/dev/null || true
+	chown -R $(APP_USER):$(APP_GROUP) static/images/ 2>/dev/null || true
+	chown -R $(APP_USER):$(APP_GROUP) templates/ 2>/dev/null || true
+	@echo "Permissions corrigées."
