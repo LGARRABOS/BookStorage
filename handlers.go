@@ -370,6 +370,8 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		orderClause = "ORDER BY reading_type, LOWER(title)"
 	case "recent":
 		orderClause = "ORDER BY id DESC"
+	case "oldest":
+		orderClause = "ORDER BY id ASC"
 	default:
 		sortBy = "title"
 		orderClause = "ORDER BY LOWER(title)"
