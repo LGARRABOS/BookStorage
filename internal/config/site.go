@@ -1,4 +1,4 @@
-package main
+package config
 
 import (
 	"encoding/json"
@@ -57,15 +57,13 @@ func LoadSiteConfig(rootPath string) *SiteConfig {
 
 	data, err := os.ReadFile(configPath)
 	if err != nil {
-		// Return default config if file doesn't exist
 		return DefaultSiteConfig()
 	}
 
-	var config SiteConfig
-	if err := json.Unmarshal(data, &config); err != nil {
-		// Return default config if parsing fails
+	var cfg SiteConfig
+	if err := json.Unmarshal(data, &cfg); err != nil {
 		return DefaultSiteConfig()
 	}
 
-	return &config
+	return &cfg
 }

@@ -1,7 +1,7 @@
 const CACHE_NAME = 'bookstorage-v1';
 const STATIC_ASSETS = [
   '/static/css/base.css',
-  '/static/manifest.json'
+  '/static/pwa/manifest.json'
 ];
 
 // Install event - cache static assets

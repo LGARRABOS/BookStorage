@@ -8,6 +8,9 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+
+	"bookstorage/internal/config"
+	"bookstorage/internal/database"
 )
 
 // Version is set at compile time with -ldflags
@@ -99,20 +102,20 @@ func main() {
 		root = filepath.Dir(configPath)
 	}
 
-	settings, err := GetSettings(root)
+	settings, err := config.Load(root)
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
 
-	siteConfig := LoadSiteConfig(root)
+	siteConfig := config.LoadSiteConfig(root)
 
-	db, err := openDB(settings)
+	db, err := database.Open(settings)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
 	defer db.Close()
 
-	if err := ensureSchema(db, settings); err != nil {
+	if err := database.EnsureSchema(db, settings); err != nil {
 		log.Fatalf("ensure schema: %v", err)
 	}
 
