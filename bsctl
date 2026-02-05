@@ -152,24 +152,30 @@ cmd_uninstall() {
 cmd_update() {
     print_header
     
-    print_step "1/5" "Fetching updates..."
+    print_step "1/6" "Fetching updates..."
     git pull
     printf "\n"
     
-    print_step "2/5" "Compiling..."
+    print_step "2/6" "Compiling..."
     cmd_build_prod
     printf "\n"
     
-    print_step "3/5" "Installing binary..."
+    print_step "3/6" "Installing binary..."
     cp ${APP_NAME} ${BIN_DIR}/
     print_success "Binary copied"
     printf "\n"
     
-    print_step "4/5" "Fixing permissions..."
+    print_step "4/6" "Updating bsctl script..."
+    cp bsctl ${BIN_DIR}/
+    chmod +x ${BIN_DIR}/bsctl
+    print_success "bsctl updated"
+    printf "\n"
+    
+    print_step "5/6" "Fixing permissions..."
     cmd_fix_perms
     printf "\n"
     
-    print_step "5/5" "Restarting service..."
+    print_step "6/6" "Restarting service..."
     systemctl restart ${APP_NAME}
     print_success "Service restarted"
     printf "\n"
