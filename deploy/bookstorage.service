@@ -1,0 +1,29 @@
+[Unit]
+Description=BookStorage - Application de suivi de lectures
+After=network.target
+
+[Service]
+Type=simple
+User=www-data
+Group=www-data
+WorkingDirectory=/opt/bookstorage
+ExecStart=/usr/local/bin/bookstorage
+Restart=always
+RestartSec=5
+
+# Environment
+Environment=FLASK_ENV=production
+Environment=BOOKSTORAGE_HOST=0.0.0.0
+Environment=BOOKSTORAGE_PORT=5000
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bookstorage
+
+# Security hardening
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target
