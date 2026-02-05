@@ -1,0 +1,33 @@
+{
+  "site_name": "BookStorage",
+  "site_url": "https://example.com",
+  
+  "legal": {
+    "owner_name": "Votre Nom / Your Name",
+    "owner_email": "contact@example.com",
+    "owner_address": "123 Rue Exemple, 75000 Paris, France",
+    
+    "hosting_provider": "Nom de l'hébergeur / Hosting Provider Name",
+    "hosting_address": "Adresse de l'hébergeur / Hosting Provider Address",
+    
+    "data_retention": "Les données sont conservées tant que votre compte est actif. / Data is retained as long as your account is active.",
+    "data_usage": "Vos données sont utilisées uniquement pour le fonctionnement du service. / Your data is only used for the operation of the service.",
+    
+    "custom_sections": [
+      {
+        "title_fr": "Propriété intellectuelle",
+        "title_en": "Intellectual Property",
+        "content_fr": "Le contenu du site (logo, textes, mise en page) est la propriété de l'éditeur. Les couvertures et images des œuvres appartiennent à leurs ayants droit respectifs.",
+        "content_en": "The site content (logo, texts, layout) is the property of the publisher. Book covers and images belong to their respective rights holders."
+      },
+      {
+        "title_fr": "Limitation de responsabilité",
+        "title_en": "Limitation of Liability",
+        "content_fr": "BookStorage est fourni 'tel quel'. L'éditeur ne saurait être tenu responsable des dommages directs ou indirects résultant de l'utilisation du service.",
+        "content_en": "BookStorage is provided 'as is'. The publisher cannot be held responsible for direct or indirect damages resulting from the use of the service."
+      }
+    ]
+  },
+
+  "_comment": "Ce fichier est configurable. Modifiez les valeurs ci-dessus selon vos besoins. / This file is configurable. Modify the values above according to your needs."
+}

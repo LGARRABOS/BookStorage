@@ -104,6 +104,8 @@ func main() {
 		log.Fatalf("config error: %v", err)
 	}
 
+	siteConfig := LoadSiteConfig(root)
+
 	db, err := openDB(settings)
 	if err != nil {
 		log.Fatalf("open db: %v", err)
@@ -114,7 +116,7 @@ func main() {
 		log.Fatalf("ensure schema: %v", err)
 	}
 
-	app := NewApp(settings, db)
+	app := NewApp(settings, siteConfig, db)
 
 	mux := http.NewServeMux()
 
@@ -125,6 +127,7 @@ func main() {
 
 	// Routes
 	mux.HandleFunc("/", app.handleHome)
+	mux.HandleFunc("/legal", app.handleLegal)
 	mux.HandleFunc("/lang/{lang}", app.handleSetLanguage)
 	mux.HandleFunc("/register", app.handleRegister)
 	mux.HandleFunc("/login", app.handleLogin)

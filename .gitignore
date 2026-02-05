@@ -40,6 +40,9 @@ Thumbs.db
 .env.local
 .env.*.local
 
+# Site config (personal legal info)
+config/site.json
+
 # Database
 database.db
 *.db-journal

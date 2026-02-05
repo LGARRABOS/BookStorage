@@ -1,0 +1,152 @@
+{{ define "legal" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal Notice{{ end }} - {{ .SiteName }}</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+    <style>
+        .legal-container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
+        .legal-header { text-align: center; margin-bottom: 3rem; }
+        .legal-header h1 { font-size: 2rem; margin-bottom: 0.5rem; }
+        .legal-header p { color: var(--text-muted); }
+        .legal-section { background: var(--surface); border-radius: var(--radius); padding: 1.5rem 2rem; margin-bottom: 1.5rem; border: 1px solid var(--border-subtle); }
+        .legal-section h2 { font-size: 1.25rem; margin-bottom: 1rem; color: var(--primary); display: flex; align-items: center; gap: 0.5rem; }
+        .legal-section p { color: var(--text-secondary); line-height: 1.7; margin: 0.5rem 0; }
+        .legal-section strong { color: var(--text-primary); }
+        .legal-info { display: grid; gap: 0.5rem; }
+        .legal-info-row { display: flex; gap: 0.5rem; }
+        .legal-info-row .label { color: var(--text-muted); min-width: 120px; }
+        .legal-info-row .value { color: var(--text-primary); }
+        .back-link { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--primary); text-decoration: none; margin-bottom: 2rem; }
+        .back-link:hover { text-decoration: underline; }
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        [data-theme="dark"] .legal-section { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/">📚 {{ .SiteName }}</a>
+            <nav class="nav-links">
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
+                    <span id="theme-icon">🌙</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-body">
+        <div class="legal-container">
+            <a href="/" class="back-link">← {{ if eq .Lang "fr" }}Retour à l'accueil{{ else }}Back to home{{ end }}</a>
+            
+            <div class="legal-header">
+                <h1>📜 {{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal Notice{{ end }}</h1>
+                <p>{{ if eq .Lang "fr" }}Informations légales et politique de confidentialité{{ else }}Legal information and privacy policy{{ end }}</p>
+            </div>
+
+            {{ if or .Legal.OwnerName .Legal.OwnerEmail .Legal.OwnerAddress }}
+            <section class="legal-section">
+                <h2>👤 {{ if eq .Lang "fr" }}Éditeur du site{{ else }}Site Publisher{{ end }}</h2>
+                <div class="legal-info">
+                    {{ if .Legal.OwnerName }}
+                    <div class="legal-info-row">
+                        <span class="label">{{ if eq .Lang "fr" }}Responsable{{ else }}Owner{{ end }}</span>
+                        <span class="value">{{ .Legal.OwnerName }}</span>
+                    </div>
+                    {{ end }}
+                    {{ if .Legal.OwnerEmail }}
+                    <div class="legal-info-row">
+                        <span class="label">Email</span>
+                        <span class="value"><a href="mailto:{{ .Legal.OwnerEmail }}">{{ .Legal.OwnerEmail }}</a></span>
+                    </div>
+                    {{ end }}
+                    {{ if .Legal.OwnerAddress }}
+                    <div class="legal-info-row">
+                        <span class="label">{{ if eq .Lang "fr" }}Adresse{{ else }}Address{{ end }}</span>
+                        <span class="value">{{ .Legal.OwnerAddress }}</span>
+                    </div>
+                    {{ end }}
+                </div>
+            </section>
+            {{ end }}
+
+            {{ if or .Legal.HostingProvider .Legal.HostingAddress }}
+            <section class="legal-section">
+                <h2>🖥️ {{ if eq .Lang "fr" }}Hébergement{{ else }}Hosting{{ end }}</h2>
+                <div class="legal-info">
+                    {{ if .Legal.HostingProvider }}
+                    <div class="legal-info-row">
+                        <span class="label">{{ if eq .Lang "fr" }}Hébergeur{{ else }}Provider{{ end }}</span>
+                        <span class="value">{{ .Legal.HostingProvider }}</span>
+                    </div>
+                    {{ end }}
+                    {{ if .Legal.HostingAddress }}
+                    <div class="legal-info-row">
+                        <span class="label">{{ if eq .Lang "fr" }}Adresse{{ else }}Address{{ end }}</span>
+                        <span class="value">{{ .Legal.HostingAddress }}</span>
+                    </div>
+                    {{ end }}
+                </div>
+            </section>
+            {{ end }}
+
+            {{ if or .Legal.DataUsage .Legal.DataRetention }}
+            <section class="legal-section">
+                <h2>🔒 {{ if eq .Lang "fr" }}Données personnelles{{ else }}Personal Data{{ end }}</h2>
+                {{ if .Legal.DataUsage }}
+                <p><strong>{{ if eq .Lang "fr" }}Utilisation des données{{ else }}Data Usage{{ end }}:</strong> {{ .Legal.DataUsage }}</p>
+                {{ end }}
+                {{ if .Legal.DataRetention }}
+                <p><strong>{{ if eq .Lang "fr" }}Conservation{{ else }}Retention{{ end }}:</strong> {{ .Legal.DataRetention }}</p>
+                {{ end }}
+            </section>
+            {{ end }}
+
+            {{ range .Legal.CustomSections }}
+            <section class="legal-section">
+                <h2>📋 {{ if eq $.Lang "fr" }}{{ .TitleFR }}{{ else }}{{ .TitleEN }}{{ end }}</h2>
+                <p>{{ if eq $.Lang "fr" }}{{ .ContentFR }}{{ else }}{{ .ContentEN }}{{ end }}</p>
+            </section>
+            {{ end }}
+
+            <section class="legal-section">
+                <h2>🍪 Cookies</h2>
+                <p>{{ if eq .Lang "fr" }}Ce site utilise uniquement des cookies techniques essentiels au fonctionnement du service (session utilisateur, préférences de langue et de thème). Aucun cookie publicitaire ou de suivi n'est utilisé.{{ else }}This site only uses essential technical cookies for the operation of the service (user session, language and theme preferences). No advertising or tracking cookies are used.{{ end }}</p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer">
+        <div class="container">
+            <p>{{ .SiteName }} — {{ if eq .Lang "fr" }}Fait avec ❤️ pour les lecteurs{{ else }}Made with ❤️ for readers{{ end }}</p>
+        </div>
+    </footer>
+
+    <script>
+        function toggleTheme() {
+            const html = document.documentElement;
+            const current = html.getAttribute('data-theme') || 'light';
+            const next = current === 'light' ? 'dark' : 'light';
+            html.setAttribute('data-theme', next);
+            localStorage.setItem('theme', next);
+            updateThemeIcon();
+        }
+        function updateThemeIcon() {
+            const theme = document.documentElement.getAttribute('data-theme') || 'light';
+            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
+        }
+        document.addEventListener('DOMContentLoaded', updateThemeIcon);
+    </script>
+</body>
+</html>
+{{ end }}
