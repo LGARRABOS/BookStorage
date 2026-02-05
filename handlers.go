@@ -4,7 +4,9 @@ import (
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
+	"encoding/csv"
 	"encoding/hex"
+	"fmt"
 	"html/template"
 	"io"
 	"net/http"
@@ -13,6 +15,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/pbkdf2"
 )
@@ -535,6 +538,7 @@ type workRow struct {
 	Rating      int
 	Notes       sql.NullString
 	UserID      int
+	UpdatedAt   sql.NullString
 }
 
 func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -560,13 +564,15 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		orderClause = "ORDER BY id DESC"
 	case "oldest":
 		orderClause = "ORDER BY id ASC"
+	case "modified":
+		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') DESC"
 	default:
 		sortBy = "title"
 		orderClause = "ORDER BY LOWER(title)"
 	}
 
 	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at
          FROM works WHERE user_id = ? `+orderClause,
 		userID,
 	)
@@ -590,6 +596,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			&wRow.Rating,
 			&wRow.Notes,
 			&wRow.UserID,
+			&wRow.UpdatedAt,
 		); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -640,36 +647,48 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		notes := strings.TrimSpace(r.FormValue("notes"))
 
 		var imagePath sql.NullString
-		file, header, err := r.FormFile("image")
-		if err == nil && header != nil && header.Filename != "" {
-			defer file.Close()
-			if allowedFile(header.Filename) {
-				filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
-				full := filepath.Join(a.Settings.UploadFolder, filename)
-				dst, err := os.Create(full)
-				if err == nil {
-					defer dst.Close()
-					_, _ = io.Copy(dst, file)
-					imagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
-					imagePath.Valid = true
+
+		// Check for image URL first
+		imageURL := strings.TrimSpace(r.FormValue("image_url"))
+		if imageURL != "" && (strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://")) {
+			imagePath.String = imageURL
+			imagePath.Valid = true
+		}
+
+		// If no URL, check for file upload
+		if !imagePath.Valid {
+			file, header, err := r.FormFile("image")
+			if err == nil && header != nil && header.Filename != "" {
+				defer file.Close()
+				if allowedFile(header.Filename) {
+					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
+					full := filepath.Join(a.Settings.UploadFolder, filename)
+					dst, err := os.Create(full)
+					if err == nil {
+						defer dst.Close()
+						_, _ = io.Copy(dst, file)
+						imagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
+						imagePath.Valid = true
+					}
 				}
 			}
 		}
 
+		var dbErr error
 		if imagePath.Valid {
-			_, err = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			_, dbErr = a.DB.Exec(
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 				title, chapter, link, status, imagePath.String, readingType, rating, notes, userID,
 			)
 		} else {
-			_, err = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?)`,
+			_, dbErr = a.DB.Exec(
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, updated_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 				title, chapter, link, status, readingType, rating, notes, userID,
 			)
 		}
-		if err != nil {
+		if dbErr != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -748,31 +767,40 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		// Gestion de l'image (optionnel)
 		newImagePath := work.ImagePath
-		file, header, err := r.FormFile("image")
-		if err == nil && header != nil && header.Filename != "" {
-			defer file.Close()
-			if allowedFile(header.Filename) {
-				filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
-				full := filepath.Join(a.Settings.UploadFolder, filename)
-				dst, err := os.Create(full)
-				if err == nil {
-					defer dst.Close()
-					_, _ = io.Copy(dst, file)
-					newImagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
-					newImagePath.Valid = true
+
+		// Check for image URL first
+		imageURL := strings.TrimSpace(r.FormValue("image_url"))
+		if imageURL != "" && (strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://")) {
+			newImagePath.String = imageURL
+			newImagePath.Valid = true
+		} else {
+			// If no URL, check for file upload
+			file, header, err := r.FormFile("image")
+			if err == nil && header != nil && header.Filename != "" {
+				defer file.Close()
+				if allowedFile(header.Filename) {
+					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
+					full := filepath.Join(a.Settings.UploadFolder, filename)
+					dst, err := os.Create(full)
+					if err == nil {
+						defer dst.Close()
+						_, _ = io.Copy(dst, file)
+						newImagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
+						newImagePath.Valid = true
+					}
 				}
 			}
 		}
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, notes = ?
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
 				title, chapter, link, status, newImagePath.String, readingType, rating, notes, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, notes = ?
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
 				title, chapter, link, status, readingType, rating, notes, workID, userID,
 			)
@@ -797,7 +825,7 @@ func (a *App) handleIncrement(w http.ResponseWriter, r *http.Request) {
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
 	_, err := a.DB.Exec(
-		`UPDATE works SET chapter = chapter + 1 WHERE id = ? AND user_id = ?`,
+		`UPDATE works SET chapter = chapter + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	)
 	if err != nil {
@@ -817,7 +845,7 @@ func (a *App) handleDecrement(w http.ResponseWriter, r *http.Request) {
 
 	_, err := a.DB.Exec(
 		`UPDATE works
-         SET chapter = CASE WHEN chapter > 0 THEN chapter - 1 ELSE 0 END
+         SET chapter = CASE WHEN chapter > 0 THEN chapter - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP
          WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	)
@@ -842,6 +870,156 @@ func (a *App) handleDeleteWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
+}
+
+// --- Export/Import CSV ---
+
+func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+
+	rows, err := a.DB.Query(
+		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes
+         FROM works WHERE user_id = ? ORDER BY title`,
+		userID,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer rows.Close()
+
+	// Set headers for CSV download
+	filename := fmt.Sprintf("bookstorage_export_%s.csv", time.Now().Format("2006-01-02"))
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+
+	// Write BOM for Excel UTF-8 compatibility
+	w.Write([]byte{0xEF, 0xBB, 0xBF})
+
+	writer := csv.NewWriter(w)
+	writer.Comma = ';' // Use semicolon for European Excel compatibility
+	defer writer.Flush()
+
+	// Write header
+	writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"})
+
+	// Write data
+	for rows.Next() {
+		var title string
+		var chapter int
+		var link, status, readingType, notes sql.NullString
+		var rating int
+
+		if err := rows.Scan(&title, &chapter, &link, &status, &readingType, &rating, &notes); err != nil {
+			continue
+		}
+
+		writer.Write([]string{
+			title,
+			strconv.Itoa(chapter),
+			link.String,
+			status.String,
+			readingType.String,
+			strconv.Itoa(rating),
+			notes.String,
+		})
+	}
+}
+
+func (a *App) handleImportCSV(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, _ := a.currentUserID(r)
+
+	// Parse multipart form
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+
+	file, _, err := r.FormFile("csv_file")
+	if err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.Comma = ';' // Use semicolon for European Excel compatibility
+	reader.LazyQuotes = true
+	records, err := reader.ReadAll()
+	if err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+
+	// Skip header row if present
+	startIdx := 0
+	if len(records) > 0 && strings.ToLower(records[0][0]) == "title" {
+		startIdx = 1
+	}
+
+	imported := 0
+	for i := startIdx; i < len(records); i++ {
+		record := records[i]
+		if len(record) < 1 || strings.TrimSpace(record[0]) == "" {
+			continue
+		}
+
+		title := strings.TrimSpace(record[0])
+		chapter := 0
+		link := ""
+		status := "En cours"
+		readingType := "Roman"
+		rating := 0
+		notes := ""
+
+		if len(record) > 1 {
+			chapter, _ = strconv.Atoi(record[1])
+		}
+		if len(record) > 2 {
+			link = strings.TrimSpace(record[2])
+		}
+		if len(record) > 3 && strings.TrimSpace(record[3]) != "" {
+			status = strings.TrimSpace(record[3])
+		}
+		if len(record) > 4 && strings.TrimSpace(record[4]) != "" {
+			readingType = strings.TrimSpace(record[4])
+		}
+		if len(record) > 5 {
+			rating, _ = strconv.Atoi(record[5])
+			if rating < 0 || rating > 5 {
+				rating = 0
+			}
+		}
+		if len(record) > 6 {
+			notes = strings.TrimSpace(record[6])
+		}
+
+		// Check if work already exists
+		var existsID int
+		a.DB.QueryRow(
+			`SELECT id FROM works WHERE user_id = ? AND title = ?`,
+			userID, title,
+		).Scan(&existsID)
+
+		if existsID == 0 {
+			// Insert new work
+			_, err := a.DB.Exec(
+				`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, readingType, rating, notes, userID,
+			)
+			if err == nil {
+				imported++
+			}
+		}
+	}
+
+	http.Redirect(w, r, fmt.Sprintf("/dashboard?imported=%d", imported), http.StatusFound)
 }
 
 // --- Gestion du profil utilisateur ---

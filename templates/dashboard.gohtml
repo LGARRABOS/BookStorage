@@ -4,6 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/static/manifest.json">
+    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <script>
@@ -184,6 +189,7 @@
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
                         <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
+                        <option value="modified" {{ if eq .SortBy "modified" }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif.{{ else }}Last modified{{ end }}</option>
                         <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
                         <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
                     </select>
@@ -259,7 +265,7 @@
     </main>
 
     <footer class="page-footer">
-        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div>
+        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a> · <span style="cursor:help;" title="{{ if eq .Lang "fr" }}N=Nouvelle œuvre, /=Rechercher, S=Stats, P=Profil{{ else }}N=New work, /=Search, S=Stats, P=Profile{{ end }}">⌨️ {{ if eq .Lang "fr" }}Raccourcis{{ else }}Shortcuts{{ end }}</span></p></div>
     </footer>
 
     <script>
@@ -371,7 +377,42 @@
             });
             document.getElementById('total-chapters').textContent = total;
         }
+        
+        // Keyboard shortcuts
+        document.addEventListener('keydown', function(e) {
+            // Don't trigger shortcuts when typing in inputs
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
+                if (e.key === 'Escape') {
+                    e.target.blur();
+                }
+                return;
+            }
+            
+            switch(e.key.toLowerCase()) {
+                case 'n': // New work
+                    window.location.href = '/add_work';
+                    break;
+                case '/': // Focus search
+                    e.preventDefault();
+                    document.getElementById('search-input').focus();
+                    break;
+                case 's': // Stats
+                    window.location.href = '/stats';
+                    break;
+                case 'p': // Profile
+                    window.location.href = '/profile';
+                    break;
+                case '?': // Show help
+                    alert('{{ if eq .Lang "fr" }}Raccourcis clavier:\nN = Nouvelle œuvre\n/ = Rechercher\nS = Statistiques\nP = Profil\nEsc = Fermer{{ else }}Keyboard shortcuts:\nN = New work\n/ = Search\nS = Stats\nP = Profile\nEsc = Close{{ end }}');
+                    break;
+            }
+        });
     });
+    
+    // Register service worker for PWA
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/sw.js').catch(err => console.log('SW registration failed:', err));
+    }
     </script>
 </body>
 </html>

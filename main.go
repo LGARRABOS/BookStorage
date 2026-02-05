@@ -143,6 +143,8 @@ func main() {
 	mux.HandleFunc("POST /api/increment/{id}", app.requireLogin(app.handleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.requireLogin(app.handleDecrement))
 	mux.HandleFunc("/delete/{id}", app.requireLogin(app.handleDeleteWork))
+	mux.HandleFunc("/export", app.requireLogin(app.handleExportCSV))
+	mux.HandleFunc("POST /import", app.requireLogin(app.handleImportCSV))
 	mux.HandleFunc("/admin/accounts", app.requireAdmin(app.handleAdminAccounts))
 	mux.HandleFunc("/admin/approve/{id}", app.requireAdmin(app.handleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.requireAdmin(app.handleDeleteAccount))
