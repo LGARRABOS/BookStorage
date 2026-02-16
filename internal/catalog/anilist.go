@@ -26,9 +26,10 @@ type anilistMedia struct {
 		Romaji  string `json:"romaji"`
 		English string `json:"english"`
 	} `json:"title"`
-	Type            string `json:"type"`
-	Format          string `json:"format"`
-	CountryOfOrigin string `json:"countryOfOrigin"`
+	Type            string   `json:"type"`
+	Format          string   `json:"format"`
+	CountryOfOrigin string   `json:"countryOfOrigin"`
+	Genres          []string `json:"genres"`
 	CoverImage      struct {
 		Large string `json:"large"`
 	} `json:"coverImage"`
@@ -45,17 +46,33 @@ type anilistResponse struct {
 	} `json:"data"`
 }
 
-// Map AniList type, format, country and tags to our reading types (Manga vs Webtoon etc.)
+// isWebtoonKeyword returns true if s (lowercase) indicates webtoon/manhwa/manhua
+func isWebtoonKeyword(s string) bool {
+	s = strings.ToLower(s)
+	return s == "webtoon" || s == "manhwa" || s == "manhua" ||
+		strings.Contains(s, "webtoon") || strings.Contains(s, "web comic") || strings.Contains(s, "webcomic")
+}
+
+// Map AniList type, format, country, genres and tags to our reading types (Manga vs Webtoon etc.)
 func mapAnilistReadingType(media anilistMedia) string {
-	// AniList n'a pas de format WEBTOON : on s'appuie sur les tags et le pays d'origine
-	for _, tag := range media.Tags {
-		name := strings.ToLower(tag.Name)
-		if name == "webtoon" || name == "manhwa" || strings.Contains(name, "webtoon") || strings.Contains(name, "web comic") {
+	// AniList n'a pas de format WEBTOON : on s'appuie sur genres, tags et pays d'origine
+	for _, g := range media.Genres {
+		if isWebtoonKeyword(g) {
 			return "Webtoon"
 		}
 	}
-	if strings.ToUpper(media.Type) == "MANGA" && media.CountryOfOrigin == "KR" {
-		// Corée du Sud : beaucoup de manhwa/webtoons
+	for _, tag := range media.Tags {
+		if isWebtoonKeyword(tag.Name) {
+			return "Webtoon"
+		}
+	}
+	country := strings.ToUpper(strings.TrimSpace(media.CountryOfOrigin))
+	if strings.ToUpper(media.Type) == "MANGA" && (country == "KR" || country == "KP") {
+		// Corée du Sud / Corée du Nord : manhwa et webtoons
+		return "Webtoon"
+	}
+	if strings.ToUpper(media.Type) == "MANGA" && country == "CN" {
+		// Chine : beaucoup de manhua (webcomics chinois)
 		return "Webtoon"
 	}
 	// Sinon mapping classique type/format
@@ -87,6 +104,7 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
       type
       format
       countryOfOrigin
+      genres
       coverImage { large }
       tags { name }
     }
