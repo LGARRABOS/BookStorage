@@ -142,6 +142,7 @@ func main() {
 	mux.HandleFunc("/users/{id}", app.requireLogin(app.handleUserDetail))
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.requireLogin(app.handleImportWork))
 	mux.HandleFunc("/add_work", app.requireLogin(app.handleAddWork))
+	mux.HandleFunc("/api/catalog/search", app.requireLogin(app.handleCatalogSearch))
 	mux.HandleFunc("/edit/{id}", app.requireLogin(app.handleEditWork))
 	mux.HandleFunc("POST /api/increment/{id}", app.requireLogin(app.handleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.requireLogin(app.handleDecrement))

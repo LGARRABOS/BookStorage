@@ -6,6 +6,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"encoding/hex"
+	"encoding/json"
 	"fmt"
 	"html/template"
 	"io"
@@ -17,6 +18,7 @@ import (
 	"strings"
 	"time"
 
+	"bookstorage/internal/catalog"
 	"bookstorage/internal/config"
 	"bookstorage/internal/i18n"
 
@@ -619,6 +621,65 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 }
 
 // Ajout d’une œuvre (avec support basique d’upload d’image)
+type catalogSearchResult struct {
+	Source       string `json:"source"`
+	CatalogID    int64  `json:"catalog_id,omitempty"`
+	ExternalID   string `json:"external_id,omitempty"`
+	Title        string `json:"title"`
+	ReadingType  string `json:"reading_type"`
+	ImageURL     string `json:"image_url,omitempty"`
+}
+
+func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": []catalogSearchResult{}})
+		return
+	}
+	var results []catalogSearchResult
+	pattern := "%" + strings.ToLower(q) + "%"
+	rows, err := a.DB.Query(
+		`SELECT id, title, reading_type, COALESCE(image_url, '') FROM catalog WHERE LOWER(title) LIKE ? ORDER BY title LIMIT 15`,
+		pattern,
+	)
+	if err == nil {
+		defer rows.Close()
+		for rows.Next() {
+			var id int64
+			var title, readingType, imageURL string
+			if err := rows.Scan(&id, &title, &readingType, &imageURL); err != nil {
+				continue
+			}
+			results = append(results, catalogSearchResult{
+				Source:      "catalog",
+				CatalogID:   id,
+				Title:       title,
+				ReadingType: readingType,
+				ImageURL:    imageURL,
+			})
+		}
+	}
+	anilistResults, err := catalog.SearchAnilist(q, 10)
+	if err == nil {
+		for _, m := range anilistResults {
+			results = append(results, catalogSearchResult{
+				Source:      "anilist",
+				ExternalID:  strconv.Itoa(m.ID),
+				Title:       m.Title,
+				ReadingType: m.ReadingType,
+				ImageURL:    m.ImageURL,
+			})
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
+}
+
 func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -651,9 +712,51 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		}
 		notes := strings.TrimSpace(r.FormValue("notes"))
 
-		var imagePath sql.NullString
+		var catalogID sql.NullInt64
+		if cidStr := r.FormValue("catalog_id"); cidStr != "" {
+			if cid, _ := strconv.ParseInt(cidStr, 10, 64); cid > 0 {
+				catalogID.Int64 = cid
+				catalogID.Valid = true
+			}
+		}
+		if !catalogID.Valid {
+			source := r.FormValue("catalog_source")
+			externalID := strings.TrimSpace(r.FormValue("catalog_external_id"))
+			imgURL := strings.TrimSpace(r.FormValue("image_url"))
+			if source == "anilist" && externalID != "" {
+				var existingID int64
+				err := a.DB.QueryRow(
+					`SELECT id FROM catalog WHERE source = 'anilist' AND external_id = ? LIMIT 1`,
+					externalID,
+				).Scan(&existingID)
+				if err == nil {
+					catalogID.Int64 = existingID
+					catalogID.Valid = true
+				} else {
+					res, err := a.DB.Exec(
+						`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, 'anilist', ?)`,
+						title, readingType, imgURL, externalID,
+					)
+					if err == nil {
+						id, _ := res.LastInsertId()
+						catalogID.Int64 = id
+						catalogID.Valid = true
+					}
+				}
+			} else {
+				res, err := a.DB.Exec(
+					`INSERT INTO catalog (title, reading_type, image_url, source) VALUES (?, ?, ?, 'manual')`,
+					title, readingType, imgURL,
+				)
+				if err == nil {
+					id, _ := res.LastInsertId()
+					catalogID.Int64 = id
+					catalogID.Valid = true
+				}
+			}
+		}
 
-		// Check for image URL first
+		var imagePath sql.NullString
 		imageURL := strings.TrimSpace(r.FormValue("image_url"))
 		if imageURL != "" && (strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://")) {
 			imagePath.String = imageURL
@@ -682,15 +785,15 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		var dbErr error
 		if imagePath.Valid {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, imagePath.String, readingType, rating, notes, userID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, catalog_id, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, notes, userID, catalogID,
 			)
 		} else {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, notes, userID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, catalog_id, updated_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, readingType, rating, notes, userID, catalogID,
 			)
 		}
 		if dbErr != nil {
