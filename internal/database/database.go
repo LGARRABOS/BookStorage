@@ -37,6 +37,17 @@ CREATE TABLE IF NOT EXISTS works (
     FOREIGN KEY (user_id) REFERENCES users (id)
 );`
 
+const createCatalogTableSQL = `
+CREATE TABLE IF NOT EXISTS catalog (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    reading_type TEXT NOT NULL,
+    image_url TEXT,
+    source TEXT NOT NULL DEFAULT 'manual',
+    external_id TEXT,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);`
+
 var profileColumns = map[string]string{
 	"display_name": "TEXT",
 	"email":        "TEXT",
@@ -50,6 +61,7 @@ var workColumns = map[string]string{
 	"rating":       "INTEGER DEFAULT 0",
 	"notes":        "TEXT",
 	"updated_at":   "DATETIME",
+	"catalog_id":   "INTEGER REFERENCES catalog(id)",
 }
 
 // Open opens a database connection
@@ -113,6 +125,9 @@ func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
 // EnsureSchema creates tables and ensures all columns exist
 func EnsureSchema(db *sql.DB, s *config.Settings) error {
 	if _, err := db.Exec(createUsersTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createCatalogTableSQL); err != nil {
 		return err
 	}
 	if _, err := db.Exec(createWorksTableSQL); err != nil {
