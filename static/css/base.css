@@ -579,7 +579,7 @@ tbody tr:hover {
   border: 0;
 }
 
-/* Mobile breakpoint: see "Mobile & PWA" section at end of file */
+/* Mobile: see "Mobile & PWA" section at end of file */
 
 /* Theme Toggle */
 .theme-toggle {
@@ -1012,4 +1012,3 @@ body {
     font-size: 0.9rem;
   }
 }
-  
