@@ -579,26 +579,7 @@ tbody tr:hover {
   border: 0;
 }
 
-@media (max-width: 720px) {
-  .nav-layout {
-    flex-direction: column;
-    gap: 0.9rem;
-    align-items: flex-start;
-  }
-
-  .nav-links {
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-
-  .content-card {
-    padding: 1.75rem;
-  }
-
-  table {
-    min-width: unset;
-  }
-}
+/* Mobile breakpoint: see "Mobile & PWA" section at end of file */
 
 /* Theme Toggle */
 .theme-toggle {
@@ -881,5 +862,154 @@ textarea.notes-input {
   font-size: 0.85rem;
   color: var(--text-muted);
   margin-top: 0.25rem;
+}
+
+/* ==========================================================================
+   Mobile & PWA (standalone / pseudo-app)
+   ========================================================================== */
+
+/* Safe area: notches, home indicator, status bar */
+@supports (padding: env(safe-area-inset-top)) {
+  body {
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  .topbar {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  .page-footer {
+    padding-bottom: max(1.5rem, env(safe-area-inset-bottom));
+  }
+
+  .container {
+    padding-left: max(1rem, env(safe-area-inset-left));
+    padding-right: max(1rem, env(safe-area-inset-right));
+  }
+}
+
+/* Prevent horizontal overflow in standalone */
+html {
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden;
+  min-height: 100vh;
+  min-height: -webkit-fill-available;
+}
+
+/* Touch-friendly: minimum 44px tap targets */
+@media (max-width: 720px) {
+  .nav-layout {
+    flex-direction: column;
+    gap: 0.9rem;
+    align-items: stretch;
+  }
+
+  .nav-links {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .nav-links a,
+  .nav-links .btn {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.6rem 1rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .theme-toggle {
+    min-width: 44px;
+    min-height: 44px;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .content-card {
+    padding: 1.75rem;
+  }
+
+  .page-body {
+    padding-top: 1.5rem;
+    padding-bottom: 2rem;
+  }
+
+  table {
+    min-width: unset;
+  }
+
+  /* Buttons and interactive elements */
+  .btn {
+    min-height: 44px;
+    padding: 0.75rem 1.5rem;
+  }
+
+  .form-actions .btn {
+    flex: 1;
+    min-width: 0;
+  }
+
+  /* Dashboard work cards: touch targets */
+  .work-actions a,
+  .chapter-btn {
+    min-width: 44px;
+    min-height: 44px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .chapter-value {
+    min-width: 2.5rem;
+  }
+
+  /* Avoid zoom on focus for inputs (iOS) */
+  input[type="text"],
+  input[type="password"],
+  input[type="number"],
+  input[type="email"],
+  input[type="search"],
+  select,
+  textarea {
+    font-size: 16px;
+  }
+
+  /* Hero / landing: less padding on small screens */
+  .hero {
+    padding: 2rem 1rem;
+  }
+
+  .hero-actions {
+    flex-direction: column;
+  }
+
+  .hero-actions .btn {
+    width: 100%;
+  }
+}
+
+/* Very small screens: ensure single column and no overflow */
+@media (max-width: 380px) {
+  .container {
+    width: 100%;
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+  }
+
+  .brand {
+    font-size: 1.2rem;
+  }
+
+  .nav-links a {
+    font-size: 0.9rem;
+  }
 }
   
