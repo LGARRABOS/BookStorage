@@ -20,32 +20,51 @@ type AnilistResult struct {
 	ReadingType string `json:"reading_type"` // mapped for our app
 }
 
+type anilistMedia struct {
+	ID    int `json:"id"`
+	Title struct {
+		Romaji  string `json:"romaji"`
+		English string `json:"english"`
+	} `json:"title"`
+	Type            string `json:"type"`
+	Format          string `json:"format"`
+	CountryOfOrigin string `json:"countryOfOrigin"`
+	CoverImage      struct {
+		Large string `json:"large"`
+	} `json:"coverImage"`
+	Tags []struct {
+		Name string `json:"name"`
+	} `json:"tags"`
+}
+
 type anilistResponse struct {
 	Data struct {
 		Page struct {
-			Media []struct {
-				ID    int `json:"id"`
-				Title struct {
-					Romaji  string `json:"romaji"`
-					English string `json:"english"`
-				} `json:"title"`
-				Type    string `json:"type"`
-				CoverImage struct {
-					Large string `json:"large"`
-				} `json:"coverImage"`
-			} `json:"media"`
+			Media []anilistMedia `json:"media"`
 		} `json:"Page"`
 	} `json:"data"`
 }
 
-// Map AniList type to our reading types
-func mapAnilistType(t string) string {
-	switch strings.ToUpper(t) {
-	case "MANGA":
-		return "Manga"
-	case "NOVEL", "LIGHT_NOVEL":
+// Map AniList type, format, country and tags to our reading types (Manga vs Webtoon etc.)
+func mapAnilistReadingType(media anilistMedia) string {
+	// AniList n'a pas de format WEBTOON : on s'appuie sur les tags et le pays d'origine
+	for _, tag := range media.Tags {
+		name := strings.ToLower(tag.Name)
+		if name == "webtoon" || name == "manhwa" || strings.Contains(name, "webtoon") || strings.Contains(name, "web comic") {
+			return "Webtoon"
+		}
+	}
+	if strings.ToUpper(media.Type) == "MANGA" && media.CountryOfOrigin == "KR" {
+		// Corée du Sud : beaucoup de manhwa/webtoons
+		return "Webtoon"
+	}
+	// Sinon mapping classique type/format
+	t := strings.ToUpper(media.Type)
+	f := strings.ToUpper(media.Format)
+	switch {
+	case t == "NOVEL" || f == "NOVEL" || f == "LIGHT_NOVEL":
 		return "Light Novel"
-	case "ONE_SHOT":
+	case t == "MANGA", f == "MANGA", f == "ONE_SHOT":
 		return "Manga"
 	default:
 		return "Autre"
@@ -66,7 +85,10 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
       id
       title { romaji english }
       type
+      format
+      countryOfOrigin
       coverImage { large }
+      tags { name }
     }
   }
 }`
@@ -107,7 +129,7 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
 			Title:        title,
 			Type:         m.Type,
 			ImageURL:     m.CoverImage.Large,
-			ReadingType:  mapAnilistType(m.Type),
+			ReadingType:  mapAnilistReadingType(m),
 		})
 	}
 	return results, nil
