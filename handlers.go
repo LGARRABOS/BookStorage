@@ -98,8 +98,6 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 			return status
 		},
 	}
-	// On ne parse que les templates Go (extension .gohtml) pour éviter
-	// les erreurs de syntaxe avec les anciens templates Jinja.
 	tpl := template.Must(
 		template.New("").Funcs(funcMap).ParseGlob(filepath.Join("templates", "*.gohtml")),
 	)
@@ -110,8 +108,6 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 		Templates:  tpl,
 	}
 }
-
-// --- vérification des mots de passe (compatible Werkzeug) ---
 
 // verifyPassword vérifie un mot de passe contre un hash.
 // Supporte le format Werkzeug pbkdf2:sha256:iterations$salt$hash
@@ -164,8 +160,6 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
-// --- helpers session très simplifiés ---
-
 func (a *App) currentUserID(r *http.Request) (int, bool) {
 	c, err := r.Cookie("user_id")
 	if err != nil {
@@ -177,8 +171,6 @@ func (a *App) currentUserID(r *http.Request) (int, bool) {
 	}
 	return id, true
 }
-
-// --- Language helpers ---
 
 func (a *App) currentLang(r *http.Request) string {
 	c, err := r.Cookie("lang")
@@ -204,7 +196,7 @@ func (a *App) handleSetLanguage(w http.ResponseWriter, r *http.Request) {
 		lang = i18n.DefaultLang
 	}
 	a.setLang(w, lang)
-	
+
 	// Redirect back to referrer or dashboard
 	referer := r.Header.Get("Referer")
 	if referer == "" {
@@ -238,7 +230,6 @@ func (a *App) setUserID(w http.ResponseWriter, userID int) {
 		Path:     "/",
 		MaxAge:   3600, // 1 hour session timeout
 		HttpOnly: true,
-		// Secure:   a.Settings.Environment == "production",
 	})
 }
 
@@ -250,8 +241,6 @@ func (a *App) clearSession(w http.ResponseWriter) {
 		MaxAge: -1,
 	})
 }
-
-// --- middleware login_required ---
 
 func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -266,9 +255,6 @@ func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
-// --- helpers application ---
-
-// Liste simplifiée des types de lecture et statuts pour rester proche de Python.
 var readingTypes = []string{
 	"Roman",
 	"Manga",
@@ -340,8 +326,6 @@ func workImageURL(s *config.Settings, storedPath string) string {
 	return "/static/" + strings.TrimPrefix(normalized, "/")
 }
 
-// --- middleware admin_required ---
-
 func (a *App) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := a.currentUserID(r)
@@ -361,8 +345,6 @@ func (a *App) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 		next(w, r)
 	}
 }
-
-// --- handlers principaux ---
 
 func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.currentUserID(r); ok {
@@ -721,12 +703,10 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// Modification d'une œuvre
 func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
-	// Récupérer l'œuvre
 	var work workRow
 	err := a.DB.QueryRow(
 		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
@@ -838,7 +818,6 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// API increment / decrement très simplifiée
 func (a *App) handleIncrement(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -894,8 +873,6 @@ func (a *App) handleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	}
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
-
-// --- Export/Import CSV ---
 
 func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
@@ -1044,8 +1021,6 @@ func (a *App) handleImportCSV(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, fmt.Sprintf("/dashboard?imported=%d", imported), http.StatusFound)
 }
-
-// --- Gestion du profil utilisateur ---
 
 type profileUser struct {
 	ID          int
@@ -1201,7 +1176,6 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// construction dynamique de la requête UPDATE
 		setParts := make([]string, 0, len(updates))
 		args := make([]any, 0, len(updates)+1)
 		for k, v := range updates {
@@ -1231,8 +1205,6 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
 }
-
-// --- Annuaire communauté / profils publics ---
 
 type communityUser struct {
 	ID          int
@@ -1494,8 +1466,6 @@ func nullableString(ns sql.NullString) any {
 	return nil
 }
 
-// --- Administration des comptes ---
-
 func (a *App) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.DB.Query(
 		`SELECT id, username, password, validated, is_admin, is_superadmin,
@@ -1582,15 +1552,10 @@ func (a *App) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// seul un super-admin peut supprimer un compte admin, et on ne supprime jamais un superadmin
 	if isSuper != 0 {
 		http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 		return
 	}
-
-	// on ne vérifie pas ici que l'appelant est superadmin : le middleware requireAdmin
-	// vérifie déjà que c'est un admin ; pour la stricte équivalence, on pourrait
-	// ajouter un contrôle supplémentaire.
 
 	if _, err := a.DB.Exec(`DELETE FROM users WHERE id = ?`, targetID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
