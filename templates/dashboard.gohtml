@@ -340,6 +340,7 @@
                 const card = this.closest('.work-card');
                 try {
                     const resp = await fetch('/api/increment/'+id, { method: 'POST' });
+                    if (resp.status === 401) { window.location.href = '/login?expired=1'; return; }
                     if (resp.ok) {
                         const oldVal = parseInt(valueEl.textContent) || 0;
                         const newVal = oldVal + 1;
@@ -361,6 +362,7 @@
                 if (oldVal <= 0) return;
                 try {
                     const resp = await fetch('/api/decrement/'+id, { method: 'POST' });
+                    if (resp.status === 401) { window.location.href = '/login?expired=1'; return; }
                     if (resp.ok) {
                         const newVal = oldVal - 1;
                         valueEl.textContent = newVal;

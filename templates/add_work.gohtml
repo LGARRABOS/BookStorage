@@ -249,7 +249,10 @@
                     if (q.length < 2) { resultsEl.classList.remove('visible'); resultsEl.innerHTML = ''; return; }
                     searchTimer = setTimeout(function() {
                         fetch('/api/catalog/search?q=' + encodeURIComponent(q))
-                            .then(function(r) { return r.json(); })
+                            .then(function(r) {
+                                if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+                                return r.json();
+                            })
                             .then(function(data) {
                                 var list = data.results || [];
                                 if (list.length === 0) {
