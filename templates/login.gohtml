@@ -43,8 +43,11 @@
                     <h1>{{ t .T "login.title" }}</h1>
                     <p>{{ if eq .Lang "fr" }}Retrouvez instantanément vos lectures en cours.{{ else }}Instantly find your current readings.{{ end }}</p>
                 </header>
-                {{ if or .LoginError .LoginPending .RegisterSuccess }}
+                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired }}
                 <div class="flash-messages">
+                    {{ if .SessionExpired }}
+                        <p>{{ t .T "login.expired" }}</p>
+                    {{ end }}
                     {{ if .RegisterSuccess }}
                         <p>{{ t .T "register.success" }}</p>
                     {{ end }}

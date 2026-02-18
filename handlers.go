@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -10,6 +11,7 @@ import (
 	"fmt"
 	"html/template"
 	"io"
+	"log"
 	"net/http"
 	"os"
 	"path"
@@ -248,6 +250,13 @@ func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := a.currentUserID(r)
 		if !ok {
+			// Requêtes API : retourner 401 pour que le front puisse rediriger vers login
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusUnauthorized)
+				w.Write([]byte(`{"error":"session_expired"}`))
+				return
+			}
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
@@ -341,11 +350,134 @@ func (a *App) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 			userID,
 		).Scan(&isAdmin, &isSuper)
 		if err != nil || isAdmin == 0 {
-			http.Redirect(w, r, "/dashboard", http.StatusFound)
+			// API: JSON 403, Pages: render 403
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				w.Write([]byte(`{"error":"forbidden"}`))
+				return
+			}
+			w.WriteHeader(http.StatusForbidden)
+			_ = a.Templates.ExecuteTemplate(w, "403", a.mergeData(r, map[string]any{
+				"RequestedPath": r.URL.Path,
+			}))
 			return
 		}
 		next(w, r)
 	}
+}
+
+type responseRecorder struct {
+	header http.Header
+	status int
+	body   bytes.Buffer
+}
+
+func newResponseRecorder() *responseRecorder {
+	return &responseRecorder{header: make(http.Header)}
+}
+
+func (rr *responseRecorder) Header() http.Header {
+	return rr.header
+}
+
+func (rr *responseRecorder) WriteHeader(code int) {
+	rr.status = code
+}
+
+func (rr *responseRecorder) Write(b []byte) (int, error) {
+	if rr.status == 0 {
+		rr.status = http.StatusOK
+	}
+	return rr.body.Write(b)
+}
+
+func copyHeader(dst, src http.Header) {
+	for k, vals := range src {
+		for _, v := range vals {
+			dst.Add(k, v)
+		}
+	}
+}
+
+// writeErrorResponse sends HTML error page or JSON for API
+func (a *App) writeErrorResponse(w http.ResponseWriter, r *http.Request, status int, templateName string, data map[string]any) {
+	if data == nil {
+		data = map[string]any{}
+	}
+	if _, ok := data["RequestedPath"]; !ok {
+		data["RequestedPath"] = r.URL.Path
+	}
+	data = a.mergeData(r, data)
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(status)
+		var payload string
+		switch status {
+		case http.StatusUnauthorized:
+			payload = `{"error":"unauthorized"}`
+		case http.StatusForbidden:
+			payload = `{"error":"forbidden"}`
+		case http.StatusNotFound:
+			payload = `{"error":"not_found"}`
+		case http.StatusMethodNotAllowed:
+			payload = `{"error":"method_not_allowed"}`
+		default:
+			payload = `{"error":"internal_server_error"}`
+		}
+		w.Write([]byte(payload))
+		return
+	}
+	w.WriteHeader(status)
+	_ = a.Templates.ExecuteTemplate(w, templateName, data)
+}
+
+func (a *App) withErrorPages(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		rec := newResponseRecorder()
+		var panicked bool
+		func() {
+			defer func() {
+				if err := recover(); err != nil {
+					panicked = true
+					log.Printf("[panic] %s %s: %v", r.Method, r.URL.Path, err)
+					a.writeErrorResponse(w, r, http.StatusInternalServerError, "500", nil)
+				}
+			}()
+			next.ServeHTTP(rec, r)
+		}()
+		if panicked {
+			return
+		}
+
+		status := rec.status
+		if status == 0 {
+			status = http.StatusOK
+		}
+
+		switch status {
+		case http.StatusUnauthorized:
+			a.writeErrorResponse(w, r, status, "401", map[string]any{"RequestedPath": r.URL.Path})
+			return
+		case http.StatusForbidden:
+			a.writeErrorResponse(w, r, status, "403", map[string]any{"RequestedPath": r.URL.Path})
+			return
+		case http.StatusNotFound:
+			a.writeErrorResponse(w, r, status, "404", map[string]any{"RequestedPath": r.URL.Path})
+			return
+		case http.StatusMethodNotAllowed:
+			a.writeErrorResponse(w, r, status, "405", map[string]any{"RequestedPath": r.URL.Path})
+			return
+		case http.StatusInternalServerError:
+			a.writeErrorResponse(w, r, status, "500", nil)
+			return
+		}
+
+		// Default: flush recorded response
+		copyHeader(w.Header(), rec.Header())
+		w.WriteHeader(status)
+		_, _ = w.Write(rec.body.Bytes())
+	})
 }
 
 func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
@@ -493,6 +625,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 			"LoginError":      q.Get("error") != "",
 			"LoginPending":    q.Get("pending") != "",
 			"RegisterSuccess": q.Get("registered") != "",
+			"SessionExpired":  q.Get("expired") != "",
 		})
 		_ = a.Templates.ExecuteTemplate(w, "login", data)
 	case http.MethodPost:

@@ -56,6 +56,21 @@ var translationsFR = Translations{
 	"login.register":    "S'inscrire",
 	"login.error":       "Identifiants invalides",
 	"login.pending":     "Votre compte est en attente de validation par un administrateur.",
+	"login.expired":     "Votre session a expiré. Veuillez vous reconnecter.",
+
+	// Error pages
+	"error.401.title":       "Non autorisé",
+	"error.401.desc":        "Vous devez être connecté pour accéder à cette page.",
+	"error.403.title":       "Accès interdit",
+	"error.403.desc":        "Vous n'êtes pas autorisé à accéder à cette page.",
+	"error.404.title":       "Page introuvable",
+	"error.404.desc":        "Cette page n'existe pas (ou a été déplacée).",
+	"error.405.title":       "Méthode non autorisée",
+	"error.405.desc":        "L'action demandée n'est pas autorisée sur cette page.",
+	"error.500.title":       "Erreur serveur",
+	"error.500.desc":        "Une erreur interne s'est produite. Réessayez plus tard.",
+	"error.requested_path":  "Chemin demandé :",
+	"error.go_home":         "Retour à l'accueil",
 
 	// Register page
 	"register.title":           "Inscription",
@@ -250,6 +265,21 @@ var translationsEN = Translations{
 	"login.register":   "Register",
 	"login.error":      "Invalid credentials",
 	"login.pending":    "Your account is pending administrator approval.",
+	"login.expired":    "Your session has expired. Please sign in again.",
+
+	// Error pages
+	"error.401.title":       "Unauthorized",
+	"error.401.desc":        "You must be signed in to access this page.",
+	"error.403.title":       "Access denied",
+	"error.403.desc":        "You are not allowed to access this page.",
+	"error.404.title":       "Page not found",
+	"error.404.desc":        "This page doesn't exist (or has been moved).",
+	"error.405.title":       "Method not allowed",
+	"error.405.desc":        "The requested action is not allowed on this page.",
+	"error.500.title":       "Server error",
+	"error.500.desc":        "An internal error occurred. Please try again later.",
+	"error.requested_path":  "Requested path:",
+	"error.go_home":         "Go to home",
 
 	// Register page
 	"register.title":          "Register",

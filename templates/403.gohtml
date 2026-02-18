@@ -1,0 +1,44 @@
+{{ define "403" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "error.403.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <style>
+        .error-wrap { min-height: 65vh; display: grid; place-items: center; }
+        .error-card { width: min(720px, 92vw); padding: 2rem; border-radius: 1rem; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
+        .error-code { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; margin: 0; }
+        .error-sub { color: var(--text-muted); margin-top: 0.5rem; }
+        .error-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .path { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: var(--surface-2); padding: 0.25rem 0.5rem; border-radius: 0.5rem; }
+    </style>
+    <script>
+        (function() {
+            const theme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', theme);
+        })();
+    </script>
+</head>
+<body>
+    <main class="page-body">
+        <div class="container error-wrap">
+            <section class="error-card">
+                <h1 class="error-code">403</h1>
+                <p class="error-sub">{{ t .T "error.403.desc" }}</p>
+                {{ if .RequestedPath }}
+                    <p class="error-sub">{{ t .T "error.requested_path" }} <span class="path">{{ .RequestedPath }}</span></p>
+                {{ end }}
+                <div class="error-actions">
+                    <a class="btn btn-primary" href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                    <a class="btn btn-secondary" href="/logout">{{ t .T "nav.logout" }}</a>
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
+{{ end }}
