@@ -134,6 +134,15 @@
                             <label for="reading_type">{{ t .T "work.form.type" }}</label>
                             <select id="reading_type" name="reading_type">{{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}</select>
                         </div>
+                        <div class="form-group">
+                            <label for="is_adult">{{ t .T "work.form.adult" }}</label>
+                            <div>
+                                <label style="display:flex;align-items:center;gap:0.4rem;">
+                                    <input id="is_adult" type="checkbox" name="is_adult" value="1">
+                                    <span>{{ if eq .Lang "fr" }}Cocher si l'œuvre contient du contenu réservé aux adultes.{{ else }}Check if this work contains adult-only content.{{ end }}</span>
+                                </label>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -263,19 +272,25 @@
                                             ? '<img src="' + item.image_url.replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
                                             : '<span class="no-cover">📖</span>';
                                         var badge = item.source === 'anilist' ? '<span class="badge">AniList</span>' : '<span class="badge">Catalogue</span>';
-                                        return '<div class="catalog-result-item" data-source="' + item.source + '" data-catalog-id="' + (item.catalog_id || '') + '" data-external-id="' + (item.external_id || '') + '" data-title="' + (item.title || '').replace(/"/g, '&quot;') + '" data-type="' + (item.reading_type || '').replace(/"/g, '&quot;') + '" data-image="' + (item.image_url || '').replace(/"/g, '&quot;') + '">' + img + '<div class="info"><strong>' + (item.title || '') + '</strong><span>' + (item.reading_type || '') + '</span></div>' + badge + '</div>';
+                                        var meta = (item.reading_type || '');
+                                        if (item.is_adult) {
+                                            meta = meta ? (meta + ' · 18+') : '18+';
+                                        }
+                                        return '<div class="catalog-result-item" data-source="' + item.source + '" data-catalog-id="' + (item.catalog_id || '') + '" data-external-id="' + (item.external_id || '') + '" data-title="' + (item.title || '').replace(/"/g, '&quot;') + '" data-type="' + (item.reading_type || '').replace(/"/g, '&quot;') + '" data-image="' + (item.image_url || '').replace(/"/g, '&quot;') + '" data-adult=\"' + (item.is_adult ? '1' : '0') + '\">' + img + '<div class="info"><strong>' + (item.title || '') + '</strong><span>' + meta + '</span></div>' + badge + '</div>';
                                     }).join('');
                                     resultsEl.querySelectorAll('.catalog-result-item[data-title]').forEach(function(el) {
                                         el.addEventListener('click', function() {
                                             var t = this.dataset.title || '';
                                             var ty = this.dataset.type || '';
                                             var img = this.dataset.image || '';
+                                            var adult = this.dataset.adult === '1';
                                             document.getElementById('title').value = t;
                                             document.getElementById('reading_type').value = ty || document.getElementById('reading_type').options[0].value;
                                             document.getElementById('image_url').value = img;
                                             document.getElementById('catalog_id').value = this.dataset.catalogId || '';
                                             document.getElementById('catalog_source').value = this.dataset.source || '';
                                             document.getElementById('catalog_external_id').value = this.dataset.externalId || '';
+                                            document.getElementById('is_adult').checked = adult;
                                             if (img) previewImageUrl(document.getElementById('image_url'));
                                             resultsEl.classList.remove('visible');
                                             searchInput.value = '';

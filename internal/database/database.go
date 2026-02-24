@@ -61,6 +61,7 @@ var workColumns = map[string]string{
 	"rating":       "INTEGER DEFAULT 0",
 	"notes":        "TEXT",
 	"updated_at":   "DATETIME",
+	"is_adult":     "INTEGER DEFAULT 0",
 	"catalog_id":   "INTEGER REFERENCES catalog(id)",
 }
 
@@ -137,6 +138,10 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 		return err
 	}
 	if err := ensureColumns(db, "works", workColumns); err != nil {
+		return err
+	}
+	// Migration légère : transformer les anciens types \"18+\" en flag adulte
+	if _, err := db.Exec(`UPDATE works SET is_adult = 1, reading_type = 'Autre' WHERE reading_type = '18+' AND COALESCE(is_adult, 0) = 0`); err != nil {
 		return err
 	}
 	if err := ensureSuperAdmin(db, s); err != nil {

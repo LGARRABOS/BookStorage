@@ -186,7 +186,11 @@
                         <option value="">{{ t .T "dashboard.filter.all" }}</option>
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
-                    <select id="sort-select" onchange="window.location.href='/dashboard?sort='+this.value">
+                    <select id="adult-filter" onchange="applyDashboardFilters()">
+                        <option value="" {{ if or (eq .AdultFilter \"\") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang \"fr\" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
+                        <option value=\"only\" {{ if eq .AdultFilter \"only\" }}selected{{ end }}>{{ if eq .Lang \"fr\" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
+                    </select>
+                    <select id="sort-select" onchange="applyDashboardFilters()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
                         <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
@@ -201,7 +205,7 @@
             {{ if .Works }}
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
-                <article class="work-card" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}">
+                <article class="work-card" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
                     <div class="work-cover">
                         {{ if .ImagePath.Valid }}
                             {{ $imgUrl := work_image_url .ImagePath.String }}
@@ -216,7 +220,10 @@
                         {{ end }}
                         <div class="work-badges">
                             {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
-                            <span class="work-type-badge">{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}</span>
+                            <span class="work-type-badge">
+                                {{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}
+                                {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }} · 18+{{ end }}
+                            </span>
                         </div>
                     </div>
                     <div class="work-body">
@@ -331,6 +338,20 @@
         if (searchInput) searchInput.addEventListener('input', filterWorks);
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
+
+        window.applyDashboardFilters = function() {
+            const sortSelect = document.getElementById('sort-select');
+            const adultSelect = document.getElementById('adult-filter');
+            const params = [];
+            if (sortSelect && sortSelect.value) {
+                params.push('sort=' + encodeURIComponent(sortSelect.value));
+            }
+            if (adultSelect && adultSelect.value) {
+                params.push('adult=' + encodeURIComponent(adultSelect.value));
+            }
+            const query = params.length ? ('?' + params.join('&')) : '';
+            window.location.href = '/dashboard' + query;
+        };
         
         // Chapter increment/decrement buttons
         document.querySelectorAll('.chapter-btn.plus').forEach(btn => {

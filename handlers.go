@@ -272,7 +272,6 @@ var readingTypes = []string{
 	"BD",
 	"Light Novel",
 	"Webtoon",
-	"18+",
 	"Autre",
 }
 
@@ -680,6 +679,7 @@ type workRow struct {
 	Notes       sql.NullString
 	UserID      int
 	UpdatedAt   sql.NullString
+	IsAdult     sql.NullInt64
 }
 
 func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -716,11 +716,23 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		orderClause = "ORDER BY LOWER(title)"
 	}
 
-	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at
-         FROM works WHERE user_id = ? `+orderClause,
-		userID,
-	)
+	// Filtre adulte
+	adultFilter := r.URL.Query().Get("adult")
+	whereClause := "WHERE user_id = ?"
+	args := []any{userID}
+	switch adultFilter {
+	case "only":
+		whereClause += " AND COALESCE(is_adult, 0) = 1"
+	default:
+		adultFilter = ""
+		whereClause += " AND COALESCE(is_adult, 0) = 0"
+	}
+
+	query := `
+        SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
+        FROM works ` + whereClause + " " + orderClause
+
+	rows, err := a.DB.Query(query, args...)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -742,6 +754,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 			&wRow.Notes,
 			&wRow.UserID,
 			&wRow.UpdatedAt,
+			&wRow.IsAdult,
 		); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -755,6 +768,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"ReadingStatus": readingStatuses,
 		"IsAdmin":       isAdmin == 1,
 		"SortBy":        sortBy,
+		"AdultFilter":   adultFilter,
 	}))
 }
 
@@ -766,6 +780,7 @@ type catalogSearchResult struct {
 	Title        string `json:"title"`
 	ReadingType  string `json:"reading_type"`
 	ImageURL     string `json:"image_url,omitempty"`
+	IsAdult      bool   `json:"is_adult"`
 }
 
 func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
@@ -799,6 +814,7 @@ func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 				Title:       title,
 				ReadingType: readingType,
 				ImageURL:    imageURL,
+				IsAdult:     false,
 			})
 		}
 	}
@@ -811,6 +827,7 @@ func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 				Title:       m.Title,
 				ReadingType: m.ReadingType,
 				ImageURL:    m.ImageURL,
+				IsAdult:     m.IsAdult,
 			})
 		}
 	}
@@ -849,6 +866,10 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 			rating = 0
 		}
 		notes := strings.TrimSpace(r.FormValue("notes"))
+		isAdult := 0
+		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
+			isAdult = 1
+		}
 
 		var catalogID sql.NullInt64
 		if cidStr := r.FormValue("catalog_id"); cidStr != "" {
@@ -923,15 +944,15 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		var dbErr error
 		if imagePath.Valid {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, catalog_id, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, imagePath.String, readingType, rating, notes, userID, catalogID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID,
 			)
 		} else {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, catalog_id, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, notes, userID, catalogID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, updated_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID,
 			)
 		}
 		if dbErr != nil {
@@ -950,7 +971,7 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 	var work workRow
 	err := a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, COALESCE(is_adult, 0)
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	).Scan(
@@ -964,6 +985,7 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 		&work.Rating,
 		&work.Notes,
 		&work.UserID,
+		&work.IsAdult,
 	)
 	if err != nil {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
@@ -1008,6 +1030,10 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 			rating = 0
 		}
 		notes := strings.TrimSpace(r.FormValue("notes"))
+		isAdult := 0
+		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
+			isAdult = 1
+		}
 
 		// Gestion de l'image (optionnel)
 		newImagePath := work.ImagePath
@@ -1038,15 +1064,15 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, rating, notes, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, rating, notes, workID, userID,
+				title, chapter, link, status, readingType, rating, isAdult, notes, workID, userID,
 			)
 		}
 		if err != nil {
