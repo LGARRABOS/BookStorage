@@ -72,7 +72,7 @@ func Open(settings *config.Settings) (*sql.DB, error) {
 		return nil, err
 	}
 	if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
-		db.Close()
+		_ = db.Close()
 		return nil, err
 	}
 	return db, nil
@@ -83,7 +83,7 @@ func ensureColumns(db *sql.DB, table string, cols map[string]string) error {
 	if err != nil {
 		return err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	existing := map[string]bool{}
 	for rows.Next() {

@@ -113,7 +113,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("open db: %v", err)
 	}
-	defer db.Close()
+	defer func() { _ = db.Close() }()
 
 	if err := database.EnsureSchema(db, settings); err != nil {
 		log.Fatalf("ensure schema: %v", err)
