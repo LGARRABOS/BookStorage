@@ -502,10 +502,16 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 
 	// Statistiques globales
 	var totalWorks int
-	a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
+	if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	var totalChapters int
-	a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters)
+	if err := a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Par statut
 	type statusCount struct {
@@ -515,10 +521,12 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	var byStatus []statusCount
 	rows, _ := a.DB.Query(`SELECT COALESCE(status, 'Non défini'), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
 	if rows != nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var sc statusCount
-			rows.Scan(&sc.Status, &sc.Count)
+			if err := rows.Scan(&sc.Status, &sc.Count); err != nil {
+				continue
+			}
 			byStatus = append(byStatus, sc)
 		}
 	}
@@ -531,10 +539,12 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	var byType []typeCount
 	rows2, _ := a.DB.Query(`SELECT COALESCE(reading_type, 'Autre'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
 	if rows2 != nil {
-		defer rows2.Close()
+		defer func() { _ = rows2.Close() }()
 		for rows2.Next() {
 			var tc typeCount
-			rows2.Scan(&tc.Type, &tc.Count)
+			if err := rows2.Scan(&tc.Type, &tc.Count); err != nil {
+				continue
+			}
 			byType = append(byType, tc)
 		}
 	}
@@ -542,7 +552,10 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	// Moyenne des notes (seulement les œuvres notées)
 	var avgRating float64
 	var ratedCount int
-	a.DB.QueryRow(`SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM works WHERE user_id = ? AND rating > 0`, userID).Scan(&avgRating, &ratedCount)
+	if err := a.DB.QueryRow(`SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM works WHERE user_id = ? AND rating > 0`, userID).Scan(&avgRating, &ratedCount); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 
 	// Top 5 meilleures notes
 	type ratedWork struct {
@@ -552,10 +565,12 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	var topRated []ratedWork
 	rows3, _ := a.DB.Query(`SELECT title, rating FROM works WHERE user_id = ? AND rating > 0 ORDER BY rating DESC, title LIMIT 5`, userID)
 	if rows3 != nil {
-		defer rows3.Close()
+		defer func() { _ = rows3.Close() }()
 		for rows3.Next() {
 			var rw ratedWork
-			rows3.Scan(&rw.Title, &rw.Rating)
+			if err := rows3.Scan(&rw.Title, &rw.Rating); err != nil {
+				continue
+			}
 			topRated = append(topRated, rw)
 		}
 	}

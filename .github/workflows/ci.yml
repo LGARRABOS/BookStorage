@@ -107,13 +107,26 @@ jobs:
           go run . &
           APP_PID=$!
           echo "App PID: $APP_PID"
-          # Wait for the server to start
-          sleep 5
+          # Wait for the server to start (polling)
+          for i in $(seq 1 15); do
+            if curl -sSf http://127.0.0.1:5000/ >/dev/null 2>&1; then
+              READY=1
+              break
+            fi
+            echo "Waiting for server to be ready..."
+            sleep 2
+          done
+
+          if [ "${READY:-0}" != "1" ]; then
+            echo "Server did not start in time"
+            kill $APP_PID || true
+            exit 1
+          fi
 
           # Basic smoke tests
-          curl -f http://127.0.0.1:5000/ || (kill $APP_PID; exit 1)
-          curl -f http://127.0.0.1:5000/login || (kill $APP_PID; exit 1)
-          curl -f http://127.0.0.1:5000/register || (kill $APP_PID; exit 1)
+          curl -sSf http://127.0.0.1:5000/ >/dev/null
+          curl -sSf http://127.0.0.1:5000/login >/dev/null
+          curl -sSf http://127.0.0.1:5000/register >/dev/null
 
-          kill $APP_PID
+          kill $APP_PID || true
 
