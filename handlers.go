@@ -774,13 +774,13 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 
 // Ajout d’une œuvre (avec support basique d’upload d’image)
 type catalogSearchResult struct {
-	Source       string `json:"source"`
-	CatalogID    int64  `json:"catalog_id,omitempty"`
-	ExternalID   string `json:"external_id,omitempty"`
-	Title        string `json:"title"`
-	ReadingType  string `json:"reading_type"`
-	ImageURL     string `json:"image_url,omitempty"`
-	IsAdult      bool   `json:"is_adult"`
+	Source      string `json:"source"`
+	CatalogID   int64  `json:"catalog_id,omitempty"`
+	ExternalID  string `json:"external_id,omitempty"`
+	Title       string `json:"title"`
+	ReadingType string `json:"reading_type"`
+	ImageURL    string `json:"image_url,omitempty"`
+	IsAdult     bool   `json:"is_adult"`
 }
 
 func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
