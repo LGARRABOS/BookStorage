@@ -187,8 +187,8 @@
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
                     <select id="adult-filter" onchange="applyDashboardFilters()">
-                        <option value="" {{ if or (eq .AdultFilter \"\") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang \"fr\" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
-                        <option value=\"only\" {{ if eq .AdultFilter \"only\" }}selected{{ end }}>{{ if eq .Lang \"fr\" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
+                        <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
+                        <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
                     </select>
                     <select id="sort-select" onchange="applyDashboardFilters()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
