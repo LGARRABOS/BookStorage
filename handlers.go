@@ -254,7 +254,7 @@ func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
-				w.Write([]byte(`{"error":"session_expired"}`))
+				_, _ = w.Write([]byte(`{"error":"session_expired"}`))
 				return
 			}
 			http.Redirect(w, r, "/login", http.StatusFound)
@@ -354,7 +354,7 @@ func (a *App) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusForbidden)
-				w.Write([]byte(`{"error":"forbidden"}`))
+				_, _ = w.Write([]byte(`{"error":"forbidden"}`))
 				return
 			}
 			w.WriteHeader(http.StatusForbidden)
@@ -425,7 +425,7 @@ func (a *App) writeErrorResponse(w http.ResponseWriter, r *http.Request, status 
 		default:
 			payload = `{"error":"internal_server_error"}`
 		}
-		w.Write([]byte(payload))
+		_, _ = w.Write([]byte(payload))
 		return
 	}
 	w.WriteHeader(status)
@@ -1161,7 +1161,7 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
 
 	// Write BOM for Excel UTF-8 compatibility
-	w.Write([]byte{0xEF, 0xBB, 0xBF})
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
 
 	writer := csv.NewWriter(w)
 	writer.Comma = ';' // Use semicolon for European Excel compatibility
