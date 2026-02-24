@@ -1,0 +1,50 @@
+name: Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment (e.g. production, staging)"
+        required: false
+        default: "production"
+
+jobs:
+  build-and-package:
+    name: Build and package Linux binary
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Build Linux binary (CGO enabled)
+        env:
+          CGO_ENABLED: 1
+          GOOS: linux
+          GOARCH: amd64
+        run: |
+          go build -ldflags="-s -w" -o bookstorage .
+
+      - name: Package artifacts
+        run: |
+          mkdir -p dist
+          cp bookstorage dist/
+          cp bsctl dist/
+          cp deploy/bookstorage.service dist/
+          tar -czf bookstorage-linux-amd64.tar.gz -C dist .
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bookstorage-linux-amd64
+          path: bookstorage-linux-amd64.tar.gz
+

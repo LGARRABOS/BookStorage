@@ -70,6 +70,41 @@ bsctl start
 
 ---
 
+## ✅ Continuous Integration & Deployment
+
+### CI (GitHub Actions)
+
+On every **push** and on **pull requests** to `main`, the workflow `.github/workflows/ci.yml` runs:
+
+- Checkout of the repository
+- Go installation (1.22.x)
+- Dependencies download (`go mod download`)
+- Build (`go build ./...`)
+- Tests (`go test ./...`)
+- Static analysis (`go vet ./...`)
+
+The PR must be **green** before being merged.
+
+### Deployment workflow
+
+The workflow `.github/workflows/deploy.yml` provides a base for deployment:
+
+- Manual trigger via **“Run workflow”** in the GitHub Actions tab (`workflow_dispatch`)
+- Build of a **Linux amd64** binary with CGO enabled
+- Packaging of:
+  - `bookstorage` binary
+  - `bsctl` CLI
+  - `deploy/bookstorage.service`
+- Upload of a `bookstorage-linux-amd64` artifact (`.tar.gz`)
+
+You can download this artifact on your server and:
+
+1. Extract it
+2. Copy `bookstorage`, `bsctl` and `bookstorage.service` to the appropriate locations
+3. Use `bsctl install` / `bsctl update` to manage the service
+
+---
+
 ## 🛠️ bsctl Commands
 
 `bsctl` (BookStorage Control) is the CLI to manage BookStorage.
