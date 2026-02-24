@@ -519,8 +519,8 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 		Count  int
 	}
 	var byStatus []statusCount
-	rows, _ := a.DB.Query(`SELECT COALESCE(status, 'Non défini'), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
-	if rows != nil {
+	rows, err := a.DB.Query(`SELECT COALESCE(status, 'Non défini'), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
+	if err == nil {
 		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var sc statusCount
@@ -537,8 +537,8 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 		Count int
 	}
 	var byType []typeCount
-	rows2, _ := a.DB.Query(`SELECT COALESCE(reading_type, 'Autre'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
-	if rows2 != nil {
+	rows2, err := a.DB.Query(`SELECT COALESCE(reading_type, 'Autre'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
+	if err == nil {
 		defer func() { _ = rows2.Close() }()
 		for rows2.Next() {
 			var tc typeCount
@@ -563,8 +563,8 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 		Rating int
 	}
 	var topRated []ratedWork
-	rows3, _ := a.DB.Query(`SELECT title, rating FROM works WHERE user_id = ? AND rating > 0 ORDER BY rating DESC, title LIMIT 5`, userID)
-	if rows3 != nil {
+	rows3, err := a.DB.Query(`SELECT title, rating FROM works WHERE user_id = ? AND rating > 0 ORDER BY rating DESC, title LIMIT 5`, userID)
+	if err == nil {
 		defer func() { _ = rows3.Close() }()
 		for rows3.Next() {
 			var rw ratedWork
@@ -728,7 +728,6 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') ASC"
 	default:
 		sortBy = "title"
-		orderClause = "ORDER BY LOWER(title)"
 	}
 
 	// Filtre adulte
@@ -752,7 +751,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var works []workRow
 	for rows.Next() {
@@ -941,13 +940,13 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 		if !imagePath.Valid {
 			file, header, err := r.FormFile("image")
 			if err == nil && header != nil && header.Filename != "" {
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 				if allowedFile(header.Filename) {
 					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
 					full := filepath.Join(a.Settings.UploadFolder, filename)
 					dst, err := os.Create(full)
 					if err == nil {
-						defer dst.Close()
+						defer func() { _ = dst.Close() }()
 						_, _ = io.Copy(dst, file)
 						imagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
 						imagePath.Valid = true
@@ -1062,13 +1061,13 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 			// If no URL, check for file upload
 			file, header, err := r.FormFile("image")
 			if err == nil && header != nil && header.Filename != "" {
-				defer file.Close()
+				defer func() { _ = file.Close() }()
 				if allowedFile(header.Filename) {
 					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
 					full := filepath.Join(a.Settings.UploadFolder, filename)
 					dst, err := os.Create(full)
 					if err == nil {
-						defer dst.Close()
+						defer func() { _ = dst.Close() }()
 						_, _ = io.Copy(dst, file)
 						newImagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
 						newImagePath.Valid = true
@@ -1183,7 +1182,9 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 	defer writer.Flush()
 
 	// Write header
-	writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"})
+	if err := writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"}); err != nil {
+		return
+	}
 
 	// Write data
 	for rows.Next() {
@@ -1196,7 +1197,7 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		writer.Write([]string{
+		if err := writer.Write([]string{
 			title,
 			strconv.Itoa(chapter),
 			link.String,
@@ -1204,7 +1205,9 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 			readingType.String,
 			strconv.Itoa(rating),
 			notes.String,
-		})
+		}); err != nil {
+			return
+		}
 	}
 }
 
@@ -1227,7 +1230,7 @@ func (a *App) handleImportCSV(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
 		return
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }()
 
 	reader := csv.NewReader(file)
 	reader.Comma = ';' // Use semicolon for European Excel compatibility
@@ -1283,10 +1286,12 @@ func (a *App) handleImportCSV(w http.ResponseWriter, r *http.Request) {
 
 		// Check if work already exists
 		var existsID int
-		a.DB.QueryRow(
+		if err := a.DB.QueryRow(
 			`SELECT id FROM works WHERE user_id = ? AND title = ?`,
 			userID, title,
-		).Scan(&existsID)
+		).Scan(&existsID); err != nil && err != sql.ErrNoRows {
+			continue
+		}
 
 		if existsID == 0 {
 			// Insert new work
@@ -1439,13 +1444,13 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 
 		file, header, err := r.FormFile("avatar")
 		if err == nil && header != nil && header.Filename != "" {
-			defer file.Close()
+			defer func() { _ = file.Close() }()
 			if allowedFile(header.Filename) {
 				filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
 				full := filepath.Join(a.Settings.ProfileUploadFolder, filename)
 				dst, err := os.Create(full)
 				if err == nil {
-					defer dst.Close()
+					defer func() { _ = dst.Close() }()
 					_, _ = io.Copy(dst, file)
 					newAvatarPath = buildMediaRelativePath(filename, a.Settings.ProfileUploadURLPath)
 					updates["avatar_path"] = newAvatarPath
