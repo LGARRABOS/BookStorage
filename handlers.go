@@ -272,6 +272,7 @@ var readingTypes = []string{
 	"BD",
 	"Light Novel",
 	"Webtoon",
+	"18+",
 	"Autre",
 }
 
@@ -704,8 +705,12 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		orderClause = "ORDER BY id DESC"
 	case "oldest":
 		orderClause = "ORDER BY id ASC"
-	case "modified":
+	case "modified", "modified_desc":
+		// Alias \"modified\" conservé pour compatibilité rétro
+		sortBy = "modified_desc"
 		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') DESC"
+	case "modified_asc":
+		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') ASC"
 	default:
 		sortBy = "title"
 		orderClause = "ORDER BY LOWER(title)"
