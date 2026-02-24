@@ -9,8 +9,37 @@ on:
       - main
 
 jobs:
-  build-and-test:
-    name: Build and test
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+
+      - name: Check formatting (gofmt)
+        run: |
+          set -e
+          files=$(gofmt -l .)
+          if [ -n "$files" ]; then
+            echo "Go files not formatted:"
+            echo "$files"
+            exit 1
+          fi
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v9
+        with:
+          version: latest
+
+  tests:
+    name: Unit tests
     runs-on: ubuntu-latest
 
     steps:
@@ -26,12 +55,65 @@ jobs:
       - name: Download dependencies
         run: go mod download
 
-      - name: Build
-        run: go build ./...
+      - name: Run tests with coverage
+        run: go test ./... -coverprofile=coverage.out
 
-      - name: Run tests
-        run: go test ./...
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage.out
 
-      - name: Static analysis (go vet)
-        run: go vet ./...
+  race-tests:
+    name: Race condition tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests with -race
+        run: go test -race ./...
+
+  smoke-http:
+    name: HTTP smoke tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22.x"
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Start application
+        run: |
+          set -e
+          go run . &
+          APP_PID=$!
+          echo "App PID: $APP_PID"
+          # Wait for the server to start
+          sleep 5
+
+          # Basic smoke tests
+          curl -f http://127.0.0.1:5000/ || (kill $APP_PID; exit 1)
+          curl -f http://127.0.0.1:5000/login || (kill $APP_PID; exit 1)
+          curl -f http://127.0.0.1:5000/register || (kill $APP_PID; exit 1)
+
+          kill $APP_PID
 
