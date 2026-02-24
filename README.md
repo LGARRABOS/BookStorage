@@ -92,16 +92,14 @@ bsctl start
 
 ### CI (GitHub Actions)
 
-On every **push** and on **pull requests** to `main`, the workflow `.github/workflows/ci.yml` runs:
+On every **push** and on **pull requests** to `main`, the workflow `.github/workflows/ci.yml` runs several jobs:
 
-- Checkout of the repository
-- Go installation (1.22.x)
-- Dependencies download (`go mod download`)
-- Build (`go build ./...`)
-- Tests (`go test ./...`)
-- Static analysis (`go vet ./...`)
+- `lint`: formatting check (`gofmt`) and advanced linting with `golangci-lint`
+- `tests`: unit tests with coverage (`go test ./... -coverprofile=coverage.out`, uploaded as an artifact)
+- `race-tests`: tests with race detector (`go test -race ./...`)
+- `smoke-http`: starts the application and performs basic HTTP checks on key routes (e.g. `/`, `/login`, `/register`)
 
-The PR must be **green** before being merged.
+All jobs must pass for the PR to be **green** and safely mergeable.
 
 ### Deployment workflow
 
