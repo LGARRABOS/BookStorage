@@ -2,7 +2,7 @@
 
 **BookStorage** is a personal reading tracker web application. Track your novels, manga, webtoons, light novels and more.
 
-_🇫🇷 [Version française ci-dessous](#-bookstorage-fr)_
+_🇫🇷 [Version française](./README.fr.md)_
 
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
@@ -23,7 +23,6 @@ _🇫🇷 [Version française ci-dessous](#-bookstorage-fr)_
 - [Project Structure](#-project-structure)
 - [Troubleshooting](#-troubleshooting)
 - [License](#-license)
-- [BookStorage (FR)](#-bookstorage-fr)
 
 ---
 
@@ -324,80 +323,3 @@ bsctl logs
 ## 📝 License
 
 MIT License
-
----
-
-# 📚 BookStorage (FR)
-
-**BookStorage** est une application web de suivi de lectures personnelles. Suivez vos romans, mangas, webtoons, light novels et plus encore.
-
-![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
-![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green)
-
----
-
-## 📑 Sommaire
-
-- [Fonctionnalités](#-fonctionnalités)
-- [Démarrage rapide](#-démarrage-rapide)
-- [Installation en production (Linux)](#-installation-en-production-linux)
-
----
-
-## ✨ Fonctionnalités
-
-- 📖 **Multi-formats** : Romans, mangas, manhwas, webtoons, light novels...
-- ⭐ **Notes & avis** : Notez vos œuvres de 1 à 5 étoiles avec des notes personnelles
-- 📊 **Statistiques** : Visualisez vos habitudes de lecture
-- 👥 **Communauté** : Explorez les bibliothèques publiques des autres lecteurs
-- 🌓 **Mode sombre** : Interface claire ou sombre selon vos préférences
-- 🔐 **Vie privée** : Profil public ou privé, vous choisissez
-- 🌍 **Multilingue** : Interface française et anglaise
-- 📱 **PWA** : Installable comme application mobile sur iOS/Android
-- 📦 **Export/Import** : Sauvegardez et restaurez votre bibliothèque via CSV
-- ⌨️ **Raccourcis clavier** : Naviguez rapidement (N, /, S, P, ?)
-
----
-
-## 🚀 Démarrage rapide
-
-### Prérequis
-
-- **Go 1.22+**
-- **GCC** (pour la compilation de SQLite avec CGO)
-
-### Lancer en développement
-
-```bash
-# Cloner le projet
-git clone https://github.com/LGARRABOS/BookStorage.git
-cd BookStorage
-
-# Lancer le serveur
-go run .
-```
-
-Le serveur démarre sur **http://127.0.0.1:5000**
-
----
-
-## 📦 Installation en Production (Linux)
-
-```bash
-# Cloner et installer (en root)
-git clone https://github.com/LGARRABOS/BookStorage.git
-cd BookStorage
-sudo ./deploy/install.sh
-
-# Démarrer le service
-bsctl start
-```
-
-Utilisez `bsctl help` pour voir toutes les commandes disponibles.
-
----
-
-<p align="center">
-  Made with ❤️ for readers / Fait avec ❤️ pour les lecteurs
-</p>
