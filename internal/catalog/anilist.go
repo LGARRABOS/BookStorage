@@ -13,11 +13,12 @@ const anilistTimeout = 8 * time.Second
 
 // AnilistResult represents one search result from AniList
 type AnilistResult struct {
-	ID         int    `json:"id"`
-	Title      string `json:"title"`
-	Type       string `json:"type"`
-	ImageURL   string `json:"image_url"`
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	Type        string `json:"type"`
+	ImageURL    string `json:"image_url"`
 	ReadingType string `json:"reading_type"` // mapped for our app
+	IsAdult     bool   `json:"is_adult"`
 }
 
 type anilistMedia struct {
@@ -30,6 +31,7 @@ type anilistMedia struct {
 	Format          string   `json:"format"`
 	CountryOfOrigin string   `json:"countryOfOrigin"`
 	Genres          []string `json:"genres"`
+	IsAdult         bool     `json:"isAdult"`
 	CoverImage      struct {
 		Large string `json:"large"`
 	} `json:"coverImage"`
@@ -105,6 +107,7 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
       format
       countryOfOrigin
       genres
+      isAdult
       coverImage { large }
       tags { name }
     }
@@ -143,11 +146,12 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
 			title = m.Title.Romaji
 		}
 		results = append(results, AnilistResult{
-			ID:           m.ID,
-			Title:        title,
-			Type:         m.Type,
-			ImageURL:     m.CoverImage.Large,
-			ReadingType:  mapAnilistReadingType(m),
+			ID:          m.ID,
+			Title:       title,
+			Type:        m.Type,
+			ImageURL:    m.CoverImage.Large,
+			ReadingType: mapAnilistReadingType(m),
+			IsAdult:     m.IsAdult,
 		})
 	}
 	return results, nil
