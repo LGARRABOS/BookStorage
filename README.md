@@ -2,11 +2,30 @@
 
 **BookStorage** is a personal reading tracker web application. Track your novels, manga, webtoons, light novels and more.
 
-*[Version française ci-dessous](#-bookstorage-fr)*
+_🇫🇷 [Version française ci-dessous](#-bookstorage-fr)_
 
 ![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
 ![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green)
+
+---
+
+## 📑 Table of Contents
+
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Production Installation (Linux)](#-production-installation-linux)
+- [Continuous Integration & Deployment](#-continuous-integration--deployment)
+- [bsctl CLI](#-bsctl-cli)
+- [Configuration](#-configuration)
+- [Keyboard Shortcuts](#-keyboard-shortcuts)
+- [Export / Import](#-exportimport)
+- [Project Structure](#-project-structure)
+- [Troubleshooting](#-troubleshooting)
+- [License](#-license)
+- [BookStorage (FR)](#-bookstorage-fr)
+
+---
 
 ## ✨ Features
 
@@ -27,7 +46,7 @@
 
 ### Prerequisites
 
-- **Go 1.22+** 
+- **Go 1.22+**
 - **GCC** (for SQLite compilation with CGO)
 
 ### Run in development
@@ -105,7 +124,7 @@ You can download this artifact on your server and:
 
 ---
 
-## 🛠️ bsctl Commands
+## 🛠️ bsctl CLI
 
 `bsctl` (BookStorage Control) is the CLI to manage BookStorage.
 
@@ -113,33 +132,33 @@ You can download this artifact on your server and:
 bsctl help     # Show help
 ```
 
-### Service
+### Service commands
 
-| Command | Description |
-|---------|-------------|
-| `bsctl start` | Start the service |
-| `bsctl stop` | Stop the service |
-| `bsctl restart` | Restart the service |
-| `bsctl status` | Show status |
-| `bsctl logs` | Show real-time logs |
+| Command        | Description          |
+|----------------|----------------------|
+| `bsctl start`  | Start the service    |
+| `bsctl stop`   | Stop the service     |
+| `bsctl restart`| Restart the service  |
+| `bsctl status` | Show status          |
+| `bsctl logs`   | Show real-time logs  |
 
-### Development
+### Development commands
 
-| Command | Description |
-|---------|-------------|
-| `bsctl build` | Compile the application |
-| `bsctl build-prod` | Compile for production |
-| `bsctl run` | Start dev server |
-| `bsctl clean` | Remove compiled files |
+| Command           | Description             |
+|-------------------|-------------------------|
+| `bsctl build`     | Compile the application |
+| `bsctl build-prod`| Compile for production  |
+| `bsctl run`       | Start dev server        |
+| `bsctl clean`     | Remove compiled files   |
 
-### Production
+### Production / maintenance commands
 
-| Command | Description |
-|---------|-------------|
-| `bsctl install` | Install systemd service |
-| `bsctl uninstall` | Uninstall service |
-| `bsctl update` | Update (pull + build + restart) |
-| `bsctl fix-perms` | Fix file permissions |
+| Command            | Description                          |
+|--------------------|--------------------------------------|
+| `bsctl install`    | Install systemd service              |
+| `bsctl uninstall`  | Uninstall service                    |
+| `bsctl update`     | Update (pull + build + restart)      |
+| `bsctl fix-perms`  | Fix file permissions                 |
 
 ---
 
@@ -165,12 +184,12 @@ BOOKSTORAGE_SUPERADMIN_USERNAME=admin
 BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 ```
 
-| Variable | Description | Default |
-|----------|-------------|---------|
-| `BOOKSTORAGE_HOST` | Listen address | `127.0.0.1` |
-| `BOOKSTORAGE_PORT` | Port | `5000` |
-| `BOOKSTORAGE_DATABASE` | SQLite database path | `database.db` |
-| `BOOKSTORAGE_SECRET_KEY` | Session secret key | `dev-secret-change-me` |
+| Variable                    | Description            | Default                 |
+|-----------------------------|------------------------|-------------------------|
+| `BOOKSTORAGE_HOST`         | Listen address         | `127.0.0.1`             |
+| `BOOKSTORAGE_PORT`         | Port                   | `5000`                  |
+| `BOOKSTORAGE_DATABASE`     | SQLite database path   | `database.db`           |
+| `BOOKSTORAGE_SECRET_KEY`   | Session secret key     | `dev-secret-change-me`  |
 
 ### Legal Notice / Mentions légales
 
@@ -205,23 +224,25 @@ Then edit `config/site.json` with your information:
 
 On the dashboard, use these keyboard shortcuts for quick navigation:
 
-| Key | Action |
-|-----|--------|
-| `N` | Add new work |
-| `/` | Focus search bar |
-| `S` | Go to Statistics |
-| `P` | Go to Profile |
-| `?` | Show help |
-| `Esc` | Close/Unfocus |
+| Key   | Action              |
+|-------|---------------------|
+| `N`   | Add new work        |
+| `/`   | Focus search bar    |
+| `S`   | Go to Statistics    |
+| `P`   | Go to Profile       |
+| `?`   | Show help           |
+| `Esc` | Close/Unfocus       |
 
 ---
 
 ## 📦 Export/Import
 
 ### Export
+
 Go to **Profile** → Download your library as a CSV file.
 
 ### Import
+
 Go to **Profile** → Upload a CSV file with the following format (semicolon separator):
 
 ```csv
@@ -310,6 +331,20 @@ MIT License
 
 **BookStorage** est une application web de suivi de lectures personnelles. Suivez vos romans, mangas, webtoons, light novels et plus encore.
 
+![Go](https://img.shields.io/badge/Go-1.22+-00ADD8?logo=go&logoColor=white)
+![SQLite](https://img.shields.io/badge/SQLite-3-003B57?logo=sqlite&logoColor=white)
+![License](https://img.shields.io/badge/License-MIT-green)
+
+---
+
+## 📑 Sommaire
+
+- [Fonctionnalités](#-fonctionnalités)
+- [Démarrage rapide](#-démarrage-rapide)
+- [Installation en production (Linux)](#-installation-en-production-linux)
+
+---
+
 ## ✨ Fonctionnalités
 
 - 📖 **Multi-formats** : Romans, mangas, manhwas, webtoons, light novels...
@@ -329,7 +364,7 @@ MIT License
 
 ### Prérequis
 
-- **Go 1.22+** 
+- **Go 1.22+**
 - **GCC** (pour la compilation de SQLite avec CGO)
 
 ### Lancer en développement
