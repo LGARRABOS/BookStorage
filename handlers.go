@@ -815,7 +815,7 @@ func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 		pattern,
 	)
 	if err == nil {
-		defer rows.Close()
+		defer func() { _ = rows.Close() }()
 		for rows.Next() {
 			var id int64
 			var title, readingType, imageURL string
@@ -1167,7 +1167,7 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	// Set headers for CSV download
 	filename := fmt.Sprintf("bookstorage_export_%s.csv", time.Now().Format("2006-01-02"))
@@ -1529,7 +1529,7 @@ WHERE validated = 1 AND is_public = 1 AND id != ?`
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var users []communityUser
 	for rows.Next() {
@@ -1615,7 +1615,7 @@ func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var works []workRow
 	for rows.Next() {
@@ -1763,7 +1763,7 @@ func (a *App) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	type adminUser struct {
 		ID           int
