@@ -190,7 +190,8 @@
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
                         <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
-                        <option value="modified" {{ if eq .SortBy "modified" }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif.{{ else }}Last modified{{ end }}</option>
+                        <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif. ↓{{ else }}Last modified ↓{{ end }}</option>
+                        <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif. ↑{{ else }}Last modified ↑{{ end }}</option>
                         <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
                         <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
                     </select>
