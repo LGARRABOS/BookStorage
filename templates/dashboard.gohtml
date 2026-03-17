@@ -45,6 +45,7 @@
         .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
         .work-card { background: var(--surface); border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; }
         .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .work-cover-link { display: block; text-decoration: none; cursor: pointer; }
         .work-cover { position: relative; height: 180px; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
         .work-cover img { width: 100%; height: 100%; object-fit: cover; }
         .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
@@ -63,9 +64,7 @@
         .work-chapter strong { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
         .work-rating-display { display: flex; gap: 0.15rem; color: #fbbf24; font-size: 0.9rem; margin-bottom: 0.75rem; }
         .work-rating-display .empty { opacity: 0.3; }
-        .work-meta { display: flex; justify-content: space-between; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
-        .work-link { font-size: 0.85rem; color: var(--primary); text-decoration: none; display: flex; align-items: center; gap: 0.25rem; }
-        .work-link:hover { text-decoration: underline; }
+        .work-meta { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
         .work-actions { display: flex; gap: 0.5rem; }
         .work-actions a { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: background 0.2s ease; }
         .work-actions .edit-btn { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
@@ -253,6 +252,7 @@
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
                 <article class="work-card" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
+                    {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ if .ImagePath.Valid }}
                             {{ $imgUrl := work_image_url .ImagePath.String }}
@@ -273,6 +273,7 @@
                             </span>
                         </div>
                     </div>
+                    {{ if .Link.Valid }}</a>{{ end }}
                     <div class="work-body">
                         <div class="work-title-row">
                             <h3 class="work-card-title">{{ .Title }}</h3>
@@ -295,11 +296,6 @@
                             {{ end }}
                         </div>
                         <div class="work-meta">
-                            {{ if .Link.Valid }}
-                                <a href="{{ .Link.String }}" target="_blank" class="work-link">{{ if eq $.Lang "fr" }}Lire{{ else }}Read{{ end }} ↗</a>
-                            {{ else }}
-                                <span></span>
-                            {{ end }}
                             <div class="work-actions">
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
                                 <a href="/delete/{{ .ID }}" class="delete-btn" title="{{ t $.T "dashboard.delete" }}" onclick="return confirm('{{ t $.T "dashboard.delete.confirm" }}');">🗑️</a>
