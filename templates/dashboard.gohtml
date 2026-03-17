@@ -155,6 +155,16 @@
         [data-theme="dark"] .edit-modal-content .star-rating-picker .star.active { color: #fbbf24; }
         [data-theme="dark"] .edit-modal-content .btn-danger { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
         @media (max-width: 600px) { .edit-modal-content .image-section { grid-template-columns: 1fr; } .edit-modal-content .form-actions { flex-direction: column; } }
+        /* Help modal */
+        .help-modal-dialog { max-width: 420px; }
+        .help-modal-content { padding: 1.5rem 2rem 2rem; }
+        .help-modal-title { font-size: 1.25rem; margin: 0 0 1.25rem 0; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem; }
+        .help-shortcuts-list { list-style: none; padding: 0; margin: 0 0 1.5rem 0; }
+        .help-shortcuts-list li { display: flex; align-items: center; gap: 0.75rem; padding: 0.5rem 0; border-bottom: 1px solid var(--border-subtle); font-size: 0.95rem; color: var(--text-secondary); }
+        .help-shortcuts-list li:last-child { border-bottom: none; }
+        .help-shortcuts-list kbd { display: inline-block; padding: 0.2rem 0.5rem; font-size: 0.8rem; font-family: inherit; background: var(--input-bg); border: 1px solid var(--border-subtle); border-radius: 0.35rem; color: var(--text-primary); box-shadow: 0 1px 0 var(--border-subtle); }
+        .help-modal-ok { width: 100%; }
+        .help-modal-close { top: 0.75rem; right: 0.75rem; }
         @media (max-width: 768px) {
             .dashboard-header { flex-direction: column; align-items: stretch; }
             .header-actions { justify-content: stretch; }
@@ -338,7 +348,7 @@
     </main>
 
     <footer class="page-footer">
-        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a> · <span style="cursor:help;" title="{{ if eq .Lang "fr" }}N=Nouvelle œuvre, /=Rechercher, S=Stats, P=Profil{{ else }}N=New work, /=Search, S=Stats, P=Profile{{ end }}">⌨️ {{ if eq .Lang "fr" }}Raccourcis{{ else }}Shortcuts{{ end }}</span></p></div>
+        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a> · <span id="help-trigger" style="cursor:pointer; text-decoration:underline; text-underline-offset:2px;" role="button" tabindex="0">⌨️ {{ if eq .Lang "fr" }}Raccourcis{{ else }}Shortcuts{{ end }}</span></p></div>
     </footer>
 
     <div id="edit-modal" class="modal-overlay" aria-hidden="true">
@@ -346,6 +356,27 @@
         <div class="modal-dialog">
             <button type="button" class="modal-close" aria-label="{{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}">×</button>
             <div class="modal-content"></div>
+        </div>
+    </div>
+
+    <div id="help-modal" class="modal-overlay" aria-hidden="true">
+        <div class="modal-backdrop"></div>
+        <div class="modal-dialog help-modal-dialog">
+            <button type="button" class="modal-close help-modal-close" aria-label="{{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}">×</button>
+            <div class="modal-content help-modal-content">
+                <h2 class="help-modal-title">⌨️ {{ if eq .Lang "fr" }}Raccourcis clavier{{ else }}Keyboard shortcuts{{ end }}</h2>
+                <ul class="help-shortcuts-list">
+                    <li><kbd>N</kbd> <kbd>A</kbd> <kbd>+</kbd> — {{ if eq .Lang "fr" }}Nouvelle œuvre{{ else }}New work{{ end }}</li>
+                    <li><kbd>/</kbd> — {{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</li>
+                    <li><kbd>E</kbd> — {{ if eq .Lang "fr" }}Éditer (1er visible){{ else }}Edit (first visible){{ end }}</li>
+                    <li><kbd>S</kbd> — {{ if eq .Lang "fr" }}Statistiques{{ else }}Stats{{ end }}</li>
+                    <li><kbd>P</kbd> — {{ if eq .Lang "fr" }}Profil{{ else }}Profile{{ end }}</li>
+                    <li><kbd>U</kbd> — {{ if eq .Lang "fr" }}Utilisateurs{{ else }}Users{{ end }}</li>
+                    <li><kbd>1</kbd>-<kbd>5</kbd> — {{ if eq .Lang "fr" }}Filtrer par statut{{ else }}Filter by status{{ end }}</li>
+                    <li><kbd>Esc</kbd> — {{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}</li>
+                </ul>
+                <button type="button" class="btn btn-primary help-modal-ok">{{ if eq .Lang "fr" }}OK{{ else }}OK{{ end }}</button>
+            </div>
         </div>
     </div>
 
@@ -694,8 +725,31 @@
         if (modalBackdrop) modalBackdrop.addEventListener('click', closeEditModal);
         if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeEditModal);
         
+        const helpModal = document.getElementById('help-modal');
+        function openHelpModal() {
+            if (helpModal) {
+                helpModal.setAttribute('aria-hidden', 'false');
+                helpModal.style.display = 'flex';
+            }
+        }
+        function closeHelpModal() {
+            if (helpModal) {
+                helpModal.setAttribute('aria-hidden', 'true');
+                helpModal.style.display = 'none';
+            }
+        }
+        document.getElementById('help-trigger')?.addEventListener('click', openHelpModal);
+        document.getElementById('help-trigger')?.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHelpModal(); } });
+        helpModal?.querySelector('.help-modal-close')?.addEventListener('click', closeHelpModal);
+        helpModal?.querySelector('.help-modal-ok')?.addEventListener('click', closeHelpModal);
+        helpModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeHelpModal);
+
         // Keyboard shortcuts
         document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && helpModal && helpModal.getAttribute('aria-hidden') === 'false') {
+                closeHelpModal();
+                return;
+            }
             if (e.key === 'Escape' && editModal && editModal.getAttribute('aria-hidden') === 'false') {
                 closeEditModal();
                 return;
@@ -754,7 +808,8 @@
                     if (statusFilter) { statusFilter.value = 'À lire'; filterWorks(); }
                     break;
                 case '?':
-                    alert('{{ if eq .Lang "fr" }}Raccourcis clavier:\nN / A / + = Nouvelle œuvre\n/ = Rechercher\nE = Éditer (1er visible)\nS = Statistiques\nP = Profil\nU = Utilisateurs\n1-5 = Filtrer par statut (En cours, Terminé, En pause, Abandonné, À lire)\nEsc = Fermer{{ else }}Keyboard shortcuts:\nN / A / + = New work\n/ = Search\nE = Edit (first visible)\nS = Stats\nP = Profile\nU = Users\n1-5 = Filter by status\nEsc = Close{{ end }}');
+                case ',':
+                    openHelpModal();
                     break;
             }
         });
