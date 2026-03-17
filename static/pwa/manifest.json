@@ -40,12 +40,6 @@
       "short_name": "Stats",
       "url": "/stats",
       "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
-    },
-    {
-      "name": "Accès rapide",
-      "short_name": "Quick",
-      "url": "/quick",
-      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
     }
   ]
 }

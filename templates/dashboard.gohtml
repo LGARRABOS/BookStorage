@@ -24,17 +24,6 @@
         .dashboard-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
         .dashboard-title p { color: var(--text-muted); margin: 0; }
         .header-actions { display: flex; gap: 0.75rem; }
-        .quick-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 1rem; margin-bottom: 2rem; }
-        .stat-card { background: var(--surface); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--border-subtle); display: flex; align-items: center; gap: 1rem; transition: transform 0.2s ease, box-shadow 0.2s ease; }
-        .stat-card:hover { transform: translateY(-2px); box-shadow: var(--shadow-base); }
-        .stat-icon { width: 48px; height: 48px; border-radius: 12px; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; flex-shrink: 0; }
-        .stat-icon.purple { background: rgba(129, 140, 248, 0.15); }
-        .stat-icon.orange { background: rgba(251, 146, 60, 0.15); }
-        .stat-icon.green { background: rgba(34, 197, 94, 0.15); }
-        .stat-icon.blue { background: rgba(56, 189, 248, 0.15); }
-        .stat-content { min-width: 0; }
-        .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--text-primary); line-height: 1.2; }
-        .stat-label { font-size: 0.8rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.03em; }
         .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
         .search-box { flex: 1; min-width: 200px; position: relative; }
         .search-box input { width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.95rem; background: var(--background); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
@@ -99,7 +88,6 @@
         .empty-state p { color: var(--text-muted); margin-bottom: 1.5rem; }
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
         .lang-toggle:hover { background: var(--primary); color: white; }
-        [data-theme="dark"] .stat-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .filters-bar { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .search-box input, [data-theme="dark"] .filter-group select { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); color: #e2e8f0; }
         [data-theme="dark"] .search-box input::placeholder { color: #94a3b8; }
@@ -170,7 +158,6 @@
             .dashboard-header { flex-direction: column; align-items: stretch; }
             .header-actions { justify-content: stretch; }
             .header-actions .btn { flex: 1; justify-content: center; }
-            .quick-stats { grid-template-columns: repeat(2, 1fr); }
             .filters-bar { flex-direction: column; align-items: stretch; }
             .search-box { width: 100%; }
             .filter-group { flex-wrap: wrap; }
@@ -184,7 +171,7 @@
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
-                <a href="/quick">{{ t .T "nav.quick" }}</a>
+                <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
                 <a href="/reminders">⏰ {{ if eq .Lang "fr" }}Rappels{{ else }}Reminders{{ end }}</a>
                 <a href="/stats">{{ t .T "nav.stats" }}</a>
                 <a href="/users">{{ t .T "nav.readers" }}</a>
@@ -208,37 +195,6 @@
                 <div class="header-actions">
                     <a href="/stats" class="btn btn-secondary">📊 {{ t .T "nav.stats" }}</a>
                     <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
-                </div>
-            </div>
-
-            <div class="quick-stats">
-                <div class="stat-card">
-                    <div class="stat-icon purple">📚</div>
-                    <div class="stat-content">
-                        <div class="stat-value">{{ len .Works }}</div>
-                        <div class="stat-label">{{ t .T "dashboard.stats.works" }}</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon orange">📖</div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="total-chapters">0</div>
-                        <div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon green">✅</div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="completed-count">0</div>
-                        <div class="stat-label">{{ if eq .Lang "fr" }}Terminés{{ else }}Completed{{ end }}</div>
-                    </div>
-                </div>
-                <div class="stat-card">
-                    <div class="stat-icon blue">▶️</div>
-                    <div class="stat-content">
-                        <div class="stat-value" id="reading-count">0</div>
-                        <div class="stat-label">{{ if eq .Lang "fr" }}En cours{{ else }}Reading{{ end }}</div>
-                    </div>
                 </div>
             </div>
 
@@ -401,22 +357,6 @@
         updateThemeIcon();
         
         const cards = document.querySelectorAll('.work-card');
-        let totalChapters = 0;
-        let completedCount = 0;
-        let readingCount = 0;
-        
-        cards.forEach(card => {
-            const chapter = parseInt(card.dataset.chapter) || 0;
-            const status = card.dataset.status;
-            totalChapters += chapter;
-            if (status === 'Terminé' || status === 'Completed') completedCount++;
-            if (status === 'En cours' || status === 'Reading') readingCount++;
-        });
-        
-        document.getElementById('total-chapters').textContent = totalChapters;
-        document.getElementById('completed-count').textContent = completedCount;
-        document.getElementById('reading-count').textContent = readingCount;
-        
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
         const typeFilter = document.getElementById('type-filter');
@@ -502,7 +442,6 @@
                         const newVal = oldVal + 1;
                         valueEl.textContent = newVal;
                         card.dataset.chapter = newVal;
-                        updateTotalChapters();
                     }
                 } catch (err) { console.error(err); }
             });
@@ -523,7 +462,6 @@
                         const newVal = oldVal - 1;
                         valueEl.textContent = newVal;
                         card.dataset.chapter = newVal;
-                        updateTotalChapters();
                     }
                 } catch (err) { console.error(err); }
             });
@@ -568,7 +506,6 @@
                         body: 'chapter=' + num
                     }).then(resp => {
                         if (resp.status === 401) { window.location.href = '/login?expired=1'; return; }
-                        if (resp.ok) updateTotalChapters();
                     }).catch(err => console.error(err));
                 }
             }
@@ -581,14 +518,6 @@
                 this.value = this.value.replace(/\D/g, '').slice(0, 4);
             });
         });
-        
-        function updateTotalChapters() {
-            let total = 0;
-            document.querySelectorAll('.work-card').forEach(c => {
-                total += parseInt(c.dataset.chapter) || 0;
-            });
-            document.getElementById('total-chapters').textContent = total;
-        }
         
         // Edit modal
         function previewImage(input) {
@@ -721,7 +650,7 @@
                                 const cardEl = document.querySelector('.js-edit-work[data-edit-id="' + deleteId + '"]');
                                 if (cardEl) {
                                     const workCard = cardEl.closest('.work-card');
-                                    if (workCard) { workCard.remove(); updateTotalChapters(); }
+                                    if (workCard) workCard.remove();
                                 }
                                 closeEditModal();
                             }
