@@ -7,6 +7,7 @@ import (
 	"bookstorage/internal/config"
 
 	_ "github.com/mattn/go-sqlite3"
+	"golang.org/x/crypto/bcrypt"
 )
 
 const createUsersTableSQL = `
@@ -35,6 +36,29 @@ CREATE TABLE IF NOT EXISTS works (
     reading_type TEXT,
     user_id INTEGER NOT NULL,
     FOREIGN KEY (user_id) REFERENCES users (id)
+);`
+
+const createPushSubscriptionsTableSQL = `
+CREATE TABLE IF NOT EXISTS push_subscriptions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    endpoint TEXT NOT NULL,
+    p256dh TEXT NOT NULL,
+    auth TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);`
+
+const createRemindersTableSQL = `
+CREATE TABLE IF NOT EXISTS reminders (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    work_id INTEGER NOT NULL,
+    remind_at DATETIME NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    sent INTEGER DEFAULT 0,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (work_id) REFERENCES works (id)
 );`
 
 const createCatalogTableSQL = `
@@ -114,11 +138,15 @@ func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
 		return nil
 	}
 
-	_, err := db.Exec(
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(s.SuperadminPassword), bcrypt.DefaultCost)
+	if err != nil {
+		return err
+	}
+	_, err = db.Exec(
 		`INSERT INTO users (username, password, validated, is_admin, is_superadmin)
          VALUES (?, ?, 1, 1, 1)`,
 		s.SuperadminUsername,
-		s.SuperadminPassword,
+		string(hashedPassword),
 	)
 	return err
 }
@@ -132,6 +160,12 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createWorksTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createRemindersTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createPushSubscriptionsTableSQL); err != nil {
 		return err
 	}
 	if err := ensureColumns(db, "users", profileColumns); err != nil {

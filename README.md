@@ -187,6 +187,10 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_PORT`         | Port                   | `5000`                  |
 | `BOOKSTORAGE_DATABASE`     | SQLite database path   | `database.db`           |
 | `BOOKSTORAGE_SECRET_KEY`   | Session secret key     | `dev-secret-change-me`  |
+| `BOOKSTORAGE_VAPID_PUBLIC` | VAPID public key (Web Push) | (optional)           |
+| `BOOKSTORAGE_VAPID_PRIVATE`| VAPID private key (Web Push) | (optional)           |
+
+Generate VAPID keys: `./bookstorage -gen-vapid`
 
 ### Legal Notice / Mentions légales
 

@@ -2,9 +2,11 @@ package main
 
 import (
 	"bytes"
+	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
+	"encoding/base64"
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
@@ -24,6 +26,7 @@ import (
 	"bookstorage/internal/config"
 	"bookstorage/internal/i18n"
 
+	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/pbkdf2"
 )
 
@@ -113,15 +116,26 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 	}
 }
 
+// hashPassword hashes a password using bcrypt.
+func hashPassword(password string) (string, error) {
+	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	if err != nil {
+		return "", err
+	}
+	return string(hash), nil
+}
+
 // verifyPassword vérifie un mot de passe contre un hash.
-// Supporte le format Werkzeug pbkdf2:sha256:iterations$salt$hash
-// et aussi la comparaison en clair (pour les comptes créés par Go).
+// Supporte bcrypt ($2a$, $2b$, $2y$), Werkzeug pbkdf2:sha256:iterations$salt$hash,
+// et la comparaison en clair (legacy).
 func verifyPassword(storedHash, password string) bool {
-	// Si le hash commence par "pbkdf2:", c'est un hash Werkzeug
+	if strings.HasPrefix(storedHash, "$2a$") || strings.HasPrefix(storedHash, "$2b$") || strings.HasPrefix(storedHash, "$2y$") {
+		err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
+		return err == nil
+	}
 	if strings.HasPrefix(storedHash, "pbkdf2:") {
 		return verifyWerkzeugHash(storedHash, password)
 	}
-	// Sinon, comparaison en clair (comptes créés par Go)
 	return storedHash == password
 }
 
@@ -164,16 +178,56 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
-func (a *App) currentUserID(r *http.Request) (int, bool) {
-	c, err := r.Cookie("user_id")
+func (a *App) signSession(userID int, expiry int64) string {
+	payload := strconv.Itoa(userID) + "|" + strconv.FormatInt(expiry, 10)
+	payloadB64 := base64.URLEncoding.EncodeToString([]byte(payload))
+	mac := hmac.New(sha256.New, []byte(a.Settings.SecretKey))
+	mac.Write([]byte(payloadB64))
+	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
+	return payloadB64 + "." + sig
+}
+
+func (a *App) verifySession(token string) (int, bool) {
+	idx := strings.LastIndex(token, ".")
+	if idx <= 0 {
+		return 0, false
+	}
+	payloadB64, sigB64 := token[:idx], token[idx+1:]
+	sig, err := base64.URLEncoding.DecodeString(sigB64)
+	if err != nil || len(sig) != sha256.Size {
+		return 0, false
+	}
+	mac := hmac.New(sha256.New, []byte(a.Settings.SecretKey))
+	mac.Write([]byte(payloadB64))
+	expected := mac.Sum(nil)
+	if subtle.ConstantTimeCompare(sig, expected) != 1 {
+		return 0, false
+	}
+	payload, err := base64.URLEncoding.DecodeString(payloadB64)
 	if err != nil {
 		return 0, false
 	}
-	id, err := strconv.Atoi(c.Value)
+	parts := strings.SplitN(string(payload), "|", 2)
+	if len(parts) != 2 {
+		return 0, false
+	}
+	id, err := strconv.Atoi(parts[0])
 	if err != nil || id <= 0 {
 		return 0, false
 	}
+	expiry, err := strconv.ParseInt(parts[1], 10, 64)
+	if err != nil || time.Now().Unix() > expiry {
+		return 0, false
+	}
 	return id, true
+}
+
+func (a *App) currentUserID(r *http.Request) (int, bool) {
+	c, err := r.Cookie("session")
+	if err != nil {
+		return 0, false
+	}
+	return a.verifySession(c.Value)
 }
 
 func (a *App) currentLang(r *http.Request) string {
@@ -228,21 +282,30 @@ func (a *App) mergeData(r *http.Request, extra map[string]any) map[string]any {
 }
 
 func (a *App) setUserID(w http.ResponseWriter, userID int) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "user_id",
-		Value:    strconv.Itoa(userID),
+	expiry := time.Now().Add(1 * time.Hour).Unix()
+	token := a.signSession(userID, expiry)
+	cookie := &http.Cookie{
+		Name:     "session",
+		Value:    token,
 		Path:     "/",
-		MaxAge:   3600, // 1 hour session timeout
+		MaxAge:   3600,
 		HttpOnly: true,
-	})
+		SameSite: http.SameSiteLaxMode,
+	}
+	if strings.ToLower(a.Settings.Environment) == "production" {
+		cookie.Secure = true
+	}
+	http.SetCookie(w, cookie)
 }
 
 func (a *App) clearSession(w http.ResponseWriter) {
 	http.SetCookie(w, &http.Cookie{
-		Name:   "user_id",
-		Value:  "",
-		Path:   "/",
-		MaxAge: -1,
+		Name:     "session",
+		Value:    "",
+		Path:     "/",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: http.SameSiteLaxMode,
 	})
 }
 
@@ -272,6 +335,7 @@ var readingTypes = []string{
 	"BD",
 	"Light Novel",
 	"Webtoon",
+	"Manhwa",
 	"Autre",
 }
 
@@ -586,6 +650,154 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
+func (a *App) handleQuick(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+
+	rows, err := a.DB.Query(
+		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
+         FROM works WHERE user_id = ? AND status = 'En cours' AND COALESCE(is_adult, 0) = 0 ORDER BY LOWER(title) LIMIT 50`,
+		userID,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	var works []workRow
+	for rows.Next() {
+		var wRow workRow
+		if err := rows.Scan(
+			&wRow.ID,
+			&wRow.Title,
+			&wRow.Chapter,
+			&wRow.Link,
+			&wRow.Status,
+			&wRow.ImagePath,
+			&wRow.ReadingType,
+			&wRow.Rating,
+			&wRow.Notes,
+			&wRow.UserID,
+			&wRow.UpdatedAt,
+			&wRow.IsAdult,
+		); err != nil {
+			continue
+		}
+		works = append(works, wRow)
+	}
+
+	_ = a.Templates.ExecuteTemplate(w, "quick", a.mergeData(r, map[string]any{
+		"Works": works,
+	}))
+}
+
+type reminderRow struct {
+	ID        int
+	UserID    int
+	WorkID    int
+	WorkTitle string
+	RemindAt  string
+	CreatedAt string
+	Sent      int
+}
+
+func (a *App) handleReminders(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+
+	switch r.Method {
+	case http.MethodGet:
+		rows, err := a.DB.Query(
+			`SELECT r.id, r.user_id, r.work_id, w.title, r.remind_at, r.created_at, COALESCE(r.sent, 0)
+             FROM reminders r JOIN works w ON r.work_id = w.id
+             WHERE r.user_id = ? AND r.sent = 0 AND r.remind_at >= datetime('now')
+             ORDER BY r.remind_at ASC`,
+			userID,
+		)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		defer func() { _ = rows.Close() }()
+
+		var reminders []reminderRow
+		for rows.Next() {
+			var rr reminderRow
+			if err := rows.Scan(&rr.ID, &rr.UserID, &rr.WorkID, &rr.WorkTitle, &rr.RemindAt, &rr.CreatedAt, &rr.Sent); err != nil {
+				continue
+			}
+			reminders = append(reminders, rr)
+		}
+
+		worksRows, _ := a.DB.Query(
+			`SELECT id, title FROM works WHERE user_id = ? ORDER BY LOWER(title)`,
+			userID,
+		)
+		var worksForSelect []struct{ ID int; Title string }
+		if worksRows != nil {
+			defer func() { _ = worksRows.Close() }()
+			for worksRows.Next() {
+				var id int
+				var title string
+				if err := worksRows.Scan(&id, &title); err != nil {
+					continue
+				}
+				worksForSelect = append(worksForSelect, struct{ ID int; Title string }{id, title})
+			}
+		}
+
+		prefillWorkID := 0
+		if w := r.URL.Query().Get("work_id"); w != "" {
+			prefillWorkID, _ = strconv.Atoi(w)
+		}
+
+		_ = a.Templates.ExecuteTemplate(w, "reminders", a.mergeData(r, map[string]any{
+			"Reminders":     reminders,
+			"Works":         worksForSelect,
+			"PrefillWorkID": prefillWorkID,
+		}))
+	case http.MethodPost:
+		if err := r.ParseForm(); err != nil {
+			http.Redirect(w, r, "/reminders?error=1", http.StatusFound)
+			return
+		}
+		workID, _ := strconv.Atoi(r.FormValue("work_id"))
+		remindAt := strings.TrimSpace(r.FormValue("remind_at"))
+		if workID <= 0 || remindAt == "" {
+			http.Redirect(w, r, "/reminders?error=1", http.StatusFound)
+			return
+		}
+		var count int
+		if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&count); err != nil || count == 0 {
+			http.Redirect(w, r, "/reminders?error=1", http.StatusFound)
+			return
+		}
+		if _, err := a.DB.Exec(
+			`INSERT INTO reminders (user_id, work_id, remind_at) VALUES (?, ?, ?)`,
+			userID, workID, remindAt,
+		); err != nil {
+			http.Redirect(w, r, "/reminders?error=1", http.StatusFound)
+			return
+		}
+		http.Redirect(w, r, "/reminders", http.StatusFound)
+	default:
+		w.WriteHeader(http.StatusMethodNotAllowed)
+	}
+}
+
+func (a *App) handleRemindersDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost && r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, _ := a.currentUserID(r)
+	reminderID, _ := strconv.Atoi(r.PathValue("id"))
+	if _, err := a.DB.Exec(`DELETE FROM reminders WHERE id = ? AND user_id = ?`, reminderID, userID); err != nil {
+		http.Redirect(w, r, "/reminders", http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/reminders", http.StatusFound)
+}
+
 func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
@@ -605,10 +817,15 @@ func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		_, err := a.DB.Exec(
+		hashedPassword, err := hashPassword(password)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		_, err = a.DB.Exec(
 			`INSERT INTO users (username, password, validated, is_admin)
              VALUES (?, ?, 0, 0)`,
-			username, password, // TODO: hash du mot de passe
+			username, hashedPassword,
 		)
 		if err != nil {
 			// conflit de username, etc.
@@ -783,6 +1000,7 @@ func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
 		"IsAdmin":       isAdmin == 1,
 		"SortBy":        sortBy,
 		"AdultFilter":   adultFilter,
+		"SearchQuery":   r.URL.Query().Get("q"),
 	}))
 }
 
@@ -838,6 +1056,19 @@ func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 			results = append(results, catalogSearchResult{
 				Source:      "anilist",
 				ExternalID:  strconv.Itoa(m.ID),
+				Title:       m.Title,
+				ReadingType: m.ReadingType,
+				ImageURL:    m.ImageURL,
+				IsAdult:     m.IsAdult,
+			})
+		}
+	}
+	mangadexResults, err := catalog.SearchMangadex(q, 10)
+	if err == nil {
+		for _, m := range mangadexResults {
+			results = append(results, catalogSearchResult{
+				Source:      "mangadex",
+				ExternalID:  m.ID,
 				Title:       m.Title,
 				ReadingType: m.ReadingType,
 				ImageURL:    m.ImageURL,
@@ -908,6 +1139,26 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 				} else {
 					res, err := a.DB.Exec(
 						`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, 'anilist', ?)`,
+						title, readingType, imgURL, externalID,
+					)
+					if err == nil {
+						id, _ := res.LastInsertId()
+						catalogID.Int64 = id
+						catalogID.Valid = true
+					}
+				}
+			} else if source == "mangadex" && externalID != "" {
+				var existingID int64
+				err := a.DB.QueryRow(
+					`SELECT id FROM catalog WHERE source = 'mangadex' AND external_id = ? LIMIT 1`,
+					externalID,
+				).Scan(&existingID)
+				if err == nil {
+					catalogID.Int64 = existingID
+					catalogID.Valid = true
+				} else {
+					res, err := a.DB.Exec(
+						`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, 'mangadex', ?)`,
 						title, readingType, imgURL, externalID,
 					)
 					if err == nil {
@@ -1231,11 +1482,22 @@ func (a *App) handleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
 
-func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
+type exportWork struct {
+	Title       string `json:"title"`
+	Chapter     int    `json:"chapter"`
+	Link        string `json:"link,omitempty"`
+	Status      string `json:"status,omitempty"`
+	ReadingType string `json:"reading_type,omitempty"`
+	Rating      int    `json:"rating"`
+	Notes       string `json:"notes,omitempty"`
+	UpdatedAt   string `json:"updated_at,omitempty"`
+}
+
+func (a *App) handleExport(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	rows, err := a.DB.Query(
-		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes
+		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
          FROM works WHERE user_id = ? ORDER BY title`,
 		userID,
 	)
@@ -1245,45 +1507,58 @@ func (a *App) handleExportCSV(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = rows.Close() }()
 
-	// Set headers for CSV download
-	filename := fmt.Sprintf("bookstorage_export_%s.csv", time.Now().Format("2006-01-02"))
-	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
-	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"%s\"", filename))
+	var works []exportWork
+	for rows.Next() {
+		var w exportWork
+		var link, status, readingType, notes sql.NullString
+		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt); err != nil {
+			continue
+		}
+		if link.Valid {
+			w.Link = link.String
+		}
+		if status.Valid {
+			w.Status = status.String
+		}
+		if readingType.Valid {
+			w.ReadingType = readingType.String
+		}
+		if notes.Valid {
+			w.Notes = notes.String
+		}
+		works = append(works, w)
+	}
 
-	// Write BOM for Excel UTF-8 compatibility
-	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
-
-	writer := csv.NewWriter(w)
-	writer.Comma = ';' // Use semicolon for European Excel compatibility
-	defer writer.Flush()
-
-	// Write header
-	if err := writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"}); err != nil {
+	dateStr := time.Now().Format("2006-01-02")
+	if r.URL.Query().Get("format") == "json" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"bookstorage_export_%s.json\"", dateStr))
+		payload := map[string]any{
+			"works":       works,
+			"exported_at": time.Now().Format(time.RFC3339),
+		}
+		_ = json.NewEncoder(w).Encode(payload)
 		return
 	}
 
-	// Write data
-	for rows.Next() {
-		var title string
-		var chapter int
-		var link, status, readingType, notes sql.NullString
-		var rating int
-
-		if err := rows.Scan(&title, &chapter, &link, &status, &readingType, &rating, &notes); err != nil {
-			continue
-		}
-
-		if err := writer.Write([]string{
-			title,
-			strconv.Itoa(chapter),
-			link.String,
-			status.String,
-			readingType.String,
-			strconv.Itoa(rating),
-			notes.String,
-		}); err != nil {
-			return
-		}
+	// CSV
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"bookstorage_export_%s.csv\"", dateStr))
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writer := csv.NewWriter(w)
+	writer.Comma = ';'
+	defer writer.Flush()
+	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"})
+	for _, w := range works {
+		_ = writer.Write([]string{
+			w.Title,
+			strconv.Itoa(w.Chapter),
+			w.Link,
+			w.Status,
+			w.ReadingType,
+			strconv.Itoa(w.Rating),
+			w.Notes,
+		})
 	}
 }
 
@@ -1479,11 +1754,16 @@ func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			// NOTE : on garde un stockage en clair pour rester cohérent avec le reste de l’app Go.
-			updates["password"] = newPassword
+			hashedPassword, err := hashPassword(newPassword)
+			if err != nil {
+				http.Redirect(w, r, "/profile", http.StatusFound)
+				return
+			}
+			updates["password"] = hashedPassword
 		}
 
 		if requirePasswordCheck {
-			if currentPassword == "" || currentPassword != u.Password {
+			if currentPassword == "" || !verifyPassword(u.Password, currentPassword) {
 				http.Redirect(w, r, "/profile", http.StatusFound)
 				return
 			}

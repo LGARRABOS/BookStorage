@@ -11,6 +11,8 @@ import (
 
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
+
+	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
 // Version is set at compile time with -ldflags
@@ -31,6 +33,7 @@ USAGE
 OPTIONS
     -h, --help      Show this help
     -v, --version   Show version
+    -gen-vapid      Generate VAPID keys for Web Push
     -c, --config    Path to .env file (default: .env)
 
 ENVIRONMENT VARIABLES
@@ -79,6 +82,8 @@ func main() {
 	flag.BoolVar(&showHelp, "h", false, "Show help")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
 	flag.BoolVar(&showVersion, "v", false, "Show version")
+	var genVapid bool
+	flag.BoolVar(&genVapid, "gen-vapid", false, "Generate VAPID keys for Web Push")
 	flag.StringVar(&configPath, "config", "", "Path to .env file")
 	flag.StringVar(&configPath, "c", "", "Path to .env file")
 
@@ -93,6 +98,17 @@ func main() {
 
 	if showVersion {
 		printVersion()
+		os.Exit(0)
+	}
+
+	if genVapid {
+		privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
+		if err != nil {
+			log.Fatalf("generate vapid: %v", err)
+		}
+		fmt.Println("Add these to your .env for Web Push notifications:")
+		fmt.Println("BOOKSTORAGE_VAPID_PUBLIC=" + publicKey)
+		fmt.Println("BOOKSTORAGE_VAPID_PRIVATE=" + privateKey)
 		os.Exit(0)
 	}
 
@@ -136,6 +152,9 @@ func main() {
 	mux.HandleFunc("/login", app.handleLogin)
 	mux.HandleFunc("/logout", app.handleLogout)
 	mux.HandleFunc("/dashboard", app.requireLogin(app.handleDashboard))
+	mux.HandleFunc("/quick", app.requireLogin(app.handleQuick))
+	mux.HandleFunc("/reminders", app.requireLogin(app.handleReminders))
+	mux.HandleFunc("/reminders/delete/{id}", app.requireLogin(app.handleRemindersDelete))
 	mux.HandleFunc("/stats", app.requireLogin(app.handleStats))
 	mux.HandleFunc("/profile", app.requireLogin(app.handleProfile))
 	mux.HandleFunc("/users", app.requireLogin(app.handleUsers))
@@ -143,18 +162,28 @@ func main() {
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.requireLogin(app.handleImportWork))
 	mux.HandleFunc("/add_work", app.requireLogin(app.handleAddWork))
 	mux.HandleFunc("/api/catalog/search", app.requireLogin(app.handleCatalogSearch))
+	mux.HandleFunc("GET /api/works", app.requireLogin(app.handleAPIWorksList))
+	mux.HandleFunc("GET /api/works/{id}", app.requireLogin(app.handleAPIWorksDetail))
+	mux.HandleFunc("POST /api/works", app.requireLogin(app.handleAPIWorksCreate))
+	mux.HandleFunc("PATCH /api/works/{id}", app.requireLogin(app.handleAPIWorksUpdate))
+	mux.HandleFunc("DELETE /api/works/{id}", app.requireLogin(app.handleAPIWorksDelete))
+	mux.HandleFunc("GET /api/stats", app.requireLogin(app.handleAPIStats))
+	mux.HandleFunc("GET /api/push/vapid-public", app.handlePushVapidPublic)
+	mux.HandleFunc("POST /api/push/subscribe", app.requireLogin(app.handlePushSubscribe))
 	mux.HandleFunc("/edit/{id}", app.requireLogin(app.handleEditWork))
 	mux.HandleFunc("POST /api/increment/{id}", app.requireLogin(app.handleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.requireLogin(app.handleDecrement))
 	mux.HandleFunc("POST /api/set-chapter/{id}", app.requireLogin(app.handleSetChapter))
 	mux.HandleFunc("/delete/{id}", app.requireLogin(app.handleDeleteWork))
 	mux.HandleFunc("POST /api/delete/{id}", app.requireLogin(app.handleDeleteWorkAPI))
-	mux.HandleFunc("/export", app.requireLogin(app.handleExportCSV))
+	mux.HandleFunc("/export", app.requireLogin(app.handleExport))
 	mux.HandleFunc("POST /import", app.requireLogin(app.handleImportCSV))
 	mux.HandleFunc("/admin/accounts", app.requireAdmin(app.handleAdminAccounts))
 	mux.HandleFunc("/admin/approve/{id}", app.requireAdmin(app.handleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.requireAdmin(app.handleDeleteAccount))
 	mux.HandleFunc("/admin/promote/{id}", app.requireAdmin(app.handlePromoteAccount))
+
+	go app.runReminderPushWorker()
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)

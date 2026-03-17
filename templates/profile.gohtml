@@ -188,6 +188,7 @@
                         <div class="form-group">
                             <label>{{ if eq .Lang "fr" }}Exporter vos lectures{{ else }}Export your readings{{ end }}</label>
                             <a href="/export" class="btn btn-primary" style="display: inline-block; margin-top: 0.5rem;">📥 {{ if eq .Lang "fr" }}Télécharger CSV{{ else }}Download CSV{{ end }}</a>
+                            <a href="/export?format=json" class="btn btn-secondary" style="display: inline-block; margin-top: 0.5rem; margin-left: 0.5rem;">📥 {{ if eq .Lang "fr" }}Télécharger JSON{{ else }}Download JSON{{ end }}</a>
                             <p class="form-hint">{{ if eq .Lang "fr" }}Exporte toutes vos œuvres dans un fichier CSV compatible Excel{{ else }}Exports all your works to an Excel-compatible CSV file{{ end }}</p>
                         </div>
                         <div class="form-group">
