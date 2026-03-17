@@ -21,6 +21,7 @@ func T(lang string) Translations {
 var translationsFR = Translations{
 	// Navigation
 	"nav.dashboard": "Tableau de bord",
+	"nav.quick":     "Accès rapide",
 	"nav.stats":     "Statistiques",
 	"nav.readers":   "Lecteurs",
 	"nav.profile":   "Mon profil",
@@ -231,6 +232,7 @@ var translationsFR = Translations{
 var translationsEN = Translations{
 	// Navigation
 	"nav.dashboard": "Dashboard",
+	"nav.quick":     "Quick",
 	"nav.stats":     "Statistics",
 	"nav.readers":   "Readers",
 	"nav.profile":   "My Profile",

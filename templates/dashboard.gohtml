@@ -43,6 +43,18 @@
         .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); cursor: pointer; transition: border-color 0.2s ease; }
         .filter-group select:focus { outline: none; border-color: var(--primary); }
         .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+        .works-grid.view-list { display: flex; flex-direction: column; gap: 0.5rem; }
+        .works-grid.view-list .work-card { flex-direction: row; height: auto; min-height: 80px; }
+        .works-grid.view-list .work-cover { width: 60px; min-width: 60px; height: 80px; flex-shrink: 0; }
+        .works-grid.view-list .work-body { flex: 1; padding: 0.75rem 1rem; flex-direction: row; align-items: center; gap: 1rem; flex-wrap: wrap; }
+        .works-grid.view-list .work-title-row { margin-bottom: 0; flex: 1; min-width: 120px; }
+        .works-grid.view-list .work-chapter { margin-bottom: 0; }
+        .works-grid.view-list .work-rating-display { margin-bottom: 0; }
+        .works-grid.view-list .work-meta { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
+        .works-grid.view-list .work-badges { position: static; }
+        .view-toggle { display: flex; gap: 0.25rem; }
+        .view-toggle button { width: 36px; height: 36px; border: 1px solid var(--border-subtle); border-radius: 0.5rem; background: var(--background); cursor: pointer; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .view-toggle button:hover, .view-toggle button.active { background: var(--primary-muted); border-color: var(--primary); color: var(--primary); }
         .work-card { background: var(--surface); border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; display: flex; flex-direction: column; }
         .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
         .work-cover-link { display: block; text-decoration: none; cursor: pointer; }
@@ -67,6 +79,8 @@
         .work-meta { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
         .work-actions { display: flex; gap: 0.5rem; }
         .work-actions a { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: background 0.2s ease; }
+        .work-actions .reminder-btn { background: rgba(251, 191, 36, 0.15); color: #d97706; }
+        .work-actions .reminder-btn:hover { background: rgba(251, 191, 36, 0.25); }
         .work-actions .edit-btn { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
         .work-actions .edit-btn:hover { background: rgba(56, 189, 248, 0.25); }
         .work-actions .delete-btn { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
@@ -159,6 +173,8 @@
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
+                <a href="/quick">{{ t .T "nav.quick" }}</a>
+                <a href="/reminders">⏰ {{ if eq .Lang "fr" }}Rappels{{ else }}Reminders{{ end }}</a>
                 <a href="/stats">{{ t .T "nav.stats" }}</a>
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
@@ -217,7 +233,7 @@
 
             <div class="filters-bar">
                 <div class="search-box">
-                    <input type="text" id="search-input" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
+                    <input type="text" id="search-input" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off" value="{{ .SearchQuery }}">
                 </div>
                 <div class="filter-group">
                     <select id="status-filter">
@@ -236,6 +252,10 @@
                         <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
                         <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
                     </select>
+                    <div class="view-toggle" title="{{ if eq .Lang "fr" }}Vue grille / liste{{ else }}Grid / List view{{ end }}">
+                        <button type="button" id="view-grid-btn" class="active" aria-label="Grid">▦</button>
+                        <button type="button" id="view-list-btn" aria-label="List">☰</button>
+                    </div>
                     <select id="sort-select" onchange="applyDashboardFilters()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
@@ -251,7 +271,7 @@
             {{ if .Works }}
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
-                <article class="work-card" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
+                <article class="work-card" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ if .ImagePath.Valid }}
@@ -297,6 +317,7 @@
                         </div>
                         <div class="work-meta">
                             <div class="work-actions">
+                                <a href="/reminders?work_id={{ .ID }}" class="reminder-btn" title="{{ if eq $.Lang "fr" }}Rappel{{ else }}Reminder{{ end }}">⏰</a>
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
                                 <a href="/delete/{{ .ID }}" class="delete-btn" title="{{ t $.T "dashboard.delete" }}" onclick="return confirm('{{ t $.T "dashboard.delete.confirm" }}');">🗑️</a>
                             </div>
@@ -369,16 +390,18 @@
         const typeFilter = document.getElementById('type-filter');
         
         function filterWorks() {
-            const search = searchInput.value.toLowerCase();
+            const search = (searchInput?.value || '').toLowerCase().trim();
             const status = statusFilter.value;
             const type = typeFilter.value;
             
             cards.forEach(card => {
-                const title = card.querySelector('.work-card-title').textContent.toLowerCase();
+                const title = (card.querySelector('.work-card-title')?.textContent || '').toLowerCase();
+                const notes = (card.dataset.notes || '').toLowerCase();
+                const link = (card.dataset.link || '').toLowerCase();
                 const cardStatus = card.dataset.status || '';
                 const cardType = card.dataset.type || '';
                 
-                const matchSearch = title.includes(search);
+                const matchSearch = !search || title.includes(search) || notes.includes(search) || link.includes(search);
                 const matchStatus = !status || cardStatus === status;
                 const matchType = !type || cardType === type;
                 
@@ -390,6 +413,33 @@
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
         filterWorks();
+
+        const gridEl = document.getElementById('works-grid');
+        const viewGridBtn = document.getElementById('view-grid-btn');
+        const viewListBtn = document.getElementById('view-list-btn');
+        const viewMode = localStorage.getItem('viewMode') || 'grid';
+        if (gridEl) {
+            if (viewMode === 'list') {
+                gridEl.classList.add('view-list');
+                if (viewListBtn) viewListBtn.classList.add('active');
+                if (viewGridBtn) viewGridBtn.classList.remove('active');
+            } else {
+                if (viewGridBtn) viewGridBtn.classList.add('active');
+                if (viewListBtn) viewListBtn.classList.remove('active');
+            }
+        }
+        if (viewGridBtn) viewGridBtn.addEventListener('click', function() {
+            if (gridEl) gridEl.classList.remove('view-list');
+            viewGridBtn.classList.add('active');
+            if (viewListBtn) viewListBtn.classList.remove('active');
+            localStorage.setItem('viewMode', 'grid');
+        });
+        if (viewListBtn) viewListBtn.addEventListener('click', function() {
+            if (gridEl) gridEl.classList.add('view-list');
+            viewListBtn.classList.add('active');
+            if (viewGridBtn) viewGridBtn.classList.remove('active');
+            localStorage.setItem('viewMode', 'list');
+        });
 
         window.applyDashboardFilters = function() {
             const sortSelect = document.getElementById('sort-select');
@@ -659,21 +709,52 @@
             }
             
             switch(e.key.toLowerCase()) {
-                case 'n': // New work
+                case 'n':
+                case 'a':
+                case '+':
                     window.location.href = '/add_work';
+                    break;
+                case 'e': // Edit first visible work
+                    const cardsForEdit = document.querySelectorAll('.work-card');
+                    for (let i = 0; i < cardsForEdit.length; i++) {
+                        if (cardsForEdit[i].style.display !== 'none') {
+                            const editBtn = cardsForEdit[i].querySelector('.js-edit-work');
+                            if (editBtn) editBtn.click();
+                            break;
+                        }
+                    }
                     break;
                 case '/': // Focus search
                     e.preventDefault();
-                    document.getElementById('search-input').focus();
+                    const si = document.getElementById('search-input');
+                    if (si) { si.focus(); si.select(); }
                     break;
-                case 's': // Stats
+                case 'u':
+                    window.location.href = '/users';
+                    break;
+                case 's':
                     window.location.href = '/stats';
                     break;
-                case 'p': // Profile
+                case 'p':
                     window.location.href = '/profile';
                     break;
-                case '?': // Show help
-                    alert('{{ if eq .Lang "fr" }}Raccourcis clavier:\nN = Nouvelle œuvre\n/ = Rechercher\nS = Statistiques\nP = Profil\nEsc = Fermer{{ else }}Keyboard shortcuts:\nN = New work\n/ = Search\nS = Stats\nP = Profile\nEsc = Close{{ end }}');
+                case '1':
+                    if (statusFilter) { statusFilter.value = 'En cours'; filterWorks(); }
+                    break;
+                case '2':
+                    if (statusFilter) { statusFilter.value = 'Terminé'; filterWorks(); }
+                    break;
+                case '3':
+                    if (statusFilter) { statusFilter.value = 'En pause'; filterWorks(); }
+                    break;
+                case '4':
+                    if (statusFilter) { statusFilter.value = 'Abandonné'; filterWorks(); }
+                    break;
+                case '5':
+                    if (statusFilter) { statusFilter.value = 'À lire'; filterWorks(); }
+                    break;
+                case '?':
+                    alert('{{ if eq .Lang "fr" }}Raccourcis clavier:\nN / A / + = Nouvelle œuvre\n/ = Rechercher\nE = Éditer (1er visible)\nS = Statistiques\nP = Profil\nU = Utilisateurs\n1-5 = Filtrer par statut (En cours, Terminé, En pause, Abandonné, À lire)\nEsc = Fermer{{ else }}Keyboard shortcuts:\nN / A / + = New work\n/ = Search\nE = Edit (first visible)\nS = Stats\nP = Profile\nU = Users\n1-5 = Filter by status\nEsc = Close{{ end }}');
                     break;
             }
         });

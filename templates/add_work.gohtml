@@ -271,7 +271,7 @@
                                         var img = item.image_url
                                             ? '<img src="' + item.image_url.replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
                                             : '<span class="no-cover">📖</span>';
-                                        var badge = item.source === 'anilist' ? '<span class="badge">AniList</span>' : '<span class="badge">Catalogue</span>';
+                                        var badge = item.source === 'anilist' ? '<span class="badge">AniList</span>' : (item.source === 'mangadex' ? '<span class="badge">MangaDex</span>' : '<span class="badge">Catalogue</span>');
                                         var meta = (item.reading_type || '');
                                         if (item.is_adult) {
                                             meta = meta ? (meta + ' · 18+') : '18+';

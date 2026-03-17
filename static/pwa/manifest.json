@@ -27,5 +27,25 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["books", "lifestyle", "productivity"]
+  "categories": ["books", "lifestyle", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Ajouter",
+      "short_name": "Ajouter",
+      "url": "/add_work",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+    },
+    {
+      "name": "Statistiques",
+      "short_name": "Stats",
+      "url": "/stats",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+    },
+    {
+      "name": "Accès rapide",
+      "short_name": "Quick",
+      "url": "/quick",
+      "icons": [{ "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" }]
+    }
+  ]
 }
