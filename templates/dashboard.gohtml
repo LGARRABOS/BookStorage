@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <script src="/static/js/modals.js"></script>
+    <script src="/static/js/modals.js?v=2"></script>
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
@@ -694,6 +694,8 @@
             const confirmDel = e.target.closest('.js-confirm-delete');
             if (confirmDel) {
                 e.preventDefault();
+                e.stopPropagation();
+                e.stopImmediatePropagation();
                 const href = confirmDel.getAttribute('data-href') || confirmDel.getAttribute('href');
                 const msg = confirmDel.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
                 showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
@@ -732,7 +734,7 @@
                 e.preventDefault();
                 closeEditModal();
             }
-        });
+        }, true);
         if (modalBackdrop) modalBackdrop.addEventListener('click', closeEditModal);
         if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeEditModal);
         
