@@ -11,6 +11,7 @@
     <title>{{ t .T "admin.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/modals.js"></script>
     <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
@@ -64,7 +65,7 @@
                                     <div class="action-buttons">
                                         {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">{{ t $.T "admin.approve" }}</a>{{ end }}
                                         {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">{{ t $.T "admin.promote" }}</a>{{ end }}
-                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger" href="/admin/delete_account/{{ .ID }}" onclick="return confirm('{{ if eq $.Lang "fr" }}Supprimer cet utilisateur ?{{ else }}Delete this user?{{ end }}');">{{ t $.T "admin.delete" }}</a>{{ end }}
+                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger js-confirm-delete" href="/admin/delete_account/{{ .ID }}" data-href="/admin/delete_account/{{ .ID }}" data-confirm="{{ if eq $.Lang "fr" }}Supprimer cet utilisateur ?{{ else }}Delete this user?{{ end }}">{{ t $.T "admin.delete" }}</a>{{ end }}
                                     </div>
                                 </td>
                             </tr>
@@ -89,6 +90,15 @@
         }
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+            document.addEventListener('click', function(e) {
+                const del = e.target.closest('.js-confirm-delete');
+                if (del) {
+                    e.preventDefault();
+                    const href = del.getAttribute('data-href') || del.getAttribute('href');
+                    const msg = del.dataset.confirm || '{{ if eq .Lang "fr" }}Confirmer ?{{ else }}Confirm?{{ end }}';
+                    showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+                }
+            });
         });
     </script>
 </body>

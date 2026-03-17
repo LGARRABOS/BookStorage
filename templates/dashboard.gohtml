@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/modals.js"></script>
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
@@ -329,7 +330,7 @@
                             <div class="work-actions">
                                 <a href="/reminders?work_id={{ .ID }}" class="reminder-btn" title="{{ if eq $.Lang "fr" }}Rappel{{ else }}Reminder{{ end }}">⏰</a>
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
-                                <a href="/delete/{{ .ID }}" class="delete-btn" title="{{ t $.T "dashboard.delete" }}" onclick="return confirm('{{ t $.T "dashboard.delete.confirm" }}');">🗑️</a>
+                                <a href="/delete/{{ .ID }}" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-href="/delete/{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</a>
                             </div>
                         </div>
                     </div>
@@ -673,7 +674,7 @@
                                         closeEditModal();
                                         window.location.reload();
                                     } else if (data && !data.ok) {
-                                        alert(data.error || 'Erreur');
+                                        showAlert(data.error || '{{ if eq .Lang "fr" }}Erreur{{ else }}Error{{ end }}');
                                     }
                                 }).catch(err => {
                                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✓ {{ t .T "work.form.submit.edit" }}'; }
@@ -690,6 +691,14 @@
                 .catch(err => console.error(err));
         }
         document.addEventListener('click', function(e) {
+            const confirmDel = e.target.closest('.js-confirm-delete');
+            if (confirmDel) {
+                e.preventDefault();
+                const href = confirmDel.getAttribute('data-href') || confirmDel.getAttribute('href');
+                const msg = confirmDel.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
+                showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+                return;
+            }
             const editBtn = e.target.closest('.js-edit-work');
             if (editBtn) {
                 e.preventDefault();
@@ -701,19 +710,21 @@
                 e.preventDefault();
                 const deleteId = del.dataset.deleteId;
                 const confirmMsg = del.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
-                if (!confirm(confirmMsg)) return;
-                fetch('/api/delete/' + deleteId, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-                    .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.json(); })
-                    .then(data => {
-                        if (data && data.ok) {
-                            const cardEl = document.querySelector('.js-edit-work[data-edit-id="' + deleteId + '"]');
-                            if (cardEl) {
-                                const workCard = cardEl.closest('.work-card');
-                                if (workCard) { workCard.remove(); updateTotalChapters(); }
+                showConfirm(confirmMsg).then(function(ok) {
+                    if (!ok) return;
+                    fetch('/api/delete/' + deleteId, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.json(); })
+                        .then(data => {
+                            if (data && data.ok) {
+                                const cardEl = document.querySelector('.js-edit-work[data-edit-id="' + deleteId + '"]');
+                                if (cardEl) {
+                                    const workCard = cardEl.closest('.work-card');
+                                    if (workCard) { workCard.remove(); updateTotalChapters(); }
+                                }
+                                closeEditModal();
                             }
-                            closeEditModal();
-                        }
-                    });
+                        });
+                });
                 return;
             }
             const cancel = e.target.closest('.js-modal-cancel');

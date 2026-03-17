@@ -260,19 +260,18 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series
 
 ```
 BookStorage/
-├── main.go              # Entry point
-├── handlers.go          # HTTP routes
-├── bsctl                # Management CLI
-├── Makefile             # Make commands
-│
+├── cmd/bookstorage/     # Entry point
+│   └── main.go
 ├── internal/            # Internal packages
-│   ├── config/          # Configuration handling
-│   │   ├── config.go    # App settings
-│   │   └── site.go      # Site/legal config
-│   ├── database/        # Database handling
-│   │   └── database.go  # SQLite schema & operations
-│   └── i18n/            # Internationalization
-│       └── i18n.go      # Translations (FR/EN)
+│   ├── server/         # HTTP handlers, API, Push
+│   ├── config/         # Configuration handling
+│   ├── database/       # SQLite database
+│   ├── catalog/        # AniList, MangaDex
+│   └── i18n/           # Internationalization
+│
+├── scripts/
+│   └── bsctl           # Management CLI
+├── Makefile            # Make commands
 │
 ├── config/
 │   └── site.json.example  # Legal config template

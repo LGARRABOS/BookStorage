@@ -103,7 +103,7 @@ fi
 print_step "3/7" "Compilation de l'application..."
 
 go mod tidy > /dev/null 2>&1
-CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=1.0.0" -o $APP_NAME . > /dev/null 2>&1
+CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=1.0.0" -o $APP_NAME ./cmd/bookstorage > /dev/null 2>&1
 print_success "Application compilée"
 
 # ============================================================================
@@ -113,7 +113,7 @@ print_success "Application compilée"
 print_step "4/7" "Installation des binaires..."
 
 cp $APP_NAME /usr/local/bin/
-cp bsctl /usr/local/bin/
+cp scripts/bsctl /usr/local/bin/
 chmod +x /usr/local/bin/bsctl
 print_success "Binaires installés dans /usr/local/bin/"
 

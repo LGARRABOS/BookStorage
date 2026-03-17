@@ -256,9 +256,9 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series
 
 ```text
 BookStorage/
-├── main.go              # Point d'entrée
-├── handlers.go          # Routes HTTP
-├── bsctl                # CLI de gestion
+├── cmd/bookstorage/     # Point d'entrée
+│   └── main.go
+├── scripts/bsctl        # CLI de gestion
 ├── Makefile             # Commandes Make
 │
 ├── internal/            # Packages internes

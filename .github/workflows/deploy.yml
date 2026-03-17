@@ -32,13 +32,13 @@ jobs:
           GOOS: linux
           GOARCH: amd64
         run: |
-          go build -ldflags="-s -w" -o bookstorage .
+          go build -ldflags="-s -w" -o bookstorage ./cmd/bookstorage
 
       - name: Package artifacts
         run: |
           mkdir -p dist
           cp bookstorage dist/
-          cp bsctl dist/
+          cp scripts/bsctl dist/
           cp deploy/bookstorage.service dist/
           tar -czf bookstorage-linux-amd64.tar.gz -C dist .
 

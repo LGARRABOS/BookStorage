@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"encoding/json"
@@ -9,7 +9,7 @@ import (
 	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
-func (a *App) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -66,7 +66,7 @@ func (a *App) handlePushSubscribe(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte(`{"ok":true}`))
 }
 
-func (a *App) handlePushVapidPublic(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandlePushVapidPublic(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -79,7 +79,7 @@ func (a *App) handlePushVapidPublic(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(out)
 }
 
-func (a *App) runReminderPushWorker() {
+func (a *App) RunReminderPushWorker() {
 	if a.Settings.VAPIDPrivateKey == "" {
 		return
 	}
