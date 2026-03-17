@@ -223,7 +223,7 @@
                 <div class="filter-group">
                     <select id="status-filter">
                         <option value="">{{ t .T "dashboard.filter.all" }}</option>
-                        <option value="En cours">{{ t .T "status.reading" }}</option>
+                        <option value="En cours" selected>{{ t .T "status.reading" }}</option>
                         <option value="Terminé">{{ t .T "status.completed" }}</option>
                         <option value="En pause">{{ t .T "status.on_hold" }}</option>
                         <option value="Abandonné">{{ t .T "status.dropped" }}</option>
@@ -393,6 +393,7 @@
         if (searchInput) searchInput.addEventListener('input', filterWorks);
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
+        filterWorks();
 
         window.applyDashboardFilters = function() {
             const sortSelect = document.getElementById('sort-select');
