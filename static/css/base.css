@@ -24,34 +24,34 @@
   font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Custom scrollbar - large and easy to grab */
+/* Custom scrollbar - easy to grab, subtle design */
 * {
   scrollbar-width: auto;
-  scrollbar-color: var(--primary) var(--border-subtle);
+  scrollbar-color: rgba(148, 163, 184, 0.5) transparent;
 }
 
 *::-webkit-scrollbar {
-  width: 18px;
-  height: 18px;
+  width: 16px;
+  height: 16px;
 }
 
 *::-webkit-scrollbar-track {
-  background: var(--border-subtle);
-  border-radius: 9px;
+  background: transparent;
 }
 
 *::-webkit-scrollbar-thumb {
-  background: var(--primary);
-  border-radius: 9px;
+  background: rgba(148, 163, 184, 0.35);
+  border-radius: 8px;
   min-height: 48px;
+  transition: background 0.2s ease;
 }
 
 *::-webkit-scrollbar-thumb:hover {
-  background: var(--primary-dark);
+  background: rgba(79, 70, 229, 0.35);
 }
 
 *::-webkit-scrollbar-thumb:active {
-  background: var(--primary-dark);
+  background: rgba(79, 70, 229, 0.5);
 }
 
 /* Dark Mode */
@@ -149,6 +149,22 @@
 
 [data-theme="dark"] .external-link:hover {
   color: #a5b4fc;
+}
+
+[data-theme="dark"] * {
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.3);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb:hover {
+  background: rgba(129, 140, 248, 0.4);
+}
+
+[data-theme="dark"] *::-webkit-scrollbar-thumb:active {
+  background: rgba(129, 140, 248, 0.5);
 }
 
 [data-theme="dark"] input,
