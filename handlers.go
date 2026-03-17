@@ -1139,6 +1139,37 @@ func (a *App) handleDecrement(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
+func (a *App) handleSetChapter(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, _ := a.currentUserID(r)
+	workID, _ := strconv.Atoi(r.PathValue("id"))
+
+	chapterStr := r.FormValue("chapter")
+	if chapterStr == "" {
+		chapterStr = "0"
+	}
+	chapter, err := strconv.Atoi(chapterStr)
+	if err != nil || chapter < 0 {
+		chapter = 0
+	}
+	if chapter > 9999 {
+		chapter = 9999
+	}
+
+	_, err = a.DB.Exec(
+		`UPDATE works SET chapter = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+		chapter, workID, userID,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	_, _ = w.Write([]byte("ok"))
+}
+
 func (a *App) handleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
