@@ -1,0 +1,9 @@
+{{ define "edit_work_modal" }}
+<div class="edit-modal-content">
+    <div class="edit-modal-header">
+        <h2>✏️ {{ t .T "work.edit.title" }}</h2>
+        <p class="edit-modal-subtitle">{{ .Work.Title }}</p>
+    </div>
+    {{ template "edit_work_form" . }}
+</div>
+{{ end }}

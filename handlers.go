@@ -1008,6 +1008,15 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
+		if r.URL.Query().Get("format") == "partial" {
+			_ = a.Templates.ExecuteTemplate(w, "edit_work_modal", a.mergeData(r, map[string]any{
+				"Work":         work,
+				"ReadingTypes": readingTypes,
+				"Statuses":     readingStatuses,
+				"IsModal":      true,
+			}))
+			return
+		}
 		_ = a.Templates.ExecuteTemplate(w, "edit_work", a.mergeData(r, map[string]any{
 			"Work":         work,
 			"ReadingTypes": readingTypes,
@@ -1021,6 +1030,12 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		title := strings.TrimSpace(r.FormValue("title"))
 		if title == "" {
+			if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusBadRequest)
+				_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "title_required"})
+				return
+			}
 			http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
 			return
 		}
@@ -1090,13 +1105,43 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 			)
 		}
 		if err != nil {
+			if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusInternalServerError)
+				_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "update_failed"})
+				return
+			}
 			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+			w.Header().Set("Content-Type", "application/json")
+			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			return
 		}
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+func (a *App) handleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, _ := a.currentUserID(r)
+	workID, _ := strconv.Atoi(r.PathValue("id"))
+
+	_, err := a.DB.Exec(`DELETE FROM works WHERE id = ? AND user_id = ?`, workID, userID)
+	if err != nil {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusInternalServerError)
+		_ = json.NewEncoder(w).Encode(map[string]any{"ok": false})
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 }
 
 func (a *App) handleIncrement(w http.ResponseWriter, r *http.Request) {
