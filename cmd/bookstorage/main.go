@@ -153,7 +153,6 @@ func main() {
 	mux.HandleFunc("/login", app.HandleLogin)
 	mux.HandleFunc("/logout", app.HandleLogout)
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
-	mux.HandleFunc("/quick", app.RequireLogin(app.HandleQuick))
 	mux.HandleFunc("/reminders", app.RequireLogin(app.HandleReminders))
 	mux.HandleFunc("/reminders/delete/{id}", app.RequireLogin(app.HandleRemindersDelete))
 	mux.HandleFunc("/stats", app.RequireLogin(app.HandleStats))

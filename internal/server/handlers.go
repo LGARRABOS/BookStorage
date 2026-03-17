@@ -650,47 +650,6 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-func (a *App) HandleQuick(w http.ResponseWriter, r *http.Request) {
-	userID, _ := a.currentUserID(r)
-
-	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
-         FROM works WHERE user_id = ? AND status = 'En cours' AND COALESCE(is_adult, 0) = 0 ORDER BY LOWER(title) LIMIT 50`,
-		userID,
-	)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	defer func() { _ = rows.Close() }()
-
-	var works []workRow
-	for rows.Next() {
-		var wRow workRow
-		if err := rows.Scan(
-			&wRow.ID,
-			&wRow.Title,
-			&wRow.Chapter,
-			&wRow.Link,
-			&wRow.Status,
-			&wRow.ImagePath,
-			&wRow.ReadingType,
-			&wRow.Rating,
-			&wRow.Notes,
-			&wRow.UserID,
-			&wRow.UpdatedAt,
-			&wRow.IsAdult,
-		); err != nil {
-			continue
-		}
-		works = append(works, wRow)
-	}
-
-	_ = a.Templates.ExecuteTemplate(w, "quick", a.mergeData(r, map[string]any{
-		"Works": works,
-	}))
-}
-
 type reminderRow struct {
 	ID        int
 	UserID    int
@@ -1712,8 +1671,21 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
+		// Stats pour le profil
+		var totalWorks int
+		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
+		var totalChapters int
+		_ = a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters)
+		var completedCount int
+		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'Terminé' OR status = 'Completed')`, userID).Scan(&completedCount)
+		var readingCount int
+		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
 		_ = a.Templates.ExecuteTemplate(w, "profile", a.mergeData(r, map[string]any{
-			"User": u,
+			"User":           u,
+			"TotalWorks":     totalWorks,
+			"TotalChapters":  totalChapters,
+			"CompletedCount": completedCount,
+			"ReadingCount":   readingCount,
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
