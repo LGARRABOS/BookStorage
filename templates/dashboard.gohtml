@@ -76,7 +76,9 @@
         .chapter-btn { width: 26px; height: 26px; border: none; background: transparent; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.15s ease; color: var(--text-muted); }
         .chapter-btn:hover { background: var(--primary-muted); color: var(--primary); }
         .chapter-btn:active { transform: scale(0.9); }
-        .chapter-value { min-width: 2rem; text-align: center; font-size: 0.95rem; padding: 0 0.25rem; border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); }
+        .chapter-value { min-width: 2rem; text-align: center; font-size: 0.95rem; padding: 0 0.25rem; border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); cursor: pointer; user-select: none; }
+        .chapter-value:hover { background: var(--primary-muted); }
+        .chapter-value-input { width: 2.5rem; min-width: 2rem; text-align: center; font-size: 0.95rem; font-weight: 600; padding: 0 0.25rem; border: 1px solid var(--primary); border-radius: 0.25rem; background: var(--surface); color: var(--text-primary); }
         .empty-state { text-align: center; padding: 4rem 2rem; background: var(--surface); border-radius: 1.5rem; border: 2px dashed var(--border-subtle); }
         .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
         .empty-state h2 { font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.5rem; }
@@ -95,6 +97,8 @@
         [data-theme="dark"] .chapter-controls { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .chapter-btn:hover { background: rgba(129, 140, 248, 0.2); color: #a5b4fc; }
         [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
+        [data-theme="dark"] .chapter-value:hover { background: rgba(129, 140, 248, 0.2); }
+        [data-theme="dark"] .chapter-value-input { background: rgba(15, 23, 42, 0.8); border-color: #818cf8; color: #f1f5f9; }
         @media (max-width: 768px) {
             .dashboard-header { flex-direction: column; align-items: stretch; }
             .header-actions { justify-content: stretch; }
@@ -235,7 +239,7 @@
                             {{ t $.T "dashboard.chapter" }}
                             <div class="chapter-controls">
                                 <button class="chapter-btn minus" data-id="{{ .ID }}" title="-1">−</button>
-                                <strong class="chapter-value" data-id="{{ .ID }}">{{ .Chapter }}</strong>
+                                <strong class="chapter-value" data-id="{{ .ID }}" title="{{ if eq $.Lang "fr" }}Cliquer pour modifier{{ else }}Click to edit{{ end }}">{{ .Chapter }}</strong>
                                 <button class="chapter-btn plus" data-id="{{ .ID }}" title="+1">+</button>
                             </div>
                         </div>
@@ -392,6 +396,59 @@
                         updateTotalChapters();
                     }
                 } catch (err) { console.error(err); }
+            });
+        });
+        
+        // Click on chapter value to edit directly (max 4 digits) - event delegation
+        document.addEventListener('click', function(e) {
+            const el = e.target.closest('.chapter-value');
+            if (!el || el.tagName === 'INPUT') return;
+            e.preventDefault();
+            const id = el.dataset.id;
+            const card = el.closest('.work-card');
+            const currentVal = (parseInt(el.textContent) || 0).toString();
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.inputMode = 'numeric';
+            input.pattern = '[0-9]*';
+            input.className = 'chapter-value-input';
+            input.value = currentVal;
+            input.dataset.id = id;
+            input.maxLength = 4;
+            input.style.borderLeft = '1px solid var(--border-subtle)';
+            input.style.borderRight = '1px solid var(--border-subtle)';
+            el.replaceWith(input);
+            input.focus();
+            input.select();
+            function submitVal() {
+                let val = input.value.replace(/\D/g, '');
+                if (val.length > 4) val = val.slice(0, 4);
+                const num = parseInt(val) || 0;
+                const strong = document.createElement('strong');
+                strong.className = 'chapter-value';
+                strong.dataset.id = id;
+                strong.textContent = num;
+                strong.title = document.documentElement.lang === 'fr' ? 'Cliquer pour modifier' : 'Click to edit';
+                input.replaceWith(strong);
+                card.dataset.chapter = num;
+                if (num !== (parseInt(currentVal) || 0)) {
+                    fetch('/api/set-chapter/'+id, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                        body: 'chapter=' + num
+                    }).then(resp => {
+                        if (resp.status === 401) { window.location.href = '/login?expired=1'; return; }
+                        if (resp.ok) updateTotalChapters();
+                    }).catch(err => console.error(err));
+                }
+            }
+            input.addEventListener('blur', submitVal);
+            input.addEventListener('keydown', function(ev) {
+                if (ev.key === 'Enter') { ev.preventDefault(); input.blur(); }
+                if (ev.key === 'Escape') { input.value = currentVal; input.blur(); }
+            });
+            input.addEventListener('input', function() {
+                this.value = this.value.replace(/\D/g, '').slice(0, 4);
             });
         });
         

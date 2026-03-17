@@ -146,6 +146,7 @@ func main() {
 	mux.HandleFunc("/edit/{id}", app.requireLogin(app.handleEditWork))
 	mux.HandleFunc("POST /api/increment/{id}", app.requireLogin(app.handleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.requireLogin(app.handleDecrement))
+	mux.HandleFunc("POST /api/set-chapter/{id}", app.requireLogin(app.handleSetChapter))
 	mux.HandleFunc("/delete/{id}", app.requireLogin(app.handleDeleteWork))
 	mux.HandleFunc("/export", app.requireLogin(app.handleExportCSV))
 	mux.HandleFunc("POST /import", app.requireLogin(app.handleImportCSV))
