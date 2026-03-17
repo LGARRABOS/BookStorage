@@ -1,0 +1,101 @@
+{{ define "edit_work_form" }}
+<form method="POST" action="/edit/{{ .Work.ID }}" enctype="multipart/form-data" class="edit-work-form">
+    <div class="form-card">
+        <div class="form-card-header"><div class="icon blue">📖</div><div><h2>{{ t .T "work.section.info" }}</h2></div></div>
+        <div class="form-group">
+            <label for="title">{{ t .T "work.form.title" }} <span class="required">*</span></label>
+            <input id="title" type="text" name="title" value="{{ .Work.Title }}" required>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="chapter">{{ t .T "work.form.chapter" }}</label>
+                <input id="chapter" type="number" name="chapter" min="0" value="{{ .Work.Chapter }}">
+            </div>
+            <div class="form-group">
+                <label for="status">{{ t .T "work.form.status" }}</label>
+                <select id="status" name="status">
+                    {{ $currentStatus := "" }}{{ if .Work.Status.Valid }}{{ $currentStatus = .Work.Status.String }}{{ end }}
+                    {{ range .Statuses }}<option value="{{ . }}" {{ if eq . $currentStatus }}selected{{ end }}>{{ translateStatus . $.Lang }}</option>{{ end }}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="reading_type">{{ t .T "work.form.type" }}</label>
+                <select id="reading_type" name="reading_type">
+                    {{ $currentType := "Roman" }}{{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
+                    {{ range .ReadingTypes }}<option value="{{ . }}" {{ if eq . $currentType }}selected{{ end }}>{{ . }}</option>{{ end }}
+                </select>
+            </div>
+            <div class="form-group">
+                <label for="is_adult">{{ t .T "work.form.adult" }}</label>
+                <div>
+                    <label style="display:flex;align-items:center;gap:0.4rem;">
+                        <input id="is_adult" type="checkbox" name="is_adult" value="1" {{ if and .Work.IsAdult.Valid (eq .Work.IsAdult.Int64 1) }}checked{{ end }}>
+                        <span>{{ if eq .Lang "fr" }}Cocher si l'œuvre contient du contenu réservé aux adultes.{{ else }}Check if this work contains adult-only content.{{ end }}</span>
+                    </label>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-header"><div class="icon purple">🔗</div><div><h2>{{ t .T "work.section.media" }}</h2></div></div>
+        <div class="form-group">
+            <label for="link">{{ if eq .Lang "fr" }}Lien de lecture{{ else }}Reading link{{ end }}</label>
+            <input id="link" type="url" name="link" value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}">
+        </div>
+        <div class="form-group">
+            <label for="image_url">{{ if eq .Lang "fr" }}URL de l'image{{ else }}Image URL{{ end }}</label>
+            <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" onchange="previewImageUrl(this)">
+        </div>
+        <div class="form-group">
+            <label>{{ if eq .Lang "fr" }}Ou télécharger une image{{ else }}Or upload an image{{ end }}</label>
+            <div class="image-section">
+                <div class="current-image">
+                    {{ if .Work.ImagePath.Valid }}{{ $imgUrl := work_image_url .Work.ImagePath.String }}{{ if $imgUrl }}<img src="{{ $imgUrl }}" alt="Cover"><p>{{ t .T "work.form.image.current" }}</p>{{ else }}<div class="no-image">📖</div>{{ end }}{{ else }}<div class="no-image">📖</div>{{ end }}
+                </div>
+                <div>
+                    <div class="image-upload-area" onclick="document.getElementById('image').click()">
+                        <div class="upload-icon">📤</div>
+                        <p>{{ t .T "work.form.image.change" }}</p>
+                        <input id="image" type="file" name="image" accept="image/*" onchange="previewImage(this)">
+                    </div>
+                    <div class="image-preview" id="image-preview"><img src="" alt="New"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-card">
+        <div class="form-card-header"><div class="icon orange">⭐</div><div><h2>{{ t .T "work.section.rating" }}</h2></div></div>
+        <div class="form-group">
+            <label>{{ t .T "work.form.rating" }}</label>
+            {{ $rating := .Work.Rating }}
+            <div class="star-rating-picker" id="star-picker">
+                <input type="hidden" name="rating" id="rating-value" value="{{ $rating }}">
+                <div class="stars">
+                    <span class="star {{ if ge $rating 1 }}active{{ end }}" data-value="1">★</span>
+                    <span class="star {{ if ge $rating 2 }}active{{ end }}" data-value="2">★</span>
+                    <span class="star {{ if ge $rating 3 }}active{{ end }}" data-value="3">★</span>
+                    <span class="star {{ if ge $rating 4 }}active{{ end }}" data-value="4">★</span>
+                    <span class="star {{ if ge $rating 5 }}active{{ end }}" data-value="5">★</span>
+                </div>
+                <button type="button" class="clear-btn" onclick="clearRating()">{{ if eq .Lang "fr" }}Effacer{{ else }}Clear{{ end }}</button>
+            </div>
+        </div>
+        <div class="form-group">
+            <label for="notes">{{ t .T "work.form.notes" }}</label>
+            <textarea id="notes" name="notes">{{ if .Work.Notes.Valid }}{{ .Work.Notes.String }}{{ end }}</textarea>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <div class="form-actions-left">
+            <a href="/delete/{{ .Work.ID }}" class="btn btn-danger js-modal-delete" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}" {{ if not .IsModal }}onclick="return confirm('{{ t .T "dashboard.delete.confirm" }}');"{{ end }}>🗑️ {{ t .T "work.form.delete" }}</a>
+        </div>
+        <div class="form-actions-right">
+            <a href="/dashboard" class="btn btn-secondary js-modal-cancel">{{ t .T "common.cancel" }}</a>
+            <button type="submit" class="btn btn-primary">✓ {{ t .T "work.form.submit.edit" }}</button>
+        </div>
+    </div>
+</form>
+{{ end }}
