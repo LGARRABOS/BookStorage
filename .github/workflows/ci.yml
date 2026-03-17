@@ -102,24 +102,31 @@ jobs:
         run: go mod download
 
       - name: Start application
+        env:
+          BOOKSTORAGE_HOST: 127.0.0.1
+          BOOKSTORAGE_PORT: 5000
+          BOOKSTORAGE_DATABASE: /tmp/bookstorage-ci.db
+          BOOKSTORAGE_SECRET_KEY: ci-secret-key-for-smoke-tests
         run: |
           set -e
           go run . &
           APP_PID=$!
           echo "App PID: $APP_PID"
-          # Wait for the server to start (polling)
-          for i in $(seq 1 15); do
+          # Wait for the server to start (polling, up to 60s)
+          READY=0
+          for i in $(seq 1 30); do
             if curl -sSf http://127.0.0.1:5000/ >/dev/null 2>&1; then
               READY=1
+              echo "Server ready after ${i} attempts"
               break
             fi
-            echo "Waiting for server to be ready..."
+            echo "Waiting for server to be ready... ($i/30)"
             sleep 2
           done
 
-          if [ "${READY:-0}" != "1" ]; then
-            echo "Server did not start in time"
-            kill $APP_PID || true
+          if [ "${READY}" != "1" ]; then
+            echo "Server did not start in 60s"
+            kill $APP_PID 2>/dev/null || true
             exit 1
           fi
 
@@ -128,5 +135,5 @@ jobs:
           curl -sSf http://127.0.0.1:5000/login >/dev/null
           curl -sSf http://127.0.0.1:5000/register >/dev/null
 
-          kill $APP_PID || true
+          kill $APP_PID 2>/dev/null || true
 
