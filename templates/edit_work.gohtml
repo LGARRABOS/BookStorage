@@ -10,6 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ t .T "work.edit.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/modals.js"></script>
     <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
     <style>
         .form-page { max-width: 900px; margin: 0 auto; }
@@ -127,6 +128,15 @@
         }
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+            document.addEventListener('click', function(e) {
+                const del = e.target.closest('.js-confirm-delete');
+                if (del) {
+                    e.preventDefault();
+                    const href = del.getAttribute('data-href') || del.getAttribute('href');
+                    const msg = del.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
+                    showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+                }
+            });
             const picker = document.getElementById('star-picker'), input = document.getElementById('rating-value'), stars = picker.querySelectorAll('.star');
             function updateStars(r) { stars.forEach((s, i) => s.classList.toggle('active', i < r)); }
             stars.forEach(star => {

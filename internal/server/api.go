@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"database/sql"
@@ -30,7 +30,7 @@ func (a *App) apiWriteError(w http.ResponseWriter, status int, errMsg string) {
 	a.apiWriteJSON(w, status, map[string]string{"error": errMsg})
 }
 
-func (a *App) handleAPIWorksList(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
@@ -87,7 +87,7 @@ func (a *App) handleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": works})
 }
 
-func (a *App) handleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
@@ -126,7 +126,7 @@ func (a *App) handleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": work})
 }
 
-func (a *App) handleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
@@ -200,7 +200,7 @@ func nullIfEmpty(s string) interface{} {
 	return s
 }
 
-func (a *App) handleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPatch {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
@@ -275,10 +275,10 @@ func (a *App) handleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.handleAPIWorksDetail(w, r)
+	a.HandleAPIWorksDetail(w, r)
 }
 
-func (a *App) handleAPIWorksDelete(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIWorksDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodDelete {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
@@ -300,7 +300,7 @@ func (a *App) handleAPIWorksDelete(w http.ResponseWriter, r *http.Request) {
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true})
 }
 
-func (a *App) handleAPIStats(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAPIStats(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return

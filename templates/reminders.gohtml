@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ if eq .Lang "fr" }}Mes rappels{{ else }}My reminders{{ end }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/modals.js"></script>
     <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
     <style>
         .reminders-section { margin-bottom: 2rem; }
@@ -89,7 +90,7 @@
                             <strong>{{ .WorkTitle }}</strong>
                             <span>{{ .RemindAt }}</span>
                         </div>
-                        <a href="/reminders/delete/{{ .ID }}" class="reminder-delete" onclick="return confirm('{{ if eq $.Lang "fr" }}Supprimer ce rappel ?{{ else }}Delete this reminder?{{ end }}');">{{ if eq $.Lang "fr" }}Supprimer{{ else }}Delete{{ end }}</a>
+                        <a href="/reminders/delete/{{ .ID }}" class="reminder-delete js-confirm-delete" data-href="/reminders/delete/{{ .ID }}" data-confirm="{{ if eq $.Lang "fr" }}Supprimer ce rappel ?{{ else }}Delete this reminder?{{ end }}">{{ if eq $.Lang "fr" }}Supprimer{{ else }}Delete{{ end }}</a>
                     </div>
                     {{ end }}
                     {{ else }}
@@ -110,6 +111,16 @@
             document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
         }
         document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
+
+        document.addEventListener('click', function(e) {
+            const del = e.target.closest('.js-confirm-delete');
+            if (del) {
+                e.preventDefault();
+                const href = del.getAttribute('data-href') || del.getAttribute('href');
+                const msg = del.dataset.confirm || '{{ if eq .Lang "fr" }}Confirmer ?{{ else }}Confirm?{{ end }}';
+                showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+            }
+        });
 
         document.getElementById('enable-push-btn').addEventListener('click', async function() {
             var status = document.getElementById('push-status');

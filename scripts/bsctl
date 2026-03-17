@@ -102,19 +102,19 @@ cmd_version() {
 
 cmd_build() {
     print_info "Compiling..."
-    go build -o ${APP_NAME} .
+    go build -o ${APP_NAME} ./cmd/bookstorage
     print_success "Build complete: ./${APP_NAME}"
 }
 
 cmd_build_prod() {
     print_info "Compiling for production..."
-    CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} .
+    CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
     print_success "Optimized binary created: ./${APP_NAME}"
 }
 
 cmd_run() {
     print_info "Starting development server..."
-    go run .
+    go run ./cmd/bookstorage
 }
 
 cmd_clean() {
@@ -127,6 +127,8 @@ cmd_install() {
     print_info "Installing ${APP_NAME} service..."
     cmd_build_prod
     cp ${APP_NAME} ${BIN_DIR}/
+    cp scripts/bsctl ${BIN_DIR}/
+    chmod +x ${BIN_DIR}/bsctl
     cp deploy/bookstorage.service /etc/systemd/system/
     systemctl daemon-reload
     systemctl enable ${APP_NAME}
@@ -145,6 +147,7 @@ cmd_uninstall() {
     systemctl disable ${APP_NAME} 2>/dev/null || true
     rm -f /etc/systemd/system/bookstorage.service
     rm -f ${BIN_DIR}/${APP_NAME}
+    rm -f ${BIN_DIR}/bsctl
     systemctl daemon-reload
     print_success "Service uninstalled"
 }
@@ -166,7 +169,7 @@ cmd_update() {
     printf "\n"
     
     print_step "4/6" "Updating bsctl script..."
-    cp bsctl ${BIN_DIR}/
+    cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
     print_success "bsctl updated"
     printf "\n"

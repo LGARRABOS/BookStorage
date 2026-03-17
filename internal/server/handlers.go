@@ -1,4 +1,4 @@
-package main
+package server
 
 import (
 	"bytes"
@@ -248,7 +248,7 @@ func (a *App) setLang(w http.ResponseWriter, lang string) {
 	})
 }
 
-func (a *App) handleSetLanguage(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 	lang := r.PathValue("lang")
 	if lang != i18n.LangFR && lang != i18n.LangEN {
 		lang = i18n.DefaultLang
@@ -309,7 +309,7 @@ func (a *App) clearSession(w http.ResponseWriter) {
 	})
 }
 
-func (a *App) requireLogin(next http.HandlerFunc) http.HandlerFunc {
+func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := a.currentUserID(r)
 		if !ok {
@@ -401,7 +401,7 @@ func workImageURL(s *config.Settings, storedPath string) string {
 	return "/static/" + strings.TrimPrefix(normalized, "/")
 }
 
-func (a *App) requireAdmin(next http.HandlerFunc) http.HandlerFunc {
+func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := a.currentUserID(r)
 		if !ok {
@@ -496,7 +496,7 @@ func (a *App) writeErrorResponse(w http.ResponseWriter, r *http.Request, status 
 	_ = a.Templates.ExecuteTemplate(w, templateName, data)
 }
 
-func (a *App) withErrorPages(next http.Handler) http.Handler {
+func (a *App) WithErrorPages(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		rec := newResponseRecorder()
 		var panicked bool
@@ -544,7 +544,7 @@ func (a *App) withErrorPages(next http.Handler) http.Handler {
 	})
 }
 
-func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
 	if _, ok := a.currentUserID(r); ok {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 		return
@@ -553,7 +553,7 @@ func (a *App) handleHome(w http.ResponseWriter, r *http.Request) {
 	_ = a.Templates.ExecuteTemplate(w, "landing", a.baseData(r))
 }
 
-func (a *App) handleLegal(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleLegal(w http.ResponseWriter, r *http.Request) {
 	data := a.baseData(r)
 	data["Legal"] = a.SiteConfig.Legal
 	data["SiteName"] = a.SiteConfig.SiteName
@@ -561,7 +561,7 @@ func (a *App) handleLegal(w http.ResponseWriter, r *http.Request) {
 	_ = a.Templates.ExecuteTemplate(w, "legal", data)
 }
 
-func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	// Statistiques globales
@@ -650,7 +650,7 @@ func (a *App) handleStats(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-func (a *App) handleQuick(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleQuick(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	rows, err := a.DB.Query(
@@ -701,7 +701,7 @@ type reminderRow struct {
 	Sent      int
 }
 
-func (a *App) handleReminders(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleReminders(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	switch r.Method {
@@ -784,7 +784,7 @@ func (a *App) handleReminders(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) handleRemindersDelete(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleRemindersDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost && r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -798,7 +798,7 @@ func (a *App) handleRemindersDelete(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/reminders", http.StatusFound)
 }
 
-func (a *App) handleRegister(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		// Messages de feedback via query string
@@ -848,7 +848,7 @@ type userRow struct {
 	IsSuperadmin int
 }
 
-func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		// Messages de feedback via query string
@@ -894,7 +894,7 @@ func (a *App) handleLogin(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) handleLogout(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleLogout(w http.ResponseWriter, r *http.Request) {
 	a.clearSession(w)
 	http.Redirect(w, r, "/", http.StatusFound)
 }
@@ -914,7 +914,7 @@ type workRow struct {
 	IsAdult     sql.NullInt64
 }
 
-func (a *App) handleDashboard(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	// Vérifier si l'utilisateur est admin
@@ -1015,7 +1015,7 @@ type catalogSearchResult struct {
 	IsAdult     bool   `json:"is_adult"`
 }
 
-func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1080,7 +1080,7 @@ func (a *App) handleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 }
 
-func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		_ = a.Templates.ExecuteTemplate(w, "add_work", a.mergeData(r, map[string]any{
@@ -1230,7 +1230,7 @@ func (a *App) handleAddWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
@@ -1376,7 +1376,7 @@ func (a *App) handleEditWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) handleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1395,7 +1395,7 @@ func (a *App) handleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 }
 
-func (a *App) handleIncrement(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleIncrement(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1414,7 +1414,7 @@ func (a *App) handleIncrement(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
-func (a *App) handleDecrement(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleDecrement(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1435,7 +1435,7 @@ func (a *App) handleDecrement(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
-func (a *App) handleSetChapter(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1466,7 +1466,7 @@ func (a *App) handleSetChapter(w http.ResponseWriter, r *http.Request) {
 	_, _ = w.Write([]byte("ok"))
 }
 
-func (a *App) handleDeleteWork(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1493,7 +1493,7 @@ type exportWork struct {
 	UpdatedAt   string `json:"updated_at,omitempty"`
 }
 
-func (a *App) handleExport(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	rows, err := a.DB.Query(
@@ -1562,7 +1562,7 @@ func (a *App) handleExport(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) handleImportCSV(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleImportCSV(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -1683,7 +1683,7 @@ func deleteMediaFile(folder, storedPath string) {
 	_ = os.Remove(target)
 }
 
-func (a *App) handleProfile(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := a.currentUserID(r)
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -1858,7 +1858,7 @@ type communityUser struct {
 	IsPublic    sql.NullInt64
 }
 
-func (a *App) handleUsers(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleUsers(w http.ResponseWriter, r *http.Request) {
 	userID, ok := a.currentUserID(r)
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -1930,7 +1930,7 @@ func (a *App) canViewProfile(viewerID int, target fullUser) bool {
 	return false
 }
 
-func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 	viewerID, ok := a.currentUserID(r)
 	if !ok {
 		http.Redirect(w, r, "/login", http.StatusFound)
@@ -2001,7 +2001,7 @@ func (a *App) handleUserDetail(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-func (a *App) handleImportWork(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -2109,7 +2109,7 @@ func nullableString(ns sql.NullString) any {
 	return nil
 }
 
-func (a *App) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.DB.Query(
 		`SELECT id, username, password, validated, is_admin, is_superadmin,
                 display_name, email, bio, avatar_path, is_public
@@ -2162,7 +2162,7 @@ func (a *App) handleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	}))
 }
 
-func (a *App) handleApproveAccount(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleApproveAccount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -2178,7 +2178,7 @@ func (a *App) handleApproveAccount(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 
-func (a *App) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
@@ -2207,7 +2207,7 @@ func (a *App) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 
-func (a *App) handlePromoteAccount(w http.ResponseWriter, r *http.Request) {
+func (a *App) HandlePromoteAccount(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return

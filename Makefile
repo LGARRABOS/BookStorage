@@ -18,16 +18,16 @@ BIN_DIR     := /usr/local/bin
 # Développement
 build:
 	@echo "Compilation..."
-	@go build -o $(APP_NAME) .
+	@go build -o $(APP_NAME) ./cmd/bookstorage
 	@echo "Terminé: ./$(APP_NAME)"
 
 build-prod:
 	@echo "Compilation production..."
-	@CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=$(APP_VERSION)" -o $(APP_NAME) .
+	@CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=$(APP_VERSION)" -o $(APP_NAME) ./cmd/bookstorage
 	@echo "Terminé: ./$(APP_NAME)"
 
 run:
-	@go run .
+	@go run ./cmd/bookstorage
 
 clean:
 	@rm -f $(APP_NAME)
@@ -36,7 +36,7 @@ clean:
 # Production
 install: build-prod
 	@cp $(APP_NAME) $(BIN_DIR)/
-	@cp bsctl $(BIN_DIR)/
+	@cp scripts/bsctl $(BIN_DIR)/
 	@chmod +x $(BIN_DIR)/bsctl
 	@cp deploy/bookstorage.service /etc/systemd/system/
 	@systemctl daemon-reload
@@ -53,10 +53,10 @@ uninstall:
 	@echo "Service désinstallé"
 
 update:
-	@./bsctl update
+	@./scripts/bsctl update
 
 fix-perms:
-	@./bsctl fix-perms
+	@./scripts/bsctl fix-perms
 
 status:
 	@systemctl status $(APP_NAME) --no-pager -l 2>/dev/null || echo "Service non installé"
