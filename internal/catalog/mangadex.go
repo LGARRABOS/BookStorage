@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/url"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -61,7 +62,7 @@ func SearchMangadex(query string, limit int) ([]MangadexResult, error) {
 	}
 	q := u.Query()
 	q.Set("title", strings.TrimSpace(query))
-	q.Set("limit", "10")
+	q.Set("limit", strconv.Itoa(limit))
 	q.Add("includes[]", "cover_art")
 	u.RawQuery = q.Encode()
 
@@ -74,7 +75,7 @@ func SearchMangadex(query string, limit int) ([]MangadexResult, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer resp.Body.Close()
+	defer func() { _ = resp.Body.Close() }()
 
 	var out mangadexResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
