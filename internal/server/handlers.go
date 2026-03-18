@@ -691,7 +691,10 @@ func (a *App) HandleReminders(w http.ResponseWriter, r *http.Request) {
 			`SELECT id, title FROM works WHERE user_id = ? ORDER BY LOWER(title)`,
 			userID,
 		)
-		var worksForSelect []struct{ ID int; Title string }
+		var worksForSelect []struct {
+			ID    int
+			Title string
+		}
 		if worksRows != nil {
 			defer func() { _ = worksRows.Close() }()
 			for worksRows.Next() {
@@ -700,7 +703,10 @@ func (a *App) HandleReminders(w http.ResponseWriter, r *http.Request) {
 				if err := worksRows.Scan(&id, &title); err != nil {
 					continue
 				}
-				worksForSelect = append(worksForSelect, struct{ ID int; Title string }{id, title})
+				worksForSelect = append(worksForSelect, struct {
+					ID    int
+					Title string
+				}{id, title})
 			}
 		}
 

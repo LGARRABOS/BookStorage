@@ -41,9 +41,9 @@ type mangadexIncluded struct {
 }
 
 type mangadexResponse struct {
-	Result   string               `json:"result"`
-	Data     []mangadexMangaData   `json:"data"`
-	Included []mangadexIncluded   `json:"included"`
+	Result   string              `json:"result"`
+	Data     []mangadexMangaData `json:"data"`
+	Included []mangadexIncluded  `json:"included"`
 }
 
 // SearchMangadex queries MangaDex API for manga by title
