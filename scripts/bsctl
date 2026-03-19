@@ -174,7 +174,7 @@ cmd_uninstall() {
 cmd_update() {
     local branch="${1:-main}"
     if ! validate_git_branch_name "$branch"; then
-        print_error "Invalid branch name: ${branch:-<empty>}"
+        print_error "Invalid branch name: ${branch:-(empty)}"
         printf "Use only letters, digits, and ${BOLD}.${NC}, ${BOLD}_${NC}, ${BOLD}/${NC}, ${BOLD}-${NC} (no ${BOLD}..${NC}).\n"
         exit 1
     fi
@@ -208,7 +208,7 @@ cmd_update() {
     print_success "Binary copied"
     printf "\n"
     
-    print_step "6/6" "Updating bsctl script..."
+    print_step "6/8" "Updating bsctl script..."
     cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
     print_success "bsctl updated"
