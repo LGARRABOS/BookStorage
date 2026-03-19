@@ -51,6 +51,24 @@ print_step() {
     printf "${BLUE}[$1]${NC} $2\n"
 }
 
+# Validates a git branch name (alphanumeric, . _ / - only; no ..)
+validate_git_branch_name() {
+    local b="$1"
+    if [[ -z "$b" ]]; then
+        return 1
+    fi
+    if [[ "$b" == -* ]]; then
+        return 1
+    fi
+    if [[ "$b" == *..* ]]; then
+        return 1
+    fi
+    if [[ ! "$b" =~ ^[a-zA-Z0-9._/-]+$ ]]; then
+        return 1
+    fi
+    return 0
+}
+
 # ============================================================================
 # Commands
 # ============================================================================
@@ -71,7 +89,7 @@ cmd_help() {
     printf "${BOLD}PRODUCTION${NC} (requires root)\n"
     printf "    ${GREEN}install${NC}      Install the systemd service\n"
     printf "    ${GREEN}uninstall${NC}    Uninstall the service\n"
-    printf "    ${GREEN}update${NC}       Update (git pull + build + restart)\n"
+    printf "    ${GREEN}update [branch]${NC}  Update from origin (default branch: main)\n"
     printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
     printf "\n"
     printf "${BOLD}SERVICE${NC}\n"
@@ -84,7 +102,8 @@ cmd_help() {
     printf "${BOLD}EXAMPLES${NC}\n"
     printf "    ${BLUE}bsctl run${NC}              Local development\n"
     printf "    ${BLUE}sudo bsctl install${NC}     Install in production\n"
-    printf "    ${BLUE}sudo bsctl update${NC}      Update the server\n"
+    printf "    ${BLUE}sudo bsctl update${NC}              Update from main\n"
+    printf "    ${BLUE}sudo bsctl update my-test-branch${NC}  Update from a branch\n"
     printf "    ${BLUE}bsctl logs${NC}             View logs\n"
     printf "\n"
     printf "${BOLD}CONFIGURATION${NC}\n"
@@ -153,32 +172,53 @@ cmd_uninstall() {
 }
 
 cmd_update() {
+    local branch="${1:-main}"
+    if ! validate_git_branch_name "$branch"; then
+        print_error "Invalid branch name: ${branch:-<empty>}"
+        printf "Use only letters, digits, and ${BOLD}.${NC}, ${BOLD}_${NC}, ${BOLD}/${NC}, ${BOLD}-${NC} (no ${BOLD}..${NC}).\n"
+        exit 1
+    fi
+
     print_header
-    
-    print_step "1/6" "Fetching updates..."
-    git pull
+    print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
+    printf "\n"
+
+    print_step "1/8" "Fetching from origin..."
+    git fetch origin "$branch"
+    printf "\n"
+
+    print_step "2/8" "Checking out ${branch}..."
+    git checkout "$branch"
+    printf "\n"
+
+    print_step "3/8" "Pulling (fast-forward only)..."
+    if ! git pull --ff-only origin "$branch"; then
+        print_error "Fast-forward pull failed: local history diverges from origin/${branch}."
+        printf "Resolve manually (merge/rebase) in ${INSTALL_DIR}, or align this clone with the remote before running update again.\n"
+        exit 1
+    fi
     printf "\n"
     
-    print_step "2/6" "Compiling..."
+    print_step "4/8" "Compiling..."
     cmd_build_prod
     printf "\n"
     
-    print_step "3/6" "Installing binary..."
+    print_step "5/8" "Installing binary..."
     cp ${APP_NAME} ${BIN_DIR}/
     print_success "Binary copied"
     printf "\n"
     
-    print_step "4/6" "Updating bsctl script..."
+    print_step "6/6" "Updating bsctl script..."
     cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
     print_success "bsctl updated"
     printf "\n"
     
-    print_step "5/6" "Fixing permissions..."
+    print_step "7/8" "Fixing permissions..."
     cmd_fix_perms
     printf "\n"
     
-    print_step "6/6" "Restarting service..."
+    print_step "8/8" "Restarting service..."
     systemctl restart ${APP_NAME}
     print_success "Service restarted"
     printf "\n"
@@ -262,7 +302,7 @@ case "${1:-help}" in
         cmd_uninstall
         ;;
     update)
-        cmd_update
+        cmd_update "${2:-main}"
         ;;
     fix-perms)
         cmd_fix_perms

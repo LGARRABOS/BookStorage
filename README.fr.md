@@ -117,7 +117,7 @@ Sur votre serveur, vous pouvez :
 1. Télécharger l’artefact
 2. Extraire l’archive
 3. Copier `bookstorage`, `bsctl` et `bookstorage.service` aux bons emplacements
-4. Utiliser `bsctl install` / `bsctl update` pour gérer le service
+4. Utiliser `bsctl install` / `bsctl update` (branche optionnelle : `bsctl update ma-branche`) pour gérer le service
 
 ---
 
@@ -154,7 +154,7 @@ bsctl help     # Afficher l'aide
 |---------------------|-------------------------------------------|
 | `bsctl install`     | Installer le service systemd              |
 | `bsctl uninstall`   | Désinstaller le service                   |
-| `bsctl update`      | Mettre à jour (pull + build + restart)    |
+| `bsctl update [branche]` | Mettre à jour depuis `origin/main` ou `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
 
 ---

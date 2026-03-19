@@ -117,7 +117,7 @@ You can download this artifact on your server and:
 
 1. Extract it
 2. Copy `bookstorage`, `bsctl` and `bookstorage.service` to the appropriate locations
-3. Use `bsctl install` / `bsctl update` to manage the service
+3. Use `bsctl install` / `bsctl update` (optional branch: `bsctl update my-branch`) to manage the service
 
 ---
 
@@ -154,7 +154,7 @@ bsctl help     # Show help
 |--------------------|--------------------------------------|
 | `bsctl install`    | Install systemd service              |
 | `bsctl uninstall`  | Uninstall service                    |
-| `bsctl update`     | Update (pull + build + restart)      |
+| `bsctl update [branch]` | Update from `origin/main` or `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
 
 ---
