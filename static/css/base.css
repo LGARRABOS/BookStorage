@@ -24,13 +24,86 @@
   font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
 }
 
-/* Scrollbar hidden */
+/* Scrollbars: hidden by default; thin scrollbars when data-scrollbars="visible" (accessibility) */
 * {
   scrollbar-width: none;
 }
 
 *::-webkit-scrollbar {
+  width: 0;
+  height: 0;
   display: none;
+}
+
+html[data-scrollbars="visible"] * {
+  scrollbar-width: thin;
+}
+
+html[data-text-size="sm"] {
+  font-size: 93.75%;
+}
+
+html[data-text-size="md"] {
+  font-size: 100%;
+}
+
+html[data-text-size="lg"] {
+  font-size: 125%;
+}
+
+html[data-scrollbars="visible"] *::-webkit-scrollbar {
+  display: block;
+  width: 8px;
+  height: 8px;
+}
+
+html[data-scrollbars="visible"] *::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.45);
+  border-radius: 4px;
+}
+
+html[data-scrollbars="visible"] *::-webkit-scrollbar-track {
+  background: rgba(148, 163, 184, 0.15);
+}
+
+[data-theme="dark"][data-scrollbars="visible"] *::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.35);
+}
+
+[data-motion="reduce"] *,
+[data-motion="reduce"] *::before,
+[data-motion="reduce"] *::after {
+  animation-duration: 0.01ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.01ms !important;
+  scroll-behavior: auto !important;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html:not([data-motion="no-preference"]) *,
+  html:not([data-motion="no-preference"]) *::before,
+  html:not([data-motion="no-preference"]) *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+html[data-contrast="more"] {
+  --border: #94a3b8;
+  --border-subtle: rgba(71, 85, 105, 0.55);
+}
+
+html[data-theme="dark"][data-contrast="more"] {
+  --border: #cbd5e1;
+  --border-subtle: rgba(203, 213, 225, 0.45);
+  --text-secondary: #e2e8f0;
+}
+
+[data-contrast="more"] *:focus-visible {
+  outline: 3px solid var(--primary);
+  outline-offset: 2px;
 }
 
 /* Dark Mode */

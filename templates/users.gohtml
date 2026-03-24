@@ -11,7 +11,7 @@
     <title>{{ t .T "users.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/users.css">
-    <script>(function() { document.documentElement.setAttribute('data-theme', localStorage.getItem('theme') || 'light'); })();</script>
+    <script src="/static/js/appearance-init.js"></script>
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .lang-toggle:hover { background: var(--primary); color: white; }
@@ -27,7 +27,7 @@
                 <a href="/stats">{{ t .T "nav.stats" }}</a>
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" type="button"><span id="theme-icon">🌙</span></button>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
                 <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
             </nav>
@@ -66,18 +66,8 @@
         </div>
     </main>
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
-    <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const next = (html.getAttribute('data-theme') || 'light') === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            document.getElementById('theme-icon').textContent = next === 'dark' ? '☀️' : '🌙';
-        }
-        document.addEventListener('DOMContentLoaded', function() {
-            document.getElementById('theme-icon').textContent = (document.documentElement.getAttribute('data-theme') || 'light') === 'dark' ? '☀️' : '🌙';
-        });
-    </script>
+    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
 </body>
 </html>
 {{ end }}

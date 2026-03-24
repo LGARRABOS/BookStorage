@@ -8,12 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal Notice{{ end }} - {{ .SiteName }}</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script src="/static/js/appearance-init.js"></script>
     <style>
         .legal-container { max-width: 800px; margin: 0 auto; padding: 2rem 1rem; }
         .legal-header { text-align: center; margin-bottom: 3rem; }
@@ -40,7 +35,7 @@
             <a class="brand" href="/">📚 {{ .SiteName }}</a>
             <nav class="nav-links">
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                     <span id="theme-icon">🌙</span>
                 </button>
             </nav>
@@ -134,21 +129,7 @@
         </div>
     </footer>
 
-    <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeIcon();
-        }
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
-    </script>
+    <script src="/static/js/appearance.js"></script>
 </body>
 </html>
 {{ end }}

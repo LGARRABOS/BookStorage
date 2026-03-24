@@ -9,12 +9,7 @@
     <title>{{ t .T "error.405.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/error-pages.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="error-page">
     <div class="error-bg" aria-hidden="true"></div>

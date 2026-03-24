@@ -11,12 +11,7 @@
     <title>BookStorage - {{ if eq .Lang "fr" }}Gérez vos lectures{{ else }}Track your reading{{ end }}</title>
     <meta name="description" content="{{ if eq .Lang "fr" }}BookStorage est une application gratuite pour suivre vos lectures{{ else }}BookStorage is a free app to track your reading{{ end }}">
     <link rel="stylesheet" href="/static/css/base.css">
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
+    <script src="/static/js/appearance-init.js"></script>
     <style>
         .landing-hero { text-align: center; padding: 5rem 1rem 4rem; max-width: 800px; margin: 0 auto; }
         .landing-hero h1 { font-size: clamp(2.2rem, 6vw, 3.5rem); margin-bottom: 1.25rem; line-height: 1.1; }
@@ -54,7 +49,7 @@
             <a class="brand" href="/">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                     <span id="theme-icon">🌙</span>
                 </button>
                 <a href="/login" class="btn btn-nav">{{ t .T "nav.login" }}</a>
@@ -132,21 +127,7 @@
         </div>
     </footer>
 
-    <script>
-        function toggleTheme() {
-            const html = document.documentElement;
-            const current = html.getAttribute('data-theme') || 'light';
-            const next = current === 'light' ? 'dark' : 'light';
-            html.setAttribute('data-theme', next);
-            localStorage.setItem('theme', next);
-            updateThemeIcon();
-        }
-        function updateThemeIcon() {
-            const theme = document.documentElement.getAttribute('data-theme') || 'light';
-            document.getElementById('theme-icon').textContent = theme === 'dark' ? '☀️' : '🌙';
-        }
-        document.addEventListener('DOMContentLoaded', updateThemeIcon);
-    </script>
+    <script src="/static/js/appearance.js"></script>
 </body>
 </html>
 {{ end }}
