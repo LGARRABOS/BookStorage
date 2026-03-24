@@ -163,7 +163,15 @@ bsctl help     # Show help
 
 ### Environment variables
 
-Create a `.env` file at the root or in `/opt/bookstorage/`:
+Copy the example file and edit it (never commit secrets):
+
+```bash
+cp .env.example .env
+```
+
+Use the same path on a server (e.g. `/opt/bookstorage/.env`). With **systemd**, load it with `EnvironmentFile=/opt/bookstorage/.env` in your unit file so variables are applied to the process.
+
+Example `.env` contents:
 
 ```env
 # Server
@@ -173,7 +181,7 @@ BOOKSTORAGE_PORT=5000
 # Database
 BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
 
-# Security (auto-generated during installation)
+# Security (use a long random key in production)
 BOOKSTORAGE_SECRET_KEY=your-very-long-secret-key
 
 # Super administrator
@@ -275,6 +283,7 @@ BookStorage/
 │   └── bsctl           # Management CLI
 ├── Makefile            # Make commands
 │
+├── .env.example        # Environment template (copy to .env)
 ├── config/
 │   └── site.json.example  # Legal config template
 ├── go.mod / go.sum      # Go dependencies
