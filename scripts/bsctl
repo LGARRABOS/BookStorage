@@ -83,16 +83,6 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
-# Block only if tracked files are modified or staged (untracked files are ignored — typical on servers).
-require_clean_tracked() {
-    if [[ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
-        print_error "Des fichiers suivis par Git ont des modifications locales ou sont indexés."
-        printf "Enregistrez-les (commit), annulez-les ou ${BOLD}git stash${NC} dans ${INSTALL_DIR:-.} avant update.\n"
-        printf "${BLUE}Les fichiers non suivis par Git (hors dépôt) ne bloquent plus cette étape.${NC}\n"
-        exit 1
-    fi
-}
-
 # Newest-first: up to 3 tags matching vMAJOR.0.0
 list_major_release_tags() {
     git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 3 | tac
@@ -243,7 +233,7 @@ cmd_update_at_tag() {
     fi
 
     print_step "2/8" "Checking out ${tag}..."
-    git checkout "$tag"
+    git checkout -f "$tag"
     printf "\n"
 
     print_step "3/8" "Release checkout (no git pull on a tag)..."
@@ -265,20 +255,17 @@ cmd_update_branch() {
     print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
     printf "\n"
 
-    require_clean_tracked
-
     print_step "1/8" "Fetching from origin..."
     git fetch origin "$branch"
     printf "\n"
 
     print_step "2/8" "Checking out ${branch}..."
-    git checkout "$branch"
+    git checkout -f "$branch"
     printf "\n"
 
-    print_step "3/8" "Pulling (fast-forward only)..."
-    if ! git pull --ff-only origin "$branch"; then
-        print_error "Fast-forward pull failed: local history diverges from origin/${branch}."
-        printf "Resolve manually (merge/rebase) in ${INSTALL_DIR}, or align this clone with the remote before running update again.\n"
+    print_step "3/8" "Aligning on origin/${branch}..."
+    if ! git reset --hard "origin/${branch}"; then
+        print_error "Impossible de synchroniser avec origin/${branch}."
         exit 1
     fi
     printf "\n"
@@ -409,8 +396,6 @@ cmd_update() {
         cmd_update_branch "$arg"
         return
     fi
-
-    require_clean_tracked
 
     local tag=""
     if [[ -n "${BSCTL_UPDATE_TAG:-}" ]]; then
