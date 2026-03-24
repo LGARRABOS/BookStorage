@@ -10,6 +10,7 @@ import (
 	"encoding/csv"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"html/template"
 	"io"
@@ -547,6 +548,12 @@ func (a *App) WithErrorPages(next http.Handler) http.Handler {
 }
 
 func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
+	// The "/" pattern in http.ServeMux matches any path not matched by a more specific route.
+	// Only serve the home / landing for the exact root path; otherwise return 404.
+	if p := path.Clean(r.URL.Path); p != "/" {
+		w.WriteHeader(http.StatusNotFound)
+		return
+	}
 	if _, ok := a.currentUserID(r); ok {
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 		return
@@ -758,8 +765,14 @@ func (a *App) HandleRemindersDelete(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, _ := a.currentUserID(r)
 	reminderID, _ := strconv.Atoi(r.PathValue("id"))
-	if _, err := a.DB.Exec(`DELETE FROM reminders WHERE id = ? AND user_id = ?`, reminderID, userID); err != nil {
-		http.Redirect(w, r, "/reminders", http.StatusFound)
+	result, err := a.DB.Exec(`DELETE FROM reminders WHERE id = ? AND user_id = ?`, reminderID, userID)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	http.Redirect(w, r, "/reminders", http.StatusFound)
@@ -1233,7 +1246,11 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 		&work.IsAdult,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
@@ -1454,9 +1471,14 @@ func (a *App) HandleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
-	_, err := a.DB.Exec(`DELETE FROM works WHERE id = ? AND user_id = ?`, workID, userID)
+	result, err := a.DB.Exec(`DELETE FROM works WHERE id = ? AND user_id = ?`, workID, userID)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	n, _ := result.RowsAffected()
+	if n == 0 {
+		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
@@ -1925,12 +1947,16 @@ func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 		&u.IsAdmin,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/users", http.StatusFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if !a.canViewProfile(viewerID, u) {
-		http.Redirect(w, r, "/users", http.StatusFound)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -2001,12 +2027,16 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		&target.IsAdmin,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/users", http.StatusFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
 	if !a.canViewProfile(viewerID, target) {
-		http.Redirect(w, r, "/users", http.StatusFound)
+		w.WriteHeader(http.StatusForbidden)
 		return
 	}
 
@@ -2033,7 +2063,11 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		&src.UserID,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/users/"+strconv.Itoa(targetID), http.StatusFound)
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
 
