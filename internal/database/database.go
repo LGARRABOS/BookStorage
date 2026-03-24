@@ -174,8 +174,7 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 	if err := ensureColumns(db, "works", workColumns); err != nil {
 		return err
 	}
-	// Migration légère : transformer les anciens types \"18+\" en flag adulte
-	if _, err := db.Exec(`UPDATE works SET is_adult = 1, reading_type = 'Autre' WHERE reading_type = '18+' AND COALESCE(is_adult, 0) = 0`); err != nil {
+	if err := ApplyMigrations(db); err != nil {
 		return err
 	}
 	if err := ensureSuperAdmin(db, s); err != nil {

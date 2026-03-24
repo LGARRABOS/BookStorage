@@ -186,7 +186,9 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_HOST`       | Adresse d’écoute                 | `127.0.0.1`                |
 | `BOOKSTORAGE_PORT`       | Port                             | `5000`                     |
 | `BOOKSTORAGE_DATABASE`   | Chemin de la base SQLite         | `database.db`              |
-| `BOOKSTORAGE_SECRET_KEY` | Clé secrète de session           | `dev-secret-change-me`     |
+| `BOOKSTORAGE_SECRET_KEY` | Clé secrète de session (min. 32 octets si `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`     |
+| `BOOKSTORAGE_ENV` | `development` ou `production` (la production interdit la clé par défaut) | `development` |
+| `BOOKSTORAGE_ENABLE_HSTS` | `true` ou `1` pour l’en-tête HSTS (uniquement derrière HTTPS) | (désactivé) |
 
 ### Mentions légales
 
@@ -236,15 +238,15 @@ Sur le tableau de bord, vous pouvez utiliser ces raccourcis :
 
 ### Export
 
-Allez dans **Profil** → Téléchargez votre bibliothèque au format CSV.
+Allez dans **Profil** → Téléchargez votre bibliothèque au format CSV, ou **JSON** pour une sauvegarde versionnée (`export_version`) réimportable.
 
 ### Import
 
-Allez dans **Profil** → Importez un fichier CSV avec le format suivant (séparateur point-virgule) :
+Allez dans **Profil** → Importez un export CSV ou JSON. Le CSV utilise le point-virgule ; les colonnes optionnelles `CatalogID`, `IsAdult`, `ImagePath` peuvent suivre `Notes`. Choisissez si les titres déjà présents sont **ignorés** ou **mis à jour**.
 
 ```csv
-Title;Chapter;Link;Status;Type;Rating;Notes
-My Manga;42;https://...;En cours;Webtoon;4;Great series
+Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath
+My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 ```
 
 **Valeurs de statut** : En cours, Terminé, En pause, Abandonné, À lire  

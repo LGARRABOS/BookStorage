@@ -24,7 +24,11 @@ type Settings struct {
 	Environment          string
 	Host                 string
 	Port                 int
+	EnableHSTS           bool
 }
+
+// MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
+const MinProductionSecretKeyLen = 32
 
 const (
 	defaultSecretKey      = "dev-secret-change-me"
@@ -144,7 +148,10 @@ func Load(rootPath string) (*Settings, error) {
 		return nil, fmt.Errorf("BOOKSTORAGE_PORT must be a valid integer: %w", err)
 	}
 
-	return &Settings{
+	enableHSTS := strings.EqualFold(strings.TrimSpace(os.Getenv("BOOKSTORAGE_ENABLE_HSTS")), "true") ||
+		os.Getenv("BOOKSTORAGE_ENABLE_HSTS") == "1"
+
+	s := &Settings{
 		SecretKey:            secret,
 		VAPIDPublicKey:       vapidPublic,
 		VAPIDPrivateKey:      vapidPrivate,
@@ -159,5 +166,23 @@ func Load(rootPath string) (*Settings, error) {
 		Environment:          env,
 		Host:                 host,
 		Port:                 port,
-	}, nil
+		EnableHSTS:           enableHSTS,
+	}
+	if err := validateSettings(s); err != nil {
+		return nil, err
+	}
+	return s, nil
+}
+
+func validateSettings(s *Settings) error {
+	if strings.ToLower(s.Environment) != "production" {
+		return nil
+	}
+	if s.SecretKey == "" || s.SecretKey == defaultSecretKey {
+		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be set to a non-default value when BOOKSTORAGE_ENV=production")
+	}
+	if len(s.SecretKey) < MinProductionSecretKeyLen {
+		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be at least %d bytes when BOOKSTORAGE_ENV=production", MinProductionSecretKeyLen)
+	}
+	return nil
 }

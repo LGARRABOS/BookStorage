@@ -186,7 +186,9 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_HOST`         | Listen address         | `127.0.0.1`             |
 | `BOOKSTORAGE_PORT`         | Port                   | `5000`                  |
 | `BOOKSTORAGE_DATABASE`     | SQLite database path   | `database.db`           |
-| `BOOKSTORAGE_SECRET_KEY`   | Session secret key     | `dev-secret-change-me`  |
+| `BOOKSTORAGE_SECRET_KEY`   | Session secret key (min. 32 bytes if `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`  |
+| `BOOKSTORAGE_ENV`          | `development` or `production` (production forbids default secret) | `development` |
+| `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
 | `BOOKSTORAGE_VAPID_PUBLIC` | VAPID public key (Web Push) | (optional)           |
 | `BOOKSTORAGE_VAPID_PRIVATE`| VAPID private key (Web Push) | (optional)           |
 
@@ -240,15 +242,15 @@ On the dashboard, use these keyboard shortcuts for quick navigation:
 
 ### Export
 
-Go to **Profile** → Download your library as a CSV file.
+Go to **Profile** → Download your library as a CSV file, or use **Download JSON** for a versioned backup (`export_version` field) suitable for re-import.
 
 ### Import
 
-Go to **Profile** → Upload a CSV file with the following format (semicolon separator):
+Go to **Profile** → Upload a CSV or JSON export. CSV uses semicolon separator; optional columns `CatalogID`, `IsAdult`, `ImagePath` may be present after `Notes`. Choose whether existing titles are **skipped** or **updated**.
 
 ```csv
-Title;Chapter;Link;Status;Type;Rating;Notes
-My Manga;42;https://...;En cours;Webtoon;4;Great series
+Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath
+My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 ```
 
 **Status values**: En cours, Terminé, En pause, Abandonné, À lire  
