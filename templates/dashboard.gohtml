@@ -12,13 +12,8 @@
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/appearance-init.js"></script>
     <script src="/static/js/modals.js?v=3"></script>
-    <script>
-        (function() {
-            const theme = localStorage.getItem('theme') || 'light';
-            document.documentElement.setAttribute('data-theme', theme);
-        })();
-    </script>
     <style>
         .dashboard-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
         .dashboard-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
@@ -174,7 +169,7 @@
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" title="Theme" type="button">
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                     <span id="theme-icon">🌙</span>
                 </button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
@@ -330,18 +325,22 @@
 
     <div id="help-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-backdrop"></div>
-        <div class="modal-dialog help-modal-dialog">
+        <div class="modal-dialog help-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="help-modal-heading">
             <button type="button" class="modal-close help-modal-close" aria-label="{{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}">×</button>
             <div class="modal-content help-modal-content">
-                <h2 class="help-modal-title">⌨️ {{ if eq .Lang "fr" }}Raccourcis clavier{{ else }}Keyboard shortcuts{{ end }}</h2>
+                <h2 id="help-modal-heading" class="help-modal-title">⌨️ {{ if eq .Lang "fr" }}Raccourcis clavier{{ else }}Keyboard shortcuts{{ end }}</h2>
                 <ul class="help-shortcuts-list">
-                    <li><kbd>N</kbd> <kbd>A</kbd> <kbd>+</kbd> — {{ if eq .Lang "fr" }}Nouvelle œuvre{{ else }}New work{{ end }}</li>
+                    <li><kbd>N</kbd> <kbd>+</kbd> — {{ t .T "dashboard.shortcut.new_work" }}</li>
                     <li><kbd>/</kbd> — {{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</li>
                     <li><kbd>E</kbd> — {{ if eq .Lang "fr" }}Éditer (1er visible){{ else }}Edit (first visible){{ end }}</li>
                     <li><kbd>S</kbd> — {{ if eq .Lang "fr" }}Statistiques{{ else }}Stats{{ end }}</li>
                     <li><kbd>P</kbd> — {{ if eq .Lang "fr" }}Profil{{ else }}Profile{{ end }}</li>
                     <li><kbd>U</kbd> — {{ if eq .Lang "fr" }}Utilisateurs{{ else }}Users{{ end }}</li>
+                    <li><kbd>G</kbd> — {{ t .T "dashboard.shortcut.dashboard" }}</li>
+                    <li><kbd>V</kbd> — {{ t .T "dashboard.shortcut.view_toggle" }}</li>
+                    <li><kbd>T</kbd> — {{ t .T "dashboard.shortcut.theme" }}</li>
                     <li><kbd>1</kbd>-<kbd>5</kbd> — {{ if eq .Lang "fr" }}Filtrer par statut{{ else }}Filter by status{{ end }}</li>
+                    <li><kbd>?</kbd> <kbd>,</kbd> — {{ t .T "dashboard.shortcut.help" }}</li>
                     <li><kbd>Esc</kbd> — {{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}</li>
                 </ul>
                 <button type="button" class="btn btn-primary help-modal-ok">{{ if eq .Lang "fr" }}OK{{ else }}OK{{ end }}</button>
@@ -349,25 +348,9 @@
         </div>
     </div>
 
+    <script src="/static/js/appearance.js"></script>
     <script>
-    function toggleTheme() {
-        const html = document.documentElement;
-        const current = html.getAttribute('data-theme') || 'light';
-        const next = current === 'light' ? 'dark' : 'light';
-        html.setAttribute('data-theme', next);
-        localStorage.setItem('theme', next);
-        updateThemeIcon();
-    }
-    
-    function updateThemeIcon() {
-        const theme = document.documentElement.getAttribute('data-theme') || 'light';
-        const icon = document.getElementById('theme-icon');
-        if (icon) icon.textContent = theme === 'dark' ? '☀️' : '🌙';
-    }
-    
     document.addEventListener('DOMContentLoaded', function() {
-        updateThemeIcon();
-        
         const cards = document.querySelectorAll('.work-card');
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
@@ -682,20 +665,28 @@
         if (modalCloseBtn) modalCloseBtn.addEventListener('click', closeEditModal);
         
         const helpModal = document.getElementById('help-modal');
+        const helpTrigger = document.getElementById('help-trigger');
+        let helpModalPrevFocus = null;
         function openHelpModal() {
             if (helpModal) {
+                helpModalPrevFocus = document.activeElement;
                 helpModal.setAttribute('aria-hidden', 'false');
                 helpModal.style.display = 'flex';
+                const okBtn = helpModal.querySelector('.help-modal-ok');
+                if (okBtn) okBtn.focus();
             }
         }
         function closeHelpModal() {
             if (helpModal) {
                 helpModal.setAttribute('aria-hidden', 'true');
                 helpModal.style.display = 'none';
+                if (helpTrigger && helpTrigger.focus) helpTrigger.focus();
+                else if (helpModalPrevFocus && helpModalPrevFocus.focus) helpModalPrevFocus.focus();
+                helpModalPrevFocus = null;
             }
         }
-        document.getElementById('help-trigger')?.addEventListener('click', openHelpModal);
-        document.getElementById('help-trigger')?.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHelpModal(); } });
+        helpTrigger?.addEventListener('click', openHelpModal);
+        helpTrigger?.addEventListener('keydown', function(e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openHelpModal(); } });
         helpModal?.querySelector('.help-modal-close')?.addEventListener('click', closeHelpModal);
         helpModal?.querySelector('.help-modal-ok')?.addEventListener('click', closeHelpModal);
         helpModal?.querySelector('.modal-backdrop')?.addEventListener('click', closeHelpModal);
@@ -720,9 +711,25 @@
             
             switch(e.key.toLowerCase()) {
                 case 'n':
-                case 'a':
                 case '+':
                     window.location.href = '/add_work';
+                    break;
+                case 'g':
+                    window.location.href = '/dashboard';
+                    break;
+                case 't':
+                    e.preventDefault();
+                    if (typeof toggleTheme === 'function') toggleTheme();
+                    break;
+                case 'v':
+                    e.preventDefault();
+                    if (gridEl && viewListBtn && viewGridBtn) {
+                        if (gridEl.classList.contains('view-list')) {
+                            viewGridBtn.click();
+                        } else {
+                            viewListBtn.click();
+                        }
+                    }
                     break;
                 case 'e': // Edit first visible work
                     const cardsForEdit = document.querySelectorAll('.work-card');
