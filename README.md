@@ -157,6 +157,26 @@ bsctl help     # Show help
 | `bsctl update [branch]` | Update from `origin/main` or `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
 
+### Unknown commands
+
+If the first argument is not a recognized subcommand, `bsctl` prints the full help (exit code `1`).
+
+### Tab completion (bash)
+
+Programmable completion works in **bash** (interactive shell). After `sudo bsctl install` or `./deploy/install.sh`, a file is installed to `/etc/bash_completion.d/bsctl`. Open a new terminal, or run:
+
+```bash
+source /etc/bash_completion.d/bsctl
+```
+
+From a development clone:
+
+```bash
+source scripts/bsctl.completion.bash
+```
+
+Then type `bsctl` and press Tab to complete subcommands. After `bsctl update`, Tab can suggest **git branch** names when your current directory is a clone of the repo.
+
 ---
 
 ## ⚙️ Configuration
@@ -280,7 +300,8 @@ BookStorage/
 │   └── i18n/           # Internationalization
 │
 ├── scripts/
-│   └── bsctl           # Management CLI
+│   ├── bsctl                    # Management CLI
+│   └── bsctl.completion.bash    # Bash tab completion (source or install)
 ├── Makefile            # Make commands
 │
 ├── .env.example        # Environment template (copy to .env)

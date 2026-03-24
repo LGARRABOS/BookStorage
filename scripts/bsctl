@@ -113,6 +113,10 @@ cmd_help() {
     printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "\n"
+    printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
+    printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
+    printf "    or after install: ${BLUE}source /etc/bash_completion.d/bsctl${NC}\n"
+    printf "\n"
 }
 
 cmd_version() {
@@ -149,6 +153,11 @@ cmd_install() {
     cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
     cp deploy/bookstorage.service /etc/systemd/system/
+    if [[ -d /etc/bash_completion.d ]]; then
+        cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
+        chmod 644 /etc/bash_completion.d/bsctl
+        print_success "Bash completion installed: /etc/bash_completion.d/bsctl (open a new shell or: source it)"
+    fi
     systemctl daemon-reload
     systemctl enable ${APP_NAME}
     printf "\n"
@@ -167,6 +176,7 @@ cmd_uninstall() {
     rm -f /etc/systemd/system/bookstorage.service
     rm -f ${BIN_DIR}/${APP_NAME}
     rm -f ${BIN_DIR}/bsctl
+    rm -f /etc/bash_completion.d/bsctl 2>/dev/null || true
     systemctl daemon-reload
     print_success "Service uninstalled"
 }
@@ -323,8 +333,8 @@ case "${1:-help}" in
         cmd_logs
         ;;
     *)
-        printf "${RED}Unknown command: $1${NC}\n"
-        printf "Use ${BOLD}bsctl help${NC} to see available commands.\n"
+        printf "${YELLOW}Unknown command: ${1}${NC}\n\n"
+        cmd_help
         exit 1
         ;;
 esac

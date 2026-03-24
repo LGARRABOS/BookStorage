@@ -115,6 +115,10 @@ print_step "4/7" "Installation des binaires..."
 cp $APP_NAME /usr/local/bin/
 cp scripts/bsctl /usr/local/bin/
 chmod +x /usr/local/bin/bsctl
+if [ -d /etc/bash_completion.d ]; then
+    cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
+    chmod 644 /etc/bash_completion.d/bsctl
+fi
 print_success "Binaires installés dans /usr/local/bin/"
 
 # ============================================================================
