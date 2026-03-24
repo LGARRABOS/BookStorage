@@ -132,6 +132,7 @@
         .reco-detail-section { margin-bottom: 1rem; }
         .reco-detail-section h3 { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); margin: 0 0 0.4rem 0; }
         .reco-detail-section p { margin: 0; font-size: 0.95rem; line-height: 1.55; color: var(--text-secondary); white-space: pre-wrap; }
+        .reco-detail-machine { font-size: 0.75rem; color: var(--text-muted); margin: 0.4rem 0 0 0; font-style: italic; }
         .reco-detail-scores { font-size: 0.9rem; color: var(--text-secondary); }
         .reco-detail-actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
         .reco-detail-loading { padding: 2rem; text-align: center; color: var(--text-muted); }
@@ -856,6 +857,7 @@
         var detailErr = {{ jsstr (t .T "dashboard.recommendations.detail.error") }};
         var detailAdd = {{ jsstr (t .T "dashboard.recommendations.detail.add") }};
         var lblSynopsis = {{ jsstr (t .T "dashboard.recommendations.detail.synopsis") }};
+        var lblMachineTranslated = {{ jsstr (t .T "dashboard.recommendations.detail.machine_translated") }};
         var lblWhy = {{ jsstr (t .T "dashboard.recommendations.detail.why") }};
         var lblScore = {{ jsstr (t .T "dashboard.recommendations.detail.score") }};
         var lblGenres = {{ jsstr (t .T "dashboard.recommendations.detail.genres_label") }};
@@ -931,7 +933,8 @@
                         (d.is_adult || item.is_adult ? ' · 18+' : '') +
                         (d.format ? ' · ' + escapeHtml(d.format) : '') + '</p></div></div>' +
                         '<div class="reco-detail-section"><h3>' + lblWhy + '</h3><p>' + whyHtml + '</p></div>' +
-                        '<div class="reco-detail-section"><h3>' + lblSynopsis + '</h3><p>' + (desc || '—') + '</p></div>' +
+                        '<div class="reco-detail-section"><h3>' + lblSynopsis + '</h3><p>' + (desc || '—') + '</p>' +
+                        (d.description_translated ? '<p class="reco-detail-machine">' + lblMachineTranslated + '</p>' : '') + '</div>' +
                         '<div class="reco-detail-section"><h3>' + lblGenres + ' / ' + lblTags + '</h3><p>' + genresStr + ' · ' + tagsStr + '</p></div>' +
                         (scoreLine ? '<div class="reco-detail-section reco-detail-scores"><h3>' + lblScore + '</h3><p>' + escapeHtml(scoreLine) + '</p></div>' : '') +
                         '<div class="reco-detail-actions"><a class="btn btn-primary" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + detailAdd + '</a></div>';

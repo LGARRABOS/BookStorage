@@ -22,6 +22,13 @@ var migrations = []migration{
 	{Version: 1, Name: "baseline", Up: ""},
 	{Version: 2, Name: "reading_type_18plus_to_adult", Up: `UPDATE works SET is_adult = 1, reading_type = 'Autre' WHERE reading_type = '18+' AND COALESCE(is_adult, 0) = 0`},
 	{Version: 3, Name: "drop_reminders_and_push", Up: `DROP TABLE IF EXISTS reminders; DROP TABLE IF EXISTS push_subscriptions;`},
+	{Version: 4, Name: "translation_cache", Up: `CREATE TABLE IF NOT EXISTS translation_cache (
+    source_hash TEXT NOT NULL,
+    target_lang TEXT NOT NULL,
+    translated_text TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (source_hash, target_lang)
+);`},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.
