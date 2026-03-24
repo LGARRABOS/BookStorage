@@ -184,7 +184,7 @@ cmd_uninstall() {
 cmd_update() {
     local branch="${1:-main}"
     if ! validate_git_branch_name "$branch"; then
-        print_error "Invalid branch name: ${branch:-(empty)}"
+        print_error "Invalid branch name: ${branch:-empty}"
         printf "Use only letters, digits, and ${BOLD}.${NC}, ${BOLD}_${NC}, ${BOLD}/${NC}, ${BOLD}-${NC} (no ${BOLD}..${NC}).\n"
         exit 1
     fi
