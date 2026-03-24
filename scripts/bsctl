@@ -99,9 +99,8 @@ prompt_release_choice() {
         exit 1
     fi
 
-    print_info "Récupération des branches et tags depuis origin…"
-    git fetch origin
-    git fetch origin --tags 2>/dev/null || git fetch --tags origin 2>/dev/null || true
+    git fetch -q origin
+    git fetch -q origin --tags 2>/dev/null || git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
 
     local majors
@@ -173,26 +172,26 @@ prompt_release_choice() {
 
 # Shared tail: build, install, restart (steps 4–8)
 cmd_update_finish() {
-    print_step "4/8" "Compiling..."
+    print_step "4/8" "Compilation…"
     cmd_build_prod
     printf "\n"
 
-    print_step "5/8" "Installing binary..."
+    print_step "5/8" "Installation du binaire…"
     cp ${APP_NAME} ${BIN_DIR}/
-    print_success "Binary copied"
+    print_success "Binaire installé dans ${BIN_DIR}/"
     printf "\n"
 
-    print_step "6/8" "Updating bsctl script..."
+    print_step "6/8" "Mise à jour du script bsctl…"
     cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
-    print_success "bsctl updated"
+    print_success "bsctl mis à jour"
     printf "\n"
 
-    print_step "7/8" "Fixing permissions..."
+    print_step "7/8" "Correction des permissions…"
     cmd_fix_perms
     printf "\n"
 
-    print_step "8/8" "Restarting service..."
+    print_step "8/8" "Redémarrage du service…"
     if ! systemctl restart ${APP_NAME}; then
         printf "\n"
         print_error "Échec de la commande systemctl restart."
@@ -227,31 +226,28 @@ cmd_update_finish() {
 cmd_update_at_tag() {
     local tag="$1"
     if [[ -z "$tag" ]]; then
-        print_error "No tag selected."
+        print_error "Aucun tag sélectionné."
         exit 1
     fi
 
-    print_header
-    print_info "Target release: ${BOLD}${tag}${NC}"
-    printf "\n"
-
-    print_step "1/8" "Fetching from origin (branches + tags)..."
-    git fetch origin
-    git fetch origin --tags 2>/dev/null || git fetch --tags origin 2>/dev/null || true
+    print_step "1/8" "Récupération depuis origin…"
+    git fetch -q origin
+    git fetch -q origin --tags 2>/dev/null || git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
 
     if ! git rev-parse "$tag^{}" >/dev/null 2>&1; then
-        print_error "Unknown tag: ${tag}"
-        printf "Fetch tags failed or tag does not exist on the remote. Try: ${BOLD}git fetch origin --tags${NC}\n"
+        print_error "Tag inconnu : ${tag}"
+        printf "Vérifiez les tags distants : ${BOLD}git fetch origin --tags${NC}\n"
         exit 1
     fi
 
-    print_step "2/8" "Checking out ${tag}..."
-    git checkout -f "$tag"
+    print_step "2/8" "Basculement sur la release ${tag}…"
+    git -c advice.detachedHead=false checkout -f -q "$tag"
     printf "\n"
 
-    print_step "3/8" "Release checkout (no git pull on a tag)..."
-    print_success "At ${tag}"
+    print_step "3/8" "Alignement sur la release ${tag}…"
+    git reset --hard -q "$tag"
+    print_success "Référence ${tag} active."
     printf "\n"
 
     cmd_update_finish
@@ -266,22 +262,23 @@ cmd_update_branch() {
     fi
 
     print_header
-    print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
+    print_info "Cible : branche ${BOLD}${branch}${NC} (origin/${branch})"
     printf "\n"
 
-    print_step "1/8" "Fetching from origin..."
-    git fetch origin "$branch"
+    print_step "1/8" "Récupération depuis origin…"
+    git fetch -q origin "$branch"
     printf "\n"
 
-    print_step "2/8" "Checking out ${branch}..."
-    git checkout -f "$branch"
+    print_step "2/8" "Basculement sur la branche ${branch}…"
+    git checkout -f -q "$branch"
     printf "\n"
 
-    print_step "3/8" "Aligning on origin/${branch}..."
-    if ! git reset --hard "origin/${branch}"; then
+    print_step "3/8" "Alignement sur origin/${branch}…"
+    if ! git reset --hard -q "origin/${branch}"; then
         print_error "Impossible de synchroniser avec origin/${branch}."
         exit 1
     fi
+    print_success "Branche alignée sur origin/${branch}."
     printf "\n"
 
     cmd_update_finish
@@ -325,7 +322,7 @@ cmd_help() {
     printf "    ${BLUE}sudo bsctl update${NC}              Choose a Git release tag (menu)\n"
     printf "    ${BLUE}BSCTL_UPDATE_TAG=v3.1.1 sudo -E bsctl update${NC}  Non-interactive tag\n"
     printf "    ${BLUE}sudo bsctl update main${NC}         Sync to latest origin/main\n"
-    printf "    ${BLUE}sudo bsctl update my-test-branch${NC}  Update from a branch\n"
+    printf "    ${BLUE}sudo bsctl update ma-branche${NC}  Depuis origin/ma-branche\n"
     printf "    ${BLUE}bsctl logs${NC}             View logs\n"
     printf "\n"
     printf "${BOLD}CONFIGURATION${NC}\n"
@@ -353,9 +350,9 @@ cmd_build() {
 }
 
 cmd_build_prod() {
-    print_info "Compiling for production..."
+    print_info "Compilation production (optimisée)…"
     CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
-    print_success "Optimized binary created: ./${APP_NAME}"
+    print_success "Binaire généré : ./${APP_NAME}"
 }
 
 cmd_run() {
@@ -412,20 +409,24 @@ cmd_update() {
     fi
 
     local tag=""
+    print_header
     if [[ -n "${BSCTL_UPDATE_TAG:-}" ]]; then
         if ! tag=$(normalize_tag "${BSCTL_UPDATE_TAG}"); then
-            print_error "Invalid BSCTL_UPDATE_TAG"
+            print_error "BSCTL_UPDATE_TAG invalide."
             exit 1
         fi
     else
         prompt_release_choice tag
     fi
 
+    print_info "Cible : release ${BOLD}${tag}${NC} (référence Git)"
+    printf "\n"
+
     cmd_update_at_tag "$tag"
 }
 
 cmd_fix_perms() {
-    print_info "Fixing permissions..."
+    print_info "Correction des permissions…"
     chown ${APP_USER}:${APP_GROUP} . 2>/dev/null || true
     chmod 755 . 2>/dev/null || true
     chown ${APP_USER}:${APP_GROUP} database.db 2>/dev/null || true
@@ -433,7 +434,7 @@ cmd_fix_perms() {
     chown -R ${APP_USER}:${APP_GROUP} static/avatars/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} static/images/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} templates/ 2>/dev/null || true
-    print_success "Permissions fixed"
+    print_success "Permissions corrigées."
 }
 
 cmd_start() {
