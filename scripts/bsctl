@@ -83,9 +83,9 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
-# Newest-first: up to 3 tags matching vMAJOR.0.0
+# Newest-first: up to 2 tags matching vMAJOR.0.0 (l’option 3 du menu = saisie manuelle d’un tag)
 list_major_release_tags() {
-    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 3 | tac
+    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 2 | tac
 }
 
 # Interactive choice: écrit le tag dans la variable dont le nom est passé en $1 (nameref bash 4.3+).
@@ -113,24 +113,23 @@ prompt_release_choice() {
     printf "\n${BOLD}── Version à déployer ──${NC}\n"
     printf "Tags majeurs récents (format ${BOLD}vX.0.0${NC}) :\n\n"
     local i
-    for ((i = 0; i < ${#MAJOR_TAGS[@]}; i++)); do
-        printf "  ${BOLD}%d.${NC}  %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
+    for ((i = 0; i < 2; i++)); do
+        if [[ $i -lt ${#MAJOR_TAGS[@]} ]]; then
+            printf "  ${BOLD}%d.${NC}  %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
+        else
+            printf "  ${BOLD}%d.${NC}  ${YELLOW}—${NC}\n" "$((i + 1))"
+        fi
     done
     if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-        printf "  ${YELLOW}(aucun tag vX.0.0 trouvé — utilisez l’option ${BOLD}a${YELLOW} ou ${BOLD}bsctl update main${YELLOW})${NC}\n"
+        printf "  ${YELLOW}(aucun tag vX.0.0 sur le dépôt — choisissez l’option 3 ou ${BOLD}bsctl update main${YELLOW})${NC}\n"
     fi
-    printf "\n  ${BOLD}a${NC}  Saisir un autre tag (ex. v3.1.1)\n"
+    printf "\n  ${BOLD}3.${NC}  Saisir un autre tag (ex. v3.1.2)\n"
     printf "\n"
 
     local choice manual_in normalized
-    # read -p n'interprète pas les codes couleur dans les variables : utiliser printf $'…' + read
     while true; do
         printf '\n'
-        if [[ ${#MAJOR_TAGS[@]} -gt 0 ]]; then
-            printf $'\033[1m→\033[0m Tapez le numéro (1 à %d), \033[1ma\033[0m pour un autre tag, ou \033[1mEntrée\033[0m pour annuler : ' "${#MAJOR_TAGS[@]}"
-        else
-            printf $'\033[1m→\033[0m Tapez \033[1ma\033[0m pour un tag manuel, ou \033[1mEntrée\033[0m pour annuler : '
-        fi
+        printf $'\033[1m→\033[0m Tapez \033[1m1\033[0m ou \033[1m2\033[0m pour une release majeure, \033[1m3\033[0m pour saisir un tag, ou \033[1mEntrée\033[0m pour annuler : '
         if [[ -r /dev/tty ]]; then
             read -r choice < /dev/tty
         else
@@ -141,8 +140,8 @@ prompt_release_choice() {
             print_error "Annulé."
             exit 1
         fi
-        if [[ "$choice" == "a" || "$choice" == "autre" ]]; then
-            printf "Nom du tag (ex. v3.1.1) : "
+        if [[ "$choice" == "3" ]]; then
+            printf "Nom du tag (ex. v3.1.2) : "
             if [[ -r /dev/tty ]]; then
                 read -r manual_in < /dev/tty
             else
@@ -155,18 +154,16 @@ prompt_release_choice() {
             __out_ref="$normalized"
             return 0
         fi
-        if [[ "$choice" =~ ^[0-9]+$ ]]; then
+        if [[ "$choice" == "1" || "$choice" == "2" ]]; then
             local idx=$((choice - 1))
             if [[ $idx -ge 0 && $idx -lt ${#MAJOR_TAGS[@]} ]]; then
                 __out_ref="${MAJOR_TAGS[$idx]}"
                 return 0
             fi
+            print_error "Aucune release majeure pour ce choix — utilisez 3 ou : bsctl update main"
+            continue
         fi
-        if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-            print_error "Aucun tag vX.0.0 — utilisez « a » ou : bsctl update main"
-        else
-            print_error "Choix invalide. Entrez un numéro entre 1 et ${#MAJOR_TAGS[@]}, ou « a »."
-        fi
+        print_error "Choix invalide. Entrez 1, 2 ou 3."
     done
 }
 
