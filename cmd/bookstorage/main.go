@@ -144,6 +144,7 @@ func main() {
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.RequireLogin(app.HandleImportWork))
 	mux.HandleFunc("/add_work", app.RequireLogin(app.HandleAddWork))
 	mux.HandleFunc("/api/catalog/search", app.RequireLogin(app.HandleCatalogSearch))
+	mux.HandleFunc("GET /api/recommendations", app.RequireLogin(app.HandleRecommendations))
 	mux.HandleFunc("GET /api/works", app.RequireLogin(app.HandleAPIWorksList))
 	mux.HandleFunc("GET /api/works/{id}", app.RequireLogin(app.HandleAPIWorksDetail))
 	mux.HandleFunc("POST /api/works", app.RequireLogin(app.HandleAPIWorksCreate))

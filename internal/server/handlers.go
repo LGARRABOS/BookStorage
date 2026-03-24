@@ -27,6 +27,7 @@ import (
 	"bookstorage/internal/catalog"
 	"bookstorage/internal/config"
 	"bookstorage/internal/i18n"
+	"bookstorage/internal/recommend"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/pbkdf2"
@@ -954,13 +955,51 @@ func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 }
 
+// HandleRecommendations returns personalized AniList-based suggestions (JSON).
+func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, ok := a.currentUserID(r)
+	if !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	sug, err := recommend.ForUser(a.DB, int64(userID), recommend.DefaultOptions())
+	if err != nil {
+		log.Printf("recommendations: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream", "results": []any{}})
+		return
+	}
+	if sug == nil {
+		sug = []recommend.Suggestion{}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"results": sug})
+}
+
 func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
-		_ = a.Templates.ExecuteTemplate(w, "add_work", a.mergeData(r, map[string]any{
+		data := map[string]any{
 			"ReadingTypes": readingTypes,
 			"Statuses":     readingStatuses,
-		}))
+		}
+		if aid := strings.TrimSpace(r.URL.Query().Get("anilist_id")); aid != "" {
+			if id, err := strconv.Atoi(aid); err == nil && id > 0 {
+				if d, err := catalog.GetMediaByID(id); err == nil && d != nil && d.Title != "" {
+					data["PrefillAnilistID"] = id
+					data["PrefillTitle"] = d.Title
+					data["PrefillImageURL"] = d.ImageURL
+					data["PrefillReadingType"] = catalog.ReadingTypeFromAnilistDetail(d)
+					data["PrefillIsAdult"] = d.RawMedia.IsAdult
+				}
+			}
+		}
+		_ = a.Templates.ExecuteTemplate(w, "add_work", a.mergeData(r, data))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
 			w.WriteHeader(http.StatusBadRequest)

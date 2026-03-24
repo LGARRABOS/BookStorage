@@ -14,6 +14,7 @@ Local development, tooling, CI, and codebase layout. For running BookStorage as 
 - [bsctl for development](#bsctl-for-development)
 - [Tab completion (bash)](#tab-completion-bash)
 - [Project structure and architecture](#project-structure-and-architecture)
+- [AniList recommendations](#anilist-recommendations)
 - [Contributing](#contributing)
 
 ---
@@ -176,6 +177,11 @@ BookStorage/
 ├── templates/           # Templates (.gohtml)
 └── static/              # CSS, avatars, images, PWA, PWA assets
 ```
+
+<a id="anilist-recommendations"></a>
+### AniList recommendations
+
+The dashboard **For you** section and `GET /api/recommendations` call AniList’s public GraphQL API (`internal/catalog`) to blend **browse** results (genres/tags inferred from the user’s library) with **recommendation** edges from highly rated linked titles. Only works whose `catalog` row has `source = 'anilist'` participate in the taste profile; add items via catalog search so they get an AniList link. Respect AniList rate limits in production (the server batches fetches per request).
 
 ---
 
