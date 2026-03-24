@@ -12,8 +12,6 @@ import (
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
 	"bookstorage/internal/server"
-
-	webpush "github.com/SherClockHolmes/webpush-go"
 )
 
 // Version is set at compile time with -ldflags
@@ -34,7 +32,6 @@ USAGE
 OPTIONS
     -h, --help      Show this help
     -v, --version   Show version
-    -gen-vapid      Generate VAPID keys for Web Push
     -c, --config    Path to .env file (default: .env)
 
 ENVIRONMENT VARIABLES
@@ -83,8 +80,6 @@ func main() {
 	flag.BoolVar(&showHelp, "h", false, "Show help")
 	flag.BoolVar(&showVersion, "version", false, "Show version")
 	flag.BoolVar(&showVersion, "v", false, "Show version")
-	var genVapid bool
-	flag.BoolVar(&genVapid, "gen-vapid", false, "Generate VAPID keys for Web Push")
 	flag.StringVar(&configPath, "config", "", "Path to .env file")
 	flag.StringVar(&configPath, "c", "", "Path to .env file")
 
@@ -99,17 +94,6 @@ func main() {
 
 	if showVersion {
 		printVersion()
-		os.Exit(0)
-	}
-
-	if genVapid {
-		privateKey, publicKey, err := webpush.GenerateVAPIDKeys()
-		if err != nil {
-			log.Fatalf("generate vapid: %v", err)
-		}
-		fmt.Println("Add these to your .env for Web Push notifications:")
-		fmt.Println("BOOKSTORAGE_VAPID_PUBLIC=" + publicKey)
-		fmt.Println("BOOKSTORAGE_VAPID_PRIVATE=" + privateKey)
 		os.Exit(0)
 	}
 
@@ -153,8 +137,6 @@ func main() {
 	mux.HandleFunc("/login", app.HandleLogin)
 	mux.HandleFunc("/logout", app.HandleLogout)
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
-	mux.HandleFunc("/reminders", app.RequireLogin(app.HandleReminders))
-	mux.HandleFunc("/reminders/delete/{id}", app.RequireLogin(app.HandleRemindersDelete))
 	mux.HandleFunc("/stats", app.RequireLogin(app.HandleStats))
 	mux.HandleFunc("/profile", app.RequireLogin(app.HandleProfile))
 	mux.HandleFunc("/users", app.RequireLogin(app.HandleUsers))
@@ -168,8 +150,6 @@ func main() {
 	mux.HandleFunc("PATCH /api/works/{id}", app.RequireLogin(app.HandleAPIWorksUpdate))
 	mux.HandleFunc("DELETE /api/works/{id}", app.RequireLogin(app.HandleAPIWorksDelete))
 	mux.HandleFunc("GET /api/stats", app.RequireLogin(app.HandleAPIStats))
-	mux.HandleFunc("GET /api/push/vapid-public", app.HandlePushVapidPublic)
-	mux.HandleFunc("POST /api/push/subscribe", app.RequireLogin(app.HandlePushSubscribe))
 	mux.HandleFunc("/edit/{id}", app.RequireLogin(app.HandleEditWork))
 	mux.HandleFunc("POST /api/increment/{id}", app.RequireLogin(app.HandleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.RequireLogin(app.HandleDecrement))
@@ -182,8 +162,6 @@ func main() {
 	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.HandleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.HandleDeleteAccount))
 	mux.HandleFunc("/admin/promote/{id}", app.RequireAdmin(app.HandlePromoteAccount))
-
-	go app.RunReminderPushWorker()
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)

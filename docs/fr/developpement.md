@@ -47,7 +47,7 @@ En développement, copiez le modèle d’environnement puis adaptez-le :
 cp .env.example .env
 ```
 
-Les valeurs par défaut suffisent souvent en local ; pour la liste complète des variables (chemins prod, secrets, VAPID, `site.json`), voir [Hébergement — Configuration](hebergement.md#configuration).
+Les valeurs par défaut suffisent souvent en local ; pour la liste complète des variables (chemins prod, secrets, `site.json`), voir [Hébergement — Configuration](hebergement.md#configuration).
 
 ---
 

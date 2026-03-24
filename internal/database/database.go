@@ -38,29 +38,6 @@ CREATE TABLE IF NOT EXISTS works (
     FOREIGN KEY (user_id) REFERENCES users (id)
 );`
 
-const createPushSubscriptionsTableSQL = `
-CREATE TABLE IF NOT EXISTS push_subscriptions (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    endpoint TEXT NOT NULL,
-    p256dh TEXT NOT NULL,
-    auth TEXT NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (user_id) REFERENCES users (id)
-);`
-
-const createRemindersTableSQL = `
-CREATE TABLE IF NOT EXISTS reminders (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    user_id INTEGER NOT NULL,
-    work_id INTEGER NOT NULL,
-    remind_at DATETIME NOT NULL,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    sent INTEGER DEFAULT 0,
-    FOREIGN KEY (user_id) REFERENCES users (id),
-    FOREIGN KEY (work_id) REFERENCES works (id)
-);`
-
 const createCatalogTableSQL = `
 CREATE TABLE IF NOT EXISTS catalog (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -160,12 +137,6 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createWorksTableSQL); err != nil {
-		return err
-	}
-	if _, err := db.Exec(createRemindersTableSQL); err != nil {
-		return err
-	}
-	if _, err := db.Exec(createPushSubscriptionsTableSQL); err != nil {
 		return err
 	}
 	if err := ensureColumns(db, "users", profileColumns); err != nil {

@@ -21,6 +21,7 @@ type migration struct {
 var migrations = []migration{
 	{Version: 1, Name: "baseline", Up: ""},
 	{Version: 2, Name: "reading_type_18plus_to_adult", Up: `UPDATE works SET is_adult = 1, reading_type = 'Autre' WHERE reading_type = '18+' AND COALESCE(is_adult, 0) = 0`},
+	{Version: 3, Name: "drop_reminders_and_push", Up: `DROP TABLE IF EXISTS reminders; DROP TABLE IF EXISTS push_subscriptions;`},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.

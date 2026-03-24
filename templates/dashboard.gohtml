@@ -69,8 +69,6 @@
         .work-meta { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
         .work-actions { display: flex; gap: 0.5rem; }
         .work-actions a { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: background 0.2s ease; }
-        .work-actions .reminder-btn { background: rgba(251, 191, 36, 0.15); color: #d97706; }
-        .work-actions .reminder-btn:hover { background: rgba(251, 191, 36, 0.25); }
         .work-actions .edit-btn { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
         .work-actions .edit-btn:hover { background: rgba(56, 189, 248, 0.25); }
         .work-actions .delete-btn { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
@@ -172,7 +170,6 @@
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
-                <a href="/reminders">⏰ {{ if eq .Lang "fr" }}Rappels{{ else }}Reminders{{ end }}</a>
                 <a href="/stats">{{ t .T "nav.stats" }}</a>
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
@@ -300,7 +297,6 @@
                         </div>
                         <div class="work-meta">
                             <div class="work-actions">
-                                <a href="/reminders?work_id={{ .ID }}" class="reminder-btn" title="{{ if eq $.Lang "fr" }}Rappel{{ else }}Reminder{{ end }}">⏰</a>
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
                                 <a href="/delete/{{ .ID }}" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-href="/delete/{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</a>
                             </div>
