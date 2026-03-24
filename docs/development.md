@@ -1,15 +1,20 @@
 # Development
 
-Local development, CI/CD, and repository layout. For installing BookStorage on a server, see [Self-hosting](self-hosting.md).
+Local development, tooling, CI, and codebase layout. For running BookStorage as a service on Linux (systemd, updates, `.env` in production), see [Self-hosting](self-hosting.md).
 
 ---
 
 ## Table of contents
 
 - [Quick start](#quick-start)
+- [Local environment](#local-environment)
+- [Makefile](#makefile)
+- [Tests and linting locally](#tests-and-linting-locally)
 - [Continuous integration & deployment](#continuous-integration--deployment)
-- [bsctl CLI](#bsctl-cli)
-- [Project structure](#project-structure)
+- [bsctl for development](#bsctl-for-development)
+- [Tab completion (bash)](#tab-completion-bash)
+- [Project structure and architecture](#project-structure-and-architecture)
+- [Contributing](#contributing)
 
 ---
 
@@ -20,7 +25,7 @@ Local development, CI/CD, and repository layout. For installing BookStorage on a
 - **Go 1.22+**
 - **GCC** (for SQLite compilation with CGO)
 
-### Run in development
+### Run the app
 
 ```bash
 git clone https://github.com/LGARRABOS/BookStorage.git
@@ -30,7 +35,62 @@ go run ./cmd/bookstorage
 
 Server listens on **http://127.0.0.1:5000** by default.
 
-You can also use `make run`, `bsctl run`, or open the project in your editor and run the `cmd/bookstorage` package.
+Alternatives: `make run`, `bsctl run`, or run the `cmd/bookstorage` package from your IDE.
+
+---
+
+## Local environment
+
+For development, copy the environment template and edit as needed:
+
+```bash
+cp .env.example .env
+```
+
+Use defaults for local work; for a full variable reference (production paths, secrets, VAPID, legal `site.json`), see [Self-hosting — Configuration](self-hosting.md#configuration).
+
+---
+
+## Makefile
+
+`make` targets mirror some `bsctl` commands. Prefer **`bsctl help`** for the canonical English CLI (see [`scripts/bsctl`](../scripts/bsctl)).
+
+| Target | Purpose |
+|--------|---------|
+| `make build` | Debug build: `go build -o bookstorage ./cmd/bookstorage` |
+| `make build-prod` | Optimized binary with `-ldflags` and `APP_VERSION` from the Makefile |
+| `make run` | `go run ./cmd/bookstorage` |
+| `make clean` | Remove the `bookstorage` binary in the repo root |
+| `make help` | Print short help (messages may be in French) |
+
+Production-oriented targets (`install`, `uninstall`, `update`, `fix-perms`, `status`, `logs`) require root or a configured host and are described from an operator perspective in [Self-hosting](self-hosting.md).
+
+---
+
+## Tests and linting locally
+
+Align with [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) before opening a PR:
+
+```bash
+go mod download
+go test ./... -coverprofile=coverage.out
+go test -race ./...
+```
+
+Formatting:
+
+```bash
+gofmt -w .
+# or: gofmt -l .   # list files that need formatting
+```
+
+Linting (install [golangci-lint](https://golangci-lint.run/) if needed):
+
+```bash
+golangci-lint run
+```
+
+CI also runs `gofmt` in strict mode (fails if any non-formatted file is listed) and a **smoke-http** job that starts `go run ./cmd/bookstorage` and curls `/`, `/login`, `/register`.
 
 ---
 
@@ -38,123 +98,93 @@ You can also use `make run`, `bsctl run`, or open the project in your editor and
 
 ### CI (GitHub Actions)
 
-On every **push** and on **pull requests** to `main`, the workflow `.github/workflows/ci.yml` runs:
+On **push** (all branches) and on **pull requests** to `main`, `.github/workflows/ci.yml` runs:
 
-- `lint`: formatting (`gofmt`) and `golangci-lint`
-- `tests`: unit tests with coverage (`go test ./... -coverprofile=coverage.out`, artifact upload)
-- `race-tests`: `go test -race ./...`
-- `smoke-http`: starts the app and checks key routes (`/`, `/login`, `/register`)
+| Job | What it does |
+|-----|----------------|
+| **Lint** | `gofmt -l .` must be empty; `golangci-lint` |
+| **Unit tests** | `go test ./... -coverprofile=coverage.out` (coverage uploaded as artifact) |
+| **Race tests** | `go test -race ./...` |
+| **HTTP smoke tests** | Start app with env vars, wait for `/`, then curl `/`, `/login`, `/register` |
 
 All jobs must pass before merging.
 
+<a id="deployment-workflow"></a>
 ### Deployment workflow
 
-The workflow `.github/workflows/deploy.yml` is a base for shipping binaries:
+The workflow `.github/workflows/deploy.yml` builds a **Linux amd64** binary with CGO, packages `bookstorage`, `bsctl`, and `deploy/bookstorage.service`, and uploads a `bookstorage-linux-amd64` `.tar.gz` artifact (manual **Run workflow**).
 
-- Manual trigger: **Run workflow** in the Actions tab (`workflow_dispatch`)
-- Builds **Linux amd64** with CGO
-- Packages `bookstorage`, `bsctl`, `deploy/bookstorage.service`
-- Uploads a `bookstorage-linux-amd64` `.tar.gz` artifact
-
-On a server: download the artifact, extract, copy files into place, then use `bsctl install` / `bsctl update` as described in [Self-hosting](self-hosting.md).
+Using that artifact on a server (install paths, `bsctl install` / `bsctl update`) is covered in [Self-hosting](self-hosting.md).
 
 ---
 
-## bsctl CLI
+<a id="bsctl-for-development"></a>
+## bsctl for development
 
-`bsctl` (BookStorage Control) manages builds, the dev server, and production installs. Run `bsctl help` for the full English help text.
+`bsctl` (BookStorage Control) is the same script as in production; for **service** (`start`, `stop`, `update`, …) and **install** commands, see [Self-hosting — bsctl](self-hosting.md#bsctl--service-and-updates).
 
-### Service commands
+| Command | Description |
+|---------|-------------|
+| `bsctl build` | Compile the application |
+| `bsctl build-prod` | Optimized binary with `-ldflags` and `APP_VERSION` from `scripts/bsctl` |
+| `bsctl run` | Start dev server (`go run ./cmd/bookstorage`) |
+| `bsctl clean` | Remove compiled binary files |
 
-| Command        | Description          |
-|----------------|----------------------|
-| `bsctl start`  | Start the service    |
-| `bsctl stop`   | Stop the service     |
-| `bsctl restart`| Restart the service  |
-| `bsctl status` | Show status          |
-| `bsctl logs`   | Show real-time logs  |
-
-### Development commands
-
-| Command           | Description             |
-|-------------------|-------------------------|
-| `bsctl build`     | Compile the application |
-| `bsctl build-prod`| Compile for production  |
-| `bsctl run`       | Start dev server        |
-| `bsctl clean`     | Remove compiled files   |
-
-### Production / maintenance commands
-
-| Command            | Description                          |
-|--------------------|--------------------------------------|
-| `bsctl install`    | Install systemd service              |
-| `bsctl uninstall`  | Uninstall service                    |
-| `bsctl update`     | Interactive release: **1** / **2** = last two **major** tags `vX.0.0`, **3** = type any tag; or `BSCTL_UPDATE_TAG=vX.Y.Z` for non-interactive + build + restart |
-| `bsctl update main` | Update from `origin/main` (fast-forward) + build + restart |
-| `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
-| `bsctl fix-perms`  | Fix file permissions                 |
-
-**Non-interactive release:** set `BSCTL_UPDATE_TAG=v4.0.1` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
-
-### Unknown commands
+Run `bsctl help` for the full command list.
 
 If the first argument is not a recognized subcommand, `bsctl` prints the full help (exit code `1`).
 
-### Tab completion (bash)
+### Version string in builds
 
-Programmable completion works in **bash**. After `sudo bsctl install` or `./deploy/install.sh`, completion is installed to `/etc/bash_completion.d/bsctl`. Open a new terminal, or:
+`APP_VERSION` in [`Makefile`](../Makefile) and [`scripts/bsctl`](../scripts/bsctl) should stay in sync for release builds (`-X main.Version=...`). See the release workflow in the [push-release-agent](../.cursor/skills/push-release-agent/SKILL.md) skill if you maintain releases.
 
-```bash
-source /etc/bash_completion.d/bsctl
-```
+---
 
-From a development clone:
+## Tab completion (bash)
+
+From a **development clone**:
 
 ```bash
 source scripts/bsctl.completion.bash
 ```
 
-Then type `bsctl` and press Tab. After `bsctl update`, Tab can suggest **`main`**, recent **tags**, and **branch** names when your current directory is a clone of the repo.
+After `sudo bsctl install` or `./deploy/install.sh`, completion may live in `/etc/bash_completion.d/bsctl` — `source` that file in a new shell. Then type `bsctl` and press Tab; after `bsctl update`, Tab can suggest `main`, tags, and branch names when the cwd is a repo clone.
 
 ---
 
-## Project structure
+## Project structure and architecture
 
 ```
 BookStorage/
-├── cmd/bookstorage/     # Entry point
+├── cmd/bookstorage/     # Entry point (flags, HTTP server bootstrap)
 │   └── main.go
-├── internal/            # Internal packages
-│   ├── server/         # HTTP handlers, API, Push
-│   ├── config/         # Configuration handling
-│   ├── database/       # SQLite database
-│   ├── catalog/        # AniList, MangaDex
-│   └── i18n/           # Internationalization
-│
+├── internal/
+│   ├── server/          # HTTP handlers, HTML/API routes, Web Push, import/export
+│   ├── config/          # Env loading, site/legal JSON config
+│   ├── database/        # SQLite access, schema migrations
+│   ├── catalog/         # External catalog integrations (AniList, MangaDex)
+│   └── i18n/            # French/English strings
 ├── scripts/
 │   ├── bsctl                    # Management CLI
-│   └── bsctl.completion.bash    # Bash tab completion (source or install)
-├── Makefile            # Make commands
-│
-├── .env.example        # Environment template (copy to .env)
-├── config/
-│   └── site.json.example  # Legal config template
-├── go.mod / go.sum      # Go dependencies
-│
+│   └── bsctl.completion.bash    # Bash completion
+├── Makefile
+├── .env.example
+├── config/site.json.example
 ├── deploy/
-│   ├── install.sh       # Installation script
+│   ├── install.sh
 │   └── bookstorage.service
-│
-├── templates/           # HTML templates (.gohtml)
-└── static/
-    ├── css/             # Stylesheets
-    ├── avatars/         # User avatars
-    ├── images/          # App images
-    ├── icons/           # Favicon & icons
-    └── pwa/             # PWA files
-        ├── manifest.json
-        └── sw.js
+├── templates/           # Templates (.gohtml)
+└── static/              # CSS, avatars, images, PWA, PWA assets
 ```
+
+---
+
+## Contributing
+
+1. Fork and branch from `main` (or open a PR from a branch with a clear name).
+2. Run **tests**, **gofmt**, and **golangci-lint** locally; CI must be green.
+3. Avoid committing `.env` or secrets; use `.env.example` and `config/site.json.example` as templates.
+4. For user-facing behavior changes, update the relevant doc under `docs/` (and `docs/fr/` if you maintain French).
 
 ---
 
