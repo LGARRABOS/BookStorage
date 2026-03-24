@@ -9,6 +9,7 @@
 set -e
 
 APP_NAME="bookstorage"
+APP_VERSION="3.1.2"
 APP_DIR="/opt/bookstorage"
 APP_USER="nobody"
 APP_GROUP="nobody"
@@ -103,7 +104,7 @@ fi
 print_step "3/7" "Compilation de l'application..."
 
 go mod tidy > /dev/null 2>&1
-CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=1.0.0" -o $APP_NAME ./cmd/bookstorage > /dev/null 2>&1
+CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o $APP_NAME ./cmd/bookstorage > /dev/null 2>&1
 print_success "Application compilée"
 
 # ============================================================================
