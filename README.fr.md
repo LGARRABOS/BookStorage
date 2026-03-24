@@ -159,7 +159,7 @@ bsctl help     # Afficher l'aide
 | `bsctl update <branche>` | Avancé : depuis `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
 
-**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v3.1.1` puis `sudo -E bsctl update`. L’arbre de travail Git doit être propre.
+**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v3.1.1` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
 
 ### Commande inconnue
 

@@ -159,7 +159,7 @@ bsctl help     # Show help
 | `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
 
-**Non-interactive release:** set `BSCTL_UPDATE_TAG=v3.1.1` and run `sudo -E bsctl update` to skip the menu. The working tree must be clean before update.
+**Non-interactive release:** set `BSCTL_UPDATE_TAG=v3.1.1` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
 
 ### Unknown commands
 
