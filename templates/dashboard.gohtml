@@ -94,6 +94,24 @@
         [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .chapter-value:hover { background: rgba(129, 140, 248, 0.2); }
         [data-theme="dark"] .chapter-value-input { background: rgba(15, 23, 42, 0.8); border-color: #818cf8; color: #f1f5f9; }
+        .reco-section { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; }
+        .reco-header { margin-bottom: 0.75rem; }
+        .reco-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem 0; color: var(--text-primary); }
+        .reco-hint { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
+        .reco-scroll { display: flex; gap: 0.75rem; overflow-x: auto; padding-bottom: 0.25rem; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+        .reco-card { flex: 0 0 140px; scroll-snap-align: start; background: var(--background); border: 1px solid var(--border-subtle); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
+        .reco-card-cover { height: 100px; background: var(--primary-muted); position: relative; }
+        .reco-card-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .reco-card-cover .no-cover { display: flex; align-items: center; justify-content: center; font-size: 2rem; opacity: 0.4; height: 100%; }
+        .reco-card-body { padding: 0.5rem 0.6rem 0.65rem; flex: 1; display: flex; flex-direction: column; gap: 0.35rem; }
+        .reco-card-title { font-size: 0.8rem; font-weight: 600; color: var(--text-primary); line-height: 1.25; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.5em; }
+        .reco-card-meta { font-size: 0.7rem; color: var(--text-muted); }
+        .reco-card a.btn-reco { display: block; text-align: center; padding: 0.35rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .reco-card a.btn-reco:hover { background: var(--primary); color: white; }
+        .reco-msg { font-size: 0.9rem; color: var(--text-muted); padding: 0.5rem 0; }
+        .reco-loading { font-size: 0.9rem; color: var(--text-muted); margin: 0; }
+        [data-theme="dark"] .reco-section { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .reco-card { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); }
         /* Edit modal */
         .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .modal-overlay[aria-hidden="true"] { display: none; }
@@ -185,6 +203,16 @@
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
                 </div>
             </div>
+
+            <section class="reco-section" id="reco-section" aria-label="{{ t .T "dashboard.recommendations.title" }}">
+                <div class="reco-header">
+                    <h2 class="reco-title">✨ {{ t .T "dashboard.recommendations.title" }}</h2>
+                    <p class="reco-hint" id="reco-hint">{{ t .T "dashboard.recommendations.hint" }}</p>
+                </div>
+                <div class="reco-scroll" id="reco-inner" role="list">
+                    <p class="reco-loading" id="reco-loading">{{ t .T "dashboard.recommendations.loading" }}</p>
+                </div>
+            </section>
 
             {{ if .ImportError }}
             <div class="import-notice import-notice--error" role="alert">{{ t .T "import.error.generic" }}</div>
@@ -778,6 +806,42 @@
         });
     });
     
+    (function loadRecommendations() {
+        var inner = document.getElementById('reco-inner');
+        var loading = document.getElementById('reco-loading');
+        var hint = document.getElementById('reco-hint');
+        if (!inner) return;
+        var emptyMsg = {{ printf "%q" (t .T "dashboard.recommendations.empty") }};
+        var errMsg = {{ printf "%q" (t .T "dashboard.recommendations.error") }};
+        var addLabel = {{ printf "%q" (t .T "dashboard.recommendations.add") }};
+        fetch('/api/recommendations')
+            .then(function(r) {
+                if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+                if (!r.ok) return Promise.reject();
+                return r.json();
+            })
+            .then(function(data) {
+                if (loading) loading.remove();
+                var list = (data && data.results) ? data.results : [];
+                if (!list.length) {
+                    inner.innerHTML = '<p class="reco-msg">' + emptyMsg + '</p>';
+                    return;
+                }
+                inner.innerHTML = list.map(function(item) {
+                    var img = item.image_url
+                        ? '<img src="' + String(item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
+                        : '<span class="no-cover">📖</span>';
+                    var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
+                    return '<article class="reco-card" role="listitem"><div class="reco-card-cover">' + img + '</div><div class="reco-card-body"><div class="reco-card-title">' + (item.title || '') + '</div><div class="reco-card-meta">' + meta + '</div><a class="btn-reco" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + addLabel + '</a></div></article>';
+                }).join('');
+                if (hint) hint.style.display = 'none';
+            })
+            .catch(function() {
+                if (loading) loading.remove();
+                inner.innerHTML = '<p class="reco-msg">' + errMsg + '</p>';
+            });
+    })();
+
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/pwa/sw.js').catch(err => console.log('SW registration failed:', err));
