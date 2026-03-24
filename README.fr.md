@@ -163,7 +163,15 @@ bsctl help     # Afficher l'aide
 
 ### Variables d’environnement
 
-Créez un fichier `.env` à la racine du projet ou dans `/opt/bookstorage/` :
+Copiez le fichier d’exemple puis éditez-le (ne commitez jamais le `.env` réel) :
+
+```bash
+cp .env.example .env
+```
+
+Sur un serveur, utilisez le même principe (ex. `/opt/bookstorage/.env`). Avec **systemd**, ajoutez `EnvironmentFile=/opt/bookstorage/.env` dans l’unité pour injecter les variables dans le processus.
+
+Exemple de contenu `.env` :
 
 ```env
 # Serveur
@@ -173,7 +181,7 @@ BOOKSTORAGE_PORT=5000
 # Base de données
 BOOKSTORAGE_DATABASE=/opt/bookstorage/database.db
 
-# Sécurité (généré automatiquement lors de l'installation)
+# Sécurité (clé longue et aléatoire en production)
 BOOKSTORAGE_SECRET_KEY=your-very-long-secret-key
 
 # Super administrateur
@@ -263,6 +271,7 @@ BookStorage/
 ├── scripts/bsctl        # CLI de gestion
 ├── Makefile             # Commandes Make
 │
+├── .env.example         # Modèle d’environnement (copier vers .env)
 ├── internal/            # Packages internes
 │   ├── config/          # Gestion de la configuration
 │   │   ├── config.go    # Paramètres de l’application
