@@ -15,7 +15,7 @@ APP_GROUP="nobody"
 INSTALL_DIR="/opt/bookstorage"
 BIN_DIR="/usr/local/bin"
 
-# Colors (ANSI C quoting — vrais codes ESC, pas la chaîne littérale \033)
+# Colors (ANSI C quoting for real ESC bytes)
 RED=$'\033[0;31m'
 GREEN=$'\033[0;32m'
 YELLOW=$'\033[0;33m'
@@ -83,19 +83,19 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
-# Newest-first: up to 2 tags matching vMAJOR.0.0 (l’option 3 du menu = saisie manuelle d’un tag)
+# Newest-first: up to 2 tags matching vMAJOR.0.0 (menu option 3 = manual tag entry)
 list_major_release_tags() {
     git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 2 | tac
 }
 
-# Interactive choice: écrit le tag dans la variable dont le nom est passé en $1 (nameref bash 4.3+).
-# Ne pas utiliser tag=$(prompt_release_choice) : sous-shell → stdin pas un TTY, menu capturé dans tag.
+# Interactive choice: writes selected tag into the variable whose name is passed as $1 (nameref, bash 4.3+).
+# Do not use tag=$(prompt_release_choice): subshell breaks TTY / captures menu on stdout.
 prompt_release_choice() {
     local -n __out_ref="$1"
 
     if [[ ! -t 0 ]] && [[ ! -r /dev/tty ]]; then
-        print_error "Pas de terminal interactif pour le menu."
-        printf "Définissez ${BOLD}BSCTL_UPDATE_TAG=vX.Y.Z${NC} ou lancez ${BOLD}bsctl update main${NC}.\n"
+        print_error "No interactive terminal for the menu."
+        printf "Set ${BOLD}BSCTL_UPDATE_TAG=vX.Y.Z${NC} or run ${BOLD}bsctl update main${NC}.\n"
         exit 1
     fi
 
@@ -110,8 +110,8 @@ prompt_release_choice() {
         [[ -n "$line" ]] && MAJOR_TAGS+=("$line")
     done <<< "$majors"
 
-    printf "\n${BOLD}── Version à déployer ──${NC}\n"
-    printf "Tags majeurs récents (format ${BOLD}vX.0.0${NC}) :\n\n"
+    printf "\n${BOLD}── Deploy version ──${NC}\n"
+    printf "Recent major tags (format ${BOLD}vX.0.0${NC}):\n\n"
     local i
     for ((i = 0; i < 2; i++)); do
         if [[ $i -lt ${#MAJOR_TAGS[@]} ]]; then
@@ -121,15 +121,15 @@ prompt_release_choice() {
         fi
     done
     if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-        printf "  ${YELLOW}(aucun tag vX.0.0 sur le dépôt — choisissez l’option 3 ou ${BOLD}bsctl update main${YELLOW})${NC}\n"
+        printf "  ${YELLOW}(no vX.0.0 tags on remote — use option 3 or ${BOLD}bsctl update main${YELLOW})${NC}\n"
     fi
-    printf "\n  ${BOLD}3.${NC}  Saisir un autre tag (ex. v3.1.2)\n"
+    printf "  ${BOLD}3.${NC}  Enter another tag (e.g. v3.1.2)\n"
     printf "\n"
 
     local choice manual_in normalized
     while true; do
         printf '\n'
-        printf $'\033[1m→\033[0m Tapez \033[1m1\033[0m ou \033[1m2\033[0m pour une release majeure, \033[1m3\033[0m pour saisir un tag, ou \033[1mEntrée\033[0m pour annuler : '
+        printf $'\033[1m→\033[0m Enter \033[1m1\033[0m or \033[1m2\033[0m for a major release, \033[1m3\033[0m to type a tag, or \033[1mEnter\033[0m to cancel: '
         if [[ -r /dev/tty ]]; then
             read -r choice < /dev/tty
         else
@@ -137,18 +137,18 @@ prompt_release_choice() {
         fi || true
         choice=$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')
         if [[ -z "$choice" ]]; then
-            print_error "Annulé."
+            print_error "Cancelled."
             exit 1
         fi
         if [[ "$choice" == "3" ]]; then
-            printf "Nom du tag (ex. v3.1.2) : "
+            printf "Tag name (e.g. v3.1.2): "
             if [[ -r /dev/tty ]]; then
                 read -r manual_in < /dev/tty
             else
                 read -r manual_in
             fi || true
             if ! normalized=$(normalize_tag "$manual_in"); then
-                print_error "Tag vide."
+                print_error "Empty tag."
                 continue
             fi
             __out_ref="$normalized"
@@ -160,42 +160,42 @@ prompt_release_choice() {
                 __out_ref="${MAJOR_TAGS[$idx]}"
                 return 0
             fi
-            print_error "Aucune release majeure pour ce choix — utilisez 3 ou : bsctl update main"
+            print_error "No major release for this choice — use 3 or: bsctl update main"
             continue
         fi
-        print_error "Choix invalide. Entrez 1, 2 ou 3."
+        print_error "Invalid choice. Enter 1, 2, or 3."
     done
 }
 
 # Shared tail: build, install, restart (steps 4–8)
 cmd_update_finish() {
-    print_step "4/8" "Compilation…"
+    print_step "4/8" "Compiling..."
     cmd_build_prod
     printf "\n"
 
-    print_step "5/8" "Installation du binaire…"
+    print_step "5/8" "Installing binary..."
     cp ${APP_NAME} ${BIN_DIR}/
-    print_success "Binaire installé dans ${BIN_DIR}/"
+    print_success "Binary installed to ${BIN_DIR}/"
     printf "\n"
 
-    print_step "6/8" "Mise à jour du script bsctl…"
+    print_step "6/8" "Updating bsctl script..."
     cp scripts/bsctl ${BIN_DIR}/
     chmod +x ${BIN_DIR}/bsctl
-    print_success "bsctl mis à jour"
+    print_success "bsctl updated"
     printf "\n"
 
-    print_step "7/8" "Correction des permissions…"
+    print_step "7/8" "Fixing permissions..."
     cmd_fix_perms
     printf "\n"
 
-    print_step "8/8" "Redémarrage du service…"
+    print_step "8/8" "Restarting service..."
     if ! systemctl restart ${APP_NAME}; then
         printf "\n"
-        print_error "Échec de la commande systemctl restart."
-        printf "${YELLOW}Dernières lignes du journal :${NC}\n"
+        print_error "systemctl restart failed."
+        printf "${YELLOW}Last journal lines:${NC}\n"
         journalctl -u ${APP_NAME} -n 20 --no-pager 2>/dev/null || true
-        printf "\n${BLUE}Plus de détails :${NC} sudo journalctl -u ${APP_NAME} -xe\n"
-        printf "${BLUE}Statut du service :${NC} sudo systemctl status ${APP_NAME}\n"
+        printf "\n${BLUE}More detail:${NC} sudo journalctl -u ${APP_NAME} -xe\n"
+        printf "${BLUE}Service status:${NC} sudo systemctl status ${APP_NAME}\n"
         exit 1
     fi
 
@@ -203,17 +203,17 @@ cmd_update_finish() {
     printf "\n"
 
     if systemctl is-active --quiet ${APP_NAME}; then
-        print_success "Service redémarré correctement (actif)."
+        print_success "Service restarted and running."
         printf "\n"
         printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-        printf "${GREEN}║         MISE À JOUR TERMINÉE ✓          ║${NC}\n"
+        printf "${GREEN}║         UPDATE COMPLETE ✓               ║${NC}\n"
         printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
         printf "\n"
     else
-        print_error "Le service n'est pas actif après le redémarrage."
-        printf "${YELLOW}Dernières lignes du journal :${NC}\n"
+        print_error "Service is not active after restart."
+        printf "${YELLOW}Last journal lines:${NC}\n"
         journalctl -u ${APP_NAME} -n 25 --no-pager 2>/dev/null || true
-        printf "\n${BLUE}Pour diagnostiquer :${NC}\n"
+        printf "\n${BLUE}To diagnose:${NC}\n"
         printf "  sudo journalctl -u ${APP_NAME} -xe\n"
         printf "  sudo systemctl status ${APP_NAME}\n"
         exit 1
@@ -223,28 +223,28 @@ cmd_update_finish() {
 cmd_update_at_tag() {
     local tag="$1"
     if [[ -z "$tag" ]]; then
-        print_error "Aucun tag sélectionné."
+        print_error "No tag selected."
         exit 1
     fi
 
-    print_step "1/8" "Récupération depuis origin…"
+    print_step "1/8" "Fetching from origin..."
     git fetch -q origin
     git fetch -q origin --tags 2>/dev/null || git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
 
     if ! git rev-parse "$tag^{}" >/dev/null 2>&1; then
-        print_error "Tag inconnu : ${tag}"
-        printf "Vérifiez les tags distants : ${BOLD}git fetch origin --tags${NC}\n"
+        print_error "Unknown tag: ${tag}"
+        printf "Fetch remote tags: ${BOLD}git fetch origin --tags${NC}\n"
         exit 1
     fi
 
-    print_step "2/8" "Basculement sur la release ${tag}…"
+    print_step "2/8" "Checking out release ${tag}..."
     git -c advice.detachedHead=false checkout -f -q "$tag"
     printf "\n"
 
-    print_step "3/8" "Alignement sur la release ${tag}…"
+    print_step "3/8" "Aligning on release ${tag}..."
     git reset --hard -q "$tag"
-    print_success "Référence ${tag} active."
+    print_success "Now at ${tag}."
     printf "\n"
 
     cmd_update_finish
@@ -259,23 +259,23 @@ cmd_update_branch() {
     fi
 
     print_header
-    print_info "Cible : branche ${BOLD}${branch}${NC} (origin/${branch})"
+    print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
     printf "\n"
 
-    print_step "1/8" "Récupération depuis origin…"
+    print_step "1/8" "Fetching from origin..."
     git fetch -q origin "$branch"
     printf "\n"
 
-    print_step "2/8" "Basculement sur la branche ${branch}…"
+    print_step "2/8" "Checking out branch ${branch}..."
     git checkout -f -q "$branch"
     printf "\n"
 
-    print_step "3/8" "Alignement sur origin/${branch}…"
+    print_step "3/8" "Aligning on origin/${branch}..."
     if ! git reset --hard -q "origin/${branch}"; then
-        print_error "Impossible de synchroniser avec origin/${branch}."
+        print_error "Could not align with origin/${branch}."
         exit 1
     fi
-    print_success "Branche alignée sur origin/${branch}."
+    print_success "Branch matches origin/${branch}."
     printf "\n"
 
     cmd_update_finish
@@ -301,9 +301,9 @@ cmd_help() {
     printf "${BOLD}PRODUCTION${NC} (requires root)\n"
     printf "    ${GREEN}install${NC}      Install the systemd service\n"
     printf "    ${GREEN}uninstall${NC}    Uninstall the service\n"
-    printf "    ${GREEN}update${NC}         Interactive release (vX.0.0) or ${GREEN}BSCTL_UPDATE_TAG${NC}\n"
-    printf "    ${GREEN}update main${NC}    Update from origin/main (fast-forward)\n"
-    printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch> (advanced)\n"
+    printf "    ${GREEN}update${NC}         Interactive release menu or ${GREEN}BSCTL_UPDATE_TAG${NC}\n"
+    printf "    ${GREEN}update main${NC}    Update from origin/main\n"
+    printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch>\n"
     printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
     printf "\n"
     printf "${BOLD}SERVICE${NC}\n"
@@ -319,7 +319,7 @@ cmd_help() {
     printf "    ${BLUE}sudo bsctl update${NC}              Choose a Git release tag (menu)\n"
     printf "    ${BLUE}BSCTL_UPDATE_TAG=v3.1.1 sudo -E bsctl update${NC}  Non-interactive tag\n"
     printf "    ${BLUE}sudo bsctl update main${NC}         Sync to latest origin/main\n"
-    printf "    ${BLUE}sudo bsctl update ma-branche${NC}  Depuis origin/ma-branche\n"
+    printf "    ${BLUE}sudo bsctl update my-branch${NC}  From origin/my-branch\n"
     printf "    ${BLUE}bsctl logs${NC}             View logs\n"
     printf "\n"
     printf "${BOLD}CONFIGURATION${NC}\n"
@@ -328,7 +328,7 @@ cmd_help() {
     printf "    - BOOKSTORAGE_PORT         (default: 5000)\n"
     printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
-    printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v3.1.1 — skip menu on ${GREEN}bsctl update${NC}\n"
+    printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v3.1.1 — non-interactive ${GREEN}bsctl update${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
     printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
@@ -347,9 +347,9 @@ cmd_build() {
 }
 
 cmd_build_prod() {
-    print_info "Compilation production (optimisée)…"
+    print_info "Compiling for production..."
     CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
-    print_success "Binaire généré : ./${APP_NAME}"
+    print_success "Optimized binary: ./${APP_NAME}"
 }
 
 cmd_run() {
@@ -409,21 +409,21 @@ cmd_update() {
     print_header
     if [[ -n "${BSCTL_UPDATE_TAG:-}" ]]; then
         if ! tag=$(normalize_tag "${BSCTL_UPDATE_TAG}"); then
-            print_error "BSCTL_UPDATE_TAG invalide."
+            print_error "Invalid BSCTL_UPDATE_TAG."
             exit 1
         fi
     else
         prompt_release_choice tag
     fi
 
-    print_info "Cible : release ${BOLD}${tag}${NC} (référence Git)"
+    print_info "Target release: ${BOLD}${tag}${NC}"
     printf "\n"
 
     cmd_update_at_tag "$tag"
 }
 
 cmd_fix_perms() {
-    print_info "Correction des permissions…"
+    print_info "Fixing permissions..."
     chown ${APP_USER}:${APP_GROUP} . 2>/dev/null || true
     chmod 755 . 2>/dev/null || true
     chown ${APP_USER}:${APP_GROUP} database.db 2>/dev/null || true
@@ -431,7 +431,7 @@ cmd_fix_perms() {
     chown -R ${APP_USER}:${APP_GROUP} static/avatars/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} static/images/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} templates/ 2>/dev/null || true
-    print_success "Permissions corrigées."
+    print_success "Permissions fixed."
 }
 
 cmd_start() {
