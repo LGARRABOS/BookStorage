@@ -208,18 +208,73 @@ func aggregateProfile(details []*catalog.MediaDetail, weights []float64) TastePr
 	return tp
 }
 
+func profileSummary(p TasteProfile, maxG, maxT int) ProfileSummary {
+	var g, t []string
+	for i := 0; i < len(p.Genres) && i < maxG; i++ {
+		g = append(g, p.Genres[i].Name)
+	}
+	for i := 0; i < len(p.Tags) && i < maxT; i++ {
+		t = append(t, p.Tags[i].Name)
+	}
+	return ProfileSummary{TopGenres: g, TopTags: t}
+}
+
+// intersectOrdered keeps order from item; only includes values present in profileTop (trimmed).
+func intersectOrdered(item []string, profileTop []string) []string {
+	set := make(map[string]struct{})
+	for _, p := range profileTop {
+		p = strings.TrimSpace(p)
+		if p != "" {
+			set[p] = struct{}{}
+		}
+	}
+	var out []string
+	seen := make(map[string]struct{})
+	for _, x := range item {
+		x = strings.TrimSpace(x)
+		if x == "" {
+			continue
+		}
+		if _, ok := set[x]; !ok {
+			continue
+		}
+		if _, dup := seen[x]; dup {
+			continue
+		}
+		seen[x] = struct{}{}
+		out = append(out, x)
+	}
+	return out
+}
+
+// ProfileSummary is a short view of inferred taste for API clients.
+type ProfileSummary struct {
+	TopGenres []string `json:"top_genres"`
+	TopTags   []string `json:"top_tags"`
+}
+
+// ForUserResult bundles suggestions and profile hints for UI copy.
+type ForUserResult struct {
+	Results []Suggestion   `json:"results"`
+	Profile ProfileSummary `json:"profile"`
+}
+
 // Suggestion is one recommended title for API/JSON.
 type Suggestion struct {
-	Source      string `json:"source"`
-	AnilistID   int    `json:"anilist_id"`
-	Title       string `json:"title"`
-	ReadingType string `json:"reading_type"`
-	ImageURL    string `json:"image_url,omitempty"`
-	IsAdult     bool   `json:"is_adult"`
+	Source           string   `json:"source"`
+	AnilistID        int      `json:"anilist_id"`
+	Title            string   `json:"title"`
+	ReadingType      string   `json:"reading_type"`
+	ImageURL         string   `json:"image_url,omitempty"`
+	IsAdult          bool     `json:"is_adult"`
+	RelatedTitle     string   `json:"related_title,omitempty"`
+	RelatedAnilistID int      `json:"related_anilist_id,omitempty"`
+	MatchedGenres    []string `json:"matched_genres,omitempty"`
+	MatchedTags      []string `json:"matched_tags,omitempty"`
 }
 
 // ForUser returns merged browse + graph recommendations, excluding already-owned ids.
-func ForUser(db *sql.DB, userID int64, o Options) ([]Suggestion, error) {
+func ForUser(db *sql.DB, userID int64, o Options) (*ForUserResult, error) {
 	works, err := LoadUserAnilistWorks(db, userID)
 	if err != nil {
 		return nil, err
@@ -258,6 +313,8 @@ func ForUser(db *sql.DB, userID int64, o Options) ([]Suggestion, error) {
 	if len(profile.Genres) == 0 && len(profile.Tags) == 0 {
 		return nil, nil
 	}
+
+	profTop := profileSummary(profile, 5, 5)
 
 	var genreIn []string
 	for i, g := range profile.Genres {
@@ -298,13 +355,17 @@ func ForUser(db *sql.DB, userID int64, o Options) ([]Suggestion, error) {
 				continue
 			}
 			seen[r.ID] = struct{}{}
+			mg := intersectOrdered(r.Genres, profTop.TopGenres)
+			mt := intersectOrdered(r.Tags, profTop.TopTags)
 			out = append(out, Suggestion{
-				Source:      "browse",
-				AnilistID:   r.ID,
-				Title:       r.Title,
-				ReadingType: r.ReadingType,
-				ImageURL:    r.ImageURL,
-				IsAdult:     r.IsAdult,
+				Source:        "browse",
+				AnilistID:     r.ID,
+				Title:         r.Title,
+				ReadingType:   r.ReadingType,
+				ImageURL:      r.ImageURL,
+				IsAdult:       r.IsAdult,
+				MatchedGenres: mg,
+				MatchedTags:   mt,
 			})
 		}
 	}
@@ -344,5 +405,5 @@ func ForUser(db *sql.DB, userID int64, o Options) ([]Suggestion, error) {
 	if len(out) > finalCap {
 		out = out[:finalCap]
 	}
-	return out, nil
+	return &ForUserResult{Results: out, Profile: profTop}, nil
 }

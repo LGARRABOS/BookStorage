@@ -18,10 +18,13 @@ type anilistTitle struct {
 type MediaDetail struct {
 	ID              int
 	Title           string
+	Description     string // plain text (HTML stripped)
 	ImageURL        string
 	Genres          []string
 	Tags            []MediaTag
 	Recommendations []AnilistResult
+	AverageScore    int // 0–100, 0 if absent
+	MeanScore       int // 0–100, 0 if absent
 	RawMedia        anilistMedia
 }
 
@@ -39,6 +42,9 @@ type mediaByIDResponse struct {
 			Type            string         `json:"type"`
 			Format          string         `json:"format"`
 			CountryOfOrigin string         `json:"countryOfOrigin"`
+			Description     *string        `json:"description"`
+			AverageScore    *int           `json:"averageScore"`
+			MeanScore       *int           `json:"meanScore"`
 			Genres          []string       `json:"genres"`
 			Tags            []mediaTagJSON `json:"tags"`
 			IsAdult         bool           `json:"isAdult"`
@@ -98,6 +104,9 @@ func GetMediaByID(id int) (*MediaDetail, error) {
     id
     title { romaji english }
     format
+    description
+    averageScore
+    meanScore
     genres
     tags { name rank }
     coverImage { large }
@@ -152,6 +161,15 @@ func GetMediaByID(id int) (*MediaDetail, error) {
 		Title:    pickTitleFromAnilistTitle(m.Title),
 		ImageURL: m.CoverImage.Large,
 		Genres:   append([]string(nil), m.Genres...),
+	}
+	if m.Description != nil && *m.Description != "" {
+		detail.Description = StripHTML(*m.Description)
+	}
+	if m.AverageScore != nil {
+		detail.AverageScore = *m.AverageScore
+	}
+	if m.MeanScore != nil {
+		detail.MeanScore = *m.MeanScore
 	}
 	detail.RawMedia = anilistMedia{
 		ID:              m.ID,
@@ -282,6 +300,10 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 			}
 		}
 		title := pickTitleFromAnilistTitle(anilistTitle{Romaji: m.Title.Romaji, English: m.Title.English})
+		var tagNames []string
+		for _, tg := range m.Tags {
+			tagNames = append(tagNames, tg.Name)
+		}
 		results = append(results, AnilistResult{
 			ID:          m.ID,
 			Title:       title,
@@ -289,6 +311,8 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 			ImageURL:    m.CoverImage.Large,
 			ReadingType: mapAnilistReadingType(m),
 			IsAdult:     m.IsAdult,
+			Genres:      append([]string(nil), m.Genres...),
+			Tags:        tagNames,
 		})
 		if len(results) >= max {
 			break

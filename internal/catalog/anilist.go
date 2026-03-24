@@ -13,12 +13,14 @@ const anilistTimeout = 8 * time.Second
 
 // AnilistResult represents one search result from AniList
 type AnilistResult struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Type        string `json:"type"`
-	ImageURL    string `json:"image_url"`
-	ReadingType string `json:"reading_type"` // mapped for our app
-	IsAdult     bool   `json:"is_adult"`
+	ID          int      `json:"id"`
+	Title       string   `json:"title"`
+	Type        string   `json:"type"`
+	ImageURL    string   `json:"image_url"`
+	ReadingType string   `json:"reading_type"` // mapped for our app
+	IsAdult     bool     `json:"is_adult"`
+	Genres      []string `json:"genres,omitempty"`
+	Tags        []string `json:"tags,omitempty"` // tag names only
 }
 
 type anilistMedia struct {
