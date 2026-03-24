@@ -9,7 +9,7 @@
 set -e
 
 APP_NAME="bookstorage"
-APP_VERSION="4.1.0"
+APP_VERSION="4.2.0"
 APP_USER="nobody"
 APP_GROUP="nobody"
 INSTALL_DIR="/opt/bookstorage"
@@ -141,7 +141,7 @@ prompt_release_choice() {
             exit 1
         fi
         if [[ "$choice" == "3" ]]; then
-            printf "Tag name (e.g. v4.1.0): "
+            printf "Tag name (e.g. v4.2.0): "
             if [[ -r /dev/tty ]]; then
                 read -r manual_in < /dev/tty
             else
