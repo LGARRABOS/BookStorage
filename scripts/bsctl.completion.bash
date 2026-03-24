@@ -19,14 +19,16 @@ _bsctl_completion() {
         return
     fi
 
-    # Second argument: optional branch name for "update" (git, current directory)
+    # Second argument: branch (e.g. main) or release tag for "update"
     if [[ ${COMP_CWORD} -eq 2 ]] && [[ "${COMP_WORDS[1]}" == "update" ]] && command -v git >/dev/null 2>&1; then
         if git rev-parse --git-dir >/dev/null 2>&1; then
-            local branches
+            local branches tags words
             branches=$(git branch -a 2>/dev/null | sed 's/^[* ]*//;s|^remotes/origin/||' | sort -u | grep -v '^HEAD' || true)
-            if [[ -n "${branches}" ]]; then
-                COMPREPLY=( $(compgen -W "${branches}" -- "${cur}") )
-            fi
+            tags=$(git tag -l 'v*' 2>/dev/null | sort -V | tail -n 20 || true)
+            words="main"
+            [[ -n "${tags}" ]] && words="${words} ${tags}"
+            [[ -n "${branches}" ]] && words="${words} ${branches}"
+            COMPREPLY=( $(compgen -W "${words}" -- "${cur}") )
         fi
     fi
 }

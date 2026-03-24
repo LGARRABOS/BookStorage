@@ -81,5 +81,5 @@ help:
 	@echo "  make build      - Compiler"
 	@echo "  make run        - Lancer en développement"
 	@echo "  make install    - Installer le service"
-	@echo "  make update     - Mettre à jour"
+	@echo "  make update     - bsctl update (menu release ; sinon: bsctl update main)"
 	@echo ""
