@@ -89,6 +89,14 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 			}
 			return key
 		},
+		// Safe JavaScript string literal for <script> (avoid printf "%q" + html/template double-escaping).
+		"jsstr": func(s string) template.JS {
+			b, err := json.Marshal(s)
+			if err != nil {
+				return template.JS(`""`)
+			}
+			return template.JS(b)
+		},
 		// Translate status (database stores French values)
 		"translateStatus": func(status, lang string) string {
 			if lang == i18n.LangEN {
