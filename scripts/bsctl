@@ -91,12 +91,12 @@ list_major_release_tags() {
 # Interactive choice: returns tag name on stdout
 prompt_release_choice() {
     if [[ ! -t 0 ]]; then
-        print_error "Interactive release choice requires a TTY."
-        printf "Set ${BOLD}BSCTL_UPDATE_TAG=vX.Y.Z${NC} (e.g. v3.1.1) or run: ${BOLD}bsctl update main${NC}\n"
+        print_error "Le choix interactif nécessite un terminal (TTY)."
+        printf "Définissez ${BOLD}BSCTL_UPDATE_TAG=vX.Y.Z${NC} ou lancez ${BOLD}bsctl update main${NC}.\n"
         exit 1
     fi
 
-    print_info "Fetching origin (branches + tags)..."
+    print_info "Récupération des branches et tags depuis origin…"
     git fetch origin
     git fetch origin --tags 2>/dev/null || git fetch --tags origin 2>/dev/null || true
     printf "\n"
@@ -108,35 +108,36 @@ prompt_release_choice() {
         [[ -n "$line" ]] && MAJOR_TAGS+=("$line")
     done <<< "$majors"
 
-    printf "\n${BOLD}Release to deploy${NC} (major tags vX.0.0, newest first):\n"
+    printf "\n${BOLD}── Version à déployer ──${NC}\n"
+    printf "Tags majeurs récents (format ${BOLD}vX.0.0${NC}) :\n\n"
     local i
     for ((i = 0; i < ${#MAJOR_TAGS[@]}; i++)); do
-        printf "  ${BOLD}%d)${NC} %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
+        printf "  ${BOLD}%d.${NC}  %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
     done
     if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-        printf "  ${YELLOW}(no vX.0.0 tags found — use ${BOLD}a${YELLOW} to enter a tag, or ${BOLD}bsctl update main${YELLOW})${NC}\n"
+        printf "  ${YELLOW}(aucun tag vX.0.0 trouvé — utilisez l’option ${BOLD}a${YELLOW} ou ${BOLD}bsctl update main${YELLOW})${NC}\n"
     fi
-    printf "  ${BOLD}a)${NC} autre — enter a tag manually (e.g. v3.1.1)\n"
+    printf "\n  ${BOLD}a${NC}  Saisir un autre tag (ex. v3.1.1)\n"
     printf "\n"
 
     local choice tag prompt_line
     if [[ ${#MAJOR_TAGS[@]} -gt 0 ]]; then
-        prompt_line="Choice [1-${#MAJOR_TAGS[@]}|a] (empty = cancel): "
+        prompt_line=$'\n'"${BOLD}→${NC} Tapez le numéro (1 à ${#MAJOR_TAGS[@]}), ${BOLD}a${NC} pour un autre tag, ou ${BOLD}Entrée${NC} pour annuler : "
     else
-        prompt_line="Choice [a] only (empty = cancel): "
+        prompt_line=$'\n'"${BOLD}→${NC} Tapez ${BOLD}a${NC} pour un tag manuel, ou ${BOLD}Entrée${NC} pour annuler : "
     fi
 
     while true; do
         read -r -p "$prompt_line" choice || true
         choice=$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')
         if [[ -z "$choice" ]]; then
-            print_error "Cancelled."
+            print_error "Annulé."
             exit 1
         fi
         if [[ "$choice" == "a" || "$choice" == "autre" ]]; then
-            read -r -p "Tag (e.g. v3.1.1): " tag || true
+            read -r -p "Nom du tag (ex. v3.1.1) : " tag || true
             if ! tag=$(normalize_tag "$tag"); then
-                print_error "Empty tag."
+                print_error "Tag vide."
                 continue
             fi
             printf '%s' "$tag"
@@ -150,9 +151,9 @@ prompt_release_choice() {
             fi
         fi
         if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-            print_error "No major vX.0.0 tags. Use a) to enter a tag, or: bsctl update main"
+            print_error "Aucun tag vX.0.0 — utilisez « a » ou : bsctl update main"
         else
-            print_error "Invalid choice. Use 1–${#MAJOR_TAGS[@]}, or a."
+            print_error "Choix invalide. Entrez un numéro entre 1 et ${#MAJOR_TAGS[@]}, ou « a »."
         fi
     done
 }
