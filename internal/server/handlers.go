@@ -14,6 +14,7 @@ import (
 	"html/template"
 	"io"
 	"log"
+	"mime/multipart"
 	"net/http"
 	"os"
 	"path"
@@ -245,6 +246,7 @@ func (a *App) setLang(w http.ResponseWriter, lang string) {
 		Path:     "/",
 		MaxAge:   365 * 24 * 60 * 60, // 1 year
 		HttpOnly: true,
+		SameSite: sessionSameSite(a.Settings.Environment),
 	})
 }
 
@@ -290,7 +292,7 @@ func (a *App) setUserID(w http.ResponseWriter, userID int) {
 		Path:     "/",
 		MaxAge:   3600,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sessionSameSite(a.Settings.Environment),
 	}
 	if strings.ToLower(a.Settings.Environment) == "production" {
 		cookie.Secure = true
@@ -305,7 +307,7 @@ func (a *App) clearSession(w http.ResponseWriter) {
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
-		SameSite: http.SameSiteLaxMode,
+		SameSite: sessionSameSite(a.Settings.Environment),
 	})
 }
 
@@ -958,7 +960,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		works = append(works, wRow)
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "dashboard", a.mergeData(r, map[string]any{
+	data := map[string]any{
 		"Works":         works,
 		"ReadingTypes":  readingTypes,
 		"ReadingStatus": readingStatuses,
@@ -966,7 +968,20 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		"SortBy":        sortBy,
 		"AdultFilter":   adultFilter,
 		"SearchQuery":   r.URL.Query().Get("q"),
-	}))
+	}
+	if enc := r.URL.Query().Get("import_report"); enc != "" {
+		raw, err := base64.RawURLEncoding.DecodeString(enc)
+		if err == nil {
+			var rep ImportReport
+			if json.Unmarshal(raw, &rep) == nil {
+				data["ImportReport"] = rep
+			}
+		}
+	}
+	if r.URL.Query().Get("error") == "import" {
+		data["ImportError"] = true
+	}
+	_ = a.Templates.ExecuteTemplate(w, "dashboard", a.mergeData(r, data))
 }
 
 // Ajout d’une œuvre (avec support basique d’upload d’image)
@@ -1447,22 +1462,12 @@ func (a *App) HandleDeleteWork(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/dashboard", http.StatusFound)
 }
 
-type exportWork struct {
-	Title       string `json:"title"`
-	Chapter     int    `json:"chapter"`
-	Link        string `json:"link,omitempty"`
-	Status      string `json:"status,omitempty"`
-	ReadingType string `json:"reading_type,omitempty"`
-	Rating      int    `json:"rating"`
-	Notes       string `json:"notes,omitempty"`
-	UpdatedAt   string `json:"updated_at,omitempty"`
-}
-
 func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	rows, err := a.DB.Query(
-		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
+		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, ''),
+                catalog_id, COALESCE(is_adult, 0), COALESCE(image_path, '')
          FROM works WHERE user_id = ? ORDER BY title`,
 		userID,
 	)
@@ -1475,8 +1480,10 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	var works []exportWork
 	for rows.Next() {
 		var w exportWork
-		var link, status, readingType, notes sql.NullString
-		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt); err != nil {
+		var link, status, readingType, notes, imagePath sql.NullString
+		var catalogID sql.NullInt64
+		var isAdult int
+		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt, &catalogID, &isAdult, &imagePath); err != nil {
 			continue
 		}
 		if link.Valid {
@@ -1491,6 +1498,14 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 		if notes.Valid {
 			w.Notes = notes.String
 		}
+		if catalogID.Valid && catalogID.Int64 > 0 {
+			cid := int(catalogID.Int64)
+			w.CatalogID = &cid
+		}
+		w.IsAdult = isAdult != 0
+		if imagePath.Valid {
+			w.ImagePath = imagePath.String
+		}
 		works = append(works, w)
 	}
 
@@ -1499,8 +1514,9 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"bookstorage_export_%s.json\"", dateStr))
 		payload := map[string]any{
-			"works":       works,
-			"exported_at": time.Now().Format(time.RFC3339),
+			"export_version": ExportFormatVersion,
+			"works":          works,
+			"exported_at":    time.Now().Format(time.RFC3339),
 		}
 		_ = json.NewEncoder(w).Encode(payload)
 		return
@@ -1513,116 +1529,94 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	writer.Comma = ';'
 	defer writer.Flush()
-	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes"})
-	for _, w := range works {
+	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes", "CatalogID", "IsAdult", "ImagePath"})
+	for _, row := range works {
+		cat := ""
+		if row.CatalogID != nil {
+			cat = strconv.Itoa(*row.CatalogID)
+		}
+		adult := "0"
+		if row.IsAdult {
+			adult = "1"
+		}
 		_ = writer.Write([]string{
-			w.Title,
-			strconv.Itoa(w.Chapter),
-			w.Link,
-			w.Status,
-			w.ReadingType,
-			strconv.Itoa(w.Rating),
-			w.Notes,
+			row.Title,
+			strconv.Itoa(row.Chapter),
+			row.Link,
+			row.Status,
+			row.ReadingType,
+			strconv.Itoa(row.Rating),
+			row.Notes,
+			cat,
+			adult,
+			row.ImagePath,
 		})
 	}
 }
 
-func (a *App) HandleImportCSV(w http.ResponseWriter, r *http.Request) {
+// HandleImport accepts CSV or JSON (file upload or JSON body).
+func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 
 	userID, _ := a.currentUserID(r)
+	mode := parseDuplicateMode(r.URL.Query().Get("duplicate_mode"))
 
-	// Parse multipart form
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/json") {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20))
+		if err != nil {
+			http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+			return
+		}
+		a.ImportFromJSONBytes(w, r, userID, body, mode)
+		return
+	}
+
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
 		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
 		return
 	}
+	mode = parseDuplicateMode(r.FormValue("duplicate_mode"))
 
-	file, _, err := r.FormFile("csv_file")
-	if err != nil {
+	var file multipart.File
+	var filename string
+	if f, h, err := r.FormFile("import_file"); err == nil {
+		file, filename = f, h.Filename
+	} else if f, h, err := r.FormFile("csv_file"); err == nil {
+		file, filename = f, h.Filename
+	} else if f, h, err := r.FormFile("json_file"); err == nil {
+		file, filename = f, h.Filename
+	} else {
 		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
 		return
 	}
 	defer func() { _ = file.Close() }()
 
-	reader := csv.NewReader(file)
-	reader.Comma = ';' // Use semicolon for European Excel compatibility
+	data, err := io.ReadAll(io.LimitReader(file, 32<<20))
+	if err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	trim := strings.TrimSpace(string(data))
+	isJSON := strings.HasSuffix(strings.ToLower(filename), ".json") ||
+		strings.HasPrefix(trim, "{") || strings.HasPrefix(trim, "[")
+	if isJSON {
+		a.ImportFromJSONBytes(w, r, userID, data, mode)
+		return
+	}
+
+	reader := csv.NewReader(bytes.NewReader(data))
+	reader.Comma = ';'
 	reader.LazyQuotes = true
 	records, err := reader.ReadAll()
 	if err != nil {
 		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
 		return
 	}
-
-	// Skip header row if present
-	startIdx := 0
-	if len(records) > 0 && strings.ToLower(records[0][0]) == "title" {
-		startIdx = 1
-	}
-
-	imported := 0
-	for i := startIdx; i < len(records); i++ {
-		record := records[i]
-		if len(record) < 1 || strings.TrimSpace(record[0]) == "" {
-			continue
-		}
-
-		title := strings.TrimSpace(record[0])
-		chapter := 0
-		link := ""
-		status := "En cours"
-		readingType := "Roman"
-		rating := 0
-		notes := ""
-
-		if len(record) > 1 {
-			chapter, _ = strconv.Atoi(record[1])
-		}
-		if len(record) > 2 {
-			link = strings.TrimSpace(record[2])
-		}
-		if len(record) > 3 && strings.TrimSpace(record[3]) != "" {
-			status = strings.TrimSpace(record[3])
-		}
-		if len(record) > 4 && strings.TrimSpace(record[4]) != "" {
-			readingType = strings.TrimSpace(record[4])
-		}
-		if len(record) > 5 {
-			rating, _ = strconv.Atoi(record[5])
-			if rating < 0 || rating > 5 {
-				rating = 0
-			}
-		}
-		if len(record) > 6 {
-			notes = strings.TrimSpace(record[6])
-		}
-
-		// Check if work already exists
-		var existsID int
-		if err := a.DB.QueryRow(
-			`SELECT id FROM works WHERE user_id = ? AND title = ?`,
-			userID, title,
-		).Scan(&existsID); err != nil && err != sql.ErrNoRows {
-			continue
-		}
-
-		if existsID == 0 {
-			// Insert new work
-			_, err := a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, notes, userID,
-			)
-			if err == nil {
-				imported++
-			}
-		}
-	}
-
-	http.Redirect(w, r, fmt.Sprintf("/dashboard?imported=%d", imported), http.StatusFound)
+	a.ImportFromCSVRecords(w, r, userID, records, mode)
 }
 
 type profileUser struct {

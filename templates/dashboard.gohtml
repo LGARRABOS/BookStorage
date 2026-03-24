@@ -12,7 +12,7 @@
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <script src="/static/js/modals.js?v=2"></script>
+    <script src="/static/js/modals.js?v=3"></script>
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
@@ -194,8 +194,28 @@
                 </div>
             </div>
 
+            {{ if .ImportError }}
+            <div class="import-notice import-notice--error" role="alert">{{ t .T "import.error.generic" }}</div>
+            {{ end }}
+            {{ if .ImportReport }}
+            <div class="import-notice" role="status">
+                {{ t .T "import.added" }}: {{ .ImportReport.Imported }} —
+                {{ t .T "import.updated" }}: {{ .ImportReport.Updated }} —
+                {{ t .T "import.skipped_dup" }}: {{ .ImportReport.SkippedDuplicate }} —
+                {{ t .T "import.skipped_invalid" }}: {{ .ImportReport.SkippedInvalid }}
+                {{ if .ImportReport.Errors }}
+                <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
+                    {{ range .ImportReport.Errors }}
+                    <li>{{ t $.T "import.line_prefix" }} {{ .Line }}: {{ .Msg }}</li>
+                    {{ end }}
+                </ul>
+                {{ end }}
+            </div>
+            {{ end }}
+
             <div class="filters-bar">
                 <div class="search-box">
+                    <label for="search-input" class="sr-only">{{ t .T "dashboard.search.label" }}</label>
                     <input type="text" id="search-input" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off" value="{{ .SearchQuery }}">
                 </div>
                 <div class="filter-group">
@@ -216,8 +236,8 @@
                         <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
                     </select>
                     <div class="view-toggle" title="{{ if eq .Lang "fr" }}Vue grille / liste{{ else }}Grid / List view{{ end }}">
-                        <button type="button" id="view-grid-btn" class="active" aria-label="Grid">▦</button>
-                        <button type="button" id="view-list-btn" aria-label="List">☰</button>
+                        <button type="button" id="view-grid-btn" class="active" aria-pressed="true" aria-label="{{ t .T "dashboard.view.grid" }}">▦</button>
+                        <button type="button" id="view-list-btn" aria-pressed="false" aria-label="{{ t .T "dashboard.view.list" }}">☰</button>
                     </div>
                     <select id="sort-select" onchange="applyDashboardFilters()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
@@ -389,23 +409,25 @@
         if (gridEl) {
             if (viewMode === 'list') {
                 gridEl.classList.add('view-list');
-                if (viewListBtn) viewListBtn.classList.add('active');
-                if (viewGridBtn) viewGridBtn.classList.remove('active');
+                if (viewListBtn) { viewListBtn.classList.add('active'); viewListBtn.setAttribute('aria-pressed', 'true'); }
+                if (viewGridBtn) { viewGridBtn.classList.remove('active'); viewGridBtn.setAttribute('aria-pressed', 'false'); }
             } else {
-                if (viewGridBtn) viewGridBtn.classList.add('active');
-                if (viewListBtn) viewListBtn.classList.remove('active');
+                if (viewGridBtn) { viewGridBtn.classList.add('active'); viewGridBtn.setAttribute('aria-pressed', 'true'); }
+                if (viewListBtn) { viewListBtn.classList.remove('active'); viewListBtn.setAttribute('aria-pressed', 'false'); }
             }
         }
         if (viewGridBtn) viewGridBtn.addEventListener('click', function() {
             if (gridEl) gridEl.classList.remove('view-list');
             viewGridBtn.classList.add('active');
-            if (viewListBtn) viewListBtn.classList.remove('active');
+            viewGridBtn.setAttribute('aria-pressed', 'true');
+            if (viewListBtn) { viewListBtn.classList.remove('active'); viewListBtn.setAttribute('aria-pressed', 'false'); }
             localStorage.setItem('viewMode', 'grid');
         });
         if (viewListBtn) viewListBtn.addEventListener('click', function() {
             if (gridEl) gridEl.classList.add('view-list');
             viewListBtn.classList.add('active');
-            if (viewGridBtn) viewGridBtn.classList.remove('active');
+            viewListBtn.setAttribute('aria-pressed', 'true');
+            if (viewGridBtn) { viewGridBtn.classList.remove('active'); viewGridBtn.setAttribute('aria-pressed', 'false'); }
             localStorage.setItem('viewMode', 'list');
         });
 

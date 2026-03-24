@@ -239,7 +239,15 @@
                         <div class="form-group">
                             <label>{{ if eq .Lang "fr" }}Importer des lectures{{ else }}Import readings{{ end }}</label>
                             <form action="/import" method="POST" enctype="multipart/form-data" style="margin-top: 0.5rem;">
-                                <input type="file" name="csv_file" accept=".csv" required style="margin-bottom: 0.5rem;">
+                                <div class="form-group" style="margin-bottom: 0.75rem;">
+                                    <label for="duplicate_mode" style="font-size: 0.85rem;">{{ t .T "profile.import.duplicate_mode" }}</label>
+                                    <select id="duplicate_mode" name="duplicate_mode" style="width: 100%; max-width: 280px; padding: 0.5rem; border-radius: 0.5rem; border: 1px solid var(--border-subtle); background: var(--background);">
+                                        <option value="skip">{{ t .T "profile.import.duplicate_skip" }}</option>
+                                        <option value="update">{{ t .T "profile.import.duplicate_update" }}</option>
+                                    </select>
+                                </div>
+                                <input type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required style="margin-bottom: 0.5rem;">
+                                <p class="form-hint" style="font-size: 0.8rem;">{{ if eq .Lang "fr" }}CSV ou JSON (export BookStorage){{ else }}CSV or JSON (BookStorage export){{ end }}</p>
                                 <button type="submit" class="btn btn-secondary">📤 {{ if eq .Lang "fr" }}Importer{{ else }}Import{{ end }}</button>
                             </form>
                         </div>
@@ -251,7 +259,7 @@
                             {{ if eq .Lang "fr" }}Le fichier doit être au format CSV avec des points-virgules (;) comme séparateur :{{ else }}The file must be CSV format with semicolons (;) as separator:{{ end }}
                         </p>
                         <code style="display: block; background: var(--background); padding: 0.75rem; border-radius: 0.5rem; font-size: 0.8rem; overflow-x: auto; white-space: nowrap;">
-Title;Chapter;Link;Status;Type;Rating;Notes
+Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath
                         </code>
                         <ul style="margin: 0.75rem 0 0; padding-left: 1.25rem; color: var(--text-secondary);">
                             <li><strong>Title</strong> : {{ if eq .Lang "fr" }}Titre de l'œuvre (obligatoire){{ else }}Work title (required){{ end }}</li>

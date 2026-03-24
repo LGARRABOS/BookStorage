@@ -4,11 +4,20 @@
  *        showAlert(msg).then(() => ...)
  */
 (function() {
+  function getFocusable(dialog) {
+    if (!dialog) return [];
+    return Array.prototype.slice.call(
+      dialog.querySelectorAll('button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])')
+    ).filter(function(el) {
+      return !el.hasAttribute('disabled') && el.offsetParent !== null;
+    });
+  }
+
   function ensureModals() {
     if (document.getElementById('confirm-modal')) return;
     const confirmHtml = '<div id="confirm-modal" class="confirm-modal-overlay" aria-hidden="true">' +
       '<div class="confirm-modal-backdrop"></div>' +
-      '<div class="confirm-modal-dialog">' +
+      '<div class="confirm-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="confirm-modal-title" aria-describedby="confirm-modal-msg" tabindex="-1">' +
       '<h3 class="confirm-modal-title" id="confirm-modal-title"></h3>' +
       '<p class="confirm-modal-msg" id="confirm-modal-msg"></p>' +
       '<div class="confirm-modal-actions">' +
@@ -17,7 +26,7 @@
       '</div></div></div>';
     const alertHtml = '<div id="alert-modal" class="alert-modal-overlay" aria-hidden="true">' +
       '<div class="alert-modal-backdrop"></div>' +
-      '<div class="alert-modal-dialog">' +
+      '<div class="alert-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="alert-modal-title" aria-describedby="alert-modal-msg" tabindex="-1">' +
       '<h3 class="alert-modal-title" id="alert-modal-title"></h3>' +
       '<p class="alert-modal-msg" id="alert-modal-msg"></p>' +
       '<div class="alert-modal-actions">' +
@@ -26,23 +35,46 @@
     document.body.insertAdjacentHTML('beforeend', confirmHtml + alertHtml);
   }
 
+  function trapFocus(e, dialog, lastFocused) {
+    var focusables = getFocusable(dialog);
+    if (focusables.length === 0) return;
+    var first = focusables[0];
+    var last = focusables[focusables.length - 1];
+    if (e.key === 'Tab') {
+      if (e.shiftKey) {
+        if (document.activeElement === first) {
+          e.preventDefault();
+          last.focus();
+        }
+      } else {
+        if (document.activeElement === last) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
+    }
+  }
+
   window.showConfirm = function(message, options) {
     ensureModals();
-    const opts = options || {};
-    const title = opts.title || (document.documentElement.lang === 'fr' ? 'Confirmer' : 'Confirm');
-    const okLabel = opts.okLabel || (document.documentElement.lang === 'fr' ? 'Supprimer' : 'Delete');
-    const cancelLabel = opts.cancelLabel || (document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel');
+    var opts = options || {};
+    var title = opts.title || (document.documentElement.lang === 'fr' ? 'Confirmer' : 'Confirm');
+    var okLabel = opts.okLabel || (document.documentElement.lang === 'fr' ? 'Supprimer' : 'Delete');
+    var cancelLabel = opts.cancelLabel || (document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel');
 
-    const modal = document.getElementById('confirm-modal');
-    const msgEl = document.getElementById('confirm-modal-msg');
-    const titleEl = document.getElementById('confirm-modal-title');
-    const cancelBtn = document.getElementById('confirm-modal-cancel');
-    const okBtn = document.getElementById('confirm-modal-ok');
+    var modal = document.getElementById('confirm-modal');
+    var dialogEl = modal.querySelector('.confirm-modal-dialog');
+    var msgEl = document.getElementById('confirm-modal-msg');
+    var titleEl = document.getElementById('confirm-modal-title');
+    var cancelBtn = document.getElementById('confirm-modal-cancel');
+    var okBtn = document.getElementById('confirm-modal-ok');
 
     titleEl.textContent = title;
     msgEl.textContent = message;
     cancelBtn.textContent = cancelLabel;
     okBtn.textContent = okLabel;
+
+    var previousActive = document.activeElement;
 
     return new Promise(function(resolve) {
       function close(result) {
@@ -50,20 +82,26 @@
         modal.style.display = 'none';
         cancelBtn.onclick = null;
         okBtn.onclick = null;
-        okBtn.onkeydown = null;
-        cancelBtn.onkeydown = null;
+        modal.removeEventListener('keydown', onTrap);
         modal.onkeydown = null;
+        if (previousActive && typeof previousActive.focus === 'function') {
+          previousActive.focus();
+        }
         resolve(result);
+      }
+      function onTrap(e) {
+        if (e.key === 'Escape') {
+          e.preventDefault();
+          close(false);
+          return;
+        }
+        trapFocus(e, dialogEl);
       }
       cancelBtn.onclick = function() { close(false); };
       okBtn.onclick = function() { close(true); };
-      const confirmBackdrop = modal.querySelector('.confirm-modal-backdrop');
+      var confirmBackdrop = modal.querySelector('.confirm-modal-backdrop');
       if (confirmBackdrop) confirmBackdrop.onclick = function() { close(false); };
-      function onKey(e) {
-        if (e.key === 'Escape') { e.preventDefault(); close(false); }
-      }
-      modal.onkeydown = onKey;
-      cancelBtn.onkeydown = okBtn.onkeydown = onKey;
+      modal.addEventListener('keydown', onTrap);
 
       modal.setAttribute('aria-hidden', 'false');
       modal.style.display = 'flex';
@@ -73,36 +111,46 @@
 
   window.showAlert = function(message, options) {
     ensureModals();
-    const opts = options || {};
-    const title = opts.title || (document.documentElement.lang === 'fr' ? 'Information' : 'Information');
-    const okLabel = opts.okLabel || 'OK';
+    var opts = options || {};
+    var title = opts.title || (document.documentElement.lang === 'fr' ? 'Information' : 'Information');
+    var okLabel = opts.okLabel || 'OK';
 
-    const modal = document.getElementById('alert-modal');
-    const msgEl = document.getElementById('alert-modal-msg');
-    const titleEl = document.getElementById('alert-modal-title');
-    const okBtn = document.getElementById('alert-modal-ok');
+    var modal = document.getElementById('alert-modal');
+    var dialogEl = modal.querySelector('.alert-modal-dialog');
+    var msgEl = document.getElementById('alert-modal-msg');
+    var titleEl = document.getElementById('alert-modal-title');
+    var okBtn = document.getElementById('alert-modal-ok');
 
     titleEl.textContent = title;
     msgEl.textContent = message;
     okBtn.textContent = okLabel;
+
+    var previousActive = document.activeElement;
 
     return new Promise(function(resolve) {
       function close() {
         modal.setAttribute('aria-hidden', 'true');
         modal.style.display = 'none';
         okBtn.onclick = null;
-        okBtn.onkeydown = null;
+        modal.removeEventListener('keydown', onTrap);
         modal.onkeydown = null;
+        if (previousActive && typeof previousActive.focus === 'function') {
+          previousActive.focus();
+        }
         resolve();
       }
-      okBtn.onclick = close;
-      const alertBackdrop = modal.querySelector('.alert-modal-backdrop');
-      if (alertBackdrop) alertBackdrop.onclick = close;
-      function onKey(e) {
-        if (e.key === 'Escape' || e.key === 'Enter') { e.preventDefault(); close(); }
+      function onTrap(e) {
+        if (e.key === 'Escape' || e.key === 'Enter') {
+          e.preventDefault();
+          close();
+          return;
+        }
+        trapFocus(e, dialogEl);
       }
-      modal.onkeydown = onKey;
-      okBtn.onkeydown = onKey;
+      okBtn.onclick = close;
+      var alertBackdrop = modal.querySelector('.alert-modal-backdrop');
+      if (alertBackdrop) alertBackdrop.onclick = close;
+      modal.addEventListener('keydown', onTrap);
 
       modal.setAttribute('aria-hidden', 'false');
       modal.style.display = 'flex';

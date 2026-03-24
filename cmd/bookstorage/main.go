@@ -177,7 +177,7 @@ func main() {
 	mux.HandleFunc("/delete/{id}", app.RequireLogin(app.HandleDeleteWork))
 	mux.HandleFunc("POST /api/delete/{id}", app.RequireLogin(app.HandleDeleteWorkAPI))
 	mux.HandleFunc("/export", app.RequireLogin(app.HandleExport))
-	mux.HandleFunc("POST /import", app.RequireLogin(app.HandleImportCSV))
+	mux.HandleFunc("POST /import", app.RequireLogin(app.HandleImport))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.HandleAdminAccounts))
 	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.HandleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.HandleDeleteAccount))
@@ -187,7 +187,8 @@ func main() {
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
-	if err := http.ListenAndServe(addr, app.WithErrorPages(mux)); err != nil {
+	handler := app.SecurityHeaders(app.WithErrorPages(mux))
+	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}
 }
