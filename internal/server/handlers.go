@@ -28,6 +28,7 @@ import (
 	"bookstorage/internal/config"
 	"bookstorage/internal/i18n"
 	"bookstorage/internal/recommend"
+	"bookstorage/internal/translate"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/pbkdf2"
@@ -1028,20 +1029,34 @@ func (a *App) HandleRecommendationMedia(w http.ResponseWriter, r *http.Request) 
 	for _, t := range d.Tags {
 		tags = append(tags, map[string]any{"name": t.Name, "rank": t.Rank})
 	}
+
+	desc := d.Description
+	descTranslated := false
+	if a.currentLang(r) == i18n.LangFR && a.Settings.TranslateURL != "" && desc != "" {
+		fr, ok, err := translate.CachedToFrench(a.DB, a.Settings, desc)
+		if err != nil {
+			log.Printf("translation: %v", err)
+		} else if ok {
+			desc = fr
+			descTranslated = true
+		}
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"anilist_id":    d.ID,
-		"title":         d.Title,
-		"description":   d.Description,
-		"genres":        d.Genres,
-		"tags":          tags,
-		"format":        d.RawMedia.Format,
-		"type":          d.RawMedia.Type,
-		"average_score": d.AverageScore,
-		"mean_score":    d.MeanScore,
-		"image_url":     d.ImageURL,
-		"reading_type":  catalog.ReadingTypeFromAnilistDetail(d),
-		"is_adult":      d.RawMedia.IsAdult,
+		"anilist_id":             d.ID,
+		"title":                  d.Title,
+		"description":            desc,
+		"description_translated": descTranslated,
+		"genres":                 d.Genres,
+		"tags":                   tags,
+		"format":                 d.RawMedia.Format,
+		"type":                   d.RawMedia.Type,
+		"average_score":          d.AverageScore,
+		"mean_score":             d.MeanScore,
+		"image_url":              d.ImageURL,
+		"reading_type":           catalog.ReadingTypeFromAnilistDetail(d),
+		"is_adult":               d.RawMedia.IsAdult,
 	})
 }
 

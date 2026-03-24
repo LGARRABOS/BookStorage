@@ -23,6 +23,9 @@ type Settings struct {
 	Host                 string
 	Port                 int
 	EnableHSTS           bool
+	// TranslateURL is a LibreTranslate-compatible API base URL (no trailing slash), e.g. https://libretranslate.com — empty disables auto-translation.
+	TranslateURL    string
+	TranslateAPIKey string
 }
 
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
@@ -160,6 +163,8 @@ func Load(rootPath string) (*Settings, error) {
 		Host:                 host,
 		Port:                 port,
 		EnableHSTS:           enableHSTS,
+		TranslateURL:         strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
+		TranslateAPIKey:      strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err
