@@ -50,6 +50,16 @@ func TestAggregateProfile(t *testing.T) {
 	}
 }
 
+func TestIntersectOrdered(t *testing.T) {
+	got := intersectOrdered([]string{"Romance", "Drama", "X"}, []string{"Drama", "Romance"})
+	if len(got) != 2 || got[0] != "Romance" || got[1] != "Drama" {
+		t.Errorf("got %v", got)
+	}
+	if len(intersectOrdered([]string{"A"}, []string{"B"})) != 0 {
+		t.Error("expected empty intersection")
+	}
+}
+
 func TestBuildWeightedListOrdering(t *testing.T) {
 	o := DefaultOptions()
 	works := []userWork{

@@ -966,19 +966,75 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	sug, err := recommend.ForUser(a.DB, int64(userID), recommend.DefaultOptions())
+	res, err := recommend.ForUser(a.DB, int64(userID), recommend.DefaultOptions())
 	if err != nil {
 		log.Printf("recommendations: %v", err)
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream", "results": []any{}})
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream", "results": []any{}, "profile": map[string]any{}})
 		return
 	}
-	if sug == nil {
-		sug = []recommend.Suggestion{}
+	if res == nil {
+		res = &recommend.ForUserResult{
+			Results: []recommend.Suggestion{},
+			Profile: recommend.ProfileSummary{},
+		}
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"results": sug})
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+// HandleRecommendationMedia returns synopsis and metadata for one AniList id (JSON).
+func (a *App) HandleRecommendationMedia(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	if _, ok := a.currentUserID(r); !ok {
+		w.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+	aid := strings.TrimSpace(r.URL.Query().Get("anilist_id"))
+	id, err := strconv.Atoi(aid)
+	if err != nil || id <= 0 {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid_id"})
+		return
+	}
+	d, err := catalog.GetMediaByID(id)
+	if err != nil {
+		log.Printf("recommendation media: %v", err)
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusBadGateway)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream"})
+		return
+	}
+	if d == nil || d.Title == "" {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusNotFound)
+		_ = json.NewEncoder(w).Encode(map[string]any{"error": "not_found"})
+		return
+	}
+	tags := make([]map[string]any, 0, len(d.Tags))
+	for _, t := range d.Tags {
+		tags = append(tags, map[string]any{"name": t.Name, "rank": t.Rank})
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"anilist_id":    d.ID,
+		"title":         d.Title,
+		"description":   d.Description,
+		"genres":        d.Genres,
+		"tags":          tags,
+		"format":        d.RawMedia.Format,
+		"type":          d.RawMedia.Type,
+		"average_score": d.AverageScore,
+		"mean_score":    d.MeanScore,
+		"image_url":     d.ImageURL,
+		"reading_type":  catalog.ReadingTypeFromAnilistDetail(d),
+		"is_adult":      d.RawMedia.IsAdult,
+	})
 }
 
 func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
