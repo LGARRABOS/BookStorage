@@ -157,6 +157,26 @@ bsctl help     # Afficher l'aide
 | `bsctl update [branche]` | Mettre à jour depuis `origin/main` ou `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
 
+### Commande inconnue
+
+Si le premier argument n’est pas une sous-commande reconnue, `bsctl` affiche l’aide complète (code de sortie `1`).
+
+### Complétion par Tab (bash)
+
+La complétion **bash** (shell interactif) est installée dans `/etc/bash_completion.d/bsctl` après `sudo bsctl install` ou `./deploy/install.sh`. Ouvrez un nouveau terminal, ou exécutez :
+
+```bash
+source /etc/bash_completion.d/bsctl
+```
+
+Depuis un clone en développement :
+
+```bash
+source scripts/bsctl.completion.bash
+```
+
+Ensuite, tapez `bsctl` puis Tab pour compléter les sous-commandes. Après `bsctl update`, Tab peut proposer des **noms de branches git** si le répertoire courant est un dépôt du projet.
+
 ---
 
 ## ⚙️ Configuration
@@ -268,7 +288,9 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 BookStorage/
 ├── cmd/bookstorage/     # Point d'entrée
 │   └── main.go
-├── scripts/bsctl        # CLI de gestion
+├── scripts/
+│   ├── bsctl                    # CLI de gestion
+│   └── bsctl.completion.bash    # Complétion bash (source ou install)
 ├── Makefile             # Commandes Make
 │
 ├── .env.example         # Modèle d’environnement (copier vers .env)
