@@ -42,7 +42,7 @@ bsctl start
 
 ## bsctl — service et mises à jour
 
-`bsctl` (BookStorage Control) sert à piloter le service et appliquer les mises à jour. La référence complète des commandes (y compris développement) est dans [Développement](developpement.md#cli-bsctl).
+`bsctl` (BookStorage Control) sert à piloter le service et appliquer les mises à jour. Pour les commandes **développement** (`build`, `run`, `clean`, …), voir [Développement — bsctl côté développement](developpement.md#bsctl-dev).
 
 ```bash
 bsctl help     # Afficher l'aide
