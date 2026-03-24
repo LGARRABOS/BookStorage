@@ -1,2 +1,6 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# Shell scripts (avoid CRLF breaking #!/bin/bash on Linux)
+scripts/bsctl text eol=lf
+scripts/bsctl.completion.bash text eol=lf
