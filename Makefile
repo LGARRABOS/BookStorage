@@ -6,7 +6,7 @@
 # ============================================================================
 
 APP_NAME    := bookstorage
-APP_VERSION := 3.1.2
+APP_VERSION := 4.0.0
 APP_USER    := nobody
 APP_GROUP   := nobody
 BIN_DIR     := /usr/local/bin
