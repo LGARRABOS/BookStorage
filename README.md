@@ -154,7 +154,7 @@ bsctl help     # Show help
 |--------------------|--------------------------------------|
 | `bsctl install`    | Install systemd service              |
 | `bsctl uninstall`  | Uninstall service                    |
-| `bsctl update`     | Interactive release: pick among the last **major** tags `vX.0.0`, or set `BSCTL_UPDATE_TAG=vX.Y.Z` for non-interactive + build + restart |
+| `bsctl update`     | Interactive release: **1** / **2** = last two **major** tags `vX.0.0`, **3** = type any tag; or `BSCTL_UPDATE_TAG=vX.Y.Z` for non-interactive + build + restart |
 | `bsctl update main` | Update from `origin/main` (fast-forward) + build + restart |
 | `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
