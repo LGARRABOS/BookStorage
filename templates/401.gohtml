@@ -8,14 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ t .T "error.401.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <style>
-        .error-wrap { min-height: 65vh; display: grid; place-items: center; }
-        .error-card { width: min(720px, 92vw); padding: 2rem; border-radius: 1rem; background: var(--card-bg); border: 1px solid var(--card-border); box-shadow: var(--shadow-sm); }
-        .error-code { font-size: 3rem; font-weight: 800; letter-spacing: -0.04em; margin: 0; }
-        .error-sub { color: var(--text-muted); margin-top: 0.5rem; }
-        .error-actions { margin-top: 1.5rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
-        .path { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; background: var(--surface-2); padding: 0.25rem 0.5rem; border-radius: 0.5rem; }
-    </style>
+    <link rel="stylesheet" href="/static/css/error-pages.css">
     <script>
         (function() {
             const theme = localStorage.getItem('theme') || 'light';
@@ -23,18 +16,23 @@
         })();
     </script>
 </head>
-<body>
-    <main class="page-body">
+<body class="error-page">
+    <div class="error-bg" aria-hidden="true"></div>
+    <a class="error-brand" href="/">BookStorage</a>
+    <main class="page-body error-page-shell">
         <div class="container error-wrap">
-            <section class="error-card">
-                <h1 class="error-code">401</h1>
-                <p class="error-sub">{{ t .T "error.401.desc" }}</p>
-                {{ if .RequestedPath }}
-                    <p class="error-sub">{{ t .T "error.requested_path" }} <span class="path">{{ .RequestedPath }}</span></p>
-                {{ end }}
-                <div class="error-actions">
-                    <a class="btn btn-primary" href="/login">{{ t .T "nav.login" }}</a>
-                    <a class="btn btn-secondary" href="/">{{ t .T "error.go_home" }}</a>
+            <section class="error-card" data-error-code="401">
+                <div class="error-card-inner">
+                    <div class="error-icon-wrap" aria-hidden="true">🔐</div>
+                    <h1 class="error-code">401</h1>
+                    <p class="error-sub">{{ t .T "error.401.desc" }}</p>
+                    {{ if .RequestedPath }}
+                        <p class="error-sub">{{ t .T "error.requested_path" }} <span class="path">{{ .RequestedPath }}</span></p>
+                    {{ end }}
+                    <div class="error-actions">
+                        <a class="btn btn-primary" href="/login">{{ t .T "nav.login" }}</a>
+                        <a class="btn btn-secondary" href="/">{{ t .T "error.go_home" }}</a>
+                    </div>
                 </div>
             </section>
         </div>
