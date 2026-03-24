@@ -113,10 +113,6 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_SECRET_KEY` | Clé secrète de session (min. 32 octets si `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`     |
 | `BOOKSTORAGE_ENV` | `development` ou `production` (la production interdit la clé par défaut) | `development` |
 | `BOOKSTORAGE_ENABLE_HSTS` | `true` ou `1` pour l’en-tête HSTS (uniquement derrière HTTPS) | (désactivé) |
-| `BOOKSTORAGE_VAPID_PUBLIC` | Clé publique VAPID (Web Push) | (optionnel) |
-| `BOOKSTORAGE_VAPID_PRIVATE` | Clé privée VAPID (Web Push) | (optionnel) |
-
-Génération des clés VAPID : `./bookstorage -gen-vapid`
 
 ### Mentions légales
 

@@ -11,8 +11,6 @@ import (
 // Settings holds application configuration
 type Settings struct {
 	SecretKey            string
-	VAPIDPublicKey       string
-	VAPIDPrivateKey      string
 	Database             string
 	DataDirectory        string
 	UploadFolder         string
@@ -121,9 +119,6 @@ func Load(rootPath string) (*Settings, error) {
 		secret = defaultSecretKey
 	}
 
-	vapidPublic := strings.TrimSpace(os.Getenv("BOOKSTORAGE_VAPID_PUBLIC"))
-	vapidPrivate := strings.TrimSpace(os.Getenv("BOOKSTORAGE_VAPID_PRIVATE"))
-
 	uploadURL := strings.Trim(strings.TrimSpace(os.Getenv("BOOKSTORAGE_UPLOAD_URL_PATH")), "/")
 	if uploadURL == "" {
 		uploadURL = defaultUploadURLPath
@@ -153,8 +148,6 @@ func Load(rootPath string) (*Settings, error) {
 
 	s := &Settings{
 		SecretKey:            secret,
-		VAPIDPublicKey:       vapidPublic,
-		VAPIDPrivateKey:      vapidPrivate,
 		Database:             dbPath,
 		DataDirectory:        dataDir,
 		UploadFolder:         uploadFolder,

@@ -47,7 +47,7 @@ For development, copy the environment template and edit as needed:
 cp .env.example .env
 ```
 
-Use defaults for local work; for a full variable reference (production paths, secrets, VAPID, legal `site.json`), see [Self-hosting — Configuration](self-hosting.md#configuration).
+Use defaults for local work; for a full variable reference (production paths, secrets, legal `site.json`), see [Self-hosting — Configuration](self-hosting.md#configuration).
 
 ---
 
