@@ -15,13 +15,13 @@ APP_GROUP="nobody"
 INSTALL_DIR="/opt/bookstorage"
 BIN_DIR="/usr/local/bin"
 
-# Colors
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-YELLOW='\033[0;33m'
-BLUE='\033[0;34m'
-BOLD='\033[1m'
-NC='\033[0m' # No Color
+# Colors (ANSI C quoting — vrais codes ESC, pas la chaîne littérale \033)
+RED=$'\033[0;31m'
+GREEN=$'\033[0;32m'
+YELLOW=$'\033[0;33m'
+BLUE=$'\033[0;34m'
+BOLD=$'\033[1m'
+NC=$'\033[0m'
 
 # ============================================================================
 # Utility functions
@@ -120,15 +120,16 @@ prompt_release_choice() {
     printf "\n  ${BOLD}a${NC}  Saisir un autre tag (ex. v3.1.1)\n"
     printf "\n"
 
-    local choice tag prompt_line
-    if [[ ${#MAJOR_TAGS[@]} -gt 0 ]]; then
-        prompt_line=$'\n'"${BOLD}→${NC} Tapez le numéro (1 à ${#MAJOR_TAGS[@]}), ${BOLD}a${NC} pour un autre tag, ou ${BOLD}Entrée${NC} pour annuler : "
-    else
-        prompt_line=$'\n'"${BOLD}→${NC} Tapez ${BOLD}a${NC} pour un tag manuel, ou ${BOLD}Entrée${NC} pour annuler : "
-    fi
-
+    local choice tag
+    # read -p n'interprète pas les codes couleur dans les variables : utiliser printf $'…' + read
     while true; do
-        read -r -p "$prompt_line" choice || true
+        printf '\n'
+        if [[ ${#MAJOR_TAGS[@]} -gt 0 ]]; then
+            printf $'\033[1m→\033[0m Tapez le numéro (1 à %d), \033[1ma\033[0m pour un autre tag, ou \033[1mEntrée\033[0m pour annuler : ' "${#MAJOR_TAGS[@]}"
+        else
+            printf $'\033[1m→\033[0m Tapez \033[1ma\033[0m pour un tag manuel, ou \033[1mEntrée\033[0m pour annuler : '
+        fi
+        read -r choice || true
         choice=$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')
         if [[ -z "$choice" ]]; then
             print_error "Annulé."
