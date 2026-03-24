@@ -117,7 +117,7 @@ Sur votre serveur, vous pouvez :
 1. Télécharger l’artefact
 2. Extraire l’archive
 3. Copier `bookstorage`, `bsctl` et `bookstorage.service` aux bons emplacements
-4. Utiliser `bsctl install` / `bsctl update` (branche optionnelle : `bsctl update ma-branche`) pour gérer le service
+4. Utiliser `bsctl install` / `bsctl update` (par défaut : **release** interactive ; `bsctl update main` pour le dernier `origin/main` ; branche optionnelle : `bsctl update ma-branche`) pour gérer le service
 
 ---
 
@@ -154,8 +154,12 @@ bsctl help     # Afficher l'aide
 |---------------------|-------------------------------------------|
 | `bsctl install`     | Installer le service systemd              |
 | `bsctl uninstall`   | Désinstaller le service                   |
-| `bsctl update [branche]` | Mettre à jour depuis `origin/main` ou `origin/<branche>` (fast-forward) + build + restart |
+| `bsctl update`      | Release interactive : choix parmi les dernières tags **majeures** `vX.0.0`, ou `BSCTL_UPDATE_TAG=vX.Y.Z` sans menu + build + restart |
+| `bsctl update main` | Mettre à jour depuis `origin/main` (fast-forward) + build + restart |
+| `bsctl update <branche>` | Avancé : depuis `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
+
+**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v3.1.1` puis `sudo -E bsctl update`. L’arbre de travail Git doit être propre.
 
 ### Commande inconnue
 
@@ -175,7 +179,7 @@ Depuis un clone en développement :
 source scripts/bsctl.completion.bash
 ```
 
-Ensuite, tapez `bsctl` puis Tab pour compléter les sous-commandes. Après `bsctl update`, Tab peut proposer des **noms de branches git** si le répertoire courant est un dépôt du projet.
+Ensuite, tapez `bsctl` puis Tab pour compléter les sous-commandes. Après `bsctl update`, Tab peut proposer **`main`**, des **tags** récents et des **branches** si le répertoire courant est un dépôt du projet.
 
 ---
 

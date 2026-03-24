@@ -117,7 +117,7 @@ You can download this artifact on your server and:
 
 1. Extract it
 2. Copy `bookstorage`, `bsctl` and `bookstorage.service` to the appropriate locations
-3. Use `bsctl install` / `bsctl update` (optional branch: `bsctl update my-branch`) to manage the service
+3. Use `bsctl install` / `bsctl update` (default: interactive **release** tag; use `bsctl update main` for latest `origin/main`; optional branch: `bsctl update my-branch`) to manage the service
 
 ---
 
@@ -154,8 +154,12 @@ bsctl help     # Show help
 |--------------------|--------------------------------------|
 | `bsctl install`    | Install systemd service              |
 | `bsctl uninstall`  | Uninstall service                    |
-| `bsctl update [branch]` | Update from `origin/main` or `origin/<branch>` (fast-forward) + build + restart |
+| `bsctl update`     | Interactive release: pick among the last **major** tags `vX.0.0`, or set `BSCTL_UPDATE_TAG=vX.Y.Z` for non-interactive + build + restart |
+| `bsctl update main` | Update from `origin/main` (fast-forward) + build + restart |
+| `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
+
+**Non-interactive release:** set `BSCTL_UPDATE_TAG=v3.1.1` and run `sudo -E bsctl update` to skip the menu. The working tree must be clean before update.
 
 ### Unknown commands
 
@@ -175,7 +179,7 @@ From a development clone:
 source scripts/bsctl.completion.bash
 ```
 
-Then type `bsctl` and press Tab to complete subcommands. After `bsctl update`, Tab can suggest **git branch** names when your current directory is a clone of the repo.
+Then type `bsctl` and press Tab to complete subcommands. After `bsctl update`, Tab can suggest **`main`**, recent **tags**, and **branch** names when your current directory is a clone of the repo.
 
 ---
 

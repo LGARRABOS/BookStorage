@@ -69,6 +69,203 @@ validate_git_branch_name() {
     return 0
 }
 
+# Trim spaces; add leading v if version looks like 1.2.3
+normalize_tag() {
+    local t="$1"
+    t="${t#"${t%%[![:space:]]*}"}"
+    t="${t%"${t##*[![:space:]]}"}"
+    if [[ -z "$t" ]]; then
+        return 1
+    fi
+    if [[ "$t" =~ ^[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+        t="v${t}"
+    fi
+    printf '%s' "$t"
+}
+
+# Abort if local changes would block checkout
+require_clean_worktree() {
+    if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
+        print_error "Working tree is not clean (uncommitted changes or untracked files)."
+        printf "Commit, stash, or clean the repo in ${INSTALL_DIR:-.} before running update.\n"
+        exit 1
+    fi
+}
+
+# Newest-first: up to 3 tags matching vMAJOR.0.0
+list_major_release_tags() {
+    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 3 | tac
+}
+
+# Interactive choice: returns tag name on stdout
+prompt_release_choice() {
+    if [[ ! -t 0 ]]; then
+        print_error "Interactive release choice requires a TTY."
+        printf "Set ${BOLD}BSCTL_UPDATE_TAG=vX.Y.Z${NC} (e.g. v3.1.1) or run: ${BOLD}bsctl update main${NC}\n"
+        exit 1
+    fi
+
+    print_info "Fetching origin (branches + tags)..."
+    git fetch origin
+    git fetch origin --tags 2>/dev/null || git fetch --tags origin 2>/dev/null || true
+    printf "\n"
+
+    local majors
+    majors=$(list_major_release_tags)
+    local -a MAJOR_TAGS=()
+    while IFS= read -r line; do
+        [[ -n "$line" ]] && MAJOR_TAGS+=("$line")
+    done <<< "$majors"
+
+    printf "\n${BOLD}Release to deploy${NC} (major tags vX.0.0, newest first):\n"
+    local i
+    for ((i = 0; i < ${#MAJOR_TAGS[@]}; i++)); do
+        printf "  ${BOLD}%d)${NC} %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
+    done
+    if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
+        printf "  ${YELLOW}(no vX.0.0 tags found — use ${BOLD}a${YELLOW} to enter a tag, or ${BOLD}bsctl update main${YELLOW})${NC}\n"
+    fi
+    printf "  ${BOLD}a)${NC} autre — enter a tag manually (e.g. v3.1.1)\n"
+    printf "\n"
+
+    local choice tag prompt_line
+    if [[ ${#MAJOR_TAGS[@]} -gt 0 ]]; then
+        prompt_line="Choice [1-${#MAJOR_TAGS[@]}|a] (empty = cancel): "
+    else
+        prompt_line="Choice [a] only (empty = cancel): "
+    fi
+
+    while true; do
+        read -r -p "$prompt_line" choice || true
+        choice="${choice,,}"
+        if [[ -z "$choice" ]]; then
+            print_error "Cancelled."
+            exit 1
+        fi
+        if [[ "$choice" == "a" || "$choice" == "autre" ]]; then
+            read -r -p "Tag (e.g. v3.1.1): " tag || true
+            if ! tag=$(normalize_tag "$tag"); then
+                print_error "Empty tag."
+                continue
+            fi
+            printf '%s' "$tag"
+            return 0
+        fi
+        if [[ "$choice" =~ ^[0-9]+$ ]]; then
+            local idx=$((10#choice - 1))
+            if [[ $idx -ge 0 && $idx -lt ${#MAJOR_TAGS[@]} ]]; then
+                printf '%s' "${MAJOR_TAGS[$idx]}"
+                return 0
+            fi
+        fi
+        if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
+            print_error "No major vX.0.0 tags. Use a) to enter a tag, or: bsctl update main"
+        else
+            print_error "Invalid choice. Use 1–${#MAJOR_TAGS[@]}, or a."
+        fi
+    done
+}
+
+# Shared tail: build, install, restart (steps 4–8)
+cmd_update_finish() {
+    print_step "4/8" "Compiling..."
+    cmd_build_prod
+    printf "\n"
+
+    print_step "5/8" "Installing binary..."
+    cp ${APP_NAME} ${BIN_DIR}/
+    print_success "Binary copied"
+    printf "\n"
+
+    print_step "6/8" "Updating bsctl script..."
+    cp scripts/bsctl ${BIN_DIR}/
+    chmod +x ${BIN_DIR}/bsctl
+    print_success "bsctl updated"
+    printf "\n"
+
+    print_step "7/8" "Fixing permissions..."
+    cmd_fix_perms
+    printf "\n"
+
+    print_step "8/8" "Restarting service..."
+    systemctl restart ${APP_NAME}
+    print_success "Service restarted"
+    printf "\n"
+
+    printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
+    printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
+    printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
+    printf "\n"
+
+    systemctl status ${APP_NAME} --no-pager -l | head -15
+}
+
+cmd_update_at_tag() {
+    local tag="$1"
+    if [[ -z "$tag" ]]; then
+        print_error "No tag selected."
+        exit 1
+    fi
+
+    print_header
+    print_info "Target release: ${BOLD}${tag}${NC}"
+    printf "\n"
+
+    print_step "1/8" "Fetching from origin (branches + tags)..."
+    git fetch origin
+    git fetch origin --tags 2>/dev/null || git fetch --tags origin 2>/dev/null || true
+    printf "\n"
+
+    if ! git rev-parse "$tag^{}" >/dev/null 2>&1; then
+        print_error "Unknown tag: ${tag}"
+        printf "Fetch tags failed or tag does not exist on the remote. Try: ${BOLD}git fetch origin --tags${NC}\n"
+        exit 1
+    fi
+
+    print_step "2/8" "Checking out ${tag}..."
+    git checkout "$tag"
+    printf "\n"
+
+    print_step "3/8" "Release checkout (no git pull on a tag)..."
+    print_success "At ${tag}"
+    printf "\n"
+
+    cmd_update_finish
+}
+
+cmd_update_branch() {
+    local branch="$1"
+    if ! validate_git_branch_name "$branch"; then
+        print_error "Invalid branch name: ${branch:-empty}"
+        printf "Use only letters, digits, and ${BOLD}.${NC}, ${BOLD}_${NC}, ${BOLD}/${NC}, ${BOLD}-${NC} (no ${BOLD}..${NC}).\n"
+        exit 1
+    fi
+
+    print_header
+    print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
+    printf "\n"
+
+    require_clean_worktree
+
+    print_step "1/8" "Fetching from origin..."
+    git fetch origin "$branch"
+    printf "\n"
+
+    print_step "2/8" "Checking out ${branch}..."
+    git checkout "$branch"
+    printf "\n"
+
+    print_step "3/8" "Pulling (fast-forward only)..."
+    if ! git pull --ff-only origin "$branch"; then
+        print_error "Fast-forward pull failed: local history diverges from origin/${branch}."
+        printf "Resolve manually (merge/rebase) in ${INSTALL_DIR}, or align this clone with the remote before running update again.\n"
+        exit 1
+    fi
+    printf "\n"
+
+    cmd_update_finish
+}
+
 # ============================================================================
 # Commands
 # ============================================================================
@@ -89,7 +286,9 @@ cmd_help() {
     printf "${BOLD}PRODUCTION${NC} (requires root)\n"
     printf "    ${GREEN}install${NC}      Install the systemd service\n"
     printf "    ${GREEN}uninstall${NC}    Uninstall the service\n"
-    printf "    ${GREEN}update [branch]${NC}  Update from origin (default branch: main)\n"
+    printf "    ${GREEN}update${NC}         Interactive release (vX.0.0) or ${GREEN}BSCTL_UPDATE_TAG${NC}\n"
+    printf "    ${GREEN}update main${NC}    Update from origin/main (fast-forward)\n"
+    printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch> (advanced)\n"
     printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
     printf "\n"
     printf "${BOLD}SERVICE${NC}\n"
@@ -102,7 +301,9 @@ cmd_help() {
     printf "${BOLD}EXAMPLES${NC}\n"
     printf "    ${BLUE}bsctl run${NC}              Local development\n"
     printf "    ${BLUE}sudo bsctl install${NC}     Install in production\n"
-    printf "    ${BLUE}sudo bsctl update${NC}              Update from main\n"
+    printf "    ${BLUE}sudo bsctl update${NC}              Choose a Git release tag (menu)\n"
+    printf "    ${BLUE}BSCTL_UPDATE_TAG=v3.1.1 sudo -E bsctl update${NC}  Non-interactive tag\n"
+    printf "    ${BLUE}sudo bsctl update main${NC}         Sync to latest origin/main\n"
     printf "    ${BLUE}sudo bsctl update my-test-branch${NC}  Update from a branch\n"
     printf "    ${BLUE}bsctl logs${NC}             View logs\n"
     printf "\n"
@@ -112,6 +313,7 @@ cmd_help() {
     printf "    - BOOKSTORAGE_PORT         (default: 5000)\n"
     printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
+    printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v3.1.1 — skip menu on ${GREEN}bsctl update${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
     printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
@@ -182,63 +384,25 @@ cmd_uninstall() {
 }
 
 cmd_update() {
-    local branch="${1:-main}"
-    if ! validate_git_branch_name "$branch"; then
-        print_error "Invalid branch name: ${branch:-empty}"
-        printf "Use only letters, digits, and ${BOLD}.${NC}, ${BOLD}_${NC}, ${BOLD}/${NC}, ${BOLD}-${NC} (no ${BOLD}..${NC}).\n"
-        exit 1
+    local arg="${1:-}"
+    if [[ -n "$arg" ]]; then
+        cmd_update_branch "$arg"
+        return
     fi
 
-    print_header
-    print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
-    printf "\n"
+    require_clean_worktree
 
-    print_step "1/8" "Fetching from origin..."
-    git fetch origin "$branch"
-    printf "\n"
-
-    print_step "2/8" "Checking out ${branch}..."
-    git checkout "$branch"
-    printf "\n"
-
-    print_step "3/8" "Pulling (fast-forward only)..."
-    if ! git pull --ff-only origin "$branch"; then
-        print_error "Fast-forward pull failed: local history diverges from origin/${branch}."
-        printf "Resolve manually (merge/rebase) in ${INSTALL_DIR}, or align this clone with the remote before running update again.\n"
-        exit 1
+    local tag=""
+    if [[ -n "${BSCTL_UPDATE_TAG:-}" ]]; then
+        if ! tag=$(normalize_tag "${BSCTL_UPDATE_TAG}"); then
+            print_error "Invalid BSCTL_UPDATE_TAG"
+            exit 1
+        fi
+    else
+        tag=$(prompt_release_choice)
     fi
-    printf "\n"
-    
-    print_step "4/8" "Compiling..."
-    cmd_build_prod
-    printf "\n"
-    
-    print_step "5/8" "Installing binary..."
-    cp ${APP_NAME} ${BIN_DIR}/
-    print_success "Binary copied"
-    printf "\n"
-    
-    print_step "6/8" "Updating bsctl script..."
-    cp scripts/bsctl ${BIN_DIR}/
-    chmod +x ${BIN_DIR}/bsctl
-    print_success "bsctl updated"
-    printf "\n"
-    
-    print_step "7/8" "Fixing permissions..."
-    cmd_fix_perms
-    printf "\n"
-    
-    print_step "8/8" "Restarting service..."
-    systemctl restart ${APP_NAME}
-    print_success "Service restarted"
-    printf "\n"
-    
-    printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-    printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
-    printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
-    printf "\n"
-    
-    systemctl status ${APP_NAME} --no-pager -l | head -15
+
+    cmd_update_at_tag "$tag"
 }
 
 cmd_fix_perms() {
@@ -312,7 +476,7 @@ case "${1:-help}" in
         cmd_uninstall
         ;;
     update)
-        cmd_update "${2:-main}"
+        cmd_update "${2:-}"
         ;;
     fix-perms)
         cmd_fix_perms
