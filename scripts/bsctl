@@ -137,7 +137,7 @@ prompt_release_choice() {
 
     while true; do
         read -r -p "$prompt_line" choice || true
-        choice="${choice,,}"
+        choice=$(printf '%s' "$choice" | tr '[:upper:]' '[:lower:]')
         if [[ -z "$choice" ]]; then
             print_error "Cancelled."
             exit 1
@@ -152,7 +152,7 @@ prompt_release_choice() {
             return 0
         fi
         if [[ "$choice" =~ ^[0-9]+$ ]]; then
-            local idx=$((10#choice - 1))
+            local idx=$((choice - 1))
             if [[ $idx -ge 0 && $idx -lt ${#MAJOR_TAGS[@]} ]]; then
                 printf '%s' "${MAJOR_TAGS[$idx]}"
                 return 0
@@ -188,16 +188,35 @@ cmd_update_finish() {
     printf "\n"
 
     print_step "8/8" "Restarting service..."
-    systemctl restart ${APP_NAME}
-    print_success "Service restarted"
+    if ! systemctl restart ${APP_NAME}; then
+        printf "\n"
+        print_error "Échec de la commande systemctl restart."
+        printf "${YELLOW}Dernières lignes du journal :${NC}\n"
+        journalctl -u ${APP_NAME} -n 20 --no-pager 2>/dev/null || true
+        printf "\n${BLUE}Plus de détails :${NC} sudo journalctl -u ${APP_NAME} -xe\n"
+        printf "${BLUE}Statut du service :${NC} sudo systemctl status ${APP_NAME}\n"
+        exit 1
+    fi
+
+    sleep 0.5
     printf "\n"
 
-    printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-    printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
-    printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
-    printf "\n"
-
-    systemctl status ${APP_NAME} --no-pager -l | head -15
+    if systemctl is-active --quiet ${APP_NAME}; then
+        print_success "Service redémarré correctement (actif)."
+        printf "\n"
+        printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
+        printf "${GREEN}║         MISE À JOUR TERMINÉE ✓          ║${NC}\n"
+        printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
+        printf "\n"
+    else
+        print_error "Le service n'est pas actif après le redémarrage."
+        printf "${YELLOW}Dernières lignes du journal :${NC}\n"
+        journalctl -u ${APP_NAME} -n 25 --no-pager 2>/dev/null || true
+        printf "\n${BLUE}Pour diagnostiquer :${NC}\n"
+        printf "  sudo journalctl -u ${APP_NAME} -xe\n"
+        printf "  sudo systemctl status ${APP_NAME}\n"
+        exit 1
+    fi
 }
 
 cmd_update_at_tag() {
