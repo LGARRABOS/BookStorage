@@ -83,11 +83,12 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
-# Abort if local changes would block checkout
-require_clean_worktree() {
-    if [[ -n "$(git status --porcelain 2>/dev/null)" ]]; then
-        print_error "Working tree is not clean (uncommitted changes or untracked files)."
-        printf "Commit, stash, or clean the repo in ${INSTALL_DIR:-.} before running update.\n"
+# Block only if tracked files are modified or staged (untracked files are ignored — typical on servers).
+require_clean_tracked() {
+    if [[ -n "$(git status --porcelain --untracked-files=no 2>/dev/null)" ]]; then
+        print_error "Des fichiers suivis par Git ont des modifications locales ou sont indexés."
+        printf "Enregistrez-les (commit), annulez-les ou ${BOLD}git stash${NC} dans ${INSTALL_DIR:-.} avant update.\n"
+        printf "${BLUE}Les fichiers non suivis par Git (hors dépôt) ne bloquent plus cette étape.${NC}\n"
         exit 1
     fi
 }
@@ -264,7 +265,7 @@ cmd_update_branch() {
     print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
     printf "\n"
 
-    require_clean_worktree
+    require_clean_tracked
 
     print_step "1/8" "Fetching from origin..."
     git fetch origin "$branch"
@@ -409,7 +410,7 @@ cmd_update() {
         return
     fi
 
-    require_clean_worktree
+    require_clean_tracked
 
     local tag=""
     if [[ -n "${BSCTL_UPDATE_TAG:-}" ]]; then
