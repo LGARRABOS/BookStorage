@@ -10,6 +10,7 @@
 set -e
 
 APP_NAME="bookstorage"
+APP_VERSION="3.1.2"
 BIN_DIR="/usr/local/bin"
 
 echo ""
@@ -24,7 +25,7 @@ chmod +x ${BIN_DIR}/bsctl
 echo "✓ bsctl mis à jour"
 
 # 2. Compiler avec le nouveau chemin
-CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=2.0.0" -o ${APP_NAME} ./cmd/bookstorage
+CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
 echo "✓ Compilation réussie"
 
 # 3. Installer le binaire
