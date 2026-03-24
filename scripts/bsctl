@@ -9,7 +9,7 @@
 set -e
 
 APP_NAME="bookstorage"
-APP_VERSION="3.1.2"
+APP_VERSION="4.0.0"
 APP_USER="nobody"
 APP_GROUP="nobody"
 INSTALL_DIR="/opt/bookstorage"
@@ -123,7 +123,7 @@ prompt_release_choice() {
     if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
         printf "  ${YELLOW}(no vX.0.0 tags on remote — use option 3 or ${BOLD}bsctl update main${YELLOW})${NC}\n"
     fi
-    printf "  ${BOLD}3.${NC}  Enter another tag (e.g. v3.1.2)\n"
+    printf "  ${BOLD}3.${NC}  Enter another tag (e.g. v4.1.0)\n"
     printf "\n"
 
     local choice manual_in normalized
@@ -141,7 +141,7 @@ prompt_release_choice() {
             exit 1
         fi
         if [[ "$choice" == "3" ]]; then
-            printf "Tag name (e.g. v3.1.2): "
+            printf "Tag name (e.g. v4.1.0): "
             if [[ -r /dev/tty ]]; then
                 read -r manual_in < /dev/tty
             else
@@ -317,7 +317,7 @@ cmd_help() {
     printf "    ${BLUE}bsctl run${NC}              Local development\n"
     printf "    ${BLUE}sudo bsctl install${NC}     Install in production\n"
     printf "    ${BLUE}sudo bsctl update${NC}              Choose a Git release tag (menu)\n"
-    printf "    ${BLUE}BSCTL_UPDATE_TAG=v3.1.1 sudo -E bsctl update${NC}  Non-interactive tag\n"
+    printf "    ${BLUE}BSCTL_UPDATE_TAG=v4.0.1 sudo -E bsctl update${NC}  Non-interactive tag\n"
     printf "    ${BLUE}sudo bsctl update main${NC}         Sync to latest origin/main\n"
     printf "    ${BLUE}sudo bsctl update my-branch${NC}  From origin/my-branch\n"
     printf "    ${BLUE}bsctl logs${NC}             View logs\n"
@@ -328,7 +328,7 @@ cmd_help() {
     printf "    - BOOKSTORAGE_PORT         (default: 5000)\n"
     printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
-    printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v3.1.1 — non-interactive ${GREEN}bsctl update${NC}\n"
+    printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v4.0.1 — non-interactive ${GREEN}bsctl update${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
     printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
