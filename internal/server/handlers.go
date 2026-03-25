@@ -680,7 +680,7 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		})
 		_ = a.Templates.ExecuteTemplate(w, "register", data)
 	case http.MethodPost:
-		username := r.FormValue("username")
+		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
 
 		if username == "" || password == "" {
@@ -732,7 +732,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		})
 		_ = a.Templates.ExecuteTemplate(w, "login", data)
 	case http.MethodPost:
-		username := r.FormValue("username")
+		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
 
 		var u userRow
@@ -1085,23 +1085,19 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		userID, _ := a.currentUserID(r)
-		title := r.FormValue("title")
-		link := r.FormValue("link")
-		status := r.FormValue("status")
+		title := sanitizeTitle(r.FormValue("title"))
+		link := strings.TrimSpace(r.FormValue("link"))
+		status := normalizeStatusForWrite(r.FormValue("status"))
 		chapterStr := r.FormValue("chapter")
 		if chapterStr == "" {
 			chapterStr = "0"
 		}
 		chapter, _ := strconv.Atoi(chapterStr)
-		readingType := strings.TrimSpace(r.FormValue("reading_type"))
-		if readingType == "" {
-			readingType = readingTypes[0]
-		}
+		chapter = clampChapter(chapter)
+		readingType := normalizeReadingTypeForWrite(r.FormValue("reading_type"))
 		ratingStr := r.FormValue("rating")
 		rating, _ := strconv.Atoi(ratingStr)
-		if rating < 0 || rating > 5 {
-			rating = 0
-		}
+		rating = clampRating(rating)
 		notes := strings.TrimSpace(r.FormValue("notes"))
 		isAdult := 0
 		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
@@ -1275,7 +1271,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		title := strings.TrimSpace(r.FormValue("title"))
+		title := sanitizeTitle(r.FormValue("title"))
 		if title == "" {
 			if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
 				w.Header().Set("Content-Type", "application/json")
@@ -1287,24 +1283,17 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		link := strings.TrimSpace(r.FormValue("link"))
-		status := r.FormValue("status")
+		status := normalizeStatusForWrite(r.FormValue("status"))
 		chapterStr := r.FormValue("chapter")
 		if chapterStr == "" {
 			chapterStr = "0"
 		}
 		chapter, _ := strconv.Atoi(chapterStr)
-		if chapter < 0 {
-			chapter = 0
-		}
-		readingType := strings.TrimSpace(r.FormValue("reading_type"))
-		if readingType == "" {
-			readingType = readingTypes[0]
-		}
+		chapter = clampChapter(chapter)
+		readingType := normalizeReadingTypeForWrite(r.FormValue("reading_type"))
 		ratingStr := r.FormValue("rating")
 		rating, _ := strconv.Atoi(ratingStr)
-		if rating < 0 || rating > 5 {
-			rating = 0
-		}
+		rating = clampRating(rating)
 		notes := strings.TrimSpace(r.FormValue("notes"))
 		isAdult := 0
 		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
@@ -1444,12 +1433,10 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 		chapterStr = "0"
 	}
 	chapter, err := strconv.Atoi(chapterStr)
-	if err != nil || chapter < 0 {
+	if err != nil {
 		chapter = 0
 	}
-	if chapter > 9999 {
-		chapter = 9999
-	}
+	chapter = clampChapter(chapter)
 
 	_, err = a.DB.Exec(
 		`UPDATE works SET chapter = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,

@@ -92,6 +92,17 @@ golangci-lint run
 
 La CI exécute aussi `gofmt` en mode strict et un job **smoke-http** qui lance `go run ./cmd/bookstorage` et interroge `/`, `/login`, `/register`.
 
+### Notes API et import
+
+- `GET /api/works` supporte la pagination (`page`, `limit`), des filtres (`status`, `reading_type`, `search`) et le tri (`sort`).
+- La réponse inclut `data` et `meta` (`total`, `total_pages`, `has_next`, `has_prev`).
+- L’import accepte en plus des exports BookStorage les formats externes courants **MyAnimeList** (CSV) et **AniList** (JSON/CSV).
+
+### Durcissement HTTP
+
+- Les requêtes mutatrices authentifiées (POST/PATCH/DELETE/PUT) sont filtrées via vérification d’origine (`Origin`/`Referer`) pour limiter les risques CSRF.
+- Un rate limiting léger est appliqué sur les endpoints sensibles (authentification et écritures fréquentes).
+
 ---
 
 ## Intégration & déploiement continus

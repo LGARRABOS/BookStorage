@@ -37,4 +37,11 @@ func TestEnsureSchemaAndMigrations(t *testing.T) {
 	if n < 1 {
 		t.Fatalf("expected migrations applied, got count %d", n)
 	}
+	var idxCount int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='index' AND name='idx_works_user_id'`).Scan(&idxCount); err != nil {
+		t.Fatal(err)
+	}
+	if idxCount != 1 {
+		t.Fatalf("expected idx_works_user_id index, got %d", idxCount)
+	}
 }

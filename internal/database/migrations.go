@@ -29,6 +29,16 @@ var migrations = []migration{
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (source_hash, target_lang)
 );`},
+	{Version: 5, Name: "indexes_for_hot_paths", Up: `
+CREATE INDEX IF NOT EXISTS idx_works_user_id ON works(user_id);
+CREATE INDEX IF NOT EXISTS idx_works_user_status ON works(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_works_user_type ON works(user_id, reading_type);
+CREATE INDEX IF NOT EXISTS idx_works_user_updated_at ON works(user_id, updated_at);
+CREATE INDEX IF NOT EXISTS idx_works_user_title ON works(user_id, title);
+CREATE INDEX IF NOT EXISTS idx_works_catalog_id ON works(catalog_id);
+CREATE INDEX IF NOT EXISTS idx_catalog_source_external_id ON catalog(source, external_id);
+CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
+`},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.

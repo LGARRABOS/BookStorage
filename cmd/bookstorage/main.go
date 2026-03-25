@@ -167,7 +167,7 @@ func main() {
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
-	handler := app.SecurityHeaders(app.WithErrorPages(mux))
+	handler := app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))
 	if err := http.ListenAndServe(addr, handler); err != nil {
 		log.Fatal(err)
 	}

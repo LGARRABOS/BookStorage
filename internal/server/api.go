@@ -50,12 +50,66 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	offset := (page - 1) * limit
+	statusFilter := normalizeStatusForWrite(r.URL.Query().Get("status"))
+	if strings.TrimSpace(r.URL.Query().Get("status")) == "" {
+		statusFilter = ""
+	}
+	typeFilter := normalizeReadingTypeForWrite(r.URL.Query().Get("reading_type"))
+	if strings.TrimSpace(r.URL.Query().Get("reading_type")) == "" {
+		typeFilter = ""
+	}
+	search := strings.TrimSpace(r.URL.Query().Get("search"))
+	sortBy := strings.TrimSpace(r.URL.Query().Get("sort"))
+	if sortBy == "" {
+		sortBy = "recent"
+	}
+	orderBy := "id DESC"
+	switch sortBy {
+	case "title_asc":
+		orderBy = "LOWER(title) ASC"
+	case "title_desc":
+		orderBy = "LOWER(title) DESC"
+	case "chapter_asc":
+		orderBy = "chapter ASC, id DESC"
+	case "chapter_desc":
+		orderBy = "chapter DESC, id DESC"
+	case "updated_asc":
+		orderBy = "COALESCE(updated_at, '1970-01-01') ASC"
+	case "updated_desc":
+		orderBy = "COALESCE(updated_at, '1970-01-01') DESC"
+	case "recent":
+		orderBy = "id DESC"
+	default:
+		sortBy = "recent"
+	}
 
-	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
-         FROM works WHERE user_id = ? ORDER BY id DESC LIMIT ? OFFSET ?`,
-		userID, limit, offset,
-	)
+	whereParts := []string{"user_id = ?"}
+	args := []any{userID}
+	if statusFilter != "" {
+		whereParts = append(whereParts, "status = ?")
+		args = append(args, statusFilter)
+	}
+	if typeFilter != "" {
+		whereParts = append(whereParts, "reading_type = ?")
+		args = append(args, typeFilter)
+	}
+	if search != "" {
+		whereParts = append(whereParts, "(LOWER(title) LIKE ? OR LOWER(COALESCE(notes, '')) LIKE ? OR LOWER(COALESCE(link, '')) LIKE ?)")
+		like := "%" + strings.ToLower(search) + "%"
+		args = append(args, like, like, like)
+	}
+	whereSQL := strings.Join(whereParts, " AND ")
+
+	var total int
+	countStmt := "SELECT COUNT(*) FROM works WHERE " + whereSQL
+	if err := a.DB.QueryRow(countStmt, args...).Scan(&total); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
+		return
+	}
+	queryArgs := append(append([]any{}, args...), limit, offset)
+	stmt := `SELECT id, title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
+         FROM works WHERE ` + whereSQL + ` ORDER BY ` + orderBy + ` LIMIT ? OFFSET ?`
+	rows, err := a.DB.Query(stmt, queryArgs...)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
@@ -84,7 +138,23 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		works = append(works, w)
 	}
 
-	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": works})
+	totalPages := 0
+	if total > 0 {
+		totalPages = (total + limit - 1) / limit
+	}
+	a.apiWriteJSON(w, http.StatusOK, map[string]any{
+		"data": works,
+		"meta": map[string]any{
+			"page":        page,
+			"limit":       limit,
+			"total":       total,
+			"total_pages": totalPages,
+			"has_next":    page < totalPages,
+			"has_prev":    page > 1,
+			"sort":        sortBy,
+			"search":      search,
+		},
+	})
 }
 
 func (a *App) HandleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
@@ -150,28 +220,16 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusBadRequest, "title_required")
 		return
 	}
-	if req.Chapter < 0 {
-		req.Chapter = 0
-	}
-	if req.Chapter > 9999 {
-		req.Chapter = 9999
-	}
-	if req.Rating < 0 || req.Rating > 5 {
-		req.Rating = 0
-	}
-	readingType := strings.TrimSpace(req.ReadingType)
-	if readingType == "" {
-		readingType = readingTypes[0]
-	}
-	status := strings.TrimSpace(req.Status)
-	if status == "" {
-		status = "En cours"
-	}
+	req.Title = sanitizeTitle(req.Title)
+	req.Chapter = clampChapter(req.Chapter)
+	req.Rating = clampRating(req.Rating)
+	readingType := normalizeReadingTypeForWrite(req.ReadingType)
+	status := normalizeStatusForWrite(req.Status)
 
 	res, err := a.DB.Exec(
 		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at)
          VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		strings.TrimSpace(req.Title), req.Chapter, nullIfEmpty(req.Link), status, readingType, req.Rating, nullIfEmpty(req.Notes), userID,
+		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID,
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
@@ -181,13 +239,13 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 
 	work := apiWork{
 		ID:          int(id),
-		Title:       strings.TrimSpace(req.Title),
+		Title:       req.Title,
 		Chapter:     req.Chapter,
-		Link:        req.Link,
+		Link:        strings.TrimSpace(req.Link),
 		Status:      status,
 		ReadingType: readingType,
 		Rating:      req.Rating,
-		Notes:       req.Notes,
+		Notes:       strings.TrimSpace(req.Notes),
 	}
 
 	a.apiWriteJSON(w, http.StatusCreated, map[string]any{"data": work})
@@ -221,39 +279,30 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		args = append(args, strings.TrimSpace(v))
 	}
 	if v, ok := req["chapter"].(float64); ok {
-		ch := int(v)
-		if ch < 0 {
-			ch = 0
-		}
-		if ch > 9999 {
-			ch = 9999
-		}
+		ch := clampChapter(int(v))
 		setParts = append(setParts, "chapter = ?")
 		args = append(args, ch)
 	}
 	if v, ok := req["link"].(string); ok {
 		setParts = append(setParts, "link = ?")
-		args = append(args, nullIfEmpty(v))
+		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
 	}
 	if v, ok := req["status"].(string); ok && v != "" {
 		setParts = append(setParts, "status = ?")
-		args = append(args, v)
+		args = append(args, normalizeStatusForWrite(v))
 	}
 	if v, ok := req["reading_type"].(string); ok && v != "" {
 		setParts = append(setParts, "reading_type = ?")
-		args = append(args, v)
+		args = append(args, normalizeReadingTypeForWrite(v))
 	}
 	if v, ok := req["rating"].(float64); ok {
-		rating := int(v)
-		if rating < 0 || rating > 5 {
-			rating = 0
-		}
+		rating := clampRating(int(v))
 		setParts = append(setParts, "rating = ?")
 		args = append(args, rating)
 	}
 	if v, ok := req["notes"].(string); ok {
 		setParts = append(setParts, "notes = ?")
-		args = append(args, nullIfEmpty(v))
+		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
 	}
 
 	if len(setParts) == 0 {
