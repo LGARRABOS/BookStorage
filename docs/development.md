@@ -137,7 +137,7 @@ If the first argument is not a recognized subcommand, `bsctl` prints the full he
 
 ### Version string in builds
 
-`APP_VERSION` in [`Makefile`](../Makefile) and [`scripts/bsctl`](../scripts/bsctl) should stay in sync for release builds (`-X main.Version=...`). See the release workflow in the [push-release-agent](../.cursor/skills/push-release-agent/SKILL.md) skill if you maintain releases.
+`APP_VERSION` in [`Makefile`](../Makefile) and [`scripts/bsctl`](../scripts/bsctl) should stay in sync for release builds (`-X main.Version=...`). Maintainers: use an annotated SemVer tag `vX.Y.Z`, push it, publish the GitHub release, and keep the injected version aligned with that tag.
 
 ---
 
