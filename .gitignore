@@ -12,6 +12,7 @@
 # Output of go coverage
 *.out
 coverage.html
+coverage
 
 # Go workspace file
 go.work
@@ -61,3 +62,6 @@ static/images/*
 # Temporary files
 tmp/
 temp/
+
+# Local idea/roadmap notes (kept private)
+notes/

@@ -23,7 +23,9 @@ L’interface vise un **usage quotidien** : mise en page adaptée, **mode sombre
 - Bibliothèque multi-formats (romans, mangas, webtoons, light novels…)
 - Notes, statistiques, bibliothèques publiques des autres lecteurs
 - Mode sombre, interface multilingue (FR/EN), PWA
-- Export/import (CSV, JSON), raccourcis clavier
+- Export/import (CSV, JSON) + prise en charge des exports externes (MyAnimeList, AniList)
+- API `/api/works` avec pagination, filtres (statut/type/recherche) et tri
+- Raccourcis clavier
 
 ---
 

@@ -177,16 +177,10 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 		return
 	}
 
-	rating := w.Rating
-	if rating < 0 || rating > 5 {
-		rating = 0
-	}
+	rating := clampRating(w.Rating)
 
 	notes := truncateNotes(strings.TrimSpace(w.Notes))
-	chapter := w.Chapter
-	if chapter < 0 {
-		chapter = 0
-	}
+	chapter := clampChapter(w.Chapter)
 	link := strings.TrimSpace(w.Link)
 	imagePath := strings.TrimSpace(w.ImagePath)
 	catID := a.resolveCatalogIDField(&w)
@@ -273,6 +267,15 @@ func mustJSON(rep ImportReport) []byte {
 
 // ImportFromCSVRecords imports semicolon-separated rows (header optional).
 func (a *App) ImportFromCSVRecords(w http.ResponseWriter, r *http.Request, userID int, records [][]string, mode DuplicateMode) {
+	if externalRows, ok := parseExternalCSVRecords(records); ok {
+		report := ImportReport{}
+		for i, row := range externalRows {
+			a.importOneWork(userID, i+1, row, mode, &report)
+		}
+		redirectWithImportReport(w, r, report)
+		return
+	}
+
 	startIdx := 0
 	if len(records) > 0 && strings.EqualFold(strings.TrimSpace(records[0][0]), "title") {
 		startIdx = 1
@@ -288,6 +291,175 @@ func (a *App) ImportFromCSVRecords(w http.ResponseWriter, r *http.Request, userI
 		a.importOneWork(userID, lineNum, w, mode, &report)
 	}
 	redirectWithImportReport(w, r, report)
+}
+
+func parseExternalCSVRecords(records [][]string) ([]exportWork, bool) {
+	if len(records) < 2 || len(records[0]) == 0 {
+		return nil, false
+	}
+	headers := make([]string, len(records[0]))
+	for i := range records[0] {
+		headers[i] = normalizeHeader(records[0][i])
+	}
+	if isMALHeader(headers) {
+		return parseMALCSVRecords(records, headers), true
+	}
+	if isAniListCSVHeader(headers) {
+		return parseAniListCSVRecords(records, headers), true
+	}
+	return nil, false
+}
+
+func normalizeHeader(s string) string {
+	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.ReplaceAll(s, " ", "_")
+	s = strings.ReplaceAll(s, "-", "_")
+	return s
+}
+
+func headerIndex(headers []string, keys ...string) int {
+	for i := range headers {
+		for _, k := range keys {
+			if headers[i] == k {
+				return i
+			}
+		}
+	}
+	return -1
+}
+
+func safeCell(row []string, idx int) string {
+	if idx < 0 || idx >= len(row) {
+		return ""
+	}
+	return strings.TrimSpace(row[idx])
+}
+
+func isMALHeader(headers []string) bool {
+	return headerIndex(headers, "series_title") >= 0 &&
+		(headerIndex(headers, "my_status") >= 0 || headerIndex(headers, "my_read_chapters") >= 0)
+}
+
+func isAniListCSVHeader(headers []string) bool {
+	return headerIndex(headers, "anilist_id", "media_id") >= 0 &&
+		headerIndex(headers, "title", "media_title") >= 0
+}
+
+func parseMALCSVRecords(records [][]string, headers []string) []exportWork {
+	idxTitle := headerIndex(headers, "series_title")
+	idxStatus := headerIndex(headers, "my_status")
+	idxProgress := headerIndex(headers, "my_read_chapters", "my_chapters_read")
+	idxScore := headerIndex(headers, "my_score")
+	idxType := headerIndex(headers, "series_type")
+
+	var out []exportWork
+	for i := 1; i < len(records); i++ {
+		row := records[i]
+		title := safeCell(row, idxTitle)
+		if title == "" {
+			continue
+		}
+		ch, _ := strconv.Atoi(safeCell(row, idxProgress))
+		rating, _ := strconv.Atoi(safeCell(row, idxScore))
+		out = append(out, exportWork{
+			Title:       title,
+			Chapter:     clampChapter(ch),
+			Status:      normalizeStatusForWrite(mapMALStatus(safeCell(row, idxStatus))),
+			ReadingType: normalizeReadingTypeForWrite(mapMALType(safeCell(row, idxType))),
+			Rating:      clampRating(rating),
+		})
+	}
+	return out
+}
+
+func parseAniListCSVRecords(records [][]string, headers []string) []exportWork {
+	idxTitle := headerIndex(headers, "title", "media_title")
+	idxStatus := headerIndex(headers, "status")
+	idxProgress := headerIndex(headers, "progress", "chapters_read")
+	idxScore := headerIndex(headers, "score")
+	idxType := headerIndex(headers, "format", "type")
+	idxID := headerIndex(headers, "anilist_id", "media_id")
+
+	var out []exportWork
+	for i := 1; i < len(records); i++ {
+		row := records[i]
+		title := safeCell(row, idxTitle)
+		if title == "" {
+			continue
+		}
+		ch, _ := strconv.Atoi(safeCell(row, idxProgress))
+		rating, _ := strconv.Atoi(safeCell(row, idxScore))
+		aid := safeCell(row, idxID)
+		link := ""
+		if aid != "" {
+			link = "https://anilist.co/manga/" + aid
+		}
+		out = append(out, exportWork{
+			Title:       title,
+			Chapter:     clampChapter(ch),
+			Link:        link,
+			Status:      normalizeStatusForWrite(mapAniListStatus(safeCell(row, idxStatus))),
+			ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(safeCell(row, idxType))),
+			Rating:      clampRating(rating),
+		})
+	}
+	return out
+}
+
+func mapMALStatus(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "reading":
+		return "En cours"
+	case "completed":
+		return "Terminé"
+	case "on_hold", "on-hold":
+		return "En pause"
+	case "dropped":
+		return "Abandonné"
+	case "plan_to_read", "plan to read":
+		return "À lire"
+	default:
+		return s
+	}
+}
+
+func mapMALType(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "manga", "manhwa", "manhua":
+		return "Manga"
+	case "novel":
+		return "Roman"
+	default:
+		return s
+	}
+}
+
+func mapAniListStatus(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "current":
+		return "En cours"
+	case "completed":
+		return "Terminé"
+	case "paused":
+		return "En pause"
+	case "dropped":
+		return "Abandonné"
+	case "planning":
+		return "À lire"
+	default:
+		return s
+	}
+}
+
+func mapAniListFormat(s string) string {
+	switch strings.ToLower(strings.TrimSpace(s)) {
+	case "manga", "one_shot":
+		return "Manga"
+	case "novel":
+		return "Roman"
+	default:
+		return s
+	}
 }
 
 func parseCSVWorkRow(record []string) (exportWork, bool) {
@@ -356,13 +528,117 @@ func (a *App) ImportFromJSONBytes(w http.ResponseWriter, r *http.Request, userID
 	if err := json.Unmarshal(data, &payload); err != nil || len(payload.Works) == 0 {
 		var only []exportWork
 		if err2 := json.Unmarshal(data, &only); err2 != nil || len(only) == 0 {
-			http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
-			return
+			if ext, ok := parseAniListExportJSON(data); ok && len(ext) > 0 {
+				payload.Works = ext
+			} else {
+				http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+				return
+			}
+		} else {
+			payload.Works = only
 		}
-		payload.Works = only
 	}
 	for i, row := range payload.Works {
 		a.importOneWork(userID, i+1, row, mode, &report)
 	}
 	redirectWithImportReport(w, r, report)
+}
+
+func parseAniListExportJSON(data []byte) ([]exportWork, bool) {
+	type aniTitle struct {
+		Romaji  string `json:"romaji"`
+		English string `json:"english"`
+		Native  string `json:"native"`
+	}
+	type aniCover struct {
+		Large string `json:"large"`
+	}
+	type aniMedia struct {
+		ID         int      `json:"id"`
+		Title      aniTitle `json:"title"`
+		Format     string   `json:"format"`
+		IsAdult    bool     `json:"isAdult"`
+		CoverImage aniCover `json:"coverImage"`
+	}
+	type aniEntry struct {
+		Status   string   `json:"status"`
+		Progress int      `json:"progress"`
+		Score    float64  `json:"score"`
+		Notes    string   `json:"notes"`
+		Media    aniMedia `json:"media"`
+	}
+	type aniList struct {
+		Entries []aniEntry `json:"entries"`
+	}
+	type aniRoot struct {
+		Lists []aniList `json:"lists"`
+	}
+	var root aniRoot
+	if err := json.Unmarshal(data, &root); err == nil && len(root.Lists) > 0 {
+		var out []exportWork
+		for _, l := range root.Lists {
+			for _, e := range l.Entries {
+				title := strings.TrimSpace(e.Media.Title.Romaji)
+				if title == "" {
+					title = strings.TrimSpace(e.Media.Title.English)
+				}
+				if title == "" {
+					title = strings.TrimSpace(e.Media.Title.Native)
+				}
+				if title == "" {
+					continue
+				}
+				link := ""
+				if e.Media.ID > 0 {
+					link = "https://anilist.co/manga/" + strconv.Itoa(e.Media.ID)
+				}
+				out = append(out, exportWork{
+					Title:       title,
+					Chapter:     clampChapter(e.Progress),
+					Link:        link,
+					Status:      normalizeStatusForWrite(mapAniListStatus(e.Status)),
+					ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(e.Media.Format)),
+					Rating:      clampRating(int(e.Score)),
+					Notes:       strings.TrimSpace(e.Notes),
+					IsAdult:     e.Media.IsAdult,
+					ImagePath:   strings.TrimSpace(e.Media.CoverImage.Large),
+				})
+			}
+		}
+		return out, len(out) > 0
+	}
+
+	var entries []aniEntry
+	if err := json.Unmarshal(data, &entries); err != nil {
+		return nil, false
+	}
+	var out []exportWork
+	for _, e := range entries {
+		title := strings.TrimSpace(e.Media.Title.Romaji)
+		if title == "" {
+			title = strings.TrimSpace(e.Media.Title.English)
+		}
+		if title == "" {
+			title = strings.TrimSpace(e.Media.Title.Native)
+		}
+		if title == "" {
+			continue
+		}
+		link := ""
+		if e.Media.ID > 0 {
+			link = "https://anilist.co/manga/" + strconv.Itoa(e.Media.ID)
+		}
+		out = append(out, exportWork{
+			Title:       title,
+			Chapter:     clampChapter(e.Progress),
+			Link:        link,
+			Status:      normalizeStatusForWrite(mapAniListStatus(e.Status)),
+			ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(e.Media.Format)),
+			Rating:      clampRating(int(e.Score)),
+			Notes:       strings.TrimSpace(e.Notes),
+			IsAdult:     e.Media.IsAdult,
+			ImagePath:   strings.TrimSpace(e.Media.CoverImage.Large),
+		})
+	}
+	return out, len(out) > 0
 }
