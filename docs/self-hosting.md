@@ -69,7 +69,7 @@ bsctl help     # Show help
 | `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
 
-**Non-interactive release:** set `BSCTL_UPDATE_TAG=v4.3.1` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
+**Non-interactive release:** set `BSCTL_UPDATE_TAG=v4.4.0` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
 
 If you deploy from a GitHub Actions artifact instead of cloning, extract the archive, copy `bookstorage`, `bsctl`, and `deploy/bookstorage.service` to the right paths, then use `bsctl install` / `bsctl update` as usual. See [Development — Deployment workflow](development.md#deployment-workflow).
 
