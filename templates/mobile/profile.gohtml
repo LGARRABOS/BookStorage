@@ -1,0 +1,139 @@
+{{ define "profile" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "profile.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "mobile_topbar" . }}
+
+    <main class="page-body mobile-page">
+        <div class="container">
+            <section class="mobile-panel">
+                <h1 style="margin-top:0;">👤 {{ t .T "profile.title" }}</h1>
+                <div class="mobile-grid-2">
+                    <div class="stat-card"><div class="stat-value">{{ .TotalWorks }}</div><div class="stat-label">{{ t .T "dashboard.stats.works" }}</div></div>
+                    <div class="stat-card"><div class="stat-value">{{ .TotalChapters }}</div><div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div></div>
+                </div>
+            </section>
+
+            <section class="mobile-panel">
+                <form method="POST" enctype="multipart/form-data" class="mobile-stack">
+                    <div class="form-group">
+                        <label for="username">{{ t .T "profile.username" }}</label>
+                        <input id="username" type="text" name="username" value="{{ .User.Username }}" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="display_name">{{ if eq .Lang "fr" }}Nom affiché{{ else }}Display name{{ end }}</label>
+                        <input id="display_name" type="text" name="display_name" value="{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ end }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="email">Email</label>
+                        <input id="email" type="email" name="email" value="{{ if .User.Email.Valid }}{{ .User.Email.String }}{{ end }}">
+                    </div>
+                    <div class="form-group">
+                        <label for="bio">Bio</label>
+                        <textarea id="bio" name="bio">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ end }}</textarea>
+                    </div>
+                    <div class="form-group">
+                        <label for="avatar">{{ t .T "profile.avatar.change" }}</label>
+                        <input id="avatar" type="file" name="avatar" accept="image/*">
+                    </div>
+                    <div class="form-group">
+                        <label for="current_password">{{ t .T "profile.password.current" }}</label>
+                        <input id="current_password" type="password" name="current_password">
+                    </div>
+                    <div class="mobile-grid-2">
+                        <div class="form-group">
+                            <label for="new_password">{{ t .T "profile.password.new" }}</label>
+                            <input id="new_password" type="password" name="new_password">
+                        </div>
+                        <div class="form-group">
+                            <label for="confirm_password">{{ t .T "profile.password.confirm" }}</label>
+                            <input id="confirm_password" type="password" name="confirm_password">
+                        </div>
+                    </div>
+                    <div class="mobile-grid-2">
+                        <label class="btn btn-secondary" style="display:flex;justify-content:center;align-items:center;">
+                            <input type="radio" name="is_public" value="1" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}checked{{ end }}{{ else }}checked{{ end }} style="margin-right:0.45rem;">
+                            {{ t .T "profile.public" }}
+                        </label>
+                        <label class="btn btn-secondary" style="display:flex;justify-content:center;align-items:center;">
+                            <input type="radio" name="is_public" value="0" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 0 }}checked{{ end }}{{ end }} style="margin-right:0.45rem;">
+                            {{ t .T "profile.private" }}
+                        </label>
+                    </div>
+                    <button type="submit" class="btn btn-primary">{{ t .T "profile.save" }}</button>
+                </form>
+            </section>
+
+            <section class="mobile-panel">
+                <h2 style="margin-top:0;">{{ t .T "profile.accessibility.title" }}</h2>
+                <p class="text-muted">{{ t .T "profile.accessibility.hint" }}</p>
+                <div class="mobile-stack">
+                    <div class="form-group">
+                        <label for="a11y-text-size">{{ t .T "profile.accessibility.text_size" }}</label>
+                        <select id="a11y-text-size" autocomplete="off">
+                            <option value="sm">{{ t .T "profile.accessibility.text_size.sm" }}</option>
+                            <option value="md">{{ t .T "profile.accessibility.text_size.md" }}</option>
+                            <option value="lg">{{ t .T "profile.accessibility.text_size.lg" }}</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="a11y-motion">{{ t .T "profile.accessibility.motion" }}</label>
+                        <select id="a11y-motion" autocomplete="off">
+                            <option value="">{{ t .T "profile.accessibility.motion.auto" }}</option>
+                            <option value="reduce">{{ t .T "profile.accessibility.motion.reduce" }}</option>
+                            <option value="no-preference">{{ t .T "profile.accessibility.motion.full" }}</option>
+                        </select>
+                    </div>
+                    <label><input type="checkbox" id="a11y-contrast" autocomplete="off"> {{ t .T "profile.accessibility.contrast" }}</label>
+                    <label><input type="checkbox" id="a11y-scrollbars" autocomplete="off"> {{ t .T "profile.accessibility.scrollbars" }}</label>
+                </div>
+            </section>
+
+            <section class="mobile-panel" style="border-color:rgba(239,68,68,0.35);">
+                <h2 style="margin-top:0;color:#dc2626;">{{ t .T "profile.delete.title" }}</h2>
+                <p class="text-muted">{{ t .T "profile.delete.desc" }}</p>
+                <form method="POST" action="/profile/delete" class="mobile-stack" onsubmit="return confirmDeleteProfile();">
+                    <div class="form-group">
+                        <label for="delete_current_password">{{ t .T "profile.password.current" }}</label>
+                        <input id="delete_current_password" name="current_password" type="password" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="confirm_delete">{{ t .T "profile.delete.confirm_label" }}</label>
+                        <input id="confirm_delete" name="confirm_delete" type="text" placeholder="SUPPRIMER" required>
+                    </div>
+                    <button type="submit" class="btn btn-danger">{{ t .T "profile.delete.action" }}</button>
+                </form>
+            </section>
+        </div>
+    </main>
+
+    {{ template "mobile_bottom_nav" . }}
+    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/mobile-nav.js"></script>
+    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
+    <script>
+    (function () {
+      if (window.BookStorageAppearance) {
+        BookStorageAppearance.initProfileControls();
+      }
+    })();
+    function confirmDeleteProfile() {
+      if (typeof window.bsConfirm === "function") {
+        return window.bsConfirm("{{ t .T \"profile.delete.action\" }}", "{{ t .T \"dashboard.delete.confirm\" }}");
+      }
+      return window.confirm("{{ t .T \"dashboard.delete.confirm\" }}");
+    }
+    </script>
+</body>
+</html>
+{{ end }}

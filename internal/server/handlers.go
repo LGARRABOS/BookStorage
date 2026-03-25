@@ -35,10 +35,11 @@ import (
 )
 
 type App struct {
-	Settings   *config.Settings
-	SiteConfig *config.SiteConfig
-	DB         *sql.DB
-	Templates  *template.Template
+	Settings        *config.Settings
+	SiteConfig      *config.SiteConfig
+	DB              *sql.DB
+	TemplatesWeb    *template.Template
+	TemplatesMobile *template.Template
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB) *App {
@@ -117,15 +118,70 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 			return status
 		},
 	}
-	tpl := template.Must(
-		template.New("").Funcs(funcMap).ParseGlob(filepath.Join("templates", "*.gohtml")),
-	)
+	webTpl := mustLoadTemplates(funcMap, []string{
+		filepath.Join("templates", "shared"),
+		"templates",
+		filepath.Join("templates", "web"),
+	})
+	mobileTpl := mustLoadTemplates(funcMap, []string{
+		filepath.Join("templates", "shared"),
+		"templates",
+		filepath.Join("templates", "web"),
+		filepath.Join("templates", "mobile"),
+	})
 	return &App{
-		Settings:   settings,
-		SiteConfig: siteConfig,
-		DB:         db,
-		Templates:  tpl,
+		Settings:        settings,
+		SiteConfig:      siteConfig,
+		DB:              db,
+		TemplatesWeb:    webTpl,
+		TemplatesMobile: mobileTpl,
 	}
+}
+
+func mustLoadTemplates(funcMap template.FuncMap, directories []string) *template.Template {
+	files := collectTemplateFiles(directories...)
+	if len(files) == 0 {
+		log.Fatal("no templates found")
+	}
+	tpl, err := template.New("").Funcs(funcMap).ParseFiles(files...)
+	if err != nil {
+		log.Fatalf("failed to parse templates: %v", err)
+	}
+	return tpl
+}
+
+func collectTemplateFiles(dirs ...string) []string {
+	var files []string
+	seen := make(map[string]struct{})
+	for _, dir := range dirs {
+		info, err := os.Stat(dir)
+		if err != nil || !info.IsDir() {
+			continue
+		}
+		rootIsTemplates := filepath.Clean(dir) == filepath.Clean("templates")
+		_ = filepath.WalkDir(dir, func(p string, d os.DirEntry, err error) error {
+			if err != nil {
+				return nil
+			}
+			if d.IsDir() {
+				if rootIsTemplates && filepath.Clean(p) != filepath.Clean(dir) {
+					return filepath.SkipDir
+				}
+				return nil
+			}
+			if filepath.Ext(d.Name()) != ".gohtml" {
+				return nil
+			}
+			clean := filepath.Clean(p)
+			if _, ok := seen[clean]; ok {
+				return nil
+			}
+			seen[clean] = struct{}{}
+			files = append(files, clean)
+			return nil
+		})
+	}
+	return files
 }
 
 // hashPassword hashes a password using bcrypt.
@@ -279,9 +335,13 @@ func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 // baseData returns common template data including translations
 func (a *App) baseData(r *http.Request) map[string]any {
 	lang := a.currentLang(r)
+	mode := a.viewModeFromRequest(r)
+	isMobile := mode == "mobile" || (mode == "auto" && isMobileRequest(r))
 	return map[string]any{
-		"Lang": lang,
-		"T":    i18n.T(lang),
+		"Lang":         lang,
+		"T":            i18n.T(lang),
+		"ViewMode":     mode,
+		"IsMobileView": isMobile,
 	}
 }
 
@@ -292,6 +352,90 @@ func (a *App) mergeData(r *http.Request, extra map[string]any) map[string]any {
 		data[k] = v
 	}
 	return data
+}
+
+func (a *App) renderTemplate(w http.ResponseWriter, r *http.Request, templateName string, data map[string]any) {
+	mode := a.resolveViewMode(w, r)
+	if _, ok := data["ViewMode"]; !ok {
+		data["ViewMode"] = mode
+	}
+	if _, ok := data["IsMobileView"]; !ok {
+		data["IsMobileView"] = mode == "mobile"
+	}
+	tpl := a.TemplatesWeb
+	if mode == "mobile" {
+		tpl = a.TemplatesMobile
+	}
+	if err := tpl.ExecuteTemplate(w, templateName, data); err == nil {
+		return
+	}
+	// Defensive fallback: always try web bundle.
+	if tpl != a.TemplatesWeb {
+		_ = a.TemplatesWeb.ExecuteTemplate(w, templateName, data)
+	}
+}
+
+func (a *App) viewModeFromRequest(r *http.Request) string {
+	if r == nil {
+		return "auto"
+	}
+	if c, err := r.Cookie("view_mode"); err == nil {
+		mode := strings.ToLower(strings.TrimSpace(c.Value))
+		if mode == "auto" || mode == "mobile" || mode == "web" {
+			return mode
+		}
+	}
+	return "auto"
+}
+
+func (a *App) resolveViewMode(w http.ResponseWriter, r *http.Request) string {
+	mode := a.viewModeFromRequest(r)
+	override := strings.ToLower(strings.TrimSpace(r.URL.Query().Get("view")))
+	if override == "auto" || override == "mobile" || override == "web" {
+		cookie := &http.Cookie{
+			Name:     "view_mode",
+			Value:    override,
+			Path:     "/",
+			MaxAge:   365 * 24 * 60 * 60,
+			HttpOnly: true,
+			SameSite: sessionSameSite(a.Settings.Environment),
+		}
+		if strings.ToLower(a.Settings.Environment) == "production" {
+			cookie.Secure = true
+		}
+		http.SetCookie(w, cookie)
+		mode = override
+	}
+	if mode == "mobile" {
+		return "mobile"
+	}
+	if mode == "web" {
+		return "web"
+	}
+	if isMobileRequest(r) {
+		return "mobile"
+	}
+	return "web"
+}
+
+func isMobileRequest(r *http.Request) bool {
+	if r == nil {
+		return false
+	}
+	if strings.TrimSpace(r.Header.Get("Sec-CH-UA-Mobile")) == "?1" {
+		return true
+	}
+	ua := strings.ToLower(r.UserAgent())
+	markers := []string{
+		"android", "iphone", "ipad", "ipod",
+		"mobile", "blackberry", "opera mini", "windows phone",
+	}
+	for _, marker := range markers {
+		if strings.Contains(ua, marker) {
+			return true
+		}
+	}
+	return false
 }
 
 func (a *App) setUserID(w http.ResponseWriter, userID int) {
@@ -435,7 +579,7 @@ func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 				return
 			}
 			w.WriteHeader(http.StatusForbidden)
-			_ = a.Templates.ExecuteTemplate(w, "403", a.mergeData(r, map[string]any{
+			a.renderTemplate(w, r, "403", a.mergeData(r, map[string]any{
 				"RequestedPath": r.URL.Path,
 			}))
 			return
@@ -506,7 +650,7 @@ func (a *App) writeErrorResponse(w http.ResponseWriter, r *http.Request, status 
 		return
 	}
 	w.WriteHeader(status)
-	_ = a.Templates.ExecuteTemplate(w, templateName, data)
+	a.renderTemplate(w, r, templateName, data)
 }
 
 func (a *App) WithErrorPages(next http.Handler) http.Handler {
@@ -569,7 +713,7 @@ func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	// Landing page for non-logged in visitors
-	_ = a.Templates.ExecuteTemplate(w, "landing", a.baseData(r))
+	a.renderTemplate(w, r, "landing", a.baseData(r))
 }
 
 func (a *App) HandleLegal(w http.ResponseWriter, r *http.Request) {
@@ -577,7 +721,7 @@ func (a *App) HandleLegal(w http.ResponseWriter, r *http.Request) {
 	data["Legal"] = a.SiteConfig.Legal
 	data["SiteName"] = a.SiteConfig.SiteName
 	data["SiteURL"] = a.SiteConfig.SiteURL
-	_ = a.Templates.ExecuteTemplate(w, "legal", data)
+	a.renderTemplate(w, r, "legal", data)
 }
 
 func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
@@ -658,7 +802,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "stats", a.mergeData(r, map[string]any{
+	a.renderTemplate(w, r, "stats", a.mergeData(r, map[string]any{
 		"TotalWorks":    totalWorks,
 		"TotalChapters": totalChapters,
 		"ByStatus":      byStatus,
@@ -678,7 +822,7 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			"RegisterErrorEmpty":  q.Get("error") == "empty",
 			"RegisterErrorExists": q.Get("error") == "exists",
 		})
-		_ = a.Templates.ExecuteTemplate(w, "register", data)
+		a.renderTemplate(w, r, "register", data)
 	case http.MethodPost:
 		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
@@ -730,7 +874,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"RegisterSuccess": q.Get("registered") != "",
 			"SessionExpired":  q.Get("expired") != "",
 		})
-		_ = a.Templates.ExecuteTemplate(w, "login", data)
+		a.renderTemplate(w, r, "login", data)
 	case http.MethodPost:
 		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
@@ -885,7 +1029,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("error") == "import" {
 		data["ImportError"] = true
 	}
-	_ = a.Templates.ExecuteTemplate(w, "dashboard", a.mergeData(r, data))
+	a.renderTemplate(w, r, "dashboard", a.mergeData(r, data))
 }
 
 // Ajout d’une œuvre (avec support basique d’upload d’image)
@@ -1078,7 +1222,7 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 				}
 			}
 		}
-		_ = a.Templates.ExecuteTemplate(w, "add_work", a.mergeData(r, data))
+		a.renderTemplate(w, r, "add_work", a.mergeData(r, data))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
 			w.WriteHeader(http.StatusBadRequest)
@@ -1252,7 +1396,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		if r.URL.Query().Get("format") == "partial" {
-			_ = a.Templates.ExecuteTemplate(w, "edit_work_modal", a.mergeData(r, map[string]any{
+			a.renderTemplate(w, r, "edit_work_modal", a.mergeData(r, map[string]any{
 				"Work":         work,
 				"ReadingTypes": readingTypes,
 				"Statuses":     readingStatuses,
@@ -1260,7 +1404,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			}))
 			return
 		}
-		_ = a.Templates.ExecuteTemplate(w, "edit_work", a.mergeData(r, map[string]any{
+		a.renderTemplate(w, r, "edit_work", a.mergeData(r, map[string]any{
 			"Work":         work,
 			"ReadingTypes": readingTypes,
 			"Statuses":     readingStatuses,
@@ -1690,7 +1834,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'Terminé' OR status = 'Completed')`, userID).Scan(&completedCount)
 		var readingCount int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
-		_ = a.Templates.ExecuteTemplate(w, "profile", a.mergeData(r, map[string]any{
+		a.renderTemplate(w, r, "profile", a.mergeData(r, map[string]any{
 			"User":           u,
 			"TotalWorks":     totalWorks,
 			"TotalChapters":  totalChapters,
@@ -1923,7 +2067,7 @@ func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("error") == "import" {
 		data["ImportError"] = true
 	}
-	_ = a.Templates.ExecuteTemplate(w, "tools", a.mergeData(r, data))
+	a.renderTemplate(w, r, "tools", a.mergeData(r, data))
 }
 
 type communityUser struct {
@@ -1974,7 +2118,7 @@ WHERE validated = 1 AND is_public = 1 AND id != ?`
 		users = append(users, u)
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "users", a.mergeData(r, map[string]any{
+	a.renderTemplate(w, r, "users", a.mergeData(r, map[string]any{
 		"Users": users,
 		"Query": query,
 	}))
@@ -2075,7 +2219,7 @@ func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 		works = append(works, wRow)
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "user_detail", a.mergeData(r, map[string]any{
+	a.renderTemplate(w, r, "user_detail", a.mergeData(r, map[string]any{
 		"TargetUser": u,
 		"Works":      works,
 		"CanImport":  viewerID != targetID,
@@ -2246,7 +2390,7 @@ func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 		users = append(users, u)
 	}
 
-	_ = a.Templates.ExecuteTemplate(w, "admin_accounts", a.mergeData(r, map[string]any{
+	a.renderTemplate(w, r, "admin_accounts", a.mergeData(r, map[string]any{
 		"Users": users,
 	}))
 }

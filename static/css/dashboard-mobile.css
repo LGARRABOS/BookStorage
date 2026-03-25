@@ -1,0 +1,85 @@
+.dashboard-mobile-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.7rem;
+  margin-bottom: 1rem;
+}
+
+.dashboard-mobile-header h1 {
+  margin: 0;
+  font-size: 1.2rem;
+}
+
+.dashboard-mobile-search input,
+.dashboard-mobile-controls select {
+  width: 100%;
+  min-height: 44px;
+}
+
+.dashboard-mobile-controls {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.6rem;
+}
+
+.works-mobile-list {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+}
+
+.work-mobile-card {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.95rem;
+  padding: 0.9rem;
+}
+
+.work-mobile-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.6rem;
+}
+
+.work-mobile-title {
+  margin: 0;
+  font-size: 1rem;
+  line-height: 1.3;
+  color: var(--text-primary);
+}
+
+.work-mobile-sub {
+  margin-top: 0.35rem;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.work-mobile-badges {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.work-mobile-badges .badge {
+  font-size: 0.75rem;
+}
+
+.work-mobile-actions {
+  margin-top: 0.7rem;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.55rem;
+}
+
+.work-mobile-actions .btn {
+  min-height: 44px;
+  justify-content: center;
+}
+
+@media (min-width: 769px) {
+  .works-mobile-list {
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  }
+}

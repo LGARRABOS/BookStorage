@@ -1,0 +1,133 @@
+{{ define "dashboard" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="manifest" href="/static/pwa/manifest.json">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <script src="/static/js/modals.js?v=3"></script>
+</head>
+<body>
+    {{ template "mobile_topbar" . }}
+
+    <main class="page-body mobile-page">
+        <div class="container">
+            <section class="mobile-panel">
+                <div class="dashboard-mobile-header">
+                    <h1>📖 {{ t .T "dashboard.title" }}</h1>
+                    <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
+                </div>
+
+                {{ if .ImportError }}
+                <div class="import-notice import-notice--error" role="alert">{{ t .T "import.error.generic" }}</div>
+                {{ end }}
+                {{ if .ImportReport }}
+                <div class="import-notice" role="status">
+                    {{ t .T "import.added" }}: {{ .ImportReport.Imported }} —
+                    {{ t .T "import.updated" }}: {{ .ImportReport.Updated }} —
+                    {{ t .T "import.skipped_dup" }}: {{ .ImportReport.SkippedDuplicate }} —
+                    {{ t .T "import.skipped_invalid" }}: {{ .ImportReport.SkippedInvalid }}
+                </div>
+                {{ end }}
+
+                <div class="mobile-stack">
+                    <div class="dashboard-mobile-search">
+                        <label for="mobile-search" class="sr-only">{{ t .T "dashboard.search.label" }}</label>
+                        <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
+                    </div>
+                    <div class="dashboard-mobile-controls">
+                        <select id="mobile-filter-status" autocomplete="off">
+                            <option value="">{{ t .T "dashboard.filter.status" }}: {{ t .T "dashboard.filter.all" }}</option>
+                            {{ range .ReadingStatus }}
+                            <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
+                            {{ end }}
+                        </select>
+                        <select id="mobile-filter-type" autocomplete="off">
+                            <option value="">{{ t .T "dashboard.filter.type" }}: {{ t .T "dashboard.filter.all" }}</option>
+                            {{ range .ReadingTypes }}
+                            <option value="{{ . }}">{{ . }}</option>
+                            {{ end }}
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            {{ if .Works }}
+            <section class="works-mobile-list" id="works-mobile-list">
+                {{ range .Works }}
+                <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}">
+                    <div class="work-mobile-top">
+                        <div>
+                            <h2 class="work-mobile-title">{{ .Title }}</h2>
+                            <div class="work-mobile-sub">{{ t $.T "dashboard.chapter" }} <strong>{{ .Chapter }}</strong></div>
+                        </div>
+                        <div class="work-mobile-badges">
+                            {{ if .Status.Valid }}<span class="badge">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
+                            {{ if .ReadingType.Valid }}<span class="badge">{{ .ReadingType.String }}</span>{{ end }}
+                        </div>
+                    </div>
+                    {{ if gt .Rating 0 }}
+                    <div class="work-mobile-sub">
+                        {{ range seq 5 }}{{ if le . $.Rating }}★{{ else }}☆{{ end }}{{ end }}
+                    </div>
+                    {{ end }}
+                    <div class="work-mobile-actions">
+                        <a href="/edit/{{ .ID }}" class="btn btn-secondary">{{ t $.T "dashboard.edit" }}</a>
+                        <a href="/delete/{{ .ID }}" class="btn btn-danger">{{ t $.T "dashboard.delete" }}</a>
+                    </div>
+                </article>
+                {{ end }}
+            </section>
+            {{ else }}
+            <section class="mobile-panel">
+                <h2>{{ t .T "dashboard.empty" }}</h2>
+                <p>{{ t .T "dashboard.empty.start" }}</p>
+            </section>
+            {{ end }}
+        </div>
+    </main>
+
+    {{ template "mobile_bottom_nav" . }}
+    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/mobile-nav.js"></script>
+    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
+    <script>
+    (function () {
+      var search = document.getElementById("mobile-search");
+      var status = document.getElementById("mobile-filter-status");
+      var type = document.getElementById("mobile-filter-type");
+      var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
+      if (!cards.length) return;
+
+      function normalize(v) { return (v || "").toLowerCase(); }
+
+      function applyFilters() {
+        var q = normalize(search ? search.value : "");
+        var s = status ? normalize(status.value) : "";
+        var t = type ? normalize(type.value) : "";
+        cards.forEach(function (card) {
+          var title = normalize(card.getAttribute("data-title"));
+          var cs = normalize(card.getAttribute("data-status"));
+          var ct = normalize(card.getAttribute("data-type"));
+          var visible = (!q || title.indexOf(q) !== -1) &&
+            (!s || cs === s) &&
+            (!t || ct === t);
+          card.style.display = visible ? "" : "none";
+        });
+      }
+
+      if (search) search.addEventListener("input", applyFilters);
+      if (status) status.addEventListener("change", applyFilters);
+      if (type) type.addEventListener("change", applyFilters);
+    })();
+    </script>
+</body>
+</html>
+{{ end }}
