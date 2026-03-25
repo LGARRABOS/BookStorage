@@ -10,7 +10,9 @@
       return;
     }
     var k = e.key.toLowerCase();
-    if (k === 's') {
+    if (k === 'n' || k === '+') {
+      window.location.href = '/add_work';
+    } else if (k === 's') {
       window.location.href = '/stats';
     } else if (k === 'p') {
       window.location.href = '/profile';
@@ -18,6 +20,11 @@
       window.location.href = '/users';
     } else if (k === 'g') {
       window.location.href = '/dashboard';
+    } else if (k === 'o') {
+      window.location.href = '/tools';
+    } else if (k === 't' && typeof window.toggleTheme === 'function') {
+      e.preventDefault();
+      window.toggleTheme();
     }
   });
 })();

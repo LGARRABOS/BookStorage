@@ -99,6 +99,7 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 		strings.HasPrefix(path, "/api/decrement/"),
 		strings.HasPrefix(path, "/api/set-chapter/"),
 		strings.HasPrefix(path, "/api/delete/"),
+		path == "/profile/delete",
 		path == "/import",
 		strings.HasPrefix(path, "/users/"),
 		strings.HasPrefix(path, "/admin/"):

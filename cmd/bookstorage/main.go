@@ -139,6 +139,7 @@ func main() {
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.HandleStats))
 	mux.HandleFunc("/profile", app.RequireLogin(app.HandleProfile))
+	mux.HandleFunc("POST /profile/delete", app.RequireLogin(app.HandleDeleteProfile))
 	mux.HandleFunc("/tools", app.RequireLogin(app.HandleTools))
 	mux.HandleFunc("/users", app.RequireLogin(app.HandleUsers))
 	mux.HandleFunc("/users/{id}", app.RequireLogin(app.HandleUserDetail))

@@ -58,7 +58,12 @@
         .opt-title { font-weight: 600; color: var(--text-primary); }
         .opt-desc { font-size: 0.8rem; color: var(--text-muted); }
         .form-actions { display: flex; justify-content: flex-end; gap: 0.7rem; margin-top: 0.5rem; padding: 0 1.1rem 1.1rem 1.1rem; border-top: 1px solid var(--border-subtle); }
-        .a11y-option label { display: flex; align-items: center; gap: 0.5rem; cursor: pointer; }
+        .a11y-option label { display: inline-flex; align-items: center; gap: 0.6rem; cursor: pointer; color: var(--text-secondary); }
+        .a11y-option input[type="checkbox"] { width: 1rem; height: 1rem; margin: 0; vertical-align: middle; }
+        .danger-zone { margin-top: 1rem; border: 1px solid rgba(239, 68, 68, 0.35); background: rgba(239, 68, 68, 0.08); border-radius: 0.75rem; padding: 0.9rem; }
+        .danger-zone h3 { margin: 0 0 0.3rem 0; color: #ef4444; font-size: 0.95rem; }
+        .danger-zone p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
+        .danger-zone .confirm-inline { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -183,6 +188,25 @@
                                         <input id="confirm_password" type="password" name="confirm_password">
                                     </div>
                                 </div>
+
+                                <div class="danger-zone">
+                                    <h3>{{ t .T "profile.delete.title" }}</h3>
+                                    <p>{{ t .T "profile.delete.desc" }}</p>
+                                    <form method="POST" action="/profile/delete" onsubmit="return confirmDeleteProfile();">
+                                        <div class="form-row">
+                                            <div class="form-group">
+                                                <label for="delete_current_password">{{ t .T "profile.password.current" }}</label>
+                                                <input id="delete_current_password" name="current_password" type="password" required>
+                                            </div>
+                                            <div class="form-group">
+                                                <label for="confirm_delete">{{ t .T "profile.delete.confirm_label" }}</label>
+                                                <input id="confirm_delete" name="confirm_delete" type="text" placeholder="SUPPRIMER" required>
+                                                <div class="confirm-inline">{{ t .T "profile.delete.confirm_hint" }}</div>
+                                            </div>
+                                        </div>
+                                        <button type="submit" class="btn btn-danger">{{ t .T "profile.delete.action" }}</button>
+                                    </form>
+                                </div>
                             </section>
 
                             <section class="tab-panel" id="panel-accessibility">
@@ -231,6 +255,16 @@
     <script src="/static/js/keyboard-shortcuts-nav.js"></script>
     <script>
     document.addEventListener('DOMContentLoaded', function() {
+        {{ if eq .Lang "fr" }}
+        window.confirmDeleteProfile = function() {
+            return confirm("Cette action est irreversible. Voulez-vous vraiment supprimer votre profil et toutes les donnees associees ?");
+        };
+        {{ else }}
+        window.confirmDeleteProfile = function() {
+            return confirm("This action is irreversible. Do you really want to delete your profile and all associated data?");
+        };
+        {{ end }}
+
         const buttons = document.querySelectorAll('#profile-tabs .tabs-btn');
         const panels = {
             identity: document.getElementById('panel-identity'),
@@ -238,6 +272,11 @@
             security: document.getElementById('panel-security'),
             accessibility: document.getElementById('panel-accessibility')
         };
+        const params = new URLSearchParams(window.location.search);
+        if (params.get('delete_error') === '1') {
+            const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
+            if (securityBtn) securityBtn.click();
+        }
         buttons.forEach(btn => {
             btn.addEventListener('click', function() {
                 const target = this.dataset.target;
