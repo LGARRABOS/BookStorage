@@ -129,9 +129,9 @@
     })();
     function confirmDeleteProfile() {
       if (typeof window.bsConfirm === "function") {
-        return window.bsConfirm("{{ t .T \"profile.delete.action\" }}", "{{ t .T \"dashboard.delete.confirm\" }}");
+        return window.bsConfirm("{{ t .T "profile.delete.action" }}", "{{ t .T "dashboard.delete.confirm" }}");
       }
-      return window.confirm("{{ t .T \"dashboard.delete.confirm\" }}");
+      return window.confirm("{{ t .T "dashboard.delete.confirm" }}");
     }
     </script>
 </body>
