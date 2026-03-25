@@ -63,11 +63,29 @@ func isManhwaKeyword(s string) bool {
 	return s == "manhwa" || strings.Contains(s, "manhwa")
 }
 
+// anilistMediaTypeUpper returns uppercased Type, or infers from Format when Type is missing.
+// Certaines requêtes GraphQL n’incluent pas `type` sur Media ; sans cela, la Corée ne peut pas être mappée en Manhwa.
+func anilistMediaTypeUpper(media anilistMedia) string {
+	t := strings.ToUpper(strings.TrimSpace(media.Type))
+	if t != "" {
+		return t
+	}
+	f := strings.ToUpper(strings.TrimSpace(media.Format))
+	switch f {
+	case "MANGA", "ONE_SHOT":
+		return "MANGA"
+	case "NOVEL":
+		return "NOVEL"
+	}
+	return ""
+}
+
 // Map AniList type, format, country, genres and tags to our reading types (Manga vs Webtoon vs Manhwa etc.)
 func mapAnilistReadingType(media anilistMedia) string {
 	// Corée : manhwa
 	country := strings.ToUpper(strings.TrimSpace(media.CountryOfOrigin))
-	if strings.ToUpper(media.Type) == "MANGA" && (country == "KR" || country == "KP") {
+	t := anilistMediaTypeUpper(media)
+	if t == "MANGA" && (country == "KR" || country == "KP") {
 		return "Manhwa"
 	}
 	// Genres/tags manhwa explicites
@@ -92,11 +110,10 @@ func mapAnilistReadingType(media anilistMedia) string {
 			return "Webtoon"
 		}
 	}
-	if strings.ToUpper(media.Type) == "MANGA" && country == "CN" {
+	if t == "MANGA" && country == "CN" {
 		return "Webtoon"
 	}
 	// Sinon mapping classique type/format
-	t := strings.ToUpper(media.Type)
 	f := strings.ToUpper(media.Format)
 	switch {
 	case t == "NOVEL" || f == "NOVEL" || f == "LIGHT_NOVEL":
