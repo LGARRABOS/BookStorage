@@ -10,6 +10,14 @@ _🇫🇷 [Version française](./README.fr.md)_
 
 ---
 
+## About BookStorage
+
+BookStorage is a **self-hosted** web app for readers who want a single place to **catalogue** what they read—novels, manga, webtoons, light novels, and similar formats—and **follow progress** over time (planned, reading, completed, dropped). You can attach **ratings and notes**, explore **statistics** on your habits, and use **community libraries** to discover what others have made public, without giving up control of your data.
+
+The interface is built for **everyday use**: responsive layout, **dark mode**, **English and French**, optional **PWA** install, and **keyboard shortcuts** for power users. Everything runs on **your** machine or server: a **SQLite** database stores your library locally, with **export/import** when you need backups or a fresh install.
+
+---
+
 ## Features
 
 - Multi-format library (novels, manga, webtoons, light novels…)
