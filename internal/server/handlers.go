@@ -1831,6 +1831,27 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	data := map[string]any{}
+	if enc := r.URL.Query().Get("import_report"); enc != "" {
+		raw, err := base64.RawURLEncoding.DecodeString(enc)
+		if err == nil {
+			var rep ImportReport
+			if json.Unmarshal(raw, &rep) == nil {
+				data["ImportReport"] = rep
+			}
+		}
+	}
+	if r.URL.Query().Get("error") == "import" {
+		data["ImportError"] = true
+	}
+	_ = a.Templates.ExecuteTemplate(w, "tools", a.mergeData(r, data))
+}
+
 type communityUser struct {
 	ID          int
 	Username    string

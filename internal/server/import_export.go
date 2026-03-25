@@ -253,7 +253,13 @@ func redirectWithImportReport(w http.ResponseWriter, r *http.Request, rep Import
 		return
 	}
 	enc := base64.RawURLEncoding.EncodeToString(b)
-	u := "/dashboard?" + url.Values{"import_report": {enc}}.Encode()
+	base := "/dashboard"
+	if ref := strings.TrimSpace(r.Referer()); ref != "" {
+		if ru, err := url.Parse(ref); err == nil && ru.Path == "/tools" {
+			base = "/tools"
+		}
+	}
+	u := base + "?" + url.Values{"import_report": {enc}}.Encode()
 	http.Redirect(w, r, u, http.StatusFound)
 }
 

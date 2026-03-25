@@ -1,0 +1,136 @@
+{{ define "tools" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "tools.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        .tools-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+        .tool-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.1rem; }
+        .tool-card h2 { margin: 0 0 0.35rem 0; font-size: 1.05rem; color: var(--text-primary); }
+        .tool-card p { margin: 0 0 0.8rem 0; font-size: 0.9rem; color: var(--text-muted); }
+        .tool-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
+        .format-box { margin-top: 1rem; background: var(--primary-muted); border-radius: 0.8rem; padding: 0.9rem; font-size: 0.9rem; }
+        .format-box code { display: block; margin-top: 0.5rem; background: var(--background); border-radius: 0.5rem; padding: 0.6rem; white-space: nowrap; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/tools">{{ t .T "nav.tools" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="page-body">
+        <div class="container">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">🛠️ {{ t .T "tools.title" }}</h1>
+                    <p class="page-subtitle">{{ t .T "tools.subtitle" }}</p>
+                </header>
+
+                {{ if .ImportError }}
+                <div class="import-notice import-notice--error" role="alert">{{ t .T "import.error.generic" }}</div>
+                {{ end }}
+                {{ if .ImportReport }}
+                <div class="import-notice" role="status">
+                    {{ t .T "import.added" }}: {{ .ImportReport.Imported }} —
+                    {{ t .T "import.updated" }}: {{ .ImportReport.Updated }} —
+                    {{ t .T "import.skipped_dup" }}: {{ .ImportReport.SkippedDuplicate }} —
+                    {{ t .T "import.skipped_invalid" }}: {{ .ImportReport.SkippedInvalid }}
+                    {{ if .ImportReport.Errors }}
+                    <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
+                        {{ range .ImportReport.Errors }}
+                        <li>{{ t $.T "import.line_prefix" }} {{ .Line }}: {{ .Msg }}</li>
+                        {{ end }}
+                    </ul>
+                    {{ end }}
+                </div>
+                {{ end }}
+
+                <div class="tools-grid">
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.export.title" }}</h2>
+                        <p>{{ t .T "tools.export.subtitle" }}</p>
+                        <div class="tool-actions">
+                            <a href="/export" class="btn btn-primary">{{ t .T "tools.export.csv" }}</a>
+                            <a href="/export?format=json" class="btn btn-secondary">{{ t .T "tools.export.json" }}</a>
+                        </div>
+                    </article>
+
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.import.title" }}</h2>
+                        <p>{{ t .T "tools.import.subtitle" }}</p>
+                        <form action="/import" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="from" value="tools">
+                            <div class="form-group">
+                                <label for="duplicate_mode">{{ t .T "profile.import.duplicate_mode" }}</label>
+                                <select id="duplicate_mode" name="duplicate_mode">
+                                    <option value="skip">{{ t .T "profile.import.duplicate_skip" }}</option>
+                                    <option value="update">{{ t .T "profile.import.duplicate_update" }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <input type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required>
+                            </div>
+                            <div class="tool-actions">
+                                <button type="submit" class="btn btn-secondary">{{ t .T "tools.import.action" }}</button>
+                            </div>
+                        </form>
+                        <div class="format-box">
+                            <strong>{{ t .T "tools.import.format_title" }}</strong>
+                            <code>Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath</code>
+                        </div>
+                    </article>
+                </div>
+
+                <article class="tool-card" style="margin-top:1rem;">
+                    <h2>{{ t .T "tools.pwa.title" }}</h2>
+                    <p>{{ t .T "tools.pwa.subtitle" }}</p>
+                    <div class="tools-grid">
+                        <div>
+                            <h3 style="font-size:0.95rem; margin:0 0 0.4rem 0;">{{ t .T "tools.pwa.ios.title" }}</h3>
+                            <ol style="margin:0; padding-left:1rem; color:var(--text-secondary);">
+                                <li>{{ t .T "tools.pwa.ios.step1" }}</li>
+                                <li>{{ t .T "tools.pwa.ios.step2" }}</li>
+                                <li>{{ t .T "tools.pwa.ios.step3" }}</li>
+                                <li>{{ t .T "tools.pwa.ios.step4" }}</li>
+                            </ol>
+                        </div>
+                        <div>
+                            <h3 style="font-size:0.95rem; margin:0 0 0.4rem 0;">{{ t .T "tools.pwa.android.title" }}</h3>
+                            <ol style="margin:0; padding-left:1rem; color:var(--text-secondary);">
+                                <li>{{ t .T "tools.pwa.android.step1" }}</li>
+                                <li>{{ t .T "tools.pwa.android.step2" }}</li>
+                                <li>{{ t .T "tools.pwa.android.step3" }}</li>
+                                <li>{{ t .T "tools.pwa.android.step4" }}</li>
+                            </ol>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

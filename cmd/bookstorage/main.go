@@ -139,6 +139,7 @@ func main() {
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.HandleStats))
 	mux.HandleFunc("/profile", app.RequireLogin(app.HandleProfile))
+	mux.HandleFunc("/tools", app.RequireLogin(app.HandleTools))
 	mux.HandleFunc("/users", app.RequireLogin(app.HandleUsers))
 	mux.HandleFunc("/users/{id}", app.RequireLogin(app.HandleUserDetail))
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.RequireLogin(app.HandleImportWork))
