@@ -52,6 +52,47 @@ Ouvrez **http://127.0.0.1:5000**
 
 ---
 
+## Compatibilité Linux (production)
+
+**Légende :** 🟢 prise en charge directe (`install.sh`, systemd) · 🟠 fonctionne, installation ou maintenance manuelle (ou réserves) · 🔴 compilation ou exécution non réalistes (ex. sans Go 1.22+ ni GCC — hors distributions ci-dessous)
+
+| Distribution | Statut |
+|---|---|
+| AlmaLinux | 🟢 |
+| Alpine Linux | 🟠 |
+| Amazon Linux 2023 | 🟢 |
+| Arch Linux | 🟠 |
+| CentOS Stream | 🟢 |
+| Clear Linux | 🟠 |
+| Debian | 🟢 |
+| Deepin | 🟢 |
+| elementary OS | 🟢 |
+| EndeavourOS | 🟠 |
+| Fedora | 🟢 |
+| Fedora Silverblue | 🟠 |
+| Garuda Linux | 🟠 |
+| Gentoo | 🟠 |
+| Kali Linux | 🟢 |
+| Linux Mint | 🟢 |
+| Manjaro | 🟠 |
+| MX Linux | 🟢 |
+| NixOS | 🟠 |
+| Nobara | 🟢 |
+| openSUSE Leap | 🟠 |
+| openSUSE Tumbleweed | 🟠 |
+| Parrot OS | 🟢 |
+| Pop!_OS | 🟢 |
+| Raspberry Pi OS | 🟢 |
+| RHEL | 🟢 |
+| Rocky Linux | 🟢 |
+| Slackware | 🟠 |
+| Solus | 🟠 |
+| Ubuntu | 🟢 |
+| Void Linux | 🟠 |
+| Zorin OS | 🟢 |
+
+---
+
 ## Production (Linux)
 
 ```bash
@@ -68,9 +109,3 @@ Détails : [guide Hébergement](docs/fr/hebergement.md).
 ## Licence
 
 Licence MIT
-
----
-
-<p align="center">
-  Fait avec ❤️ pour les lecteurs
-</p>

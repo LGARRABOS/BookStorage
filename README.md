@@ -52,6 +52,47 @@ Open **http://127.0.0.1:5000**
 
 ---
 
+## Linux distribution support (production)
+
+**Legend:** 🟢 first-class support (`install.sh`, systemd) · 🟠 works, manual install or caveats · 🔴 build or run not realistic (e.g. no Go 1.22+ / GCC — not covered by the distros below)
+
+| Distribution | Status |
+|---|---|
+| AlmaLinux | 🟢 |
+| Alpine Linux | 🟠 |
+| Amazon Linux 2023 | 🟢 |
+| Arch Linux | 🟠 |
+| CentOS Stream | 🟢 |
+| Clear Linux | 🟠 |
+| Debian | 🟢 |
+| Deepin | 🟢 |
+| elementary OS | 🟢 |
+| EndeavourOS | 🟠 |
+| Fedora | 🟢 |
+| Fedora Silverblue | 🟠 |
+| Garuda Linux | 🟠 |
+| Gentoo | 🟠 |
+| Kali Linux | 🟢 |
+| Linux Mint | 🟢 |
+| Manjaro | 🟠 |
+| MX Linux | 🟢 |
+| NixOS | 🟠 |
+| Nobara | 🟢 |
+| openSUSE Leap | 🟠 |
+| openSUSE Tumbleweed | 🟠 |
+| Parrot OS | 🟢 |
+| Pop!_OS | 🟢 |
+| Raspberry Pi OS | 🟢 |
+| RHEL | 🟢 |
+| Rocky Linux | 🟢 |
+| Slackware | 🟠 |
+| Solus | 🟠 |
+| Ubuntu | 🟢 |
+| Void Linux | 🟠 |
+| Zorin OS | 🟢 |
+
+---
+
 ## Production (Linux)
 
 ```bash
