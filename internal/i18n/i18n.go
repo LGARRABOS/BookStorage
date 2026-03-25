@@ -30,6 +30,7 @@ var translationsFR = Translations{
 	"nav.logout":    "Déconnexion",
 	"nav.login":     "Connexion",
 	"nav.register":  "Inscription",
+	"nav.menu":      "Menu",
 
 	// Landing page
 	"landing.hero.title":     "Suivez vos lectures",
@@ -329,6 +330,7 @@ var translationsEN = Translations{
 	"nav.logout":    "Logout",
 	"nav.login":     "Login",
 	"nav.register":  "Register",
+	"nav.menu":      "Menu",
 
 	// Landing page
 	"landing.hero.title":     "Track your reading",
