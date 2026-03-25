@@ -1539,7 +1539,9 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 			"works":          works,
 			"exported_at":    time.Now().Format(time.RFC3339),
 		}
-		_ = json.NewEncoder(w).Encode(payload)
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(payload)
 		return
 	}
 
