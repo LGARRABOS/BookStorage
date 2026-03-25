@@ -69,7 +69,7 @@ bsctl help     # Afficher l'aide
 | `bsctl update <branche>` | Avancé : depuis `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
 
-**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v4.3.0` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
+**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v4.3.1` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
 
 Si vous déployez depuis un artefact GitHub Actions plutôt qu’un clone, extrayez l’archive, copiez `bookstorage`, `bsctl` et `deploy/bookstorage.service` aux bons emplacements, puis utilisez `bsctl install` / `bsctl update` comme d’habitude. Voir [Développement — Workflow de déploiement](developpement.md#workflow-de-déploiement).
 
