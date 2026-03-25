@@ -103,7 +103,9 @@ func GetMediaByID(id int) (*MediaDetail, error) {
   Media(id: $id) {
     id
     title { romaji english }
+    type
     format
+    countryOfOrigin
     description
     averageScore
     meanScore
