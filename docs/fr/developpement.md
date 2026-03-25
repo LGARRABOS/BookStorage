@@ -136,7 +136,7 @@ Si le premier argument n’est pas une sous-commande reconnue, `bsctl` affiche l
 
 ### Chaîne de version dans les builds
 
-Les champs `APP_VERSION` du [`Makefile`](../../Makefile) et de [`scripts/bsctl`](../../scripts/bsctl) doivent rester alignés pour les builds de release (`-X main.Version=...`). Voir le skill [push-release-agent](../../.cursor/skills/push-release-agent/SKILL.md) si vous gérez des releases.
+Les champs `APP_VERSION` du [`Makefile`](../../Makefile) et de [`scripts/bsctl`](../../scripts/bsctl) doivent rester alignés pour les builds de release (`-X main.Version=...`). Mainteneurs : tag annoté SemVer `vX.Y.Z`, push, publication de la release GitHub, et version injectée alignée sur ce tag.
 
 ---
 

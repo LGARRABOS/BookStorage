@@ -22,8 +22,8 @@ vendor/
 # IDE / Editor
 .idea/
 .vscode/
-# Cursor — mini-agent push (local)
-.cursor/skills/push-agent/
+# Cursor (local IDE — ne pas versionner)
+.cursor/
 *.swp
 *.swo
 *~
