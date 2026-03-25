@@ -18,18 +18,19 @@ const maxNotesRunes = 20000
 const maxImportReportURLLen = 1800
 
 // exportWork is the portable shape for JSON export/import and CSV extended columns.
+// JSON export always emits every key (empty strings / null catalog_id when absent) for a stable object shape.
 type exportWork struct {
 	Title       string `json:"title"`
 	Chapter     int    `json:"chapter"`
-	Link        string `json:"link,omitempty"`
-	Status      string `json:"status,omitempty"`
-	ReadingType string `json:"reading_type,omitempty"`
+	Link        string `json:"link"`
+	Status      string `json:"status"`
+	ReadingType string `json:"reading_type"`
 	Rating      int    `json:"rating"`
-	Notes       string `json:"notes,omitempty"`
-	UpdatedAt   string `json:"updated_at,omitempty"`
-	CatalogID   *int   `json:"catalog_id,omitempty"`
+	Notes       string `json:"notes"`
+	UpdatedAt   string `json:"updated_at"`
+	CatalogID   *int   `json:"catalog_id"`
 	IsAdult     bool   `json:"is_adult"`
-	ImagePath   string `json:"image_path,omitempty"`
+	ImagePath   string `json:"image_path"`
 }
 
 // DuplicateMode controls import when a work with the same title already exists.
