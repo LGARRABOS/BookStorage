@@ -3,9 +3,10 @@ name: push-release-agent
 description: >-
   Mini-agent : aligner la version dans le code (Makefile, bsctl, deploy) avec
   SemVer, mêmes vérifications locales que l’agent push, puis push Git et
-  création d’une release GitHub via la CLI gh (titre + notes), ou texte prêt
-  à copier-coller si gh indisponible. Tag annoté vX.Y.Z. Invoquer pour une
-  release, publier une version, taguer, ou « je veux créer une release ».
+  création d’une release GitHub via gh avec titre + notes détaillées (style
+  releases BookStorage, pas seul --generate-notes), ou texte prêt à copier-coller
+  si gh indisponible. Tag annoté vX.Y.Z. Invoquer pour une release, publier une
+  version, taguer, ou « je veux créer une release ».
 ---
 
 # Mini-agent Push + Release
@@ -15,7 +16,7 @@ description: >-
 Tu es **uniquement** l’agent **Push + Release**. Ta mission est :
 
 1. **Avant tout tag / push** : pour le dépôt **BookStorage**, **aligner la version dans le code** sur le numéro de release prévu (`X.Y.Z` sans préfixe `v`) — voir [Synchronisation version dans le code](#synchronisation-version-dans-le-code-bookstorage). Ensuite exécuter les **mêmes vérifications locales** que l’[agent push](../push-agent/SKILL.md) (alignement `.github/workflows/ci.yml` : `go mod`, `gofmt`, `golangci-lint`, `go test`, `go test -race`, smoke HTTP si l’environnement le permet).
-2. **Ensuite** : créer un **tag Git annoté** cohérent avec [SemVer](https://semver.org/lang/fr/) (`vMAJOR.MINOR.PATCH`), pousser la **branche courante** et le **tag**, puis **publier la release GitHub** (titre + notes) — idéalement avec **`gh release create`** pour éviter le formulaire web. Le tag **`vX.Y.Z`** doit correspondre au **`X.Y.Z`** déjà posé dans les fichiers listés ci‑dessous (même commit que le tag, en principe).
+2. **Ensuite** : créer un **tag Git annoté** cohérent avec [SemVer](https://semver.org/lang/fr/) (`vMAJOR.MINOR.PATCH`), pousser la **branche courante** et le **tag**, puis **publier la release GitHub** avec un **titre** et un **corps de notes rédigé** (voir [Notes de release GitHub](#notes-de-release-github)) — **`gh release create`** avec **`--notes-file`**, pas uniquement `--generate-notes`. Le tag **`vX.Y.Z`** doit correspondre au **`X.Y.Z`** déjà posé dans les fichiers listés ci‑dessous (même commit que le tag, en principe).
 
 Si une vérification échoue, **tu ne tags pas et tu ne pousses pas** (sauf demande explicite contraire de l’utilisateur, à documenter).
 
@@ -60,33 +61,44 @@ Objectif : l’utilisateur ne doit **pas** avoir à choisir le tag, le titre et 
 
 1. Le tag **`vX.Y.Z`** doit **déjà exister sur `origin`** (`git push origin vX.Y.Z`) **avant** `gh release create` (sinon GitHub ne résout pas le tag cible).
 
-### Avec GitHub CLI (`gh`)
+### Notes de release GitHub
 
-1. Vérifier : `gh auth status` et `command -v gh`. Si non authentifié : indiquer `gh auth login` (une fois), puis reprendre.
-2. **Création recommandée** — titre lisible + notes générées comme sur le bouton *Generate release notes* du site :
+**Comportement par défaut (BookStorage)** : rédiger un **corps de release dense et lisible**, sur le modèle des releases **v4.0.0** / **v4.1.0** — pas seulement `--generate-notes`, qui produit souvent un corps quasi vide (un lien *Full Changelog* sans contexte).
+
+1. **Collecter le contexte** : comparer avec le tag précédent, ex.  
+   `git log vPREVIOUS..vX.Y.Z --oneline`  
+   et si besoin `git diff vPREVIOUS..vX.Y.Z --stat`. Identifier les thèmes (fonctionnalités, correctifs, breaking changes, docs, déploiement).
+2. **Rédiger en anglais** le corps (cohérent avec les titres des releases récentes du dépôt), structure type :
+   - **Premier paragraphe** : une ou deux phrases qui posent le type de release (major / minor / patch) et la valeur pour l’utilisateur ou l’opérateur.
+   - **Puces ou paragraphes courts** : regrouper les changements par thème (produit, CLI/`bsctl`, base de données, PWA, docs, etc.). Être factuel ; pas de roman.
+   - **Paragraphe « Release workflow »** (recommandé) : indiquer que le skill **push-release** (mini-agent Cursor de ce dépôt) peut enchaîner version bump, vérifs locales, tag annoté, push et publication GitHub — afin que la prochaine release puisse être préparée de la même façon sans remplir le formulaire web à la main.
+   - **Lien** : terminer par une ligne **Full changelog** vers la comparaison GitHub :  
+     `https://github.com/<owner>/<repo>/compare/vPREVIOUS...vX.Y.Z`  
+     (`vPREVIOUS` = tag SemVer immédiatement antérieur, ex. via `git tag -l "v*"`, ou `git describe --tags --abbrev=0` sur le parent du tag de release).
+3. **Création avec `gh`** : écrire le Markdown dans un fichier temporaire puis :
    ```bash
    gh release create "vX.Y.Z" \
-     --title "BookStorage vX.Y.Z — <courte phrase des highlights>" \
-     --generate-notes
+     --title "BookStorage vX.Y.Z — <short highlight phrase>" \
+     --notes-file path/to/notes.md
    ```
-   - Le **titre** doit résumer l’essentiel (souvent en **anglais** si les notes le sont). Exemple de pattern : `BookStorage v4.0.0 — Smarter production updates & English CLI`.
-   - `--generate-notes` remplit le corps avec les commits / PRs entre le tag précédent et `vX.Y.Z` (équivalent du site GitHub).
-3. **Variante** — notes entièrement rédigées (utilisateur a fourni un brouillon ou l’agent résume `git log` / le diff) :
-   ```bash
-   gh release create "vX.Y.Z" --title "..." --notes-file path/to/notes.md
-   ```
-   ou `--notes "$(cat <<'EOF'
-   ... markdown ...
-   EOF
-   )"` sur Unix ; sous Windows PowerShell, préférer un fichier temporaire + `--notes-file`.
-4. Après succès : récupérer le **lien** affiché par `gh` ou construire `https://github.com/<owner>/<repo>/releases/tag/vX.Y.Z` (`gh repo view --json url -q .url` pour la base du dépôt si besoin).
+   Sous **Windows PowerShell**, utiliser de préférence **`--notes-file`** (fichier UTF-8) plutôt qu’un heredoc.
+4. **Optionnel** : si l’utilisateur exige explicitement les notes auto-générées GitHub en complément, on peut créer avec `--notes-file` puis enrichir avec `gh release edit vX.Y.Z --notes-file ...`, ou n’utiliser `--generate-notes` **que** si l’utilisateur le demande — dans tous les cas, **ne pas** s’arrêter sur une release au corps minimal sans accord explicite.
+
+### Avec GitHub CLI (`gh`)
+
+1. Vérifier : `gh auth status` et `command -v gh` (ou `Get-Command gh` sous PowerShell). Si non authentifié : indiquer `gh auth login` (une fois), puis reprendre.
+2. Rédiger le fichier Markdown (voir [Notes de release GitHub](#notes-de-release-github)), puis lancer `gh release create "vX.Y.Z" --title "..." --notes-file ...`.
+3. Après succès : récupérer le **lien** affiché par `gh` ou construire `https://github.com/<owner>/<repo>/releases/tag/vX.Y.Z` (`gh repo view --json url -q .url` pour la base du dépôt si besoin).
+4. **Correction a posteriori** : si une release a été créée avec trop peu de texte, utiliser  
+   `gh release edit vX.Y.Z --notes-file path/to/notes.md`  
+   pour aligner le corps sur ce skill sans recréer le tag.
 
 ### Si `gh` est absent ou `gh release create` échoue
 
 1. **Ne pas** laisser l’utilisateur sans contenu : dans le **rapport final**, inclure un bloc **prêt à copier-coller** :
    - **Tag** : `vX.Y.Z` (déjà poussé ou à créer)
    - **Release title** : une ligne
-   - **Release notes** : Markdown (puces courtes, même structure qu’une release propre)
+   - **Release notes** : Markdown suivant la **même structure** que [Notes de release GitHub](#notes-de-release-github) (intro, thèmes, paragraphe sur le skill push-release, lien *Full changelog*)
 2. Indiquer la commande manuelle équivalente une fois `gh` prêt :  
    `gh release create "vX.Y.Z" --title "..." --notes-file ...`  
    ou l’URL du dépôt **Releases** → *Draft a new release*.
@@ -109,7 +121,7 @@ Objectif : l’utilisateur ne doit **pas** avoir à choisir le tag, le titre et 
 - **Version code** : `X.Y.Z` aligné dans Makefile / `bsctl` / `deploy` ou `NON APPLICABLE` / `inchangé`.
 - **Tag** : nom exact (`vX.Y.Z`), créé ou non.
 - **Push** : branche, remote, tags poussés, résultat.
-- **Release** : créée via `gh release create` (titre + `--generate-notes` ou `--notes-file`) ou **titre + notes en copier-coller** pour le site ; **lien** vers la release si disponible.
+- **Release** : créée via `gh release create` (titre + **`--notes-file`** avec notes détaillées, voir section dédiée) ou **titre + notes en copier-coller** pour le site ; **lien** vers la release si disponible.
 
 Exécuter les commandes dans l’environnement réel ; ne pas inventer les sorties. Réponses en **français** si l’utilisateur écrit en français.
 
