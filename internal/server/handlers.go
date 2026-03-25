@@ -1831,6 +1831,80 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, ok := a.currentUserID(r)
+	if !ok {
+		http.Redirect(w, r, "/login", http.StatusFound)
+		return
+	}
+	currentPassword := r.FormValue("current_password")
+	confirmText := strings.TrimSpace(r.FormValue("confirm_delete"))
+	if currentPassword == "" || strings.ToUpper(confirmText) != "SUPPRIMER" {
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+
+	var storedPassword string
+	var avatarPath sql.NullString
+	err := a.DB.QueryRow(
+		`SELECT password, avatar_path FROM users WHERE id = ?`,
+		userID,
+	).Scan(&storedPassword, &avatarPath)
+	if err != nil || !verifyPassword(storedPassword, currentPassword) {
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+
+	type imgPathRow struct {
+		imagePath sql.NullString
+	}
+	var workImagePaths []string
+	rows, err := a.DB.Query(`SELECT image_path FROM works WHERE user_id = ?`, userID)
+	if err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var p imgPathRow
+			if rows.Scan(&p.imagePath) == nil && p.imagePath.Valid {
+				workImagePaths = append(workImagePaths, p.imagePath.String)
+			}
+		}
+	}
+
+	tx, err := a.DB.Begin()
+	if err != nil {
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM works WHERE user_id = ?`, userID); err != nil {
+		_ = tx.Rollback()
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+	if _, err := tx.Exec(`DELETE FROM users WHERE id = ?`, userID); err != nil {
+		_ = tx.Rollback()
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+	if err := tx.Commit(); err != nil {
+		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+		return
+	}
+
+	if avatarPath.Valid {
+		deleteMediaFile(a.Settings.ProfileUploadFolder, avatarPath.String)
+	}
+	for _, p := range workImagePaths {
+		deleteMediaFile(a.Settings.UploadFolder, p)
+	}
+
+	a.clearSession(w)
+	http.Redirect(w, r, "/?account_deleted=1", http.StatusFound)
+}
+
 func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
