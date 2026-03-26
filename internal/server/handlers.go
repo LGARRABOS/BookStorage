@@ -336,6 +336,13 @@ func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 func (a *App) baseData(r *http.Request) map[string]any {
 	lang := a.currentLang(r)
 	mode := a.viewModeFromRequest(r)
+	// Keep base data consistent with resolveViewMode() safety guards, but without mutating cookies.
+	if mode != "" {
+		m := isMobileRequest(r)
+		if (mode == "web" && m) || (mode == "mobile" && !m) {
+			mode = "auto"
+		}
+	}
 	isMobile := mode == "mobile" || (mode == "auto" && isMobileRequest(r))
 	return map[string]any{
 		"Lang":         lang,
