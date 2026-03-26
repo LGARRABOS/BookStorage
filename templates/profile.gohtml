@@ -65,6 +65,14 @@
         .danger-zone h3 { margin: 0 0 0.3rem 0; color: #ef4444; font-size: 0.95rem; }
         .danger-zone p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
         .danger-zone .confirm-inline { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; }
+        .sessions-box { margin-top: 1rem; border: 1px solid var(--border-subtle); background: var(--background); border-radius: 0.75rem; padding: 0.9rem; }
+        .sessions-box h3 { margin: 0 0 0.35rem 0; color: var(--text-primary); font-size: 0.95rem; }
+        .sessions-box p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
+        .sessions-table { width: 100%; border-collapse: collapse; }
+        .sessions-table th, .sessions-table td { padding: 0.55rem 0.6rem; border-top: 1px solid var(--border-subtle); text-align: left; font-size: 0.85rem; color: var(--text-secondary); vertical-align: top; }
+        .sessions-table th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .sessions-table code { font-size: 0.78rem; }
+        .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -94,6 +102,7 @@
                 <header class="section-header">
                     <h1 class="page-title">👤 {{ t .T "profile.title" }}</h1>
                 </header>
+                {{ if .LogoutAllDone }}<div class="notice">{{ if eq .Lang "fr" }}Déconnexion globale effectuée.{{ else }}Logged out everywhere.{{ end }}</div>{{ end }}
 
                 <div class="quick-stats">
                     <div class="stat-card"><div class="stat-icon purple">📚</div><div><div class="stat-value">{{ .TotalWorks }}</div><div class="stat-label">{{ t .T "dashboard.stats.works" }}</div></div></div>
@@ -190,6 +199,40 @@
                                         <label for="confirm_password">{{ t .T "profile.password.confirm" }}</label>
                                         <input id="confirm_password" type="password" name="confirm_password">
                                     </div>
+                                </div>
+
+                                <div class="sessions-box">
+                                    <h3>{{ if eq .Lang "fr" }}Sessions actives{{ else }}Active sessions{{ end }}</h3>
+                                    <p>{{ if eq .Lang "fr" }}Liste des appareils connectés (approx. IP + user-agent).{{ else }}Devices currently signed in (approx. IP + user-agent).{{ end }}</p>
+                                    <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
+                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm('{{ if eq .Lang \"fr\" }}Se déconnecter partout ?{{ else }}Log out everywhere?{{ end }}');">
+                                            <button type="submit" class="btn btn-secondary">{{ if eq .Lang "fr" }}Se déconnecter partout{{ else }}Log out everywhere{{ end }}</button>
+                                        </form>
+                                    </div>
+                                    <table class="sessions-table">
+                                        <thead>
+                                            <tr>
+                                                <th>{{ if eq .Lang "fr" }}Appareil{{ else }}Device{{ end }}</th>
+                                                <th>IP</th>
+                                                <th>{{ if eq .Lang "fr" }}Dernier accès{{ else }}Last seen{{ end }}</th>
+                                                <th>{{ if eq .Lang "fr" }}Expire{{ else }}Expires{{ end }}</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {{ range .Sessions }}
+                                            <tr>
+                                                <td>
+                                                    {{ if .UserAgent.Valid }}<code>{{ .UserAgent.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}
+                                                </td>
+                                                <td>{{ if .IP.Valid }}<code>{{ .IP.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}</td>
+                                                <td><code>{{ .LastSeenAt }}</code></td>
+                                                <td><code>{{ .ExpiresAt }}</code></td>
+                                            </tr>
+                                            {{ else }}
+                                            <tr><td colspan="4" style="color:var(--text-muted)">{{ if eq .Lang "fr" }}Aucune session active.{{ else }}No active sessions.{{ end }}</td></tr>
+                                            {{ end }}
+                                        </tbody>
+                                    </table>
                                 </div>
 
                                 <div class="danger-zone">

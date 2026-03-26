@@ -50,21 +50,36 @@ func openTestDB(t *testing.T) (*sql.DB, *config.Settings) {
 	return db, s
 }
 
-func TestVerifySession(t *testing.T) {
-	s := &config.Settings{
-		SecretKey:   "0123456789abcdef0123456789abcdef",
-		Environment: "development",
+func mustCreateSession(t *testing.T, app *App, userID int) string {
+	t.Helper()
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	token, err := app.createSession(req, userID)
+	if err != nil {
+		t.Fatalf("createSession: %v", err)
 	}
-	app := &App{Settings: s}
-	tok := app.signSession(42, time.Now().Add(time.Hour).Unix())
-	id, ok := app.verifySession(tok)
-	if !ok || id != 42 {
-		t.Fatalf("verifySession got id=%d ok=%v", id, ok)
+	return token
+}
+
+func TestSessions_CurrentSessionAndExpiry(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	token := mustCreateSession(t, app, 1)
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: token})
+	uid, _, ok := app.currentSession(req)
+	if !ok || uid != 1 {
+		t.Fatalf("currentSession uid=%d ok=%v", uid, ok)
 	}
-	tok2 := app.signSession(1, time.Now().Add(-time.Hour).Unix())
-	_, ok2 := app.verifySession(tok2)
-	if ok2 {
-		t.Fatal("expected expired session")
+
+	_, _ = db.Exec(
+		`UPDATE sessions SET expires_at = ? WHERE token_hash = ?`,
+		time.Now().UTC().Add(-time.Minute),
+		hashSessionToken(token),
+	)
+	uid2, _, ok2 := app.currentSession(req)
+	if ok2 || uid2 != 0 {
+		t.Fatalf("expected expired invalid, got uid=%d ok=%v", uid2, ok2)
 	}
 }
 
@@ -79,7 +94,7 @@ func TestHandleExportJSON(t *testing.T) {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/export?format=json", nil)
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleExport(rec, req)
 	if rec.Code != http.StatusOK {
@@ -104,7 +119,7 @@ func TestHandleExportCSV(t *testing.T) {
 		t.Fatal(err)
 	}
 	req := httptest.NewRequest(http.MethodGet, "/export", nil)
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleExport(rec, req)
 	if rec.Code != http.StatusOK {
@@ -141,7 +156,7 @@ func TestHandleImportCSV(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/import", &b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleImport(rec, req)
 	if rec.Code != http.StatusFound {
@@ -173,7 +188,7 @@ func TestHandleAPIWorksList_WithFiltersAndMeta(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/works?status=En%20cours&reading_type=Manga&search=char&page=1&limit=5&sort=title_asc", nil)
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleAPIWorksList(rec, req)
 	if rec.Code != http.StatusOK {
@@ -208,7 +223,7 @@ func TestAPIWorksCRUDFlow(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
 
-	session := app.signSession(1, time.Now().Add(time.Hour).Unix())
+	session := mustCreateSession(t, app, 1)
 
 	createReq := httptest.NewRequest(http.MethodPost, "/api/works", strings.NewReader(`{
 		"title":"Flow Title",
@@ -308,7 +323,7 @@ func TestHandleAPIStats_UserScopedAggregates(t *testing.T) {
 	}
 
 	req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleAPIStats(rec, req)
 	if rec.Code != http.StatusOK {
@@ -340,7 +355,7 @@ func TestHandleDismissRecommendation_InsertsRow(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/api/recommendations/dismiss", strings.NewReader(`{"source":"anilist","anilist_id":12345}`))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleDismissRecommendation(rec, req)
 	if rec.Code != http.StatusOK {
@@ -399,7 +414,7 @@ func TestImportFromJSON_AniListExport(t *testing.T) {
 	}`
 	req := httptest.NewRequest(http.MethodPost, "/import?duplicate_mode=skip", strings.NewReader(anilistPayload))
 	req.Header.Set("Content-Type", "application/json")
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleImport(rec, req)
 	if rec.Code != http.StatusFound {
@@ -439,7 +454,7 @@ func TestImportFromCSV_MAL(t *testing.T) {
 
 	req := httptest.NewRequest(http.MethodPost, "/import", &b)
 	req.Header.Set("Content-Type", w.FormDataContentType())
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	app.HandleImport(rec, req)
 	if rec.Code != http.StatusFound {
@@ -469,7 +484,7 @@ func TestWithRequestPolicies_CSRFAndRateLimit(t *testing.T) {
 	// CSRF: requête mutatrice avec session mais sans Origin/Referer doit être bloquée.
 	req := httptest.NewRequest(http.MethodPost, "/api/works", strings.NewReader(`{}`))
 	req.RemoteAddr = "127.0.0.1:9000"
-	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
 	rec := httptest.NewRecorder()
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
@@ -493,5 +508,51 @@ func TestWithRequestPolicies_CSRFAndRateLimit(t *testing.T) {
 	}
 	if !got429 {
 		t.Fatal("rate limiting attendu mais non observé")
+	}
+}
+
+func TestMergeDuplicate_MergesAndDeletesFrom(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	_, err := db.Exec(
+		`INSERT INTO works (id, title, chapter, link, status, reading_type, rating, notes, user_id, updated_at)
+		 VALUES
+		 (10, 'Same', 3, NULL, 'En cours', 'Manga', 2, 'into notes', 1, CURRENT_TIMESTAMP),
+		 (11, 'Same', 7, 'https://x.test', NULL, 'Manga', 5, 'from notes', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodPost, "/tools/duplicates/merge", strings.NewReader("from_id=11&into_id=10"))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Origin", "http://example.test")
+	req.Host = "example.test"
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+
+	// Ensure CSRF policy behaves like prod chain.
+	app.WithRequestPolicies(http.HandlerFunc(app.HandleMergeDuplicate)).ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var (
+		ch     int
+		link   sql.NullString
+		rating int
+		notes  sql.NullString
+	)
+	if err := db.QueryRow(`SELECT chapter, link, rating, notes FROM works WHERE id = 10 AND user_id = 1`).Scan(&ch, &link, &rating, &notes); err != nil {
+		t.Fatal(err)
+	}
+	if ch != 7 || !link.Valid || link.String != "https://x.test" || rating != 5 || !notes.Valid {
+		t.Fatalf("merged work unexpected: ch=%d link=%v rating=%d notes=%v", ch, link, rating, notes)
+	}
+	var count int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM works WHERE id = 11 AND user_id = 1`).Scan(&count)
+	if count != 0 {
+		t.Fatalf("expected from work deleted, count=%d", count)
 	}
 }
