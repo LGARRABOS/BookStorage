@@ -406,6 +406,11 @@ func (a *App) resolveViewMode(w http.ResponseWriter, r *http.Request) string {
 		http.SetCookie(w, cookie)
 		mode = override
 	}
+	// Safety guard: keep mobile rendering on phones by default.
+	// This prevents a stale "web" cookie from forcing desktop layout on mobile.
+	if override == "" && mode == "web" && isMobileRequest(r) {
+		mode = "auto"
+	}
 	if mode == "mobile" {
 		return "mobile"
 	}
