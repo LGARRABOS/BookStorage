@@ -1138,6 +1138,13 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 			Profile: recommend.ProfileSummary{},
 		}
 	}
+
+	if dismissed, err := loadDismissedRecommendations(a.DB, userID, "anilist"); err == nil {
+		filterDismissedSuggestions(res, dismissed)
+	} else {
+		log.Printf("dismissed recommendations: %v", err)
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(res)
 }

@@ -118,6 +118,8 @@
         .reco-card-meta { font-size: 0.7rem; color: var(--text-muted); }
         .reco-card a.btn-reco { display: block; text-align: center; padding: 0.35rem 0.5rem; border-radius: 0.5rem; font-size: 0.75rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .reco-card a.btn-reco:hover { background: var(--primary); color: white; }
+        .reco-card .btn-reco--dismiss { border: 1px solid var(--border-subtle); background: transparent; color: var(--text-muted); padding: 0.35rem 0.55rem; border-radius: 0.5rem; font-size: 0.8rem; line-height: 1; cursor: pointer; }
+        .reco-card .btn-reco--dismiss:hover { background: rgba(239, 68, 68, 0.12); border-color: rgba(239, 68, 68, 0.35); color: #ef4444; }
         .reco-msg { font-size: 0.9rem; color: var(--text-muted); padding: 0.5rem 0; }
         .reco-loading { font-size: 0.9rem; color: var(--text-muted); margin: 0; }
         [data-theme="dark"] .reco-section { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
@@ -895,6 +897,7 @@
             recoLoadEl.style.display = 'block';
             recoLoadEl.textContent = detailLoading;
             var whyHtml = buildWhyHtml(item);
+            var dismissLbl = (document.documentElement.lang === 'fr') ? 'Pas intéressé' : 'Not interested';
             fetch('/api/recommendations/media?anilist_id=' + encodeURIComponent(item.anilist_id))
                 .then(function(r) {
                     if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
@@ -926,7 +929,35 @@
                         (d.description_translated ? '<p class="reco-detail-machine">' + lblMachineTranslated + '</p>' : '') + '</div>' +
                         '<div class="reco-detail-section"><h3>' + lblGenres + ' / ' + lblTags + '</h3><p>' + genresStr + ' · ' + tagsStr + '</p></div>' +
                         (scoreLine ? '<div class="reco-detail-section reco-detail-scores"><h3>' + lblScore + '</h3><p>' + escapeHtml(scoreLine) + '</p></div>' : '') +
-                        '<div class="reco-detail-actions"><a class="btn btn-primary" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + detailAdd + '</a></div>';
+                        '<div class="reco-detail-actions">' +
+                        '<a class="btn btn-primary" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + detailAdd + '</a>' +
+                        '<button type="button" class="btn btn-secondary" id="reco-detail-dismiss-btn">' + dismissLbl + '</button>' +
+                        '</div>';
+
+                    var dismissBtn = document.getElementById('reco-detail-dismiss-btn');
+                    if (dismissBtn) {
+                        dismissBtn.addEventListener('click', function() {
+                            fetch('/api/recommendations/dismiss', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
+                            }).then(function(r) {
+                                if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
+                                // Remove the corresponding card if it still exists.
+                                var card = document.querySelector('.reco-card[data-reco-idx="' + idx + '"]');
+                                if (card) card.remove();
+                                recoListData[idx] = null;
+                                closeRecoDetailModal();
+                                setupRecoScroll();
+                            }).catch(function() {
+                                var card = document.querySelector('.reco-card[data-reco-idx="' + idx + '"]');
+                                if (card) card.remove();
+                                recoListData[idx] = null;
+                                closeRecoDetailModal();
+                                setupRecoScroll();
+                            });
+                        });
+                    }
                 })
                 .catch(function() {
                     recoLoadEl.style.display = 'none';
@@ -1006,12 +1037,41 @@
                         ? '<img src="' + String(item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
                         : '<span class="no-cover">📖</span>';
                     var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
-                    return '<article class="reco-card" role="listitem"><button type="button" class="reco-card-cover reco-card-cover--btn" data-reco-idx="' + idx + '" aria-label="' + openLbl + '">' + img + '</button><div class="reco-card-body"><div class="reco-card-title">' + escapeHtml(item.title || '') + '</div><div class="reco-card-meta">' + escapeHtml(meta) + '</div><a class="btn-reco" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + addLabel + '</a></div></article>';
+                    var dismissBtn = '<button type="button" class="btn-reco btn-reco--dismiss" data-reco-dismiss="' + idx + '" aria-label="' + (document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested') + '" title="' + (document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested') + '">✕</button>';
+                    return '<article class="reco-card" role="listitem" data-reco-idx="' + idx + '"><button type="button" class="reco-card-cover reco-card-cover--btn" data-reco-idx="' + idx + '" aria-label="' + openLbl + '">' + img + '</button><div class="reco-card-body"><div class="reco-card-title">' + escapeHtml(item.title || '') + '</div><div class="reco-card-meta">' + escapeHtml(meta) + '</div><div style="display:flex; gap:0.4rem; align-items:center;"><a class="btn-reco" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + addLabel + '</a>' + dismissBtn + '</div></div></article>';
                 }).join('');
                 inner.querySelectorAll('.reco-card-cover--btn').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         var i = parseInt(btn.getAttribute('data-reco-idx'), 10);
                         if (!isNaN(i)) openRecoDetail(i);
+                    });
+                });
+                inner.querySelectorAll('[data-reco-dismiss]').forEach(function(btn) {
+                    btn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        e.stopPropagation();
+                        var i = parseInt(btn.getAttribute('data-reco-dismiss'), 10);
+                        if (isNaN(i)) return;
+                        var item = recoListData[i];
+                        if (!item || !item.anilist_id) return;
+                        fetch('/api/recommendations/dismiss', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
+                        }).then(function(r) {
+                            if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
+                            // Remove card immediately for UX even if backend already had it.
+                            var card = btn.closest('.reco-card');
+                            if (card) card.remove();
+                            // Keep model in sync (leave a hole rather than reindex all listeners).
+                            recoListData[i] = null;
+                            setupRecoScroll();
+                        }).catch(function() {
+                            var card = btn.closest('.reco-card');
+                            if (card) card.remove();
+                            recoListData[i] = null;
+                            setupRecoScroll();
+                        });
                     });
                 });
                 if (hint) hint.style.display = 'none';

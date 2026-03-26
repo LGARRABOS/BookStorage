@@ -49,6 +49,19 @@ CREATE TABLE IF NOT EXISTS catalog (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );`
 
+const createDismissedRecommendationsTableSQL = `
+CREATE TABLE IF NOT EXISTS dismissed_recommendations (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    source TEXT NOT NULL,
+    external_id TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE(user_id, source, external_id),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_dismissed_recommendations_user_source
+    ON dismissed_recommendations(user_id, source);`
+
 var profileColumns = map[string]string{
 	"display_name": "TEXT",
 	"email":        "TEXT",
@@ -134,6 +147,9 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createCatalogTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createDismissedRecommendationsTableSQL); err != nil {
 		return err
 	}
 	if _, err := db.Exec(createWorksTableSQL); err != nil {
