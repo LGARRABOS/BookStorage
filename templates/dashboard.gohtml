@@ -12,6 +12,7 @@
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
     <script src="/static/js/modals.js?v=3"></script>
     <style>
@@ -202,6 +203,7 @@
     </style>
 </head>
 <body>
+    {{ if not .IsMobileView }}
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
@@ -220,8 +222,9 @@
             </nav>
         </div>
     </header>
+    {{ end }}
 
-    <main class="page-body">
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div class="container">
             <div class="dashboard-header">
                 <div class="dashboard-title">
@@ -367,6 +370,7 @@
             {{ end }}
         </div>
     </main>
+    {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
     <footer class="page-footer">
         <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a> · <span id="help-trigger" style="cursor:pointer; text-decoration:underline; text-underline-offset:2px;" role="button" tabindex="0">⌨️ {{ if eq .Lang "fr" }}Raccourcis{{ else }}Shortcuts{{ end }}</span></p></div>
@@ -417,6 +421,7 @@
     </div>
 
     <script src="/static/js/appearance.js"></script>
+    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
         const cards = document.querySelectorAll('.work-card');
