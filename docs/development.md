@@ -126,6 +126,27 @@ CI also enables workflow concurrency (`cancel-in-progress`) to automatically can
 
 All jobs in that chain must pass before merging.
 
+### Security testing in CI
+
+The same trigger (push / PR) also runs **security-oriented jobs** in parallel with the core pipeline. These jobs use `continue-on-error` so they **never block a merge** (warn-only / observability mode).
+
+| Job | Tool | What it checks |
+|-----|------|----------------|
+| **SAST** | `gosec` | Static analysis of Go source for common security issues |
+| **Dependency vulnerabilities** | `govulncheck` | Known CVEs in Go modules |
+| **Secrets scan** | `gitleaks` | Leaked credentials, API keys, tokens in the git history |
+| **DAST smoke** | `scripts/ci/security_smoke.sh` | Live checks against the running app: security headers, API auth (401), wrong methods (405), CSRF origin blocking (403), auth rate limiting (429), admin route protection |
+
+Each job uploads a report artifact (JSON or TXT) for review.
+
+#### Hardening roadmap
+
+The security jobs are designed for a progressive enforcement strategy:
+
+- **Phase 1 (current):** Observability only -- all jobs are `continue-on-error: true`. Review artifacts after each run to assess baseline noise.
+- **Phase 2:** Remove `continue-on-error` on `gosec` and `govulncheck` so that High/Critical findings block PRs. Optionally add severity thresholds (`gosec -severity=high`, `govulncheck` exit code).
+- **Phase 3:** Tighten to Medium+ once the baseline is clean; add `gitleaks` to required checks.
+
 <a id="deployment-workflow"></a>
 ### Deployment workflow
 

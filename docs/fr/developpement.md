@@ -125,6 +125,27 @@ La CI active aussi la concurrence de workflow (`cancel-in-progress`) pour annule
 
 Tous les jobs de cette chaîne doivent passer pour merger.
 
+### Tests de sécurité en CI
+
+Le même déclencheur (push / PR) lance aussi des **jobs orientés sécurité** en parallèle du pipeline principal. Ces jobs utilisent `continue-on-error` et ne **bloquent jamais un merge** (mode warn-only / observabilité).
+
+| Job | Outil | Ce qu'il vérifie |
+|-----|-------|------------------|
+| **SAST** | `gosec` | Analyse statique du code Go pour les problèmes de sécurité courants |
+| **Vulnérabilités dépendances** | `govulncheck` | CVE connues dans les modules Go |
+| **Scan de secrets** | `gitleaks` | Identifiants, clés API ou tokens dans l'historique git |
+| **DAST smoke** | `scripts/ci/security_smoke.sh` | Vérifications live sur l'app en fonctionnement : en-têtes sécurité, auth API (401), mauvaises méthodes (405), blocage CSRF par origin (403), rate limiting auth (429), protection des routes admin |
+
+Chaque job publie un rapport en artefact (JSON ou TXT) consultable après exécution.
+
+#### Trajectoire de durcissement
+
+Les jobs sécurité sont conçus pour une montée en rigueur progressive :
+
+- **Phase 1 (actuelle) :** Observabilité uniquement -- tous les jobs sont en `continue-on-error: true`. Consulter les artefacts après chaque run pour évaluer le bruit de base.
+- **Phase 2 :** Retirer `continue-on-error` sur `gosec` et `govulncheck` pour que les alertes High/Critical bloquent les PR. Possibilité d'ajouter des seuils de sévérité (`gosec -severity=high`, code de sortie `govulncheck`).
+- **Phase 3 :** Resserrer à Medium+ une fois la base propre ; ajouter `gitleaks` aux checks obligatoires.
+
 <a id="workflow-de-déploiement"></a>
 ### Workflow de déploiement
 
