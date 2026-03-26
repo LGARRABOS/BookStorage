@@ -17,6 +17,7 @@ import (
 
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
+	"bookstorage/internal/recommend"
 )
 
 func testSettings(dir string) *config.Settings {
@@ -330,6 +331,48 @@ func TestHandleAPIStats_UserScopedAggregates(t *testing.T) {
 	}
 	if payload.Data.AvgRating < 2.99 || payload.Data.AvgRating > 3.01 {
 		t.Fatalf("avg rating inattendue: %.2f", payload.Data.AvgRating)
+	}
+}
+
+func TestHandleDismissRecommendation_InsertsRow(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/recommendations/dismiss", strings.NewReader(`{"source":"anilist","anilist_id":12345}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	rec := httptest.NewRecorder()
+	app.HandleDismissRecommendation(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var count int
+	if err := db.QueryRow(
+		`SELECT COUNT(*) FROM dismissed_recommendations WHERE user_id = 1 AND source = 'anilist' AND external_id = '12345'`,
+	).Scan(&count); err != nil {
+		t.Fatal(err)
+	}
+	if count != 1 {
+		t.Fatalf("expected 1 row, got %d", count)
+	}
+}
+
+func TestFilterDismissedSuggestions_RemovesMatchingIDs(t *testing.T) {
+	res := &recommend.ForUserResult{
+		Results: []recommend.Suggestion{
+			{Source: "browse", AnilistID: 111, Title: "Keep"},
+			{Source: "browse", AnilistID: 222, Title: "Remove"},
+			{Source: "recommendation", AnilistID: 333, Title: "Keep2"},
+		},
+	}
+	dismissed := map[string]struct{}{"222": {}}
+	filterDismissedSuggestions(res, dismissed)
+	if len(res.Results) != 2 {
+		t.Fatalf("expected 2 results, got %d", len(res.Results))
+	}
+	if res.Results[0].AnilistID != 111 || res.Results[1].AnilistID != 333 {
+		t.Fatalf("unexpected results: %+v", res.Results)
 	}
 }
 
