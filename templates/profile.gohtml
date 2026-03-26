@@ -205,7 +205,7 @@
                                     <h3>{{ if eq .Lang "fr" }}Sessions actives{{ else }}Active sessions{{ end }}</h3>
                                     <p>{{ if eq .Lang "fr" }}Liste des appareils connectés (approx. IP + user-agent).{{ else }}Devices currently signed in (approx. IP + user-agent).{{ end }}</p>
                                     <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
-                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm('{{ if eq .Lang \"fr\" }}Se déconnecter partout ?{{ else }}Log out everywhere?{{ end }}');">
+                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm('{{ if eq .Lang "fr" }}Se déconnecter partout ?{{ else }}Log out everywhere?{{ end }}');">
                                             <button type="submit" class="btn btn-secondary">{{ if eq .Lang "fr" }}Se déconnecter partout{{ else }}Log out everywhere{{ end }}</button>
                                         </form>
                                     </div>
