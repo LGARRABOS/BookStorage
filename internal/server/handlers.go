@@ -2,7 +2,6 @@ package server
 
 import (
 	"bytes"
-	"crypto/hmac"
 	"crypto/sha256"
 	"crypto/subtle"
 	"database/sql"
@@ -246,56 +245,9 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
-func (a *App) signSession(userID int, expiry int64) string {
-	payload := strconv.Itoa(userID) + "|" + strconv.FormatInt(expiry, 10)
-	payloadB64 := base64.URLEncoding.EncodeToString([]byte(payload))
-	mac := hmac.New(sha256.New, []byte(a.Settings.SecretKey))
-	mac.Write([]byte(payloadB64))
-	sig := base64.URLEncoding.EncodeToString(mac.Sum(nil))
-	return payloadB64 + "." + sig
-}
-
-func (a *App) verifySession(token string) (int, bool) {
-	idx := strings.LastIndex(token, ".")
-	if idx <= 0 {
-		return 0, false
-	}
-	payloadB64, sigB64 := token[:idx], token[idx+1:]
-	sig, err := base64.URLEncoding.DecodeString(sigB64)
-	if err != nil || len(sig) != sha256.Size {
-		return 0, false
-	}
-	mac := hmac.New(sha256.New, []byte(a.Settings.SecretKey))
-	mac.Write([]byte(payloadB64))
-	expected := mac.Sum(nil)
-	if subtle.ConstantTimeCompare(sig, expected) != 1 {
-		return 0, false
-	}
-	payload, err := base64.URLEncoding.DecodeString(payloadB64)
-	if err != nil {
-		return 0, false
-	}
-	parts := strings.SplitN(string(payload), "|", 2)
-	if len(parts) != 2 {
-		return 0, false
-	}
-	id, err := strconv.Atoi(parts[0])
-	if err != nil || id <= 0 {
-		return 0, false
-	}
-	expiry, err := strconv.ParseInt(parts[1], 10, 64)
-	if err != nil || time.Now().Unix() > expiry {
-		return 0, false
-	}
-	return id, true
-}
-
 func (a *App) currentUserID(r *http.Request) (int, bool) {
-	c, err := r.Cookie("session")
-	if err != nil {
-		return 0, false
-	}
-	return a.verifySession(c.Value)
+	id, _, ok := a.currentSession(r)
+	return id, ok
 }
 
 func (a *App) currentLang(r *http.Request) string {
@@ -450,37 +402,9 @@ func isMobileRequest(r *http.Request) bool {
 	return false
 }
 
-func (a *App) setUserID(w http.ResponseWriter, userID int) {
-	expiry := time.Now().Add(1 * time.Hour).Unix()
-	token := a.signSession(userID, expiry)
-	cookie := &http.Cookie{
-		Name:     "session",
-		Value:    token,
-		Path:     "/",
-		MaxAge:   3600,
-		HttpOnly: true,
-		SameSite: sessionSameSite(a.Settings.Environment),
-	}
-	if strings.ToLower(a.Settings.Environment) == "production" {
-		cookie.Secure = true
-	}
-	http.SetCookie(w, cookie)
-}
-
-func (a *App) clearSession(w http.ResponseWriter) {
-	http.SetCookie(w, &http.Cookie{
-		Name:     "session",
-		Value:    "",
-		Path:     "/",
-		MaxAge:   -1,
-		HttpOnly: true,
-		SameSite: sessionSameSite(a.Settings.Environment),
-	})
-}
-
 func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		userID, ok := a.currentUserID(r)
+		_, token, ok := a.currentSession(r)
 		if !ok {
 			// Requêtes API : retourner 401 pour que le front puisse rediriger vers login
 			if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -492,8 +416,9 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 			http.Redirect(w, r, "/login", http.StatusFound)
 			return
 		}
-		// Refresh session on each request (sliding expiration)
-		a.setUserID(w, userID)
+		// Sliding expiration (DB + cookie)
+		a.touchSession(r, token)
+		a.setSessionCookie(w, token, sessionTTL)
 		next(w, r)
 	}
 }
@@ -914,7 +839,12 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		a.setUserID(w, u.ID)
+		token, err := a.createSession(r, u.ID)
+		if err != nil {
+			http.Redirect(w, r, "/login?error=1", http.StatusFound)
+			return
+		}
+		a.setSessionCookie(w, token, sessionTTL)
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -922,8 +852,22 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandleLogout(w http.ResponseWriter, r *http.Request) {
+	if _, tok, ok := a.currentSession(r); ok {
+		a.revokeSession(tok)
+	}
 	a.clearSession(w)
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+func (a *App) HandleLogoutAll(w http.ResponseWriter, r *http.Request) {
+	userID, ok := a.currentUserID(r)
+	if !ok {
+		http.Redirect(w, r, "/login?expired=1", http.StatusFound)
+		return
+	}
+	a.revokeAllUserSessions(userID)
+	a.clearSession(w)
+	http.Redirect(w, r, "/profile?logout_all=1", http.StatusFound)
 }
 
 type workRow struct {
@@ -1853,12 +1797,22 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'Terminé' OR status = 'Completed')`, userID).Scan(&completedCount)
 		var readingCount int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
+
+		sessions, _ := a.listActiveSessions(userID)
+		_, tok, _ := a.currentSession(r)
+		currentSessionHash := ""
+		if tok != "" {
+			currentSessionHash = hashSessionToken(tok)
+		}
 		a.renderTemplate(w, r, "profile", a.mergeData(r, map[string]any{
 			"User":           u,
 			"TotalWorks":     totalWorks,
 			"TotalChapters":  totalChapters,
 			"CompletedCount": completedCount,
 			"ReadingCount":   readingCount,
+			"Sessions":       sessions,
+			"CurrentSession": currentSessionHash,
+			"LogoutAllDone":  r.URL.Query().Get("logout_all") == "1",
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {

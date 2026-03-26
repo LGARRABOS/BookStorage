@@ -62,6 +62,23 @@ CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 CREATE INDEX IF NOT EXISTS idx_dismissed_recommendations_user_source
     ON dismissed_recommendations(user_id, source);`
 
+const createSessionsTableSQL = `
+CREATE TABLE IF NOT EXISTS sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    token_hash TEXT NOT NULL UNIQUE,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    expires_at DATETIME NOT NULL,
+    ip TEXT,
+    user_agent TEXT,
+    revoked_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id);
+CREATE INDEX IF NOT EXISTS idx_sessions_user_revoked ON sessions(user_id, revoked_at);
+CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);`
+
 var profileColumns = map[string]string{
 	"display_name": "TEXT",
 	"email":        "TEXT",
@@ -147,6 +164,9 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createCatalogTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createSessionsTableSQL); err != nil {
 		return err
 	}
 	if _, err := db.Exec(createDismissedRecommendationsTableSQL); err != nil {

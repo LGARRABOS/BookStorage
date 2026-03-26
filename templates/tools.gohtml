@@ -62,6 +62,14 @@
                     </article>
 
                     <article class="tool-card">
+                        <h2>{{ if eq .Lang "fr" }}Qualité des données{{ else }}Data quality{{ end }}</h2>
+                        <p>{{ if eq .Lang "fr" }}Détecter et fusionner les doublons dans ta bibliothèque.{{ else }}Detect and merge duplicates in your library.{{ end }}</p>
+                        <div class="tool-actions">
+                            <a href="/tools/duplicates" class="btn btn-secondary">{{ if eq .Lang "fr" }}Gérer les doublons{{ else }}Manage duplicates{{ end }}</a>
+                        </div>
+                    </article>
+
+                    <article class="tool-card">
                         <h2>{{ t .T "tools.import.title" }}</h2>
                         <p>{{ t .T "tools.import.subtitle" }}</p>
                         <form action="/import" method="POST" enctype="multipart/form-data">

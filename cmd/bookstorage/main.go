@@ -13,6 +13,7 @@ import (
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
 	"bookstorage/internal/server"
+	"encoding/json"
 )
 
 // Version is set at compile time with -ldflags
@@ -70,6 +71,7 @@ func printVersion() {
 }
 
 func main() {
+	startedAt := time.Now().UTC()
 	// Flags
 	var (
 		showHelp    bool
@@ -131,6 +133,23 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// Routes
+	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != http.MethodGet {
+			w.WriteHeader(http.StatusMethodNotAllowed)
+			return
+		}
+		dbOK := true
+		if err := db.QueryRow("SELECT 1").Scan(new(int)); err != nil {
+			dbOK = false
+		}
+		payload := map[string]any{
+			"ok":         dbOK,
+			"version":    Version,
+			"uptime_sec": int(time.Since(startedAt).Seconds()),
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(payload)
+	})
 	mux.HandleFunc("/", app.HandleHome)
 	mux.HandleFunc("/legal", app.HandleLegal)
 	mux.HandleFunc("/lang/{lang}", app.HandleSetLanguage)
@@ -140,8 +159,11 @@ func main() {
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.HandleStats))
 	mux.HandleFunc("/profile", app.RequireLogin(app.HandleProfile))
+	mux.HandleFunc("POST /profile/logout_all", app.RequireLogin(app.HandleLogoutAll))
 	mux.HandleFunc("POST /profile/delete", app.RequireLogin(app.HandleDeleteProfile))
 	mux.HandleFunc("/tools", app.RequireLogin(app.HandleTools))
+	mux.HandleFunc("/tools/duplicates", app.RequireLogin(app.HandleDuplicates))
+	mux.HandleFunc("POST /tools/duplicates/merge", app.RequireLogin(app.HandleMergeDuplicate))
 	mux.HandleFunc("/users", app.RequireLogin(app.HandleUsers))
 	mux.HandleFunc("/users/{id}", app.RequireLogin(app.HandleUserDetail))
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.RequireLogin(app.HandleImportWork))
@@ -171,7 +193,7 @@ func main() {
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
-	handler := app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))
+	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))))
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           handler,

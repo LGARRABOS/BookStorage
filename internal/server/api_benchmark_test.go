@@ -7,7 +7,6 @@ import (
 	"strconv"
 	"strings"
 	"testing"
-	"time"
 
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
@@ -64,7 +63,11 @@ func BenchmarkHandleAPIWorksList_Search(b *testing.B) {
 		b.Fatal(err)
 	}
 
-	session := app.signSession(1, time.Now().Add(time.Hour).Unix())
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	session, err := app.createSession(req, 1)
+	if err != nil {
+		b.Fatal(err)
+	}
 	b.ResetTimer()
 
 	for i := 0; i < b.N; i++ {

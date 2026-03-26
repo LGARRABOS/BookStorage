@@ -297,7 +297,7 @@
                         {{ if .ImagePath.Valid }}
                             {{ $imgUrl := work_image_url .ImagePath.String }}
                             {{ if $imgUrl }}
-                                <img src="{{ $imgUrl }}" alt="{{ .Title }}" onerror="this.style.display='none'; this.parentElement.querySelector('.no-image').style.display='flex';">
+                                <img src="{{ $imgUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.parentElement.querySelector('.no-image').style.display='flex';">
                                 <span class="no-image" style="display:none;">📖</span>
                             {{ else }}
                                 <span class="no-image">📖</span>
@@ -409,10 +409,29 @@
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     <script>
     document.addEventListener('DOMContentLoaded', function() {
-        const cards = document.querySelectorAll('.work-card');
+        const cards = Array.from(document.querySelectorAll('.work-card'));
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
         const typeFilter = document.getElementById('type-filter');
+
+        // Precompute searchable text once to avoid repeated DOM reads on each keystroke.
+        cards.forEach(card => {
+            const title = (card.querySelector('.work-card-title')?.textContent || '').toLowerCase();
+            const notes = (card.dataset.notes || '').toLowerCase();
+            const link = (card.dataset.link || '').toLowerCase();
+            card.dataset.search = (title + ' ' + notes + ' ' + link).trim();
+            // Free large per-card attributes once materialized.
+            card.dataset.notes = '';
+            card.dataset.link = '';
+        });
+
+        function debounce(fn, delayMs) {
+            let t;
+            return function(...args) {
+                clearTimeout(t);
+                t = setTimeout(() => fn.apply(this, args), delayMs);
+            };
+        }
         
         function filterWorks() {
             const search = (searchInput?.value || '').toLowerCase().trim();
@@ -420,13 +439,11 @@
             const type = typeFilter.value;
             
             cards.forEach(card => {
-                const title = (card.querySelector('.work-card-title')?.textContent || '').toLowerCase();
-                const notes = (card.dataset.notes || '').toLowerCase();
-                const link = (card.dataset.link || '').toLowerCase();
                 const cardStatus = card.dataset.status || '';
                 const cardType = card.dataset.type || '';
                 
-                const matchSearch = !search || title.includes(search) || notes.includes(search) || link.includes(search);
+                const hay = card.dataset.search || '';
+                const matchSearch = !search || hay.includes(search);
                 const matchStatus = !status || cardStatus === status;
                 const matchType = !type || cardType === type;
                 
@@ -434,7 +451,7 @@
             });
         }
         
-        if (searchInput) searchInput.addEventListener('input', filterWorks);
+        if (searchInput) searchInput.addEventListener('input', debounce(filterWorks, 120));
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
         filterWorks();

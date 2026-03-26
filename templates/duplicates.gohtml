@@ -1,0 +1,119 @@
+{{ define "duplicates" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ if eq .Lang "fr" }}Doublons{{ else }}Duplicates{{ end }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
+        .group { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1rem; margin-bottom: 1rem; }
+        .group h2 { margin: 0 0 0.35rem 0; font-size: 1.05rem; color: var(--text-primary); }
+        .group p { margin: 0 0 0.8rem 0; color: var(--text-muted); font-size: 0.9rem; }
+        .works { width: 100%; border-collapse: collapse; }
+        .works th, .works td { padding: 0.55rem 0.6rem; border-top: 1px solid var(--border-subtle); text-align: left; font-size: 0.86rem; color: var(--text-secondary); vertical-align: top; }
+        .works th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
+        .works code { font-size: 0.78rem; }
+        .merge-row { display:flex; gap:0.6rem; align-items:flex-end; flex-wrap:wrap; margin-top:0.75rem; }
+        .merge-row select { padding: 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); color: var(--text-primary); }
+    </style>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/tools">{{ t .T "nav.tools" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">🧹 {{ if eq .Lang "fr" }}Doublons{{ else }}Duplicates{{ end }}</h1>
+                    <p class="page-subtitle">{{ if eq .Lang "fr" }}Regroupe et fusionne les entrées qui semblent identiques (titre + type).{{ else }}Group and merge entries that look identical (title + type).{{ end }}</p>
+                </header>
+
+                {{ if .MergedOK }}<div class="notice">{{ if eq .Lang "fr" }}Fusion effectuée.{{ else }}Merge done.{{ end }}</div>{{ end }}
+
+                {{ range .Groups }}
+                <div class="group">
+                    <h2>{{ if .Works }}{{ (index .Works 0).Title }}{{ else }}{{ .NormTitle }}{{ end }}</h2>
+                    <p>{{ if eq $.Lang "fr" }}{{ .Count }} éléments détectés{{ else }}{{ .Count }} items detected{{ end }} — {{ if .ReadingTyp }}{{ .ReadingTyp }}{{ else }}{{ if eq $.Lang "fr" }}Type non défini{{ else }}No type{{ end }}{{ end }}</p>
+                    <table class="works">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>{{ if eq $.Lang "fr" }}Chap.{{ else }}Ch.{{ end }}</th>
+                                <th>{{ if eq $.Lang "fr" }}Statut{{ else }}Status{{ end }}</th>
+                                <th>{{ if eq $.Lang "fr" }}Lien{{ else }}Link{{ end }}</th>
+                                <th>{{ if eq $.Lang "fr" }}Notes{{ else }}Notes{{ end }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {{ range .Works }}
+                            <tr>
+                                <td><code>{{ .ID }}</code></td>
+                                <td><code>{{ .Chapter }}</code></td>
+                                <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}-{{ end }}</td>
+                                <td>{{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" rel="noreferrer">{{ if eq $.Lang "fr" }}ouvrir{{ else }}open{{ end }}</a>{{ else }}-{{ end }}</td>
+                                <td>{{ if .Notes.Valid }}{{ if .Notes.String }}…{{ else }}-{{ end }}{{ else }}-{{ end }}</td>
+                            </tr>
+                            {{ end }}
+                        </tbody>
+                    </table>
+                    {{ if ge (len .Works) 2 }}
+                    <form method="POST" action="/tools/duplicates/merge" class="merge-row" onsubmit="return confirm('{{ if eq $.Lang "fr" }}Fusionner ces deux entrées ?{{ else }}Merge these two entries?{{ end }}');">
+                        <div>
+                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ if eq $.Lang "fr" }}Supprimer (from){{ else }}Delete (from){{ end }}</label>
+                            <select name="from_id">
+                                {{ range .Works }}<option value="{{ .ID }}">{{ .ID }} — {{ .Title }}</option>{{ end }}
+                            </select>
+                        </div>
+                        <div>
+                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ if eq $.Lang "fr" }}Conserver (into){{ else }}Keep (into){{ end }}</label>
+                            <select name="into_id">
+                                {{ range .Works }}<option value="{{ .ID }}">{{ .ID }} — {{ .Title }}</option>{{ end }}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-secondary">{{ if eq $.Lang "fr" }}Fusionner{{ else }}Merge{{ end }}</button>
+                    </form>
+                    {{ end }}
+                </div>
+                {{ else }}
+                <div class="empty-state">
+                    <div class="empty-state-icon">✅</div>
+                    <h2>{{ if eq .Lang "fr" }}Aucun doublon détecté{{ else }}No duplicates detected{{ end }}</h2>
+                    <p>{{ if eq .Lang "fr" }}Rien à faire pour le moment.{{ else }}Nothing to do for now.{{ end }}</p>
+                    <a href="/tools" class="btn btn-secondary">{{ if eq .Lang "fr" }}Retour outils{{ else }}Back to tools{{ end }}</a>
+                </div>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+
+    {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
+</body>
+</html>
+{{ end }}
