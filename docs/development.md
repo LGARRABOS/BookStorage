@@ -62,6 +62,10 @@ Use defaults for local work; for a full variable reference (production paths, se
 | `make build-prod` | Optimized binary with `-ldflags` and `APP_VERSION` from the Makefile |
 | `make run` | `go run ./cmd/bookstorage` |
 | `make clean` | Remove the `bookstorage` binary in the repo root |
+| `make test` | Run unit tests with coverage profile (`coverage.out`) |
+| `make test-race` | Run race detector suite |
+| `make lint` | Enforce `gofmt -l .` + run `golangci-lint` |
+| `make ci-local` | Local CI parity (`lint`, `test`, `test-race`) |
 | `make help` | Print short help (messages may be in French) |
 
 Production-oriented targets (`install`, `uninstall`, `update`, `fix-perms`, `status`, `logs`) require root or a configured host and are described from an operator perspective in [Self-hosting](self-hosting.md).
@@ -98,11 +102,13 @@ CI also runs `gofmt` in strict mode (fails if any non-formatted file is listed) 
 - `GET /api/works` supports pagination (`page`, `limit`), filters (`status`, `reading_type`, `search`), and sorting (`sort`).
 - The response now includes both `data` and `meta` (`total`, `total_pages`, `has_next`, `has_prev`).
 - Import accepts standard BookStorage exports plus common external formats: **MyAnimeList** (CSV) and **AniList** (JSON/CSV).
+- Current search implementation uses SQL `LIKE` patterns for broad matching; if library size grows significantly, an FTS5-backed path can be introduced while keeping the API contract stable.
 
 ### HTTP hardening
 
 - Authenticated mutating requests (POST/PATCH/DELETE/PUT) are protected with an origin check (`Origin`/`Referer`) to reduce CSRF risk.
 - Lightweight rate limiting is applied on sensitive endpoints (authentication and write-heavy routes).
+- The HTTP server is started with explicit timeouts (`ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout`) in `cmd/bookstorage/main.go` for better resilience under load and slowloris-like traffic.
 
 ---
 

@@ -11,7 +11,7 @@ APP_USER    := nobody
 APP_GROUP   := nobody
 BIN_DIR     := /usr/local/bin
 
-.PHONY: all build build-prod run clean install uninstall update fix-perms status logs help
+.PHONY: all build build-prod run clean test test-race lint ci-local install uninstall update fix-perms status logs help
 
 .DEFAULT_GOAL := help
 
@@ -32,6 +32,22 @@ run:
 clean:
 	@rm -f $(APP_NAME)
 	@echo "Nettoyage terminé"
+
+test:
+	@echo "Tests unitaires..."
+	@go test ./... -coverprofile=coverage.out
+
+test-race:
+	@echo "Tests race..."
+	@go test -race ./...
+
+lint:
+	@echo "Format + lint..."
+	@files=$$(gofmt -l .); if [ -n "$$files" ]; then echo "Go files not formatted:"; echo "$$files"; exit 1; fi
+	@golangci-lint run
+
+ci-local: lint test test-race
+	@echo "Validation locale CI terminée"
 
 # Production
 install: build-prod
@@ -80,6 +96,10 @@ help:
 	@echo "Commandes make disponibles:"
 	@echo "  make build      - Compiler"
 	@echo "  make run        - Lancer en développement"
+	@echo "  make test       - Tests unitaires + coverage.out"
+	@echo "  make test-race  - Tests race"
+	@echo "  make lint       - gofmt (strict) + golangci-lint"
+	@echo "  make ci-local   - lint + test + test-race"
 	@echo "  make install    - Installer le service"
 	@echo "  make update     - bsctl update (menu release ; sinon: bsctl update main)"
 	@echo ""
