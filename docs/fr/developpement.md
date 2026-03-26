@@ -116,9 +116,14 @@ La CI exécute aussi `gofmt` en mode strict et un job **smoke-http** qui lance `
 | **Lint** | `gofmt -l .` doit être vide ; `golangci-lint` |
 | **Unit tests** | `go test ./... -coverprofile=coverage.out` (artefact de couverture) |
 | **Race tests** | `go test -race ./...` |
-| **HTTP smoke tests** | Démarrage de l’app avec variables d’environnement, attente sur `/`, puis requêtes sur `/`, `/login`, `/register` |
+| **Build Linux binary** | `go build -o bookstorage ./cmd/bookstorage` (binaire publié en artefact CI) |
+| **HTTP smoke tests** | Téléchargement du binaire artefact CI, démarrage de l’app, attente sur `/`, puis requêtes sur `/`, `/login`, `/register` |
 
-Tous les jobs doivent passer pour merger.
+L’ordre d’exécution est organisé par étapes : **Lint** d’abord, puis **Unit tests** et **Race tests** en parallèle, ensuite **Build Linux binary**, puis **HTTP smoke tests**.
+
+La CI active aussi la concurrence de workflow (`cancel-in-progress`) pour annuler automatiquement les exécutions obsolètes sur une même branche.
+
+Tous les jobs de cette chaîne doivent passer pour merger.
 
 <a id="workflow-de-déploiement"></a>
 ### Workflow de déploiement

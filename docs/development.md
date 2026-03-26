@@ -117,9 +117,14 @@ On **push** (all branches) and on **pull requests** to `main`, `.github/workflow
 | **Lint** | `gofmt -l .` must be empty; `golangci-lint` |
 | **Unit tests** | `go test ./... -coverprofile=coverage.out` (coverage uploaded as artifact) |
 | **Race tests** | `go test -race ./...` |
-| **HTTP smoke tests** | Start app with env vars, wait for `/`, then curl `/`, `/login`, `/register` |
+| **Build Linux binary** | `go build -o bookstorage ./cmd/bookstorage` (uploaded as CI artifact) |
+| **HTTP smoke tests** | Download built CI binary artifact, start app, wait for `/`, then curl `/`, `/login`, `/register` |
 
-All jobs must pass before merging.
+Execution order is staged: **Lint** first, then **Unit tests** and **Race tests** in parallel, then **Build Linux binary**, and finally **HTTP smoke tests**.
+
+CI also enables workflow concurrency (`cancel-in-progress`) to automatically cancel outdated runs on the same branch.
+
+All jobs in that chain must pass before merging.
 
 <a id="deployment-workflow"></a>
 ### Deployment workflow
