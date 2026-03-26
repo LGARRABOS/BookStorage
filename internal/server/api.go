@@ -324,7 +324,10 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.HandleAPIWorksDetail(w, r)
+	// Reuse detail payload while forcing a GET method.
+	detailReq := r.Clone(r.Context())
+	detailReq.Method = http.MethodGet
+	a.HandleAPIWorksDetail(w, detailReq)
 }
 
 func (a *App) HandleAPIWorksDelete(w http.ResponseWriter, r *http.Request) {

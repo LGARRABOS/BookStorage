@@ -203,6 +203,136 @@ func TestHandleAPIWorksList_WithFiltersAndMeta(t *testing.T) {
 	}
 }
 
+func TestAPIWorksCRUDFlow(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	session := app.signSession(1, time.Now().Add(time.Hour).Unix())
+
+	createReq := httptest.NewRequest(http.MethodPost, "/api/works", strings.NewReader(`{
+		"title":"Flow Title",
+		"chapter":7,
+		"status":"En cours",
+		"reading_type":"Manga",
+		"rating":4,
+		"notes":"flow notes"
+	}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	createRec := httptest.NewRecorder()
+	app.HandleAPIWorksCreate(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createRec.Code, createRec.Body.String())
+	}
+
+	var created struct {
+		Data apiWork `json:"data"`
+	}
+	if err := json.NewDecoder(createRec.Body).Decode(&created); err != nil {
+		t.Fatal(err)
+	}
+	if created.Data.ID == 0 {
+		t.Fatalf("expected created id, got %+v", created.Data)
+	}
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/api/works/"+strconv.Itoa(created.Data.ID), strings.NewReader(`{
+		"chapter": 12,
+		"status": "Terminé",
+		"rating": 5
+	}`))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	updateReq.SetPathValue("id", strconv.Itoa(created.Data.ID))
+	updateRec := httptest.NewRecorder()
+	app.HandleAPIWorksUpdate(updateRec, updateReq)
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("update status=%d body=%s", updateRec.Code, updateRec.Body.String())
+	}
+
+	detailReq := httptest.NewRequest(http.MethodGet, "/api/works/"+strconv.Itoa(created.Data.ID), nil)
+	detailReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	detailReq.SetPathValue("id", strconv.Itoa(created.Data.ID))
+	detailRec := httptest.NewRecorder()
+	app.HandleAPIWorksDetail(detailRec, detailReq)
+	if detailRec.Code != http.StatusOK {
+		t.Fatalf("detail status=%d body=%s", detailRec.Code, detailRec.Body.String())
+	}
+	var detail struct {
+		Data apiWork `json:"data"`
+	}
+	if err := json.NewDecoder(detailRec.Body).Decode(&detail); err != nil {
+		t.Fatal(err)
+	}
+	if detail.Data.Chapter != 12 || detail.Data.Status != "Terminé" || detail.Data.Rating != 5 {
+		t.Fatalf("detail inattendu: %+v", detail.Data)
+	}
+
+	deleteReq := httptest.NewRequest(http.MethodDelete, "/api/works/"+strconv.Itoa(created.Data.ID), nil)
+	deleteReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	deleteReq.SetPathValue("id", strconv.Itoa(created.Data.ID))
+	deleteRec := httptest.NewRecorder()
+	app.HandleAPIWorksDelete(deleteRec, deleteReq)
+	if deleteRec.Code != http.StatusOK {
+		t.Fatalf("delete status=%d body=%s", deleteRec.Code, deleteRec.Body.String())
+	}
+
+	detailAfterDeleteReq := httptest.NewRequest(http.MethodGet, "/api/works/"+strconv.Itoa(created.Data.ID), nil)
+	detailAfterDeleteReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	detailAfterDeleteReq.SetPathValue("id", strconv.Itoa(created.Data.ID))
+	detailAfterDeleteRec := httptest.NewRecorder()
+	app.HandleAPIWorksDetail(detailAfterDeleteRec, detailAfterDeleteReq)
+	if detailAfterDeleteRec.Code != http.StatusNotFound {
+		t.Fatalf("expected 404 after delete, got %d", detailAfterDeleteRec.Code)
+	}
+}
+
+func TestHandleAPIStats_UserScopedAggregates(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	_, err := db.Exec(`INSERT INTO users (id, username, password, validated) VALUES (2, 'other-user', 'x', 1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, err = db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, rating, user_id, updated_at)
+		 VALUES
+		 ('A', 10, 'En cours', 'Manga', 4, 1, CURRENT_TIMESTAMP),
+		 ('B', 5, 'Terminé', 'Roman', 2, 1, CURRENT_TIMESTAMP),
+		 ('C', 99, 'En cours', 'Manga', 5, 2, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/stats", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: app.signSession(1, time.Now().Add(time.Hour).Unix())})
+	rec := httptest.NewRecorder()
+	app.HandleAPIStats(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	var payload struct {
+		Data struct {
+			TotalWorks    int     `json:"total_works"`
+			TotalChapters int     `json:"total_chapters"`
+			AvgRating     float64 `json:"avg_rating"`
+			RatedCount    int     `json:"rated_count"`
+		} `json:"data"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Data.TotalWorks != 2 || payload.Data.TotalChapters != 15 || payload.Data.RatedCount != 2 {
+		t.Fatalf("stats inattendues: %+v", payload.Data)
+	}
+	if payload.Data.AvgRating < 2.99 || payload.Data.AvgRating > 3.01 {
+		t.Fatalf("avg rating inattendue: %.2f", payload.Data.AvgRating)
+	}
+}
+
 func TestImportFromJSON_AniListExport(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

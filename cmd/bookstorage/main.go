@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
@@ -170,7 +171,15 @@ func main() {
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
 	handler := app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))
-	if err := http.ListenAndServe(addr, handler); err != nil {
+	srv := &http.Server{
+		Addr:              addr,
+		Handler:           handler,
+		ReadHeaderTimeout: 5 * time.Second,
+		ReadTimeout:       15 * time.Second,
+		WriteTimeout:      30 * time.Second,
+		IdleTimeout:       60 * time.Second,
+	}
+	if err := srv.ListenAndServe(); err != nil {
 		log.Fatal(err)
 	}
 }

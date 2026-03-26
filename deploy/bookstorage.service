@@ -12,7 +12,7 @@ Restart=always
 RestartSec=5
 
 # Environment
-Environment=FLASK_ENV=production
+Environment=BOOKSTORAGE_ENV=production
 Environment=BOOKSTORAGE_HOST=0.0.0.0
 Environment=BOOKSTORAGE_PORT=5000
 

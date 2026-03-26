@@ -49,24 +49,7 @@
                     <p class="page-subtitle">{{ t .T "tools.subtitle" }}</p>
                 </header>
 
-                {{ if .ImportError }}
-                <div class="import-notice import-notice--error" role="alert">{{ t .T "import.error.generic" }}</div>
-                {{ end }}
-                {{ if .ImportReport }}
-                <div class="import-notice" role="status">
-                    {{ t .T "import.added" }}: {{ .ImportReport.Imported }} —
-                    {{ t .T "import.updated" }}: {{ .ImportReport.Updated }} —
-                    {{ t .T "import.skipped_dup" }}: {{ .ImportReport.SkippedDuplicate }} —
-                    {{ t .T "import.skipped_invalid" }}: {{ .ImportReport.SkippedInvalid }}
-                    {{ if .ImportReport.Errors }}
-                    <ul style="margin:0.5rem 0 0 1.1rem; padding:0;">
-                        {{ range .ImportReport.Errors }}
-                        <li>{{ t $.T "import.line_prefix" }} {{ .Line }}: {{ .Msg }}</li>
-                        {{ end }}
-                    </ul>
-                    {{ end }}
-                </div>
-                {{ end }}
+                {{ template "import_notice" . }}
 
                 <div class="tools-grid">
                     <article class="tool-card">
