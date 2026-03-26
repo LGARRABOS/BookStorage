@@ -15,9 +15,7 @@
     <script src="/static/js/modals.js?v=3"></script>
 </head>
 <body>
-    {{ template "mobile_topbar" . }}
-
-    <main class="page-body mobile-page">
+    <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
             <section class="mobile-panel">
                 <div class="dashboard-mobile-header">
@@ -47,12 +45,6 @@
                             <option value="">{{ t .T "dashboard.filter.status" }}: {{ t .T "dashboard.filter.all" }}</option>
                             {{ range .ReadingStatus }}
                             <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
-                            {{ end }}
-                        </select>
-                        <select id="mobile-filter-type" autocomplete="off">
-                            <option value="">{{ t .T "dashboard.filter.type" }}: {{ t .T "dashboard.filter.all" }}</option>
-                            {{ range .ReadingTypes }}
-                            <option value="{{ . }}">{{ . }}</option>
                             {{ end }}
                         </select>
                     </div>
@@ -97,12 +89,10 @@
     {{ template "mobile_bottom_nav" . }}
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
-    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
     <script>
     (function () {
       var search = document.getElementById("mobile-search");
       var status = document.getElementById("mobile-filter-status");
-      var type = document.getElementById("mobile-filter-type");
       var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
       if (!cards.length) return;
 
@@ -111,21 +101,17 @@
       function applyFilters() {
         var q = normalize(search ? search.value : "");
         var s = status ? normalize(status.value) : "";
-        var t = type ? normalize(type.value) : "";
         cards.forEach(function (card) {
           var title = normalize(card.getAttribute("data-title"));
           var cs = normalize(card.getAttribute("data-status"));
-          var ct = normalize(card.getAttribute("data-type"));
           var visible = (!q || title.indexOf(q) !== -1) &&
-            (!s || cs === s) &&
-            (!t || ct === t);
+            (!s || cs === s);
           card.style.display = visible ? "" : "none";
         });
       }
 
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
-      if (type) type.addEventListener("change", applyFilters);
     })();
     </script>
 </body>

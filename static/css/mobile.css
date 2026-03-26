@@ -83,6 +83,10 @@
     padding-bottom: 5.5rem;
   }
 
+  .page-body.mobile-dashboard-page {
+    padding-top: 0.6rem;
+  }
+
   .mobile-bottom-nav {
     position: fixed;
     left: 0;
