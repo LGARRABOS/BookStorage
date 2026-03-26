@@ -10,11 +10,6 @@ import (
 	"bookstorage/internal/recommend"
 )
 
-type dismissedRecommendation struct {
-	Source     string
-	ExternalID string
-}
-
 func loadDismissedRecommendations(db *sql.DB, userID int, source string) (map[string]struct{}, error) {
 	rows, err := db.Query(
 		`SELECT external_id FROM dismissed_recommendations WHERE user_id = ? AND source = ?`,
