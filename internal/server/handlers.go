@@ -362,17 +362,13 @@ func (a *App) renderTemplate(w http.ResponseWriter, r *http.Request, templateNam
 	if _, ok := data["IsMobileView"]; !ok {
 		data["IsMobileView"] = mode == "mobile"
 	}
-	tpl := a.TemplatesWeb
 	if mode == "mobile" {
-		tpl = a.TemplatesMobile
+		mobileName := "mobile_" + templateName
+		if err := a.TemplatesMobile.ExecuteTemplate(w, mobileName, data); err == nil {
+			return
+		}
 	}
-	if err := tpl.ExecuteTemplate(w, templateName, data); err == nil {
-		return
-	}
-	// Defensive fallback: always try web bundle.
-	if tpl != a.TemplatesWeb {
-		_ = a.TemplatesWeb.ExecuteTemplate(w, templateName, data)
-	}
+	_ = a.TemplatesWeb.ExecuteTemplate(w, templateName, data)
 }
 
 func (a *App) viewModeFromRequest(r *http.Request) string {

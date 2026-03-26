@@ -1,4 +1,4 @@
-{{ define "dashboard" }}
+{{ define "mobile_dashboard" }}
 <!DOCTYPE html>
 <html lang="{{ .Lang }}">
 <head>
@@ -54,6 +54,7 @@
             {{ if .Works }}
             <section class="works-mobile-list" id="works-mobile-list">
                 {{ range .Works }}
+                {{ $work := . }}
                 <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}">
                     <div class="work-mobile-top">
                         <div>
@@ -67,7 +68,7 @@
                     </div>
                     {{ if gt .Rating 0 }}
                     <div class="work-mobile-sub">
-                        {{ range seq 5 }}{{ if le . $.Rating }}★{{ else }}☆{{ end }}{{ end }}
+                        {{ range seq 5 }}{{ if le . $work.Rating }}★{{ else }}☆{{ end }}{{ end }}
                     </div>
                     {{ end }}
                     <div class="work-mobile-actions">
