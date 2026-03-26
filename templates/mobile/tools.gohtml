@@ -12,9 +12,7 @@
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
-    {{ template "mobile_topbar" . }}
-
-    <main class="page-body mobile-page">
+    <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
             <section class="mobile-panel">
                 <h1 style="margin-top:0;">🛠️ {{ t .T "tools.title" }}</h1>
@@ -98,7 +96,6 @@
     {{ template "mobile_bottom_nav" . }}
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
-    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
 </body>
 </html>
 {{ end }}

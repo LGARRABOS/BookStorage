@@ -10,6 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ t .T "work.add.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
         .form-page { max-width: 900px; margin: 0 auto; }
@@ -69,6 +70,7 @@
     </style>
 </head>
 <body>
+    {{ if not .IsMobileView }}
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
@@ -85,8 +87,9 @@
             </nav>
         </div>
     </header>
+    {{ end }}
 
-    <main class="page-body">
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div class="container form-page">
             <div class="form-header">
                 <div class="form-header-title">
@@ -206,11 +209,13 @@
             </form>
         </div>
     </main>
+    {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
-    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
+    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
+    {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
     <script>
         function previewImage(input) {
             const preview = document.getElementById('image-preview');
