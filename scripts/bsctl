@@ -83,9 +83,12 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
-# Newest-first: up to 2 tags matching vMAJOR.0.0 (menu option 3 = manual tag entry)
-list_major_release_tags() {
-    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 2 | tac
+latest_major_release_tag() {
+    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 1
+}
+
+latest_non_major_release_tag() {
+    git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.[0-9]+\.[0-9]+$' | grep -Ev '^v[0-9]+\.0\.0$' | sort -V | tail -n 1
 }
 
 # Interactive choice: writes selected tag into the variable whose name is passed as $1 (nameref, bash 4.3+).
@@ -103,33 +106,29 @@ prompt_release_choice() {
     git fetch -q origin --tags 2>/dev/null || git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
 
-    local majors
-    majors=$(list_major_release_tags)
-    local -a MAJOR_TAGS=()
-    while IFS= read -r line; do
-        [[ -n "$line" ]] && MAJOR_TAGS+=("$line")
-    done <<< "$majors"
+    local major_tag patch_tag
+    major_tag=$(latest_major_release_tag)
+    patch_tag=$(latest_non_major_release_tag)
 
     printf "\n${BOLD}── Deploy version ──${NC}\n"
-    printf "Recent major tags (format ${BOLD}vX.0.0${NC}):\n\n"
-    local i
-    for ((i = 0; i < 2; i++)); do
-        if [[ $i -lt ${#MAJOR_TAGS[@]} ]]; then
-            printf "  ${BOLD}%d.${NC}  %s\n" "$((i + 1))" "${MAJOR_TAGS[$i]}"
-        else
-            printf "  ${BOLD}%d.${NC}  ${YELLOW}—${NC}\n" "$((i + 1))"
-        fi
-    done
-    if [[ ${#MAJOR_TAGS[@]} -eq 0 ]]; then
-        printf "  ${YELLOW}(no vX.0.0 tags on remote — use option 3 or ${BOLD}bsctl update main${YELLOW})${NC}\n"
+    printf "Recent tags:\n\n"
+    if [[ -n "$major_tag" ]]; then
+        printf "  ${BOLD}1.${NC}  %s  ${YELLOW}(latest major vX.0.0)${NC}\n" "$major_tag"
+    else
+        printf "  ${BOLD}1.${NC}  ${YELLOW}— (no major tags found)${NC}\n"
     fi
-    printf "  ${BOLD}3.${NC}  Enter another tag (e.g. v4.1.0)\n"
+    if [[ -n "$patch_tag" ]]; then
+        printf "  ${BOLD}2.${NC}  %s  ${YELLOW}(latest non-major vX.Y.Z)${NC}\n" "$patch_tag"
+    else
+        printf "  ${BOLD}2.${NC}  ${YELLOW}— (no non-major tags found)${NC}\n"
+    fi
+    printf "  ${BOLD}Tag:${NC} type a tag directly (e.g. v5.1.0)\n"
     printf "\n"
 
     local choice manual_in normalized
     while true; do
         printf '\n'
-        printf $'\033[1m→\033[0m Enter \033[1m1\033[0m or \033[1m2\033[0m for a major release, \033[1m3\033[0m to type a tag, or \033[1mEnter\033[0m to cancel: '
+        printf $'\033[1m→\033[0m Enter \033[1m1\033[0m (latest major), \033[1m2\033[0m (latest non-major), type a tag (vX.Y.Z), or \033[1mEnter\033[0m to cancel: '
         if [[ -r /dev/tty ]]; then
             read -r choice < /dev/tty
         else
@@ -140,30 +139,29 @@ prompt_release_choice() {
             print_error "Cancelled."
             exit 1
         fi
-        if [[ "$choice" == "3" ]]; then
-            printf "Tag name (e.g. v4.2.0): "
-            if [[ -r /dev/tty ]]; then
-                read -r manual_in < /dev/tty
-            else
-                read -r manual_in
-            fi || true
-            if ! normalized=$(normalize_tag "$manual_in"); then
-                print_error "Empty tag."
-                continue
-            fi
-            __out_ref="$normalized"
-            return 0
-        fi
-        if [[ "$choice" == "1" || "$choice" == "2" ]]; then
-            local idx=$((choice - 1))
-            if [[ $idx -ge 0 && $idx -lt ${#MAJOR_TAGS[@]} ]]; then
-                __out_ref="${MAJOR_TAGS[$idx]}"
+        if [[ "$choice" == "1" ]]; then
+            if [[ -n "$major_tag" ]]; then
+                __out_ref="$major_tag"
                 return 0
             fi
-            print_error "No major release for this choice — use 3 or: bsctl update main"
+            print_error "No major tag available for choice 1."
             continue
         fi
-        print_error "Invalid choice. Enter 1, 2, or 3."
+        if [[ "$choice" == "2" ]]; then
+            if [[ -n "$patch_tag" ]]; then
+                __out_ref="$patch_tag"
+                return 0
+            fi
+            print_error "No non-major tag available for choice 2."
+            continue
+        fi
+
+        if ! normalized=$(normalize_tag "$choice"); then
+            print_error "Empty tag."
+            continue
+        fi
+        __out_ref="$normalized"
+        return 0
     done
 }
 
