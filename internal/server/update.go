@@ -6,8 +6,8 @@ import (
 	"errors"
 	"log"
 	"net/http"
-	"os/exec"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -30,6 +30,7 @@ type UpdateResult struct {
 	Message   string `json:"message,omitempty"`
 	StartedAt int64  `json:"started_at_unix,omitempty"`
 	Output    string `json:"output,omitempty"`
+	Command   string `json:"command,omitempty"`
 }
 
 type semVer struct {
@@ -93,38 +94,83 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	}
 
 	// Run bsctl update non-interactively. This assumes the server has permissions.
-	// Try "bsctl" first (installed), fallback to repo script.
+	// Try common bsctl locations first, then fallback to repo script.
 	log.Printf("[admin-update] requested mode=%s tag=%s", mode, tag)
-	var cmd *exec.Cmd
-	var execErr error
-	for _, argv := range [][]string{{"bsctl", "update"}, {"./scripts/bsctl", "update"}} {
-		cmd = exec.CommandContext(ctx, argv[0], argv[1:]...)
+
+	workDir := a.bestUpdateWorkDir()
+	candidates := [][]string{
+		{"bsctl", "update"},
+		{"/usr/local/bin/bsctl", "update"},
+		{"/opt/bookstorage/scripts/bsctl", "update"},
+		{"./scripts/bsctl", "update"},
+	}
+
+	var lastErr error
+	var lastOut string
+	var lastCmd string
+	var notFoundCount int
+	for _, argv := range candidates {
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
 		cmd.Env = append(cmd.Environ(), "BSCTL_UPDATE_TAG="+tag)
-		b, err := cmd.CombinedOutput()
-		res.Output = strings.TrimSpace(string(b))
-		if err == nil {
-			execErr = nil
-			break
+		if workDir != "" {
+			cmd.Dir = workDir
 		}
-		execErr = err
-		// If command not found, try next candidate; otherwise stop.
+		b, err := cmd.CombinedOutput()
+		out := strings.TrimSpace(string(b))
+		lastOut = out
+		lastErr = err
+		lastCmd = strings.Join(argv, " ")
+		res.Command = lastCmd
+		res.Output = out
+		if err == nil {
+			res.OK = true
+			res.Message = "started"
+			updateMu.Lock()
+			updateLast = res
+			updateMu.Unlock()
+			return res
+		}
+
+		// If command not found, try next candidate.
 		var ee *exec.Error
 		if errors.As(err, &ee) && errors.Is(ee.Err, exec.ErrNotFound) {
+			notFoundCount++
 			continue
 		}
+		// Non-zero exit: keep the output and stop (this is the real failure).
 		break
 	}
-	if execErr != nil {
-		res.OK = false
-		res.Message = "bsctl_failed"
+
+	res.OK = false
+	if notFoundCount == len(candidates) {
+		res.Message = "bsctl_not_found"
+		if lastOut == "" && lastErr != nil {
+			res.Output = lastErr.Error()
+		}
 	} else {
-		res.OK = true
-		res.Message = "started"
+		res.Message = "bsctl_failed"
+		if res.Output == "" && lastErr != nil {
+			res.Output = lastErr.Error()
+		}
 	}
 	updateMu.Lock()
 	updateLast = res
 	updateMu.Unlock()
 	return res
+}
+
+func (a *App) bestUpdateWorkDir() string {
+	// Prefer /opt/bookstorage in production installs, else current executable dir, else empty.
+	if st, err := os.Stat("/opt/bookstorage"); err == nil && st.IsDir() {
+		return "/opt/bookstorage"
+	}
+	if exe, err := os.Executable(); err == nil && exe != "" {
+		d := filepath.Dir(exe)
+		if st, err := os.Stat(d); err == nil && st.IsDir() {
+			return d
+		}
+	}
+	return ""
 }
 
 func (a *App) computeUpdateTag(mode updateMode) (tag string, output string, ok bool) {
