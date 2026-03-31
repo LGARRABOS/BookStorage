@@ -99,6 +99,11 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 
 	workDir := a.bestUpdateWorkDir()
 	candidates := [][]string{
+		// Prefer non-interactive sudo if available (common for production installs).
+		{"sudo", "-n", "bsctl", "update"},
+		{"sudo", "-n", "/usr/local/bin/bsctl", "update"},
+		{"sudo", "-n", "/opt/bookstorage/scripts/bsctl", "update"},
+		{"sudo", "-n", "./scripts/bsctl", "update"},
 		{"bsctl", "update"},
 		{"/usr/local/bin/bsctl", "update"},
 		{"/opt/bookstorage/scripts/bsctl", "update"},
