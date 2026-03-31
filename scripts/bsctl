@@ -25,15 +25,48 @@ NC=$'\033[0m'
 
 # Load library (repo: scripts/bsctl.lib.sh, installed: /usr/local/bin/bsctl.lib.sh)
 _bsctl_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-if [[ -f "${_bsctl_dir}/bsctl.lib.sh" ]]; then
+
+# #region agent log
+_bsctl_dbg_log() {
+    local msg="$1"
+    local data="$2"
+    local ts
+    ts="$(date +%s%3N 2>/dev/null || date +%s 2>/dev/null || echo 0)"
+    printf '{"sessionId":"a51b51","runId":"pre-fix","hypothesisId":"A","location":"scripts/bsctl:lib-load","message":"%s","data":%s,"timestamp":%s}\n' \
+        "$msg" "${data:-{}}" "${ts:-0}" >> "debug-a51b51.log" 2>/dev/null || true
+}
+_bsctl_dbg_log "lib search start" "{\"pwd\":\"$(pwd 2>/dev/null || echo "")\",\"_bsctl_dir\":\"${_bsctl_dir}\",\"BIN_DIR\":\"${BIN_DIR}\"}"
+# #endregion
+
+_bsctl_lib_candidates=(
+    "${_bsctl_dir}/bsctl.lib.sh"
+    "${BIN_DIR}/bsctl.lib.sh"
+    "$(pwd)/scripts/bsctl.lib.sh"
+    "/opt/bookstorage/scripts/bsctl.lib.sh"
+)
+
+_bsctl_lib_found=""
+for _p in "${_bsctl_lib_candidates[@]}"; do
+    if [[ -f "${_p}" ]]; then
+        _bsctl_lib_found="${_p}"
+        break
+    fi
+done
+
+# #region agent log
+_bsctl_dbg_log "lib selected" "{\"found\":\"${_bsctl_lib_found}\",\"candidates\":${#_bsctl_lib_candidates[@]}}"
+# #endregion
+
+if [[ -n "${_bsctl_lib_found}" ]]; then
     # shellcheck source=/dev/null
-    source "${_bsctl_dir}/bsctl.lib.sh"
-elif [[ -f "${BIN_DIR}/bsctl.lib.sh" ]]; then
-    # shellcheck source=/dev/null
-    source "${BIN_DIR}/bsctl.lib.sh"
+    source "${_bsctl_lib_found}"
 else
     printf "✗ Missing bsctl library: bsctl.lib.sh\n"
-    printf "  Expected at: %s/bsctl.lib.sh or %s/bsctl.lib.sh\n" "${_bsctl_dir}" "${BIN_DIR}"
+    printf "  Looked for:\n"
+    printf "    - %s\n" "${_bsctl_dir}/bsctl.lib.sh"
+    printf "    - %s\n" "${BIN_DIR}/bsctl.lib.sh"
+    printf "    - %s\n" "$(pwd)/scripts/bsctl.lib.sh"
+    printf "    - %s\n" "/opt/bookstorage/scripts/bsctl.lib.sh"
     exit 1
 fi
 
