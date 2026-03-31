@@ -71,10 +71,16 @@
                                 </button>
                             </div>
                             {{ if not .LatestTagOK }}
-                                <div class="kpi-meta" style="margin-top:0.6rem;">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière version (tags git manquants).{{ else }}Unable to determine latest version (missing git tags).{{ end }}</div>
+                                <details style="margin-top:0.6rem;">
+                                    <summary style="cursor:pointer; color: var(--text-muted);">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière version.{{ else }}Unable to determine latest version.{{ end }}</summary>
+                                    <pre class="admin-output">{{ .LatestInfo }}</pre>
+                                </details>
                             {{ end }}
                             {{ if not .LatestMajorOK }}
-                                <div class="kpi-meta" style="margin-top:0.2rem;">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière majeure (tags git vX.0.0 manquants).{{ else }}Unable to determine latest major (missing vX.0.0 tags).{{ end }}</div>
+                                <details style="margin-top:0.4rem;">
+                                    <summary style="cursor:pointer; color: var(--text-muted);">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière majeure.{{ else }}Unable to determine latest major.{{ end }}</summary>
+                                    <pre class="admin-output">{{ .LatestMajorInfo }}</pre>
+                                </details>
                             {{ end }}
                             <p id="update-status" style="margin-top:0.9rem; display:none;"></p>
                             <pre id="update-output" class="admin-output" style="display:none;"></pre>
@@ -89,6 +95,9 @@
     <script src="/static/js/appearance.js"></script>
     <script>
         window.__UPDATE_CONFIRM__ = {{ jsstr (t .T "update.confirm") }};
+        window.__UPDATE_CONFIRM_TITLE__ = {{ jsstr (t .T "update.confirm.title") }};
+        window.__UPDATE_CONFIRM_OK__ = {{ jsstr (t .T "update.confirm.ok") }};
+        window.__UPDATE_CONFIRM_CANCEL__ = {{ jsstr (t .T "update.confirm.cancel") }};
         window.__UPDATE_IN_PROGRESS__ = {{ jsstr (t .T "update.in_progress") }};
         window.__UPDATE_SUCCESS__ = {{ jsstr (t .T "update.success") }};
         window.__UPDATE_ERROR__ = {{ jsstr (t .T "update.error") }};

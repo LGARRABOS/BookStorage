@@ -4,7 +4,12 @@
   async function confirmUpdate() {
     const msg = window.__UPDATE_CONFIRM__ || "Confirmer ?";
     if (typeof window.showConfirm === "function") {
-      return await window.showConfirm(msg);
+      return await window.showConfirm(msg, {
+        title: window.__UPDATE_CONFIRM_TITLE__ || "Confirmer",
+        okLabel: window.__UPDATE_CONFIRM_OK__ || "OK",
+        cancelLabel: window.__UPDATE_CONFIRM_CANCEL__ || "Annuler",
+        okClass: "btn-primary",
+      });
     }
     return window.confirm(msg);
   }
@@ -43,9 +48,11 @@
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.ok) {
-        showStatus(window.__UPDATE_ERROR__ || "Erreur", false);
+        const extra = data && (data.message || data.tag) ? ` (${[data.message, data.tag].filter(Boolean).join(" / ")})` : "";
+        showStatus((window.__UPDATE_ERROR__ || "Erreur") + extra, false);
       } else {
-        showStatus(window.__UPDATE_SUCCESS__ || "OK", true);
+        const extra = data && data.tag ? ` (${data.tag})` : "";
+        showStatus((window.__UPDATE_SUCCESS__ || "OK") + extra, true);
       }
       showOutput(data.output || "");
     } catch (e) {
