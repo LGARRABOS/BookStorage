@@ -63,11 +63,11 @@
                             <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
                                 <button id="btn-update-latest" class="btn btn-primary" type="button">
                                     {{ t .T "update.latest" }}
-                                    {{ if .LatestTagOK }}<span class="badge info" style="margin-left:0.4rem;">{{ .LatestTag }}</span>{{ end }}
+                                    {{ if .LatestTagOK }}<span class="admin-tag-badge">{{ .LatestTag }}</span>{{ end }}
                                 </button>
                                 <button id="btn-update-latest-major" class="btn btn-secondary" type="button">
                                     {{ t .T "update.latest_major" }}
-                                    {{ if .LatestMajorOK }}<span class="badge info" style="margin-left:0.4rem;">{{ .LatestMajorTag }}</span>{{ end }}
+                                    {{ if .LatestMajorOK }}<span class="admin-tag-badge">{{ .LatestMajorTag }}</span>{{ end }}
                                 </button>
                             </div>
                             {{ if not .LatestTagOK }}

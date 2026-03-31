@@ -84,6 +84,24 @@ table {
   color: var(--text-secondary);
 }
 
+.admin-tag-badge {
+  margin-left: 0.45rem;
+  padding: 0.18rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1.4;
+  background: rgba(255, 255, 255, 0.92);
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+}
+
+[data-theme="dark"] .admin-tag-badge {
+  background: rgba(15, 23, 42, 0.75);
+  color: #e2e8f0;
+  border-color: rgba(148, 163, 184, 0.25);
+}
+
 thead th {
   background: linear-gradient(120deg, rgba(79, 70, 229, 0.16), rgba(249, 115, 22, 0.1));
   color: #1e293b;
