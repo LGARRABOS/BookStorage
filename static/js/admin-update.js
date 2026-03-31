@@ -36,6 +36,19 @@
     el.style.display = "block";
   }
 
+  async function fetchStatus() {
+    const res = await fetch("/api/admin/update/status", {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+    });
+    return await res.json().catch(() => ({}));
+  }
+
+  function summarize(data) {
+    const extra = data && data.tag ? ` (${data.tag})` : "";
+    return { extra, msg: data?.message || "", out: data?.output || "", cmd: data?.command || "" };
+  }
+
   async function run(endpoint) {
     if (!(await confirmUpdate())) return;
     setBusy(true);
@@ -56,11 +69,43 @@
       if (!res.ok || !data.ok) {
         const extra = data && (data.message || data.tag) ? ` (${[data.message, data.tag].filter(Boolean).join(" / ")})` : "";
         showStatus((window.__UPDATE_ERROR__ || "Erreur") + extra, false);
+        showOutput(data.output || "");
+        return;
       } else {
+        // Update runs in background; the service may restart, so we poll status.
         const extra = data && data.tag ? ` (${data.tag})` : "";
-        showStatus((window.__UPDATE_SUCCESS__ || "OK") + extra, true);
+        showStatus((window.__UPDATE_IN_PROGRESS__ || "En cours...") + extra, null);
       }
-      showOutput(data.output || "");
+
+      let attempts = 0;
+      while (attempts < 60) {
+        await new Promise((r) => setTimeout(r, 2000));
+        const st = await fetchStatus().catch(() => ({}));
+        if (!st || st.running === true) {
+          attempts++;
+          continue;
+        }
+        const last = st.last || {};
+        if (last && last.message === "already_up_to_date") {
+          const { extra } = summarize(last);
+          showStatus((window.__UPDATE_ALREADY__ || "Déjà à jour.") + extra, true);
+          showOutput("");
+          return;
+        }
+        if (last && last.ok) {
+          const { extra, out, cmd } = summarize(last);
+          showStatus((window.__UPDATE_SUCCESS__ || "OK") + extra, true);
+          showOutput([cmd ? `command: ${cmd}` : "", out].filter(Boolean).join("\n\n"));
+          return;
+        }
+        const { extra, out, cmd, msg } = summarize(last);
+        showStatus((window.__UPDATE_ERROR__ || "Erreur") + ` (${[msg, last.tag].filter(Boolean).join(" / ")})`, false);
+        showOutput([cmd ? `command: ${cmd}` : "", out].filter(Boolean).join("\n\n"));
+        return;
+      }
+
+      showStatus(window.__UPDATE_IN_PROGRESS__ || "En cours...", null);
+      showOutput("Le service redémarre peut-être encore. Réessaie dans quelques instants ou recharge la page.");
     } catch (e) {
       showStatus(`${window.__UPDATE_ERROR__ || "Erreur"}: ${e?.message || e}`, false);
     } finally {
