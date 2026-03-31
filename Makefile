@@ -53,6 +53,7 @@ ci-local: lint test test-race
 install: build-prod
 	@cp $(APP_NAME) $(BIN_DIR)/
 	@cp scripts/bsctl $(BIN_DIR)/
+	@cp scripts/bsctl.lib.sh $(BIN_DIR)/bsctl.lib.sh
 	@chmod +x $(BIN_DIR)/bsctl
 	@test -d /etc/bash_completion.d && cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl && chmod 644 /etc/bash_completion.d/bsctl || true
 	@cp deploy/bookstorage.service /etc/systemd/system/
@@ -66,6 +67,7 @@ uninstall:
 	@-rm -f /etc/systemd/system/bookstorage.service
 	@-rm -f $(BIN_DIR)/$(APP_NAME)
 	@-rm -f $(BIN_DIR)/bsctl
+	@-rm -f $(BIN_DIR)/bsctl.lib.sh
 	@-rm -f /etc/bash_completion.d/bsctl
 	@systemctl daemon-reload
 	@echo "Service désinstallé"
