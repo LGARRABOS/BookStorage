@@ -211,6 +211,7 @@ cmd_update_at_tag() {
 
     # If the requested version is already installed, avoid rebuild/restart.
     # We still print a clear message for the user.
+    local target_version="${tag#v}"
     local installed_tag=""
     local installed_out=""
     local bookstorage_bin=""
@@ -221,7 +222,16 @@ cmd_update_at_tag() {
     fi
     if [[ -n "$bookstorage_bin" ]]; then
         installed_out="$("$bookstorage_bin" -v 2>/dev/null || true)"
-        installed_tag="$(printf '%s' "$installed_out" | grep -Eo 'v[0-9]+\.[0-9]+\.[0-9]+' | head -n 1 || true)"
+        # Parse "BookStorage vX.Y.Z" robustly (avoid relying on grep -o).
+        installed_tag="$(printf '%s\n' "$installed_out" | sed -n 's/.*\(v[0-9]\+\.[0-9]\+\.[0-9]\+\).*/\1/p' | head -n 1 || true)"
+        # Fallback: if parsing fails but the raw output contains the target version, accept it.
+        if [[ -z "$installed_tag" && -n "$target_version" ]]; then
+            if printf '%s' "$installed_out" | grep -Fq "v${target_version}"; then
+                installed_tag="v${target_version}"
+            elif printf '%s' "$installed_out" | grep -Fq "${target_version}"; then
+                installed_tag="v${target_version}"
+            fi
+        fi
         if [[ -n "$installed_tag" && "$installed_tag" == "$tag" ]]; then
             print_header
             print_info "Requested version: ${BOLD}${tag}${NC}"
