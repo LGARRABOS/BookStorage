@@ -505,7 +505,13 @@ cmd_update() {
         fi
     else
         bsctl_require_repo
-        bsctl_in_repo prompt_release_choice tag
+        # Must run in the current shell (not a subshell), otherwise the nameref
+        # inside prompt_release_choice can't set our local variable.
+        local repo
+        repo="$(bsctl_repo_dir)" || { print_error "Repository not found."; exit 1; }
+        pushd "$repo" >/dev/null || { print_error "Could not enter repo: $repo"; exit 1; }
+        prompt_release_choice tag
+        popd >/dev/null || true
     fi
 
     print_info "Target release: ${BOLD}${tag}${NC}"
