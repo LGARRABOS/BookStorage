@@ -155,7 +155,7 @@ cmd_update_finish() {
     printf "\n"
 
     print_step "5/8" "Installing binary..."
-    cp ${APP_NAME} ${BIN_DIR}/
+    cp "${repo}/${APP_NAME}" ${BIN_DIR}/
     print_success "Binary installed to ${BIN_DIR}/"
     printf "\n"
 
@@ -450,15 +450,18 @@ cmd_clean() {
 }
 
 cmd_install() {
+    local repo
+    repo="$(bsctl_repo_dir)" || { print_error "Repository not found."; printf "Expected at ${BOLD}${INSTALL_DIR:-/opt/bookstorage}${NC}\n"; exit 1; }
+
     print_info "Installing ${APP_NAME} service..."
     cmd_build_prod
-    cp ${APP_NAME} ${BIN_DIR}/
-    cp scripts/bsctl ${BIN_DIR}/
-    cp scripts/bsctl.lib.sh ${BIN_DIR}/bsctl.lib.sh
+    cp "${repo}/${APP_NAME}" ${BIN_DIR}/
+    cp "${repo}/scripts/bsctl" ${BIN_DIR}/
+    cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
     chmod +x ${BIN_DIR}/bsctl
-    cp deploy/bookstorage.service /etc/systemd/system/
+    cp "${repo}/deploy/bookstorage.service" /etc/systemd/system/
     if [[ -d /etc/bash_completion.d ]]; then
-        cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
+        cp "${repo}/scripts/bsctl.completion.bash" /etc/bash_completion.d/bsctl
         chmod 644 /etc/bash_completion.d/bsctl
         print_success "Bash completion installed: /etc/bash_completion.d/bsctl (open a new shell or: source it)"
     fi
@@ -501,7 +504,8 @@ cmd_update() {
             exit 1
         fi
     else
-        prompt_release_choice tag
+        bsctl_require_repo
+        bsctl_in_repo prompt_release_choice tag
     fi
 
     print_info "Target release: ${BOLD}${tag}${NC}"
