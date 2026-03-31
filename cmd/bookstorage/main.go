@@ -123,7 +123,7 @@ func main() {
 		log.Fatalf("ensure schema: %v", err)
 	}
 
-	app := server.NewApp(settings, siteConfig, db)
+	app := server.NewApp(settings, siteConfig, db, Version)
 
 	mux := http.NewServeMux()
 
@@ -187,6 +187,11 @@ func main() {
 	mux.HandleFunc("/export", app.RequireLogin(app.HandleExport))
 	mux.HandleFunc("POST /import", app.RequireLogin(app.HandleImport))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.HandleAdminAccounts))
+	mux.HandleFunc("/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminMonitoring)))
+	mux.HandleFunc("GET /api/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIMonitoring)))
+	mux.HandleFunc("/admin/update", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminUpdate)))
+	mux.HandleFunc("POST /api/admin/update/latest", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatest)))
+	mux.HandleFunc("POST /api/admin/update/latest-major", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatestMajor)))
 	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.HandleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.HandleDeleteAccount))
 	mux.HandleFunc("/admin/promote/{id}", app.RequireAdmin(app.HandlePromoteAccount))

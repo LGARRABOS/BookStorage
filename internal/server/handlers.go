@@ -39,9 +39,11 @@ type App struct {
 	DB              *sql.DB
 	TemplatesWeb    *template.Template
 	TemplatesMobile *template.Template
+	Version         string
+	Monitor         *Monitoring
 }
 
-func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB) *App {
+func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB, version string) *App {
 	funcMap := template.FuncMap{
 		"work_image_url": func(stored string) string {
 			return workImageURL(settings, stored)
@@ -134,6 +136,8 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 		DB:              db,
 		TemplatesWeb:    webTpl,
 		TemplatesMobile: mobileTpl,
+		Version:         strings.TrimSpace(version),
+		Monitor:         NewMonitoring(strings.TrimSpace(version), strings.TrimSpace(settings.Environment)),
 	}
 }
 
@@ -301,6 +305,29 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		"T":            i18n.T(lang),
 		"ViewMode":     mode,
 		"IsMobileView": isMobile,
+		"AppVersion":   a.Version,
+	}
+}
+
+// RequireWebOnly blocks requests when resolved view mode is mobile.
+// This is used for admin pages that must not be available in the mobile web UI.
+func (a *App) RequireWebOnly(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if a.resolveViewMode(w, r) == "mobile" {
+			// API: JSON 403, Pages: render 403
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte(`{"error":"forbidden"}`))
+				return
+			}
+			w.WriteHeader(http.StatusForbidden)
+			a.renderTemplate(w, r, "403", a.mergeData(r, map[string]any{
+				"RequestedPath": r.URL.Path,
+			}))
+			return
+		}
+		next(w, r)
 	}
 }
 

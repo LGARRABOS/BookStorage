@@ -1,0 +1,93 @@
+{{ define "admin_monitoring" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.monitoring.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/tools">{{ t .T "nav.tools" }}</a>
+                <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>{{ t .T "admin.monitoring.title" }}</h1>
+                    <div class="action-buttons">
+                        <a class="btn btn-icon" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="btn btn-icon primary" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="btn btn-icon" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </div>
+                </header>
+
+                <div class="admin-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
+                    <div class="form-card">
+                        <div class="form-card-header"><h2>{{ t .T "monitoring.uptime" }}</h2></div>
+                        <div class="form-card-body"><div id="mon-uptime" style="font-size:1.2rem; font-weight:600;">—</div></div>
+                    </div>
+                    <div class="form-card">
+                        <div class="form-card-header"><h2>{{ t .T "monitoring.requests" }}</h2></div>
+                        <div class="form-card-body">
+                            <div><strong id="mon-req-total">—</strong> {{ t .T "monitoring.requests_total" }}</div>
+                            <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                                <span class="badge success">2xx: <span id="mon-req-2xx">—</span></span>
+                                <span class="badge info">3xx: <span id="mon-req-3xx">—</span></span>
+                                <span class="badge warning">4xx: <span id="mon-req-4xx">—</span></span>
+                                <span class="badge danger">5xx: <span id="mon-req-5xx">—</span></span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-card">
+                        <div class="form-card-header"><h2>{{ t .T "monitoring.latency" }}</h2></div>
+                        <div class="form-card-body">
+                            <div>{{ t .T "monitoring.latency.p95" }}: <strong id="mon-lat-p95">—</strong> ms</div>
+                            <div>{{ t .T "monitoring.latency.avg" }}: <strong id="mon-lat-avg">—</strong> ms</div>
+                            <div>{{ t .T "monitoring.latency.max" }}: <strong id="mon-lat-max">—</strong> ms</div>
+                        </div>
+                    </div>
+                    <div class="form-card">
+                        <div class="form-card-header"><h2>{{ t .T "monitoring.runtime" }}</h2></div>
+                        <div class="form-card-body">
+                            <div>{{ t .T "monitoring.goroutines" }}: <strong id="mon-go">—</strong></div>
+                            <div>{{ t .T "monitoring.heap" }}: <strong id="mon-heap">—</strong></div>
+                            <div>{{ t .T "monitoring.gc" }}: <strong id="mon-gc">—</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <p id="mon-error" style="display:none; margin-top:1rem; color:#dc2626;"></p>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/admin-monitoring.js"></script>
+</body>
+</html>
+{{ end }}
+

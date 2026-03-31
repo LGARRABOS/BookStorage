@@ -96,6 +96,11 @@ func (a *App) WithAccessLog(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 		dur := time.Since(start)
 
+		// Best-effort: update in-process monitoring.
+		if a.Monitor != nil {
+			a.Monitor.Observe(rec.status, dur)
+		}
+
 		rid := requestIDFromContext(r.Context())
 		uid, _ := a.currentUserID(r)
 		log.Printf("[access] %s %s status=%d bytes=%d dur=%s rid=%s user_id=%d", r.Method, r.URL.Path, rec.status, rec.bytes, dur, rid, uid)
