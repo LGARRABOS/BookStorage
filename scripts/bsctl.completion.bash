@@ -1,3 +1,4 @@
+#!/usr/bin/env bash
 # Bash completion for bsctl (BookStorage Control)
 #
 # Usage (development):
@@ -10,27 +11,56 @@
 # Requires an interactive bash with programmable completion (default on most Linux distros).
 
 _bsctl_completion() {
-    local cur="${COMP_WORDS[COMP_CWORD]}"
+    local cur subcmd
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    subcmd="${COMP_WORDS[1]}"
+
     local cmds='help -h --help version -v --version build build-prod run clean install uninstall update fix-perms start stop restart status logs'
 
-    # First argument: subcommand
+    # Subcommand
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
-        return
+        return 0
     fi
 
-    # Second argument: branch (e.g. main) or release tag for "update"
-    if [[ ${COMP_CWORD} -eq 2 ]] && [[ "${COMP_WORDS[1]}" == "update" ]] && command -v git >/dev/null 2>&1; then
-        if git rev-parse --git-dir >/dev/null 2>&1; then
-            local branches tags words
-            branches=$(git branch -a 2>/dev/null | sed 's/^[* ]*//;s|^remotes/origin/||' | sort -u | grep -v '^HEAD' || true)
-            tags=$(git tag -l 'v*' 2>/dev/null | sort -V | tail -n 20 || true)
-            words="main"
-            [[ -n "${tags}" ]] && words="${words} ${tags}"
-            [[ -n "${branches}" ]] && words="${words} ${branches}"
-            COMPREPLY=( $(compgen -W "${words}" -- "${cur}") )
-        fi
-    fi
+    case "${subcmd}" in
+        update)
+            # Arguments for "update": branch (e.g. main) or release tag (vX.Y.Z).
+            # Works from inside the repo, and falls back to /opt/bookstorage if present.
+            if [[ ${COMP_CWORD} -eq 2 ]] && command -v git >/dev/null 2>&1; then
+                local git_args=()
+                if git rev-parse --git-dir >/dev/null 2>&1; then
+                    git_args=()
+                elif [[ -d /opt/bookstorage/.git ]]; then
+                    git_args=(-C /opt/bookstorage)
+                else
+                    COMPREPLY=( $(compgen -W "main" -- "${cur}") )
+                    return 0
+                fi
+
+                local branches tags words
+                branches="$(git "${git_args[@]}" branch -a 2>/dev/null | sed 's/^[* ]*//;s|^remotes/origin/||' | grep -v '^HEAD' | sort -u || true)"
+                tags="$(git "${git_args[@]}" tag -l 'v*' 2>/dev/null | sort -V | tail -n 40 || true)"
+
+                words="main"
+                [[ -n "${tags}" ]] && words="${words} ${tags}"
+                [[ -n "${branches}" ]] && words="${words} ${branches}"
+
+                COMPREPLY=( $(compgen -W "${words}" -- "${cur}") )
+                return 0
+            fi
+            ;;
+        help|-h|--help|version|-v|--version|build|build-prod|run|clean|install|uninstall|fix-perms|start|stop|restart|status|logs)
+            # These subcommands don't accept (or need) arguments; return empty completion
+            # to avoid falling back to file/path completion.
+            ;;
+        *)
+            # Unknown / not yet completed: return empty completion
+            ;;
+    esac
+
+    COMPREPLY=()
+    return 0
 }
 
-complete -o bashdefault -o default -F _bsctl_completion bsctl
+complete -o nospace -F _bsctl_completion bsctl
