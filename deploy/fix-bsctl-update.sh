@@ -10,7 +10,7 @@
 set -e
 
 APP_NAME="bookstorage"
-APP_VERSION="5.2.1"
+APP_VERSION="5.2.2"
 BIN_DIR="/usr/local/bin"
 
 echo ""
