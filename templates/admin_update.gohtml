@@ -12,6 +12,10 @@
     <link rel="stylesheet" href="/static/css/admin.css">
     <script src="/static/js/modals.js"></script>
     <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     {{ if not .IsMobileView }}
@@ -25,6 +29,7 @@
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 <a href="/tools">{{ t .T "nav.tools" }}</a>
                 <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
                 <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
                 <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
@@ -33,35 +38,36 @@
     </header>
     {{ end }}
 
-    <main class="page-body">
-        <div class="container content-card">
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>{{ t .T "admin.update.title" }}</h1>
-                    <div class="action-buttons">
-                        <a class="btn btn-icon" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
-                        <a class="btn btn-icon" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
-                        <a class="btn btn-icon primary" href="/admin/update">{{ t .T "admin.update" }}</a>
-                    </div>
+                    <h1 class="page-title">⬆️ {{ t .T "admin.update.title" }}</h1>
+                    <p class="page-subtitle">{{ if eq .Lang "fr" }}Mettre à jour l’instance (sans version personnalisée).{{ else }}Update this instance (no custom version).{{ end }}</p>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab active" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </nav>
                 </header>
 
-                <div class="form-card">
-                    <div class="form-card-header"><h2>{{ t .T "update.current_version" }}</h2></div>
-                    <div class="form-card-body">
-                        <div style="font-size:1.1rem; font-weight:600;">v{{ .AppVersion }}</div>
-                    </div>
-                </div>
-
-                <div class="form-card" style="margin-top:1rem;">
-                    <div class="form-card-header"><h2>{{ t .T "admin.update" }}</h2></div>
-                    <div class="form-card-body">
-                        <div class="action-buttons" style="flex-wrap:wrap;">
-                            <button id="btn-update-latest" class="btn btn-icon primary" type="button">{{ t .T "update.latest" }}</button>
-                            <button id="btn-update-latest-major" class="btn btn-icon" type="button">{{ t .T "update.latest_major" }}</button>
+                <div class="admin-metrics-grid">
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "update.current_version" }}</h2>
+                        <div class="kpi-value">v{{ .AppVersion }}</div>
+                        <div class="kpi-meta">{{ if eq .Lang "fr" }}Affiché à partir de la version buildée.{{ else }}Shown from build version.{{ end }}</div>
+                    </article>
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "admin.update" }}</h2>
+                        <div class="kpi-meta" style="margin-top:0.25rem;">
+                            <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
+                                <button id="btn-update-latest" class="btn btn-primary" type="button">{{ t .T "update.latest" }}</button>
+                                <button id="btn-update-latest-major" class="btn btn-secondary" type="button">{{ t .T "update.latest_major" }}</button>
+                            </div>
+                            <p id="update-status" style="margin-top:0.9rem; display:none;"></p>
+                            <pre id="update-output" class="admin-output" style="display:none;"></pre>
                         </div>
-                        <p id="update-status" style="margin-top:1rem; display:none;"></p>
-                        <pre id="update-output" style="margin-top:0.75rem; display:none; white-space:pre-wrap; border:1px solid var(--border-subtle); border-radius:0.75rem; padding:0.75rem; background: var(--surface);"></pre>
-                    </div>
+                    </article>
                 </div>
             </section>
         </div>

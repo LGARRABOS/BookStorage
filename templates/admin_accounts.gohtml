@@ -44,11 +44,11 @@
             <section class="page-section">
                 <header class="section-header">
                     <h1>{{ t .T "admin.accounts" }}</h1>
-                    <div class="action-buttons">
-                        <a class="btn btn-icon primary" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
-                        <a class="btn btn-icon" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
-                        <a class="btn btn-icon" href="/admin/update">{{ t .T "admin.update" }}</a>
-                    </div>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab active" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </nav>
                 </header>
                 {{ if .Users }}
                 <div class="table-wrapper">
