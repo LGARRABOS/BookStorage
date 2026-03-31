@@ -4,6 +4,86 @@ table {
   background: transparent;
 }
 
+/* Admin tabs (within admin pages) */
+.admin-tabs {
+  display: inline-flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+  padding: 0.35rem;
+  border-radius: 0.95rem;
+  border: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.03);
+}
+
+.admin-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.admin-tab:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--text-primary);
+}
+
+.admin-tab.active {
+  background: var(--primary-muted);
+  border-color: rgba(79, 70, 229, 0.25);
+  color: var(--primary-dark);
+}
+
+.admin-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 1rem;
+}
+
+.admin-kpi {
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 1.1rem;
+}
+
+.admin-kpi h2 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.05rem;
+  color: var(--text-primary);
+}
+
+.admin-kpi .kpi-value {
+  margin-top: 0.35rem;
+  font-size: 1.4rem;
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--text-primary);
+}
+
+.admin-kpi .kpi-meta {
+  margin-top: 0.6rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.admin-output {
+  margin-top: 0.85rem;
+  white-space: pre-wrap;
+  border: 1px solid var(--border-subtle);
+  border-radius: 1rem;
+  padding: 0.9rem;
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--text-secondary);
+}
+
 thead th {
   background: linear-gradient(120deg, rgba(79, 70, 229, 0.16), rgba(249, 115, 22, 0.1));
   color: #1e293b;
@@ -100,6 +180,16 @@ tbody tr:nth-child(even) {
 /* Dark Mode */
 [data-theme="dark"] thead th {
   background: linear-gradient(120deg, rgba(129, 140, 248, 0.2), rgba(251, 146, 60, 0.15));
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .admin-tabs {
+  background: rgba(100, 116, 139, 0.12);
+}
+
+[data-theme="dark"] .admin-tab.active {
+  background: rgba(129, 140, 248, 0.2);
+  border-color: rgba(129, 140, 248, 0.35);
   color: #e2e8f0;
 }
 

@@ -11,6 +11,10 @@
     <link rel="stylesheet" href="/static/css/mobile.css">
     <link rel="stylesheet" href="/static/css/admin.css">
     <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+    </style>
 </head>
 <body>
     {{ if not .IsMobileView }}
@@ -24,6 +28,7 @@
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 <a href="/tools">{{ t .T "nav.tools" }}</a>
                 <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
                 <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
                 <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
@@ -32,51 +37,53 @@
     </header>
     {{ end }}
 
-    <main class="page-body">
-        <div class="container content-card">
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
             <section class="page-section">
                 <header class="section-header">
-                    <h1>{{ t .T "admin.monitoring.title" }}</h1>
-                    <div class="action-buttons">
-                        <a class="btn btn-icon" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
-                        <a class="btn btn-icon primary" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
-                        <a class="btn btn-icon" href="/admin/update">{{ t .T "admin.update" }}</a>
-                    </div>
+                    <h1 class="page-title">📈 {{ t .T "admin.monitoring.title" }}</h1>
+                    <p class="page-subtitle">{{ if eq .Lang "fr" }}Vue rapide santé & performances.{{ else }}Quick health & performance view.{{ end }}</p>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab active" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </nav>
                 </header>
 
-                <div class="admin-grid" style="display:grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem;">
-                    <div class="form-card">
-                        <div class="form-card-header"><h2>{{ t .T "monitoring.uptime" }}</h2></div>
-                        <div class="form-card-body"><div id="mon-uptime" style="font-size:1.2rem; font-weight:600;">—</div></div>
-                    </div>
-                    <div class="form-card">
-                        <div class="form-card-header"><h2>{{ t .T "monitoring.requests" }}</h2></div>
-                        <div class="form-card-body">
-                            <div><strong id="mon-req-total">—</strong> {{ t .T "monitoring.requests_total" }}</div>
-                            <div style="margin-top:0.5rem; display:flex; gap:0.5rem; flex-wrap:wrap;">
+                <div class="admin-metrics-grid">
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "monitoring.uptime" }}</h2>
+                        <div class="kpi-value" id="mon-uptime">—</div>
+                        <div class="kpi-meta">{{ if eq .Lang "fr" }}Depuis le dernier redémarrage.{{ else }}Since last restart.{{ end }}</div>
+                    </article>
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "monitoring.requests" }}</h2>
+                        <div class="kpi-value"><span id="mon-req-total">—</span></div>
+                        <div class="kpi-meta">
+                            <div style="margin-top:0.25rem; display:flex; gap:0.45rem; flex-wrap:wrap;">
                                 <span class="badge success">2xx: <span id="mon-req-2xx">—</span></span>
                                 <span class="badge info">3xx: <span id="mon-req-3xx">—</span></span>
                                 <span class="badge warning">4xx: <span id="mon-req-4xx">—</span></span>
                                 <span class="badge danger">5xx: <span id="mon-req-5xx">—</span></span>
                             </div>
                         </div>
-                    </div>
-                    <div class="form-card">
-                        <div class="form-card-header"><h2>{{ t .T "monitoring.latency" }}</h2></div>
-                        <div class="form-card-body">
+                    </article>
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "monitoring.latency" }}</h2>
+                        <div class="kpi-meta">
                             <div>{{ t .T "monitoring.latency.p95" }}: <strong id="mon-lat-p95">—</strong> ms</div>
                             <div>{{ t .T "monitoring.latency.avg" }}: <strong id="mon-lat-avg">—</strong> ms</div>
                             <div>{{ t .T "monitoring.latency.max" }}: <strong id="mon-lat-max">—</strong> ms</div>
                         </div>
-                    </div>
-                    <div class="form-card">
-                        <div class="form-card-header"><h2>{{ t .T "monitoring.runtime" }}</h2></div>
-                        <div class="form-card-body">
+                    </article>
+                    <article class="admin-kpi">
+                        <h2>{{ t .T "monitoring.runtime" }}</h2>
+                        <div class="kpi-meta">
                             <div>{{ t .T "monitoring.goroutines" }}: <strong id="mon-go">—</strong></div>
                             <div>{{ t .T "monitoring.heap" }}: <strong id="mon-heap">—</strong></div>
                             <div>{{ t .T "monitoring.gc" }}: <strong id="mon-gc">—</strong></div>
                         </div>
-                    </div>
+                    </article>
                 </div>
 
                 <p id="mon-error" style="display:none; margin-top:1rem; color:#dc2626;"></p>
