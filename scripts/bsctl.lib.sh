@@ -147,6 +147,9 @@ prompt_release_choice() {
 
 # Shared tail: build, install, restart (steps 4–8)
 cmd_update_finish() {
+    local repo
+    repo="$(bsctl_repo_dir)" || { print_error "Repository not found."; printf "Expected at ${BOLD}${INSTALL_DIR:-/opt/bookstorage}${NC}\n"; exit 1; }
+
     print_step "4/8" "Compiling..."
     cmd_build_prod
     printf "\n"
@@ -157,8 +160,8 @@ cmd_update_finish() {
     printf "\n"
 
     print_step "6/8" "Updating bsctl script..."
-    cp scripts/bsctl ${BIN_DIR}/
-    cp scripts/bsctl.lib.sh ${BIN_DIR}/bsctl.lib.sh
+    cp "${repo}/scripts/bsctl" ${BIN_DIR}/
+    cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
     chmod +x ${BIN_DIR}/bsctl
     print_success "bsctl updated"
     printf "\n"
@@ -236,23 +239,25 @@ cmd_update_at_tag() {
         fi
     fi
 
+    bsctl_require_repo
+
     print_step "1/8" "Fetching from origin..."
-    git fetch -q origin
-    git fetch -q origin --tags 2>/dev/null || git fetch -q --tags origin 2>/dev/null || true
+    bsctl_git fetch -q origin
+    bsctl_git fetch -q origin --tags 2>/dev/null || bsctl_git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
 
-    if ! git rev-parse "$tag^{}" >/dev/null 2>&1; then
+    if ! bsctl_git rev-parse "$tag^{}" >/dev/null 2>&1; then
         print_error "Unknown tag: ${tag}"
         printf "Fetch remote tags: ${BOLD}git fetch origin --tags${NC}\n"
         exit 1
     fi
 
     print_step "2/8" "Checking out release ${tag}..."
-    git -c advice.detachedHead=false checkout -f -q "$tag"
+    bsctl_git -c advice.detachedHead=false checkout -f -q "$tag"
     printf "\n"
 
     print_step "3/8" "Aligning on release ${tag}..."
-    git reset --hard -q "$tag"
+    bsctl_git reset --hard -q "$tag"
     print_success "Now at ${tag}."
     printf "\n"
 
@@ -271,36 +276,38 @@ cmd_update_branch() {
     print_info "Target branch: ${BOLD}${branch}${NC} (origin/${branch})"
     printf "\n"
 
+    bsctl_require_repo
+
     print_step "1/8" "Fetching from origin..."
-    git fetch -q origin "$branch"
+    bsctl_git fetch -q origin "$branch"
     printf "\n"
 
     # If we're already on the exact same commit as origin/<branch> and the worktree is clean,
     # avoid rebuild/install/restart.
     local head_ref remote_ref cur_branch
-    head_ref="$(git rev-parse HEAD 2>/dev/null || true)"
-    remote_ref="$(git rev-parse "origin/${branch}" 2>/dev/null || true)"
-    cur_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    head_ref="$(bsctl_git rev-parse HEAD 2>/dev/null || true)"
+    remote_ref="$(bsctl_git rev-parse "origin/${branch}" 2>/dev/null || true)"
+    cur_branch="$(bsctl_git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
     if [[ -n "${head_ref}" && -n "${remote_ref}" && "${head_ref}" == "${remote_ref}" ]] \
         && [[ "${cur_branch}" == "${branch}" ]] \
-        && git diff --quiet 2>/dev/null \
-        && git diff --cached --quiet 2>/dev/null; then
+        && bsctl_git diff --quiet 2>/dev/null \
+        && bsctl_git diff --cached --quiet 2>/dev/null; then
         print_success "Already up to date: ${BOLD}origin/${branch}${NC}"
         print_success "No update needed — skipping build/install/restart."
         printf "\n"
         printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-        printf "${GREEN}║          ALREADY UP TO DATE ✓           ║${NC}\n"
+        printf "${GREEN}║          ALREADY UP TO DATE ✓          ║${NC}\n"
         printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
         printf "\n"
         return 0
     fi
 
     print_step "2/8" "Checking out branch ${branch}..."
-    git checkout -f -q "$branch"
+    bsctl_git checkout -f -q "$branch"
     printf "\n"
 
     print_step "3/8" "Aligning on origin/${branch}..."
-    if ! git reset --hard -q "origin/${branch}"; then
+    if ! bsctl_git reset --hard -q "origin/${branch}"; then
         print_error "Could not align with origin/${branch}."
         exit 1
     fi
@@ -365,30 +372,80 @@ cmd_help() {
     printf "\n"
 }
 
+#
+# Repo helpers (make bsctl usable from anywhere)
+#
+bsctl_repo_dir() {
+    # Prefer current directory if it's a git checkout
+    if command -v git >/dev/null 2>&1; then
+        local top
+        top="$(git rev-parse --show-toplevel 2>/dev/null || true)"
+        if [[ -n "$top" && -d "$top/.git" ]]; then
+            printf '%s' "$top"
+            return 0
+        fi
+    fi
+    # Default install dir
+    if [[ -n "${INSTALL_DIR:-}" && -d "${INSTALL_DIR}/.git" ]]; then
+        printf '%s' "${INSTALL_DIR}"
+        return 0
+    fi
+    # Legacy fallback
+    if [[ -d "/opt/bookstorage/.git" ]]; then
+        printf '%s' "/opt/bookstorage"
+        return 0
+    fi
+    return 1
+}
+
+bsctl_require_repo() {
+    if ! bsctl_repo_dir >/dev/null 2>&1; then
+        print_error "Repository not found."
+        printf "Expected a git checkout at ${BOLD}${INSTALL_DIR:-/opt/bookstorage}${NC} (or run from inside the repo).\n"
+        exit 1
+    fi
+}
+
+bsctl_git() {
+    local repo
+    repo="$(bsctl_repo_dir)" || return 1
+    git -C "$repo" "$@"
+}
+
+bsctl_in_repo() {
+    local repo
+    repo="$(bsctl_repo_dir)" || return 1
+    ( cd "$repo" && "$@" )
+}
+
 cmd_version() {
     printf "BookStorage v${APP_VERSION}\n"
 }
 
 cmd_build() {
     print_info "Compiling..."
-    go build -o ${APP_NAME} ./cmd/bookstorage
+    bsctl_require_repo
+    bsctl_in_repo go build -o ${APP_NAME} ./cmd/bookstorage
     print_success "Build complete: ./${APP_NAME}"
 }
 
 cmd_build_prod() {
     print_info "Compiling for production..."
-    CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
+    bsctl_require_repo
+    bsctl_in_repo env CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
     print_success "Optimized binary: ./${APP_NAME}"
 }
 
 cmd_run() {
     print_info "Starting development server..."
-    go run ./cmd/bookstorage
+    bsctl_require_repo
+    bsctl_in_repo go run ./cmd/bookstorage
 }
 
 cmd_clean() {
     print_info "Cleaning up..."
-    rm -f ${APP_NAME}
+    bsctl_require_repo
+    bsctl_in_repo rm -f ${APP_NAME}
     print_success "Cleanup complete"
 }
 
