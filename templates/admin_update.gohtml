@@ -1,0 +1,82 @@
+{{ define "admin_update" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.update.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/modals.js"></script>
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
+                <a href="/stats">{{ t .T "nav.stats" }}</a>
+                <a href="/users">{{ t .T "nav.readers" }}</a>
+                <a href="/tools">{{ t .T "nav.tools" }}</a>
+                <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
+                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>{{ t .T "admin.update.title" }}</h1>
+                    <div class="action-buttons">
+                        <a class="btn btn-icon" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="btn btn-icon" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="btn btn-icon primary" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </div>
+                </header>
+
+                <div class="form-card">
+                    <div class="form-card-header"><h2>{{ t .T "update.current_version" }}</h2></div>
+                    <div class="form-card-body">
+                        <div style="font-size:1.1rem; font-weight:600;">v{{ .AppVersion }}</div>
+                    </div>
+                </div>
+
+                <div class="form-card" style="margin-top:1rem;">
+                    <div class="form-card-header"><h2>{{ t .T "admin.update" }}</h2></div>
+                    <div class="form-card-body">
+                        <div class="action-buttons" style="flex-wrap:wrap;">
+                            <button id="btn-update-latest" class="btn btn-icon primary" type="button">{{ t .T "update.latest" }}</button>
+                            <button id="btn-update-latest-major" class="btn btn-icon" type="button">{{ t .T "update.latest_major" }}</button>
+                        </div>
+                        <p id="update-status" style="margin-top:1rem; display:none;"></p>
+                        <pre id="update-output" style="margin-top:0.75rem; display:none; white-space:pre-wrap; border:1px solid var(--border-subtle); border-radius:0.75rem; padding:0.75rem; background: var(--surface);"></pre>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    <script>
+        window.__UPDATE_CONFIRM__ = {{ jsstr (t .T "update.confirm") }};
+        window.__UPDATE_IN_PROGRESS__ = {{ jsstr (t .T "update.in_progress") }};
+        window.__UPDATE_SUCCESS__ = {{ jsstr (t .T "update.success") }};
+        window.__UPDATE_ERROR__ = {{ jsstr (t .T "update.error") }};
+    </script>
+    <script src="/static/js/admin-update.js"></script>
+</body>
+</html>
+{{ end }}
+

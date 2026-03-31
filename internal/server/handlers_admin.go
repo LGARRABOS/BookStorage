@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"encoding/json"
 	"net/http"
 	"strconv"
 )
@@ -118,4 +119,59 @@ func (a *App) HandlePromoteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
+}
+
+func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{}))
+}
+
+func (a *App) HandleAPIMonitoring(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	snap := MonitoringSnapshot{}
+	if a.Monitor != nil {
+		snap = a.Monitor.Snapshot()
+	}
+	_ = json.NewEncoder(w).Encode(snap)
+}
+
+func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "admin_update", a.mergeData(r, map[string]any{}))
+}
+
+func (a *App) HandleAPIUpdateLatest(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	res := a.triggerUpdate(r.Context(), updateModeLatest)
+	w.Header().Set("Content-Type", "application/json")
+	if !res.OK {
+		w.WriteHeader(http.StatusBadGateway)
+	}
+	_ = json.NewEncoder(w).Encode(res)
+}
+
+func (a *App) HandleAPIUpdateLatestMajor(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	res := a.triggerUpdate(r.Context(), updateModeLatestMajor)
+	w.Header().Set("Content-Type", "application/json")
+	if !res.OK {
+		w.WriteHeader(http.StatusBadGateway)
+	}
+	_ = json.NewEncoder(w).Encode(res)
 }

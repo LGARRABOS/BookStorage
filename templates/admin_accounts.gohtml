@@ -31,6 +31,8 @@
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 <a href="/tools">{{ t .T "nav.tools" }}</a>
                 <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
+                <a href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                <a href="/admin/update">{{ t .T "admin.update" }}</a>
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
                 <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
