@@ -708,6 +708,24 @@
                 openEditModal(editBtn.dataset.editId);
                 return;
             }
+            // Click on the lower part of the card should open edit (web).
+            // Keep cover click for reading site and avoid hijacking controls/actions.
+            const body = e.target.closest('.work-body');
+            if (body) {
+                const inActions = e.target.closest('.work-actions');
+                const inChapterControls = e.target.closest('.chapter-controls') || e.target.closest('.chapter-value');
+                const isInteractive = e.target.closest('a, button, input, select, textarea, label');
+                if (!inActions && !inChapterControls && !isInteractive) {
+                    const card = body.closest('.work-card');
+                    const btn = card ? card.querySelector('.js-edit-work') : null;
+                    const id = btn ? (btn.getAttribute('data-edit-id') || btn.dataset.editId) : null;
+                    if (id) {
+                        e.preventDefault();
+                        openEditModal(id);
+                        return;
+                    }
+                }
+            }
             const del = e.target.closest('.js-modal-delete');
             if (del && editModal && editModal.contains(del)) {
                 e.preventDefault();
