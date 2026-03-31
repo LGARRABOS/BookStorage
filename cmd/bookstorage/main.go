@@ -192,6 +192,7 @@ func main() {
 	mux.HandleFunc("/admin/update", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminUpdate)))
 	mux.HandleFunc("POST /api/admin/update/latest", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatest)))
 	mux.HandleFunc("POST /api/admin/update/latest-major", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatestMajor)))
+	mux.HandleFunc("GET /api/admin/update/status", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateStatus)))
 	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.HandleApproveAccount))
 	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.HandleDeleteAccount))
 	mux.HandleFunc("/admin/promote/{id}", app.RequireAdmin(app.HandlePromoteAccount))

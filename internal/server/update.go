@@ -43,24 +43,6 @@ var updateRunning bool
 var updateLast UpdateResult
 
 func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
-	updateMu.Lock()
-	if updateRunning {
-		r := updateLast
-		r.OK = false
-		r.Mode = string(mode)
-		r.Message = "update_already_running"
-		updateMu.Unlock()
-		return r
-	}
-	updateRunning = true
-	updateMu.Unlock()
-
-	defer func() {
-		updateMu.Lock()
-		updateRunning = false
-		updateMu.Unlock()
-	}()
-
 	tag, out, ok := a.computeUpdateTag(mode)
 	res := UpdateResult{
 		OK:        ok,
@@ -93,9 +75,32 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		}
 	}
 
-	// Run bsctl update non-interactively. This assumes the server has permissions.
-	// Try common bsctl locations first, then fallback to repo script.
+	updateMu.Lock()
+	if updateRunning {
+		r := updateLast
+		r.OK = false
+		r.Mode = string(mode)
+		r.Message = "update_already_running"
+		updateMu.Unlock()
+		return r
+	}
+	updateRunning = true
+	res.OK = true
+	res.Message = "started"
+	// We respond immediately to avoid the HTTP request being interrupted by service restarts.
+	updateLast = res
+	updateMu.Unlock()
+
 	log.Printf("[admin-update] requested mode=%s tag=%s", mode, tag)
+
+	// IMPORTANT: do not use the request context, it will be cancelled when the handler returns.
+	go a.runUpdateInBackground(mode, tag)
+	return res
+}
+
+func (a *App) runUpdateInBackground(mode updateMode, tag string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Minute)
+	defer cancel()
 
 	workDir := a.bestUpdateWorkDir()
 	candidates := [][]string{
@@ -110,9 +115,16 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		{"./scripts/bsctl", "update"},
 	}
 
+	res := UpdateResult{
+		OK:        false,
+		Mode:      string(mode),
+		Tag:       tag,
+		StartedAt: time.Now().Unix(),
+		Message:   "bsctl_failed",
+	}
+
 	var lastErr error
 	var lastOut string
-	var lastCmd string
 	var notFoundCount int
 	for _, argv := range candidates {
 		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
@@ -120,48 +132,58 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		if workDir != "" {
 			cmd.Dir = workDir
 		}
+
 		b, err := cmd.CombinedOutput()
 		out := strings.TrimSpace(string(b))
 		lastOut = out
 		lastErr = err
-		lastCmd = strings.Join(argv, " ")
-		res.Command = lastCmd
+		res.Command = strings.Join(argv, " ")
 		res.Output = out
+
 		if err == nil {
 			res.OK = true
-			res.Message = "started"
-			updateMu.Lock()
-			updateLast = res
-			updateMu.Unlock()
-			return res
+			res.Message = "done"
+			break
 		}
 
-		// If command not found, try next candidate.
 		var ee *exec.Error
 		if errors.As(err, &ee) && errors.Is(ee.Err, exec.ErrNotFound) {
 			notFoundCount++
 			continue
 		}
-		// Non-zero exit: keep the output and stop (this is the real failure).
+		// Non-zero exit: stop at the first real failure (keep output).
 		break
 	}
 
-	res.OK = false
-	if notFoundCount == len(candidates) {
-		res.Message = "bsctl_not_found"
-		if lastOut == "" && lastErr != nil {
-			res.Output = lastErr.Error()
+	if !res.OK {
+		if notFoundCount == len(candidates) {
+			res.Message = "bsctl_not_found"
+		} else {
+			res.Message = "bsctl_failed"
 		}
-	} else {
-		res.Message = "bsctl_failed"
+		if res.Output == "" && lastOut != "" {
+			res.Output = lastOut
+		}
 		if res.Output == "" && lastErr != nil {
 			res.Output = lastErr.Error()
 		}
 	}
+
 	updateMu.Lock()
 	updateLast = res
+	updateRunning = false
 	updateMu.Unlock()
-	return res
+}
+
+type UpdateStatus struct {
+	Running bool         `json:"running"`
+	Last    UpdateResult `json:"last"`
+}
+
+func (a *App) updateStatus() UpdateStatus {
+	updateMu.Lock()
+	defer updateMu.Unlock()
+	return UpdateStatus{Running: updateRunning, Last: updateLast}
 }
 
 func (a *App) bestUpdateWorkDir() string {

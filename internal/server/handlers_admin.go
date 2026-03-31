@@ -185,3 +185,12 @@ func (a *App) HandleAPIUpdateLatestMajor(w http.ResponseWriter, r *http.Request)
 	}
 	_ = json.NewEncoder(w).Encode(res)
 }
+
+func (a *App) HandleAPIUpdateStatus(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(a.updateStatus())
+}
