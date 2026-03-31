@@ -47,6 +47,12 @@
         headers: { "Accept": "application/json" },
       });
       const data = await res.json().catch(() => ({}));
+      if (data && data.message === "already_up_to_date") {
+        const extra = data.tag ? ` (${data.tag})` : "";
+        showStatus((window.__UPDATE_ALREADY__ || "Déjà à jour.") + extra, true);
+        showOutput("");
+        return;
+      }
       if (!res.ok || !data.ok) {
         const extra = data && (data.message || data.tag) ? ` (${[data.message, data.tag].filter(Boolean).join(" / ")})` : "";
         showStatus((window.__UPDATE_ERROR__ || "Erreur") + extra, false);

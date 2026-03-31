@@ -331,6 +331,7 @@ var translationsFR = Translations{
 	"update.confirm.cancel":  "Annuler",
 	"update.in_progress":     "Mise à jour en cours...",
 	"update.success":         "Mise à jour lancée.",
+	"update.already":         "Déjà à jour.",
 	"update.error":           "Échec de la mise à jour.",
 
 	// Common
@@ -660,6 +661,7 @@ var translationsEN = Translations{
 	"update.confirm.cancel":  "Cancel",
 	"update.in_progress":     "Update in progress...",
 	"update.success":         "Update started.",
+	"update.already":         "Already up to date.",
 	"update.error":           "Update failed.",
 
 	// Common
