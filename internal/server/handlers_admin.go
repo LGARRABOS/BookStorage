@@ -147,14 +147,16 @@ func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	latestTag, _, latestOK := a.computeUpdateTag(updateModeLatest)
-	majorTag, _, majorOK := a.computeUpdateTag(updateModeLatestMajor)
+	latestTag, latestInfo, latestOK := a.computeUpdateTag(updateModeLatest)
+	majorTag, majorInfo, majorOK := a.computeUpdateTag(updateModeLatestMajor)
 
 	a.renderTemplate(w, r, "admin_update", a.mergeData(r, map[string]any{
 		"LatestTag":      latestTag,
 		"LatestTagOK":    latestOK,
+		"LatestInfo":     latestInfo,
 		"LatestMajorTag": majorTag,
 		"LatestMajorOK":  majorOK,
+		"LatestMajorInfo": majorInfo,
 	}))
 }
 

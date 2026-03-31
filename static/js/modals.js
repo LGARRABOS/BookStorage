@@ -61,6 +61,7 @@
     var title = opts.title || (document.documentElement.lang === 'fr' ? 'Confirmer' : 'Confirm');
     var okLabel = opts.okLabel || (document.documentElement.lang === 'fr' ? 'Supprimer' : 'Delete');
     var cancelLabel = opts.cancelLabel || (document.documentElement.lang === 'fr' ? 'Annuler' : 'Cancel');
+    var okClass = opts.okClass || 'btn-danger';
 
     var modal = document.getElementById('confirm-modal');
     var dialogEl = modal.querySelector('.confirm-modal-dialog');
@@ -73,6 +74,7 @@
     msgEl.textContent = message;
     cancelBtn.textContent = cancelLabel;
     okBtn.textContent = okLabel;
+    okBtn.className = 'btn ' + okClass;
 
     var previousActive = document.activeElement;
 
