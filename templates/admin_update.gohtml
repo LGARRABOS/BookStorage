@@ -61,9 +61,21 @@
                         <h2>{{ t .T "admin.update" }}</h2>
                         <div class="kpi-meta" style="margin-top:0.25rem;">
                             <div style="display:flex; gap:0.6rem; flex-wrap:wrap;">
-                                <button id="btn-update-latest" class="btn btn-primary" type="button">{{ t .T "update.latest" }}</button>
-                                <button id="btn-update-latest-major" class="btn btn-secondary" type="button">{{ t .T "update.latest_major" }}</button>
+                                <button id="btn-update-latest" class="btn btn-primary" type="button">
+                                    {{ t .T "update.latest" }}
+                                    {{ if .LatestTagOK }}<span class="badge info" style="margin-left:0.4rem;">{{ .LatestTag }}</span>{{ end }}
+                                </button>
+                                <button id="btn-update-latest-major" class="btn btn-secondary" type="button">
+                                    {{ t .T "update.latest_major" }}
+                                    {{ if .LatestMajorOK }}<span class="badge info" style="margin-left:0.4rem;">{{ .LatestMajorTag }}</span>{{ end }}
+                                </button>
                             </div>
+                            {{ if not .LatestTagOK }}
+                                <div class="kpi-meta" style="margin-top:0.6rem;">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière version (tags git manquants).{{ else }}Unable to determine latest version (missing git tags).{{ end }}</div>
+                            {{ end }}
+                            {{ if not .LatestMajorOK }}
+                                <div class="kpi-meta" style="margin-top:0.2rem;">{{ if eq .Lang "fr" }}Impossible de déterminer la dernière majeure (tags git vX.0.0 manquants).{{ else }}Unable to determine latest major (missing vX.0.0 tags).{{ end }}</div>
+                            {{ end }}
                             <p id="update-status" style="margin-top:0.9rem; display:none;"></p>
                             <pre id="update-output" class="admin-output" style="display:none;"></pre>
                         </div>
