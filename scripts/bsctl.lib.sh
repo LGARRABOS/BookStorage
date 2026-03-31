@@ -275,6 +275,26 @@ cmd_update_branch() {
     git fetch -q origin "$branch"
     printf "\n"
 
+    # If we're already on the exact same commit as origin/<branch> and the worktree is clean,
+    # avoid rebuild/install/restart.
+    local head_ref remote_ref cur_branch
+    head_ref="$(git rev-parse HEAD 2>/dev/null || true)"
+    remote_ref="$(git rev-parse "origin/${branch}" 2>/dev/null || true)"
+    cur_branch="$(git rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+    if [[ -n "${head_ref}" && -n "${remote_ref}" && "${head_ref}" == "${remote_ref}" ]] \
+        && [[ "${cur_branch}" == "${branch}" ]] \
+        && git diff --quiet 2>/dev/null \
+        && git diff --cached --quiet 2>/dev/null; then
+        print_success "Already up to date: ${BOLD}origin/${branch}${NC}"
+        print_success "No update needed — skipping build/install/restart."
+        printf "\n"
+        printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
+        printf "${GREEN}║          ALREADY UP TO DATE ✓           ║${NC}\n"
+        printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
+        printf "\n"
+        return 0
+    fi
+
     print_step "2/8" "Checking out branch ${branch}..."
     git checkout -f -q "$branch"
     printf "\n"
