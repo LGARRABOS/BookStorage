@@ -31,8 +31,6 @@
                 <a href="/users">{{ t .T "nav.readers" }}</a>
                 <a href="/tools">{{ t .T "nav.tools" }}</a>
                 <a href="/admin/accounts">{{ t .T "nav.admin" }}</a>
-                <a href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
-                <a href="/admin/update">{{ t .T "admin.update" }}</a>
                 <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
                 <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
                 <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
@@ -46,6 +44,11 @@
             <section class="page-section">
                 <header class="section-header">
                     <h1>{{ t .T "admin.accounts" }}</h1>
+                    <div class="action-buttons">
+                        <a class="btn btn-icon primary" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="btn btn-icon" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="btn btn-icon" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </div>
                 </header>
                 {{ if .Users }}
                 <div class="table-wrapper">
