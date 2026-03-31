@@ -76,6 +76,22 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		return res
 	}
 
+	// If already on that version, behave like bsctl: no-op with a clear message.
+	cur := strings.TrimSpace(a.Version)
+	if cur != "" && cur != "dev" && tag != "" {
+		cur = strings.TrimPrefix(cur, "v")
+		target := strings.TrimPrefix(strings.TrimSpace(tag), "v")
+		if cur == target {
+			res.OK = true
+			res.Message = "already_up_to_date"
+			res.Output = ""
+			updateMu.Lock()
+			updateLast = res
+			updateMu.Unlock()
+			return res
+		}
+	}
+
 	// Run bsctl update non-interactively. This assumes the server has permissions.
 	// Try "bsctl" first (installed), fallback to repo script.
 	log.Printf("[admin-update] requested mode=%s tag=%s", mode, tag)
