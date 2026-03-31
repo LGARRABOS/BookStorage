@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
+	"html/template"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -170,6 +171,67 @@ func TestHandleImportCSV(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM works WHERE title = 'Imported'`).Scan(&count)
 	if count != 1 {
 		t.Fatalf("works count: %d", count)
+	}
+}
+
+func TestHandleDashboard_AdultFilter(t *testing.T) {
+	db, s := openTestDB(t)
+	// Handler renders templates; for this test we only need deterministic output,
+	// so we provide a tiny in-memory template set to avoid filesystem dependency.
+	tpl := template.Must(template.New("").Parse(`
+{{ define "dashboard" }}{{ range .Works }}{{ .Title }}
+{{ end }}{{ end }}
+{{ define "mobile_dashboard" }}{{ range .Works }}{{ .Title }}
+{{ end }}{{ end }}
+`))
+	app := &App{
+		Settings:        s,
+		SiteConfig:      config.DefaultSiteConfig(),
+		DB:              db,
+		TemplatesWeb:    tpl,
+		TemplatesMobile: tpl,
+	}
+
+	_, err := db.Exec(
+		`INSERT INTO works (title, chapter, user_id, status, reading_type, is_adult, updated_at)
+		 VALUES
+		 ('Safe', 1, 1, 'En cours', 'Manga', 0, CURRENT_TIMESTAMP),
+		 ('Adult', 1, 1, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// Default: adult content is hidden
+	req := httptest.NewRequest(http.MethodGet, "/dashboard", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleDashboard(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d", rec.Code)
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "Safe") {
+		t.Fatalf("expected non-adult work visible, body=%s", body)
+	}
+	if strings.Contains(body, "Adult") {
+		t.Fatalf("expected adult work hidden by default, body=%s", body)
+	}
+
+	// adult=only: show only adult works
+	req2 := httptest.NewRequest(http.MethodGet, "/dashboard?adult=only", nil)
+	req2.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec2 := httptest.NewRecorder()
+	app.HandleDashboard(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("status %d", rec2.Code)
+	}
+	body2 := rec2.Body.String()
+	if strings.Contains(body2, "Safe") {
+		t.Fatalf("expected non-adult work hidden when adult=only, body=%s", body2)
+	}
+	if !strings.Contains(body2, "Adult") {
+		t.Fatalf("expected adult work visible when adult=only, body=%s", body2)
 	}
 }
 

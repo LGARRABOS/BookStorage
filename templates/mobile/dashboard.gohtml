@@ -37,6 +37,10 @@
                             <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
                             {{ end }}
                         </select>
+                        <select id="mobile-filter-adult" autocomplete="off">
+                            <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
+                            <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
+                        </select>
                     </div>
                 </div>
             </section>
@@ -54,6 +58,7 @@
                         <div class="work-mobile-badges">
                             {{ if .Status.Valid }}<span class="badge">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
                             {{ if .ReadingType.Valid }}<span class="badge">{{ .ReadingType.String }}</span>{{ end }}
+                            {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="badge">18+</span>{{ end }}
                         </div>
                     </div>
                     {{ if gt .Rating 0 }}
@@ -84,10 +89,23 @@
     (function () {
       var search = document.getElementById("mobile-search");
       var status = document.getElementById("mobile-filter-status");
+      var adult = document.getElementById("mobile-filter-adult");
       var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
       if (!cards.length) return;
 
       function normalize(v) { return (v || "").toLowerCase(); }
+
+      function applyAdultFilter() {
+        if (!adult) return;
+        var val = (adult.value || "").trim();
+        var u = new URL(window.location.href);
+        if (val) {
+          u.searchParams.set("adult", val);
+        } else {
+          u.searchParams.delete("adult");
+        }
+        window.location.href = u.toString();
+      }
 
       function applyFilters() {
         var q = normalize(search ? search.value : "");
@@ -103,6 +121,7 @@
 
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
+      if (adult) adult.addEventListener("change", applyAdultFilter);
     })();
     </script>
 </body>
