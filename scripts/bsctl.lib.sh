@@ -10,7 +10,7 @@
 print_header() {
     printf "\n"
     printf "${BOLD}╔════════════════════════════════════════╗${NC}\n"
-    printf "${BOLD}║  📚 BookStorage Control v${APP_VERSION}        ║${NC}\n"
+    printf "${BOLD}║  📚 BookStorage Control v${APP_VERSION}         ║${NC}\n"
     printf "${BOLD}╚════════════════════════════════════════╝${NC}\n"
     printf "\n"
 }
@@ -185,7 +185,7 @@ cmd_update_finish() {
         print_success "Service restarted and running."
         printf "\n"
         printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-        printf "${GREEN}║         UPDATE COMPLETE ✓               ║${NC}\n"
+        printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
         printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
         printf "\n"
     else
@@ -226,7 +226,7 @@ cmd_update_at_tag() {
             print_success "No update needed — skipping build/install/restart."
             printf "\n"
             printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
-            printf "${GREEN}║          ALREADY UP TO DATE ✓           ║${NC}\n"
+            printf "${GREEN}║          ALREADY UP TO DATE ✓          ║${NC}\n"
             printf "${GREEN}╚════════════════════════════════════════╝${NC}\n"
             printf "\n"
             return 0
