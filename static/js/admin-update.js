@@ -45,7 +45,9 @@
   }
 
   function summarize(data) {
-    const extra = data && data.tag ? ` (${data.tag})` : "";
+    const tag = data?.tag || "";
+    const cur = data?.current || "";
+    const extra = tag ? ` (cible ${tag}${cur ? ` / actuelle ${cur}` : ""})` : cur ? ` (actuelle ${cur})` : "";
     return { extra, msg: data?.message || "", out: data?.output || "", cmd: data?.command || "" };
   }
 
@@ -61,7 +63,7 @@
       });
       const data = await res.json().catch(() => ({}));
       if (data && data.message === "already_up_to_date") {
-        const extra = data.tag ? ` (${data.tag})` : "";
+        const { extra } = summarize(data);
         showStatus((window.__UPDATE_ALREADY__ || "Déjà à jour.") + extra, true);
         showOutput("");
         return;
