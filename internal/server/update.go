@@ -195,6 +195,7 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	// Version C: delegate to root worker via request/status files.
 	if reqPath := a.updateRequestPath(); reqPath != "" {
 		stPath := a.updateStatusPath()
+		// Best-effort status write (non-fatal).
 		_ = writeJSONAtomic(stPath, UpdateStatus{Running: true, Last: res})
 		req := updateRequest{Mode: string(mode), Tag: tag, RequestedAt: time.Now().Unix()}
 		if err := writeJSONAtomic(reqPath, req); err == nil {
@@ -205,7 +206,16 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 			updateMu.Unlock()
 			return res
 		}
-		// If writing fails (permissions/misconfig), fall back to in-process best-effort.
+		// If writing fails (permissions/misconfig), DO NOT fall back to sudo execution:
+		// that path is commonly blocked by NoNewPrivileges and will produce confusing UI errors.
+		res.OK = false
+		res.Message = "update_queue_failed"
+		res.Output = "failed_to_write_request_json path=" + reqPath
+		updateMu.Lock()
+		updateLast = res
+		updateRunning = false
+		updateMu.Unlock()
+		return res
 	}
 
 	// IMPORTANT: do not use the request context, it will be cancelled when the handler returns.
