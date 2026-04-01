@@ -148,8 +148,8 @@ print_step "6/7" "Installation du service systemd..."
 cp deploy/bookstorage.service /etc/systemd/system/
 cp deploy/bookstorage-update.service /etc/systemd/system/
 cp deploy/bookstorage-update.path /etc/systemd/system/
-cp deploy/bookstorage-update-worker.sh /opt/bookstorage/deploy/bookstorage-update-worker.sh
-chmod +x /opt/bookstorage/deploy/bookstorage-update-worker.sh
+cp deploy/bookstorage-update-worker.sh /usr/local/bin/bookstorage-update-worker
+chmod +x /usr/local/bin/bookstorage-update-worker
 
 # Update queue directory (used by admin update worker)
 mkdir -p /var/lib/bookstorage/update
