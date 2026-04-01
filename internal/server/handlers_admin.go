@@ -151,11 +151,11 @@ func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {
 	majorTag, majorInfo, majorOK := a.computeUpdateTag(updateModeLatestMajor)
 
 	a.renderTemplate(w, r, "admin_update", a.mergeData(r, map[string]any{
-		"LatestTag":      latestTag,
-		"LatestTagOK":    latestOK,
-		"LatestInfo":     latestInfo,
-		"LatestMajorTag": majorTag,
-		"LatestMajorOK":  majorOK,
+		"LatestTag":       latestTag,
+		"LatestTagOK":     latestOK,
+		"LatestInfo":      latestInfo,
+		"LatestMajorTag":  majorTag,
+		"LatestMajorOK":   majorOK,
 		"LatestMajorInfo": majorInfo,
 	}))
 }
