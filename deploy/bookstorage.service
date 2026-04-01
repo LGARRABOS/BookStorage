@@ -25,5 +25,8 @@ SyslogIdentifier=bookstorage
 NoNewPrivileges=true
 PrivateTmp=true
 
+# Admin updates (Version C): queue requests for root worker.
+Environment=BOOKSTORAGE_UPDATE_DIR=/var/lib/bookstorage/update
+
 [Install]
 WantedBy=multi-user.target

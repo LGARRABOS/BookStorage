@@ -1,0 +1,15 @@
+[#] This unit is triggered by bookstorage-update.path when an update request is queued.
+[Unit]
+Description=BookStorage - Apply queued update (root worker)
+After=network.target
+
+[Service]
+Type=oneshot
+User=root
+Group=root
+WorkingDirectory=/opt/bookstorage
+ExecStart=/opt/bookstorage/deploy/bookstorage-update-worker.sh
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=bookstorage-update
+
