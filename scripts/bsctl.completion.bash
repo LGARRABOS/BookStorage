@@ -17,6 +17,12 @@ _bsctl_completion() {
 
     local cmds='help -h --help version -v --version build build-prod run clean install uninstall update fix-perms start stop restart status logs'
 
+    # If the user is completing just "bsctl" (no space yet), do not fall back to file completion.
+    if [[ ${COMP_CWORD} -eq 0 ]]; then
+        COMPREPLY=()
+        return 0
+    fi
+
     # Subcommand
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
@@ -63,4 +69,4 @@ _bsctl_completion() {
     return 0
 }
 
-complete -o nospace -F _bsctl_completion bsctl
+complete -o nospace -o nofile -F _bsctl_completion bsctl
