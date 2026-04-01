@@ -9,7 +9,7 @@
 set -e
 
 APP_NAME="bookstorage"
-APP_VERSION="5.3.0"
+APP_VERSION="5.3.1"
 APP_DIR="/opt/bookstorage"
 APP_USER="nobody"
 APP_GROUP="nobody"
