@@ -23,6 +23,8 @@ type Settings struct {
 	Host                 string
 	Port                 int
 	EnableHSTS           bool
+	// RequireAccountValidation controls whether non-admin accounts must be approved (validated=1) before login.
+	RequireAccountValidation bool
 	// TranslateURL is a LibreTranslate-compatible API base URL (no trailing slash), e.g. https://libretranslate.com — empty disables auto-translation.
 	TranslateURL    string
 	TranslateAPIKey string
@@ -78,6 +80,20 @@ func envOr(key, def string) string {
 		return def
 	}
 	return val
+}
+
+func envBoolOr(key string, def bool) bool {
+	raw := strings.TrimSpace(os.Getenv(key))
+	if raw == "" {
+		return def
+	}
+	if strings.EqualFold(raw, "true") || raw == "1" || strings.EqualFold(raw, "yes") || strings.EqualFold(raw, "y") || strings.EqualFold(raw, "on") {
+		return true
+	}
+	if strings.EqualFold(raw, "false") || raw == "0" || strings.EqualFold(raw, "no") || strings.EqualFold(raw, "n") || strings.EqualFold(raw, "off") {
+		return false
+	}
+	return def
 }
 
 // Load loads settings from environment variables
@@ -150,21 +166,22 @@ func Load(rootPath string) (*Settings, error) {
 		os.Getenv("BOOKSTORAGE_ENABLE_HSTS") == "1"
 
 	s := &Settings{
-		SecretKey:            secret,
-		Database:             dbPath,
-		DataDirectory:        dataDir,
-		UploadFolder:         uploadFolder,
-		UploadURLPath:        uploadURL,
-		ProfileUploadFolder:  avatarFolder,
-		ProfileUploadURLPath: avatarURL,
-		SuperadminUsername:   envOr("BOOKSTORAGE_SUPERADMIN_USERNAME", defaultSuperadminUser),
-		SuperadminPassword:   envOr("BOOKSTORAGE_SUPERADMIN_PASSWORD", defaultSuperadminPass),
-		Environment:          env,
-		Host:                 host,
-		Port:                 port,
-		EnableHSTS:           enableHSTS,
-		TranslateURL:         strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
-		TranslateAPIKey:      strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
+		SecretKey:                secret,
+		Database:                 dbPath,
+		DataDirectory:            dataDir,
+		UploadFolder:             uploadFolder,
+		UploadURLPath:            uploadURL,
+		ProfileUploadFolder:      avatarFolder,
+		ProfileUploadURLPath:     avatarURL,
+		SuperadminUsername:       envOr("BOOKSTORAGE_SUPERADMIN_USERNAME", defaultSuperadminUser),
+		SuperadminPassword:       envOr("BOOKSTORAGE_SUPERADMIN_PASSWORD", defaultSuperadminPass),
+		Environment:              env,
+		Host:                     host,
+		Port:                     port,
+		EnableHSTS:               enableHSTS,
+		RequireAccountValidation: envBoolOr("BOOKSTORAGE_REQUIRE_ACCOUNT_VALIDATION", true),
+		TranslateURL:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
+		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err
