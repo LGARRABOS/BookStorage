@@ -44,7 +44,7 @@
                         <p>{{ t .T "login.expired" }}</p>
                     {{ end }}
                     {{ if .RegisterSuccess }}
-                        <p>{{ t .T "register.success" }}</p>
+                        <p>{{ if .RegisterAuto }}{{ t .T "register.success_auto" }}{{ else }}{{ t .T "register.success" }}{{ end }}</p>
                     {{ end }}
                     {{ if .LoginPending }}
                         <p>{{ t .T "login.pending" }}</p>

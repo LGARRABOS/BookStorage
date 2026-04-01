@@ -300,11 +300,16 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		}
 	}
 	isMobile := mode == "mobile" || (mode == "auto" && isMobileRequest(r))
+	currentPath := ""
+	if r != nil && r.URL != nil {
+		currentPath = r.URL.Path
+	}
 	return map[string]any{
 		"Lang":         lang,
 		"T":            i18n.T(lang),
 		"ViewMode":     mode,
 		"IsMobileView": isMobile,
+		"CurrentPath":  currentPath,
 		"AppVersion":   a.Version,
 	}
 }
@@ -547,6 +552,12 @@ func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 				"RequestedPath": r.URL.Path,
 			}))
 			return
+		}
+
+		// Prevent stale admin pages/status after a self-update / restart.
+		// Applies to admin HTML and admin APIs (polling endpoints).
+		if strings.HasPrefix(r.URL.Path, "/admin") || strings.HasPrefix(r.URL.Path, "/api/admin") {
+			w.Header().Set("Cache-Control", "no-store")
 		}
 		next(w, r)
 	}
@@ -801,17 +812,25 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		validated := 0
+		if a.Settings != nil && !a.Settings.RequireAccountValidation {
+			validated = 1
+		}
 		_, err = a.DB.Exec(
 			`INSERT INTO users (username, password, validated, is_admin)
-             VALUES (?, ?, 0, 0)`,
-			username, hashedPassword,
+             VALUES (?, ?, ?, 0)`,
+			username, hashedPassword, validated,
 		)
 		if err != nil {
 			// conflit de username, etc.
 			http.Redirect(w, r, "/register?error=exists", http.StatusFound)
 			return
 		}
-		// Succès : compte créé, en attente de validation par le staff
+		// Succès : compte créé.
+		if validated == 1 {
+			http.Redirect(w, r, "/login?registered=1&auto=1", http.StatusFound)
+			return
+		}
 		http.Redirect(w, r, "/login?registered=1", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -836,6 +855,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"LoginError":      q.Get("error") != "",
 			"LoginPending":    q.Get("pending") != "",
 			"RegisterSuccess": q.Get("registered") != "",
+			"RegisterAuto":    q.Get("auto") == "1",
 			"SessionExpired":  q.Get("expired") != "",
 		})
 		a.renderTemplate(w, r, "login", data)
@@ -860,7 +880,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
-		if u.Validated == 0 && u.IsAdmin == 0 {
+		if (a.Settings == nil || a.Settings.RequireAccountValidation) && u.Validated == 0 && u.IsAdmin == 0 {
 			// Compte non encore validé par le staff
 			http.Redirect(w, r, "/login?pending=1", http.StatusFound)
 			return

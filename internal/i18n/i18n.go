@@ -84,6 +84,7 @@ var translationsFR = Translations{
 	"register.has_account":    "Déjà un compte ?",
 	"register.login":          "Se connecter",
 	"register.success":        "Compte créé ! En attente de validation par un administrateur.",
+	"register.success_auto":   "Compte créé ! Vous pouvez vous connecter.",
 	"register.error.exists":   "Ce nom d'utilisateur existe déjà",
 	"register.error.mismatch": "Les mots de passe ne correspondent pas",
 
@@ -414,6 +415,7 @@ var translationsEN = Translations{
 	"register.has_account":    "Already have an account?",
 	"register.login":          "Sign in",
 	"register.success":        "Account created! Pending administrator approval.",
+	"register.success_auto":   "Account created! You can sign in.",
 	"register.error.exists":   "This username already exists",
 	"register.error.mismatch": "Passwords do not match",
 
