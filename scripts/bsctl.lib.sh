@@ -147,11 +147,19 @@ prompt_release_choice() {
 
 # Shared tail: build, install, restart (steps 4–8)
 cmd_update_finish() {
+    local build_version="${1:-}"
     local repo
     repo="$(bsctl_repo_dir)" || { print_error "Repository not found."; printf "Expected at ${BOLD}${INSTALL_DIR:-/opt/bookstorage}${NC}\n"; exit 1; }
 
     print_step "4/8" "Compiling..."
-    cmd_build_prod
+    if [[ -z "$build_version" && -f "${repo}/scripts/bsctl" ]]; then
+        build_version="$(sed -n 's/^APP_VERSION="\([^"]\+\)".*/\1/p' "${repo}/scripts/bsctl" | head -n 1 || true)"
+    fi
+    if [[ -n "$build_version" ]]; then
+        cmd_build_prod "$build_version"
+    else
+        cmd_build_prod
+    fi
     printf "\n"
 
     print_step "5/8" "Installing binary..."
@@ -271,7 +279,7 @@ cmd_update_at_tag() {
     print_success "Now at ${tag}."
     printf "\n"
 
-    cmd_update_finish
+    cmd_update_finish "$target_version"
 }
 
 cmd_update_branch() {
@@ -440,9 +448,10 @@ cmd_build() {
 }
 
 cmd_build_prod() {
+    local build_version="${1:-$APP_VERSION}"
     print_info "Compiling for production..."
     bsctl_require_repo
-    bsctl_in_repo env CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${APP_VERSION}" -o ${APP_NAME} ./cmd/bookstorage
+    bsctl_in_repo env CGO_ENABLED=1 go build -ldflags="-s -w -X main.Version=${build_version}" -o ${APP_NAME} ./cmd/bookstorage
     print_success "Optimized binary: ./${APP_NAME}"
 }
 
