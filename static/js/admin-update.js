@@ -1,5 +1,7 @@
 (() => {
   const $ = (id) => document.getElementById(id);
+  let updateInProgress = false;
+  let redirectedToMaintenance = false;
 
   async function confirmUpdate() {
     const msg = window.__UPDATE_CONFIRM__ || "Confirmer ?";
@@ -70,6 +72,12 @@
       body.includes("under maintenance") ||
       body.includes("Maintenance — BookStorage");
     if (looksLikeMaintenance) {
+      // If we're in an update flow, proactively navigate to a page that will display maintenance.
+      // (Many setups serve the maintenance page for any path while the service restarts.)
+      if (updateInProgress && !redirectedToMaintenance) {
+        redirectedToMaintenance = true;
+        window.location.href = "/";
+      }
       return { running: true, last: { ok: false, message: "restarting", output: "" } };
     }
     return { running: false, last: { ok: false, message: "status_parse_failed", output: `HTTP ${res.status}\n\n${body}` } };
@@ -84,6 +92,8 @@
 
   async function run(endpoint) {
     if (!(await confirmUpdate())) return;
+    updateInProgress = true;
+    redirectedToMaintenance = false;
     setBusy(true);
     showStatus(window.__UPDATE_IN_PROGRESS__ || "En cours...", null);
     showOutput("");
@@ -145,6 +155,7 @@
       showStatus(`${window.__UPDATE_ERROR__ || "Erreur"}: ${e?.message || e}`, false);
     } finally {
       setBusy(false);
+      updateInProgress = false;
     }
   }
 
