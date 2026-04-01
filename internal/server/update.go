@@ -27,6 +27,7 @@ type UpdateResult struct {
 	OK        bool   `json:"ok"`
 	Mode      string `json:"mode"`
 	Tag       string `json:"tag,omitempty"`
+	Current   string `json:"current,omitempty"`
 	Message   string `json:"message,omitempty"`
 	StartedAt int64  `json:"started_at_unix,omitempty"`
 	Output    string `json:"output,omitempty"`
@@ -116,10 +117,20 @@ func readJSONFile(path string, v any) error {
 
 func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	tag, out, ok := a.computeUpdateTag(mode)
+	cur := strings.TrimSpace(a.Version)
+	curNorm := ""
+	if cur != "" && cur != "dev" {
+		if strings.HasPrefix(cur, "v") {
+			curNorm = cur
+		} else {
+			curNorm = "v" + cur
+		}
+	}
 	res := UpdateResult{
 		OK:        ok,
 		Mode:      string(mode),
 		Tag:       tag,
+		Current:   curNorm,
 		StartedAt: time.Now().Unix(),
 		Output:    out,
 	}
@@ -131,8 +142,7 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		return res
 	}
 
-	// If already on that version, behave like bsctl: no-op with a clear message.
-	cur := strings.TrimSpace(a.Version)
+	// If already on that version (or target isn't newer), behave like bsctl: no-op with a clear message.
 	if cur != "" && cur != "dev" && tag != "" {
 		curNoV := strings.TrimPrefix(cur, "v")
 		targetNoV := strings.TrimPrefix(strings.TrimSpace(tag), "v")
