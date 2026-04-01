@@ -1,0 +1,10 @@
+[Unit]
+Description=BookStorage - Watch for update requests
+
+[Path]
+PathExists=/var/lib/bookstorage/update/request.json
+Unit=bookstorage-update.service
+
+[Install]
+WantedBy=multi-user.target
+

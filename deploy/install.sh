@@ -146,8 +146,19 @@ print_success "Répertoires configurés"
 print_step "6/7" "Installation du service systemd..."
 
 cp deploy/bookstorage.service /etc/systemd/system/
+cp deploy/bookstorage-update.service /etc/systemd/system/
+cp deploy/bookstorage-update.path /etc/systemd/system/
+cp deploy/bookstorage-update-worker.sh /opt/bookstorage/deploy/bookstorage-update-worker.sh
+chmod +x /opt/bookstorage/deploy/bookstorage-update-worker.sh
+
+# Update queue directory (used by admin update worker)
+mkdir -p /var/lib/bookstorage/update
+chmod 755 /var/lib/bookstorage
+chmod 755 /var/lib/bookstorage/update
+
 systemctl daemon-reload
 systemctl enable $APP_NAME > /dev/null 2>&1
+systemctl enable bookstorage-update.path > /dev/null 2>&1
 print_success "Service systemd installé"
 
 # ============================================================================

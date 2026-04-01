@@ -42,6 +42,78 @@ var updateMu sync.Mutex
 var updateRunning bool
 var updateLast UpdateResult
 
+type updateRequest struct {
+	Mode        string `json:"mode"`
+	Tag         string `json:"tag"`
+	RequestedAt int64  `json:"requested_at_unix"`
+}
+
+func parseSemVerTag(s string) (semVer, bool) {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return semVer{}, false
+	}
+	if !strings.HasPrefix(s, "v") {
+		s = "v" + s
+	}
+	semverRe := regexp.MustCompile(`^v(\d+)\.(\d+)\.(\d+)$`)
+	m := semverRe.FindStringSubmatch(s)
+	if m == nil {
+		return semVer{}, false
+	}
+	maj, _ := strconv.Atoi(m[1])
+	min, _ := strconv.Atoi(m[2])
+	pat, _ := strconv.Atoi(m[3])
+	return semVer{maj: maj, min: min, pat: pat, tag: s}, true
+}
+
+func (a *App) updateDir() string {
+	// When set, admin updates are delegated to a root worker watching request.json in this directory.
+	// Example: /var/lib/bookstorage/update
+	d := strings.TrimSpace(os.Getenv("BOOKSTORAGE_UPDATE_DIR"))
+	if d == "" {
+		return ""
+	}
+	return d
+}
+
+func (a *App) updateRequestPath() string {
+	d := a.updateDir()
+	if d == "" {
+		return ""
+	}
+	return filepath.Join(d, "request.json")
+}
+
+func (a *App) updateStatusPath() string {
+	d := a.updateDir()
+	if d == "" {
+		return ""
+	}
+	return filepath.Join(d, "status.json")
+}
+
+func writeJSONAtomic(path string, v any) error {
+	dir := filepath.Dir(path)
+	tmp := filepath.Join(dir, ".tmp."+filepath.Base(path))
+	b, err := json.MarshalIndent(v, "", "  ")
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, path)
+}
+
+func readJSONFile(path string, v any) error {
+	b, err := os.ReadFile(path)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(b, v)
+}
+
 func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	tag, out, ok := a.computeUpdateTag(mode)
 	res := UpdateResult{
@@ -62,9 +134,11 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	// If already on that version, behave like bsctl: no-op with a clear message.
 	cur := strings.TrimSpace(a.Version)
 	if cur != "" && cur != "dev" && tag != "" {
-		cur = strings.TrimPrefix(cur, "v")
-		target := strings.TrimPrefix(strings.TrimSpace(tag), "v")
-		if cur == target {
+		curNoV := strings.TrimPrefix(cur, "v")
+		targetNoV := strings.TrimPrefix(strings.TrimSpace(tag), "v")
+
+		// Exact match: no-op.
+		if curNoV == targetNoV {
 			res.OK = true
 			res.Message = "already_up_to_date"
 			res.Output = ""
@@ -72,6 +146,21 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 			updateLast = res
 			updateMu.Unlock()
 			return res
+		}
+
+		// Prevent downgrades / pointless "major" updates (e.g. current v5.2.3 vs latest-major v5.0.0).
+		if curV, ok1 := parseSemVerTag(curNoV); ok1 {
+			if targetV, ok2 := parseSemVerTag(tag); ok2 {
+				if compareVer(curV, targetV) >= 0 {
+					res.OK = true
+					res.Message = "already_up_to_date"
+					res.Output = ""
+					updateMu.Lock()
+					updateLast = res
+					updateMu.Unlock()
+					return res
+				}
+			}
 		}
 	}
 
@@ -92,6 +181,22 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	updateMu.Unlock()
 
 	log.Printf("[admin-update] requested mode=%s tag=%s", mode, tag)
+
+	// Version C: delegate to root worker via request/status files.
+	if reqPath := a.updateRequestPath(); reqPath != "" {
+		stPath := a.updateStatusPath()
+		_ = writeJSONAtomic(stPath, UpdateStatus{Running: true, Last: res})
+		req := updateRequest{Mode: string(mode), Tag: tag, RequestedAt: time.Now().Unix()}
+		if err := writeJSONAtomic(reqPath, req); err == nil {
+			// Mark as queued; the worker will update status.json.
+			res.Message = "queued"
+			updateMu.Lock()
+			updateLast = res
+			updateMu.Unlock()
+			return res
+		}
+		// If writing fails (permissions/misconfig), fall back to in-process best-effort.
+	}
 
 	// IMPORTANT: do not use the request context, it will be cancelled when the handler returns.
 	go a.runUpdateInBackground(mode, tag)
@@ -181,6 +286,13 @@ type UpdateStatus struct {
 }
 
 func (a *App) updateStatus() UpdateStatus {
+	// If Version C is configured, prefer on-disk status (survives restarts).
+	if stPath := a.updateStatusPath(); stPath != "" {
+		var st UpdateStatus
+		if err := readJSONFile(stPath, &st); err == nil {
+			return st
+		}
+	}
 	updateMu.Lock()
 	defer updateMu.Unlock()
 	return UpdateStatus{Running: updateRunning, Last: updateLast}
