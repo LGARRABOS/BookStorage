@@ -115,6 +115,12 @@ func readJSONFile(path string, v any) error {
 	return json.Unmarshal(b, v)
 }
 
+func allowAdminDowngrade() bool {
+	v := strings.TrimSpace(os.Getenv("BOOKSTORAGE_ADMIN_ALLOW_DOWNGRADE"))
+	v = strings.ToLower(v)
+	return v == "1" || v == "true" || v == "yes" || v == "on"
+}
+
 func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 	tag, out, ok := a.computeUpdateTag(mode)
 	cur := strings.TrimSpace(a.Version)
@@ -162,6 +168,11 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		if curV, ok1 := parseSemVerTag(curNoV); ok1 {
 			if targetV, ok2 := parseSemVerTag(tag); ok2 {
 				if compareVer(curV, targetV) >= 0 {
+					if allowAdminDowngrade() {
+						// Testing mode: allow downgrades / replays of the same major line.
+						// Exact match is still handled above.
+						goto continueUpdate
+					}
 					res.OK = true
 					res.Message = "already_up_to_date"
 					res.Output = ""
@@ -174,6 +185,7 @@ func (a *App) triggerUpdate(ctx context.Context, mode updateMode) UpdateResult {
 		}
 	}
 
+continueUpdate:
 	updateMu.Lock()
 	if updateRunning {
 		r := updateLast
