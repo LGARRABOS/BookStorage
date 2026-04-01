@@ -1,4 +1,4 @@
-[#] This unit is triggered by bookstorage-update.path when an update request is queued.
+# This unit is triggered by bookstorage-update.path when an update request is queued.
 [Unit]
 Description=BookStorage - Apply queued update (root worker)
 After=network.target
