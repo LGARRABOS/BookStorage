@@ -61,7 +61,18 @@
     });
     const { data, text } = await readJsonOrText(res);
     if (data) return data;
-    return { running: false, last: { ok: false, message: "status_parse_failed", output: `HTTP ${res.status}\n\n${text}` } };
+    const body = text || "";
+    // Some deployments serve a maintenance HTML page with HTTP 200 while the app is restarting.
+    // Treat that as "still running" so the UI keeps polling.
+    const looksLikeMaintenance =
+      body.includes("<title>Maintenance") ||
+      body.includes("BookStorage is unavailable") ||
+      body.includes("under maintenance") ||
+      body.includes("Maintenance — BookStorage");
+    if (looksLikeMaintenance) {
+      return { running: true, last: { ok: false, message: "restarting", output: "" } };
+    }
+    return { running: false, last: { ok: false, message: "status_parse_failed", output: `HTTP ${res.status}\n\n${body}` } };
   }
 
   function summarize(data) {
