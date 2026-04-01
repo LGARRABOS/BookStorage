@@ -108,6 +108,12 @@ Détails : [guide Hébergement](docs/fr/hebergement.md).
 
 ---
 
+## Recommandations de mise à jour
+
+- **Privilégiez la dernière version majeure** (\`vX.0.0\`) si vous cherchez un maximum de stabilité en production.
+- **Attention** : les versions **non-majeures** (\`vX.Y.Z\` avec \(Y>0\) ou \(Z>0\)) peuvent contenir des régressions et des bugs pouvant aller jusqu’à **rendre certaines fonctionnalités inutilisables**.
+- Avant une mise à jour : faites une sauvegarde (au minimum du fichier \`database.db\` et de vos dossiers \`static/images\` / \`static/avatars\`), puis testez rapidement l’app après redémarrage.
+
 ## Licence
 
 Licence MIT

@@ -106,6 +106,12 @@ Details: [Self-hosting guide](docs/self-hosting.md).
 
 ---
 
+## Update recommendations
+
+- **Prefer the latest major release** (`vX.0.0`) if you want maximum stability in production.
+- **Warning**: **non-major** releases (`vX.Y.Z` with \(Y>0\) or \(Z>0\)) may ship with regressions/bugs that can **break some features**.
+- Before updating: take a backup (at least `database.db` and your `static/images` / `static/avatars` folders), then smoke-test the app after restart.
+
 ## License
 
 MIT License
