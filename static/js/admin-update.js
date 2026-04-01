@@ -36,12 +36,32 @@
     el.style.display = "block";
   }
 
+  async function readJsonOrText(res) {
+    const ct = (res.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      const data = await res.json().catch(() => null);
+      return { data, text: "" };
+    }
+    const text = await res.text().catch(() => "");
+    // Try JSON anyway (some servers forget content-type).
+    const data = (() => {
+      try {
+        return text ? JSON.parse(text) : null;
+      } catch {
+        return null;
+      }
+    })();
+    return { data, text };
+  }
+
   async function fetchStatus() {
     const res = await fetch("/api/admin/update/status", {
       method: "GET",
       headers: { "Accept": "application/json" },
     });
-    return await res.json().catch(() => ({}));
+    const { data, text } = await readJsonOrText(res);
+    if (data) return data;
+    return { running: false, last: { ok: false, message: "status_parse_failed", output: `HTTP ${res.status}\n\n${text}` } };
   }
 
   function summarize(data) {
@@ -61,7 +81,8 @@
         method: "POST",
         headers: { "Accept": "application/json" },
       });
-      const data = await res.json().catch(() => ({}));
+      const parsed = await readJsonOrText(res);
+      const data = parsed.data || {};
       if (data && data.message === "already_up_to_date") {
         const { extra } = summarize(data);
         showStatus((window.__UPDATE_ALREADY__ || "Déjà à jour.") + extra, true);
@@ -70,8 +91,9 @@
       }
       if (!res.ok || !data.ok) {
         const extra = data && (data.message || data.tag) ? ` (${[data.message, data.tag].filter(Boolean).join(" / ")})` : "";
-        showStatus((window.__UPDATE_ERROR__ || "Erreur") + extra, false);
-        showOutput(data.output || "");
+        showStatus((window.__UPDATE_ERROR__ || "Erreur") + extra + ` (HTTP ${res.status})`, false);
+        const body = data.output || parsed.text || "";
+        showOutput(body ? body : `Réponse vide (HTTP ${res.status}).`);
         return;
       } else {
         // Update runs in background; the service may restart, so we poll status.
