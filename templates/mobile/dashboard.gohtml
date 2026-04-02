@@ -52,7 +52,7 @@
                 <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}">
                     <div class="work-mobile-top">
                         <div>
-                            <h2 class="work-mobile-title">{{ .Title }}</h2>
+                            <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer" title="{{ t $.T "dashboard.reading_link" }}" aria-label="{{ t $.T "dashboard.reading_link" }}">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
                             <div class="work-mobile-sub">{{ t $.T "dashboard.chapter" }} <strong>{{ .Chapter }}</strong></div>
                         </div>
                         <div class="work-mobile-badges">
