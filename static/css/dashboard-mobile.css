@@ -50,6 +50,21 @@
   color: var(--text-primary);
 }
 
+.work-mobile-title .work-mobile-title-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.work-mobile-title .work-mobile-title-link:active {
+  opacity: 0.85;
+}
+
+.work-mobile-title .work-mobile-title-link:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 0.2rem;
+}
+
 .work-mobile-sub {
   margin-top: 0.35rem;
   color: var(--text-muted);
