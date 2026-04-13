@@ -22,7 +22,8 @@ L’interface vise un **usage quotidien** : mise en page adaptée, **mode sombre
 
 - Bibliothèque multi-formats (romans, mangas, webtoons, light novels…)
 - Notes, statistiques, bibliothèques publiques des autres lecteurs
-- Mode sombre, interface multilingue (FR/EN), PWA
+- Mode sombre, interface multilingue (FR/EN), PWA installable
+- PWA mobile avec tableau de bord simplifié (recherche, filtres, chapitres +/-, rafraîchissement auto)
 - Export/import (CSV, JSON) + prise en charge des exports externes (MyAnimeList, AniList)
 - API `/api/works` avec pagination, filtres (statut/type/recherche) et tri
 - Raccourcis clavier
@@ -110,9 +111,9 @@ Détails : [guide Hébergement](docs/fr/hebergement.md).
 
 ## Recommandations de mise à jour
 
-- **Privilégiez la dernière version majeure** (\`vX.0.0\`) si vous cherchez un maximum de stabilité en production.
-- **Attention** : les versions **non-majeures** (\`vX.Y.Z\` avec \(Y>0\) ou \(Z>0\)) peuvent contenir des régressions et des bugs pouvant aller jusqu’à **rendre certaines fonctionnalités inutilisables**.
-- Avant une mise à jour : faites une sauvegarde (au minimum du fichier \`database.db\` et de vos dossiers \`static/images\` / \`static/avatars\`), puis testez rapidement l’app après redémarrage.
+- **Privilégiez la dernière version majeure** (`vX.0.0`) si vous cherchez un maximum de stabilité en production.
+- **Attention** : les versions **non-majeures** (`vX.Y.Z` avec Y>0 ou Z>0) peuvent contenir des régressions et des bugs pouvant aller jusqu’à **rendre certaines fonctionnalités inutilisables**.
+- Avant une mise à jour : faites une sauvegarde (au minimum du fichier `database.db` et de vos dossiers `static/images` / `static/avatars`), puis testez rapidement l’app après redémarrage.
 
 ## Licence
 

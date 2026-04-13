@@ -22,7 +22,8 @@ The interface is built for **everyday use**: responsive layout, **dark mode**, *
 
 - Multi-format library (novels, manga, webtoons, light novels…)
 - Ratings, notes, statistics, public community libraries
-- Dark mode, multilingual UI (EN/FR), PWA
+- Dark mode, multilingual UI (EN/FR), installable PWA
+- Mobile PWA with simplified dashboard (search, filter, quick chapter +/-, auto-refresh)
 - Export/import (CSV, JSON), keyboard shortcuts
 
 ---

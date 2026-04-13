@@ -69,7 +69,7 @@ bsctl help     # Show help
 | `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
 
-**Non-interactive release:** set `BSCTL_UPDATE_TAG=v4.4.0` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
+**Non-interactive release:** set `BSCTL_UPDATE_TAG=v5.4.1` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
 
 If you deploy from a GitHub Actions artifact instead of cloning, extract the archive, copy `bookstorage`, `bsctl`, and `deploy/bookstorage.service` to the right paths, then use `bsctl install` / `bsctl update` as usual. See [Development — Deployment workflow](development.md#deployment-workflow).
 
@@ -111,6 +111,10 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_PORT`         | Port                   | `5000`                  |
 | `BOOKSTORAGE_DATABASE`     | SQLite database path   | `database.db`           |
 | `BOOKSTORAGE_SECRET_KEY`   | Session secret key (min. 32 bytes if `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`  |
+
+### Session lifetime
+
+Sessions use a **sliding TTL of 2 hours** and an **absolute TTL of 24 hours**. If a user is inactive for more than 2 hours, they must log in again. Regardless of activity, every session expires 24 hours after creation.
 | `BOOKSTORAGE_ENV`          | `development` or `production` (production forbids default secret) | `development` |
 | `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
 
@@ -145,9 +149,9 @@ Then edit `config/site.json` with your information:
 
 ## Using the app
 
-### Keyboard shortcuts
+### Keyboard shortcuts (desktop)
 
-On the dashboard:
+On the dashboard (desktop web view only — not available on the mobile PWA):
 
 | Key   | Action              |
 |-------|---------------------|
@@ -158,11 +162,19 @@ On the dashboard:
 | `?`   | Show help           |
 | `Esc` | Close/Unfocus       |
 
-### Export / import
+### Mobile PWA
+
+The mobile view provides a **simplified experience** focused on everyday tracking. Available features: dashboard (search, filter, sort), add/edit works, and quick chapter +/- buttons. Pages like Statistics, Profile, Tools, Users, Admin, Export/Import and Legal are **only accessible from the desktop web view** and redirect to the dashboard on mobile.
+
+The mobile app **auto-refreshes** when brought back to the foreground (e.g. after switching from the desktop web version), so changes sync automatically.
+
+### Export / import (desktop)
 
 **Export:** Profile → download your library as CSV, or **Download JSON** for a versioned backup (`export_version` field) suitable for re-import.
 
 **Import:** Profile → upload a CSV or JSON export. CSV uses semicolon separator; optional columns `CatalogID`, `IsAdult`, `ImagePath` may follow `Notes`. Choose whether existing titles are **skipped** or **updated**.
+
+> **Note:** Export and import are only accessible from the desktop web view (Profile page).
 
 ```csv
 Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath
