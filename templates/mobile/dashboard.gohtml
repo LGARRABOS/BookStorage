@@ -12,37 +12,32 @@
     <link rel="stylesheet" href="/static/css/mobile.css">
     <link rel="stylesheet" href="/static/css/dashboard-mobile.css">
     <script src="/static/js/appearance-init.js"></script>
-    <script src="/static/js/modals.js?v=3"></script>
 </head>
 <body>
+    {{ template "mobile_topbar" . }}
+
     <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
-            <section class="mobile-panel">
-                <div class="dashboard-mobile-header">
-                    <h1>📖 {{ t .T "dashboard.title" }}</h1>
-                </div>
+            {{ template "import_notice" . }}
 
-                {{ template "import_notice" . }}
-
-                <div class="mobile-stack">
-                    <div class="dashboard-mobile-search">
-                        <label for="mobile-search" class="sr-only">{{ t .T "dashboard.search.label" }}</label>
-                        <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
-                    </div>
-                    <div class="dashboard-mobile-controls">
-                        <select id="mobile-filter-status" autocomplete="off">
-                            <option value="">{{ t .T "dashboard.filter.status" }}: {{ t .T "dashboard.filter.all" }}</option>
-                            {{ range .ReadingStatus }}
-                            <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
-                            {{ end }}
-                        </select>
-                        <select id="mobile-filter-adult" autocomplete="off">
-                            <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
-                            <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
-                        </select>
-                    </div>
-                </div>
+            <section class="mobile-search-bar">
+                <label for="mobile-search" class="sr-only">{{ t .T "dashboard.search.label" }}</label>
+                <svg class="mobile-search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
             </section>
+
+            <div class="mobile-filters">
+                <select id="mobile-filter-status" autocomplete="off">
+                    <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                    {{ range .ReadingStatus }}
+                    <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
+                    {{ end }}
+                </select>
+                <select id="mobile-filter-adult" autocomplete="off">
+                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
+                    <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}+18 seul{{ else }}18+ only{{ end }}</option>
+                </select>
+            </div>
 
             {{ if .Works }}
             <section class="works-mobile-list" id="works-mobile-list">
@@ -50,34 +45,43 @@
                 {{ $work := . }}
                 <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}">
                     <div class="work-mobile-top">
-                        <div>
-                            <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer" title="{{ t $.T "dashboard.reading_link" }}" aria-label="{{ t $.T "dashboard.reading_link" }}">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
+                        <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
+                        {{ if gt .Rating 0 }}
+                        <span class="work-mobile-rating">{{ range seq 5 }}{{ if le . $work.Rating }}★{{ else }}☆{{ end }}{{ end }}</span>
+                        {{ end }}
+                    </div>
+
+                    <div class="work-mobile-meta">
+                        {{ if .Status.Valid }}<span class="work-mobile-tag">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
+                        {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
+                        {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
+                    </div>
+
+                    <div class="work-mobile-chapter-row">
+                        <span class="work-mobile-chapter-label">{{ t $.T "dashboard.chapter" }}</span>
+                        <div class="work-mobile-chapter-controls">
+                            <button type="button" class="btn-chapter btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
+                            <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
+                            <button type="button" class="btn-chapter btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
                         </div>
-                        <div class="work-mobile-badges">
-                            {{ if .Status.Valid }}<span class="badge">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
-                            {{ if .ReadingType.Valid }}<span class="badge">{{ .ReadingType.String }}</span>{{ end }}
-                            {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="badge">18+</span>{{ end }}
-                        </div>
                     </div>
-                    <div class="work-mobile-chapter-controls">
-                        <button type="button" class="btn btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
-                        <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
-                        <button type="button" class="btn btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
-                    </div>
-                    {{ if gt .Rating 0 }}
-                    <div class="work-mobile-sub">
-                        {{ range seq 5 }}{{ if le . $work.Rating }}★{{ else }}☆{{ end }}{{ end }}
-                    </div>
-                    {{ end }}
+
                     <div class="work-mobile-actions">
-                        <a href="/edit/{{ .ID }}" class="btn btn-secondary">{{ t $.T "dashboard.edit" }}</a>
-                        <a href="/delete/{{ .ID }}" class="btn btn-danger">{{ t $.T "dashboard.delete" }}</a>
+                        <a href="/edit/{{ .ID }}" class="btn-mobile btn-mobile--edit">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                            {{ t $.T "dashboard.edit" }}
+                        </a>
+                        <a href="/delete/{{ .ID }}" class="btn-mobile btn-mobile--delete">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                            {{ t $.T "dashboard.delete" }}
+                        </a>
                     </div>
                 </article>
                 {{ end }}
             </section>
             {{ else }}
-            <section class="mobile-panel">
+            <section class="mobile-panel mobile-empty-state">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mobile-empty-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 <h2>{{ t .T "dashboard.empty" }}</h2>
                 <p>{{ t .T "dashboard.empty.start" }}</p>
             </section>
@@ -102,11 +106,7 @@
         if (!adult) return;
         var val = (adult.value || "").trim();
         var u = new URL(window.location.href);
-        if (val) {
-          u.searchParams.set("adult", val);
-        } else {
-          u.searchParams.delete("adult");
-        }
+        if (val) { u.searchParams.set("adult", val); } else { u.searchParams.delete("adult"); }
         window.location.href = u.toString();
       }
 
@@ -116,8 +116,7 @@
         cards.forEach(function (card) {
           var title = normalize(card.getAttribute("data-title"));
           var cs = normalize(card.getAttribute("data-status"));
-          var visible = (!q || title.indexOf(q) !== -1) &&
-            (!s || cs === s);
+          var visible = (!q || title.indexOf(q) !== -1) && (!s || cs === s);
           card.style.display = visible ? "" : "none";
         });
       }
