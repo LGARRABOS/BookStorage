@@ -31,6 +31,8 @@ var translationsFR = Translations{
 	"nav.login":     "Connexion",
 	"nav.register":  "Inscription",
 	"nav.menu":      "Menu",
+	"nav.more":      "Plus",
+	"nav.theme":     "Thème",
 
 	// Landing page
 	"landing.hero.title":     "Suivez vos lectures",
@@ -255,6 +257,7 @@ var translationsFR = Translations{
 	"tools.pwa.android.step4":   "Confirmez l'installation.",
 
 	"a11y.theme_toggle": "Basculer entre le thème clair et le thème sombre",
+	"a11y.nav_settings": "Langue et thème",
 
 	"dashboard.shortcut.new_work":    "Nouvelle œuvre (N ou +)",
 	"dashboard.shortcut.help":        "Afficher cette aide (? ou ,)",
@@ -363,6 +366,8 @@ var translationsEN = Translations{
 	"nav.login":     "Login",
 	"nav.register":  "Register",
 	"nav.menu":      "Menu",
+	"nav.more":      "More",
+	"nav.theme":     "Theme",
 
 	// Landing page
 	"landing.hero.title":     "Track your reading",
@@ -587,6 +592,7 @@ var translationsEN = Translations{
 	"tools.pwa.android.step4":   "Confirm the installation.",
 
 	"a11y.theme_toggle": "Toggle light and dark theme",
+	"a11y.nav_settings": "Language and theme",
 
 	"dashboard.shortcut.new_work":    "New work (N or +)",
 	"dashboard.shortcut.help":        "Show this help (? or ,)",

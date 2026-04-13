@@ -101,6 +101,7 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 			return template.JS(b)
 		},
 		// Translate status (database stores French values)
+		"hasPrefix": strings.HasPrefix,
 		"translateStatus": func(status, lang string) string {
 			if lang == i18n.LangEN {
 				switch status {
