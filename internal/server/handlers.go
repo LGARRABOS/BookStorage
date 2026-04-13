@@ -451,7 +451,7 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 		}
 		// Sliding expiration (DB + cookie)
 		a.touchSession(r, token)
-		a.setSessionCookie(w, token, sessionTTL)
+		a.setSessionCookie(w, token, sessionSlidingTTL)
 		next(w, r)
 	}
 }
@@ -892,7 +892,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
-		a.setSessionCookie(w, token, sessionTTL)
+		a.setSessionCookie(w, token, sessionSlidingTTL)
 		http.Redirect(w, r, "/dashboard", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
