@@ -12,8 +12,9 @@ import (
 )
 
 const (
-	sessionCookieName = "session"
-	sessionTTL        = 30 * 24 * time.Hour
+	sessionCookieName  = "session"
+	sessionSlidingTTL  = 2 * time.Hour
+	sessionAbsoluteTTL = 24 * time.Hour
 )
 
 type sessionRow struct {
@@ -69,7 +70,7 @@ func (a *App) createSession(r *http.Request, userID int) (token string, err erro
 		return "", err
 	}
 	now := time.Now().UTC()
-	expires := now.Add(sessionTTL)
+	expires := now.Add(sessionSlidingTTL)
 	ip := clientIP(r)
 	ua := ""
 	if r != nil {
@@ -100,21 +101,25 @@ func (a *App) currentSession(r *http.Request) (userID int, token string, ok bool
 	}
 
 	var uid int
-	var expiresAt time.Time
+	var createdAt, expiresAt time.Time
 	var revokedAt sql.NullTime
 	err = a.DB.QueryRow(
-		`SELECT user_id, expires_at, revoked_at
+		`SELECT user_id, created_at, expires_at, revoked_at
 		 FROM sessions
 		 WHERE token_hash = ?`,
 		hashSessionToken(token),
-	).Scan(&uid, &expiresAt, &revokedAt)
+	).Scan(&uid, &createdAt, &expiresAt, &revokedAt)
 	if err != nil {
 		return 0, "", false
 	}
 	if revokedAt.Valid {
 		return 0, "", false
 	}
-	if time.Now().UTC().After(expiresAt) {
+	now := time.Now().UTC()
+	if now.After(expiresAt) {
+		return 0, "", false
+	}
+	if now.After(createdAt.Add(sessionAbsoluteTTL)) {
 		return 0, "", false
 	}
 	return uid, token, true
@@ -129,7 +134,7 @@ func (a *App) touchSession(r *http.Request, token string) {
 		`UPDATE sessions
 		 SET last_seen_at = ?, expires_at = ?
 		 WHERE token_hash = ? AND revoked_at IS NULL`,
-		now, now.Add(sessionTTL), hashSessionToken(token),
+		now, now.Add(sessionSlidingTTL), hashSessionToken(token),
 	)
 }
 
