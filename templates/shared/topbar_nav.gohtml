@@ -1,16 +1,17 @@
 {{define "nav_settings_dropdown"}}
-<div class="nav-dropdown" data-nav-dropdown>
-    <button type="button" class="nav-dropdown-toggle nav-dropdown-toggle--icon" data-nav-dropdown-toggle aria-expanded="false" aria-haspopup="true" aria-controls="nav-settings-panel" aria-label="{{ t .T "a11y.nav_settings" }}">
-        {{ range .Languages }}{{ if eq .Code $.Lang }}<span aria-hidden="true">{{ .Flag }}</span>{{ end }}{{ end }}
-    </button>
-    <div class="nav-dropdown-panel" id="nav-settings-panel" data-nav-dropdown-panel hidden role="menu">
-        {{ range .Languages }}{{ if ne .Code $.Lang }}<a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ .Code }}">{{ .Flag }} {{ .Name }}</a>
-        {{ end }}{{ end }}
-        <button type="button" role="menuitem" class="nav-dropdown-item theme-toggle nav-dropdown-theme-btn" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
-            <span id="theme-icon" aria-hidden="true">🌙</span>
-            <span>{{ t .T "nav.theme" }}</span>
+<div class="nav-settings-group">
+    <div class="nav-dropdown" data-nav-dropdown>
+        <button type="button" class="nav-dropdown-toggle nav-dropdown-toggle--icon" data-nav-dropdown-toggle aria-expanded="false" aria-haspopup="true" aria-controls="nav-settings-panel" aria-label="{{ t .T "a11y.nav_settings" }}">
+            {{ range .Languages }}{{ if eq .Code $.Lang }}<span aria-hidden="true">{{ .Flag }}</span>{{ end }}{{ end }}
         </button>
+        <div class="nav-dropdown-panel" id="nav-settings-panel" data-nav-dropdown-panel hidden role="menu">
+            {{ range .Languages }}{{ if ne .Code $.Lang }}<a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ .Code }}">{{ .Flag }} {{ .Name }}</a>
+            {{ end }}{{ end }}
+        </div>
     </div>
+    <button type="button" class="nav-theme-toggle theme-toggle" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
+        <span id="theme-icon" aria-hidden="true">🌙</span>
+    </button>
 </div>
 {{end}}
 
