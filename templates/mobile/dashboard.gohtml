@@ -33,9 +33,15 @@
                     <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
                     {{ end }}
                 </select>
+                <select id="mobile-sort" autocomplete="off">
+                    <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>A→Z</option>
+                    <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
+                    <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ if eq .Lang "fr" }}Récent{{ else }}Recent{{ end }}</option>
+                    <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
+                </select>
                 <select id="mobile-filter-adult" autocomplete="off">
-                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
-                    <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}+18 seul{{ else }}18+ only{{ end }}</option>
+                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}−18{{ else }}−18{{ end }}</option>
+                    <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>+18</option>
                 </select>
             </div>
 
@@ -102,14 +108,6 @@
 
       function normalize(v) { return (v || "").toLowerCase(); }
 
-      function applyAdultFilter() {
-        if (!adult) return;
-        var val = (adult.value || "").trim();
-        var u = new URL(window.location.href);
-        if (val) { u.searchParams.set("adult", val); } else { u.searchParams.delete("adult"); }
-        window.location.href = u.toString();
-      }
-
       function applyFilters() {
         var q = normalize(search ? search.value : "");
         var s = status ? normalize(status.value) : "";
@@ -121,9 +119,27 @@
         });
       }
 
+      var sortSel = document.getElementById("mobile-sort");
+
+      function applyServerFilters() {
+        var u = new URL(window.location.href);
+        if (sortSel && sortSel.value && sortSel.value !== "title") {
+          u.searchParams.set("sort", sortSel.value);
+        } else {
+          u.searchParams.delete("sort");
+        }
+        if (adult && adult.value) {
+          u.searchParams.set("adult", adult.value);
+        } else {
+          u.searchParams.delete("adult");
+        }
+        window.location.href = u.toString();
+      }
+
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
-      if (adult) adult.addEventListener("change", applyAdultFilter);
+      if (adult) adult.addEventListener("change", applyServerFilters);
+      if (sortSel) sortSel.addEventListener("change", applyServerFilters);
     })();
 
     (function () {
