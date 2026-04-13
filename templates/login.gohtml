@@ -33,7 +33,7 @@
             <section class="page-section narrow auth-card">
                 <header class="section-header">
                     <h1>{{ t .T "login.title" }}</h1>
-                    <p>{{ if eq .Lang "fr" }}Retrouvez instantanément vos lectures en cours.{{ else }}Instantly find your current readings.{{ end }}</p>
+                    <p>{{ t .T "login.subtitle" }}</p>
                 </header>
                 {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired }}
                 <div class="flash-messages">
@@ -69,7 +69,7 @@
         </div>
     </main>
     <footer class="page-footer">
-        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div>
+        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div>
     </footer>
     <script src="/static/js/appearance.js"></script>
 </body>

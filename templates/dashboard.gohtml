@@ -262,10 +262,10 @@
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
                     <select id="adult-filter" onchange="applyDashboardFilters()">
-                        <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}Cacher +18{{ else }}Hide 18+{{ end }}</option>
-                        <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ if eq .Lang "fr" }}Uniquement +18{{ else }}Only 18+{{ end }}</option>
+                        <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ t .T "dashboard.filter.hide_adult" }}</option>
+                        <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ t .T "dashboard.filter.only_adult" }}</option>
                     </select>
-                    <div class="view-toggle" title="{{ if eq .Lang "fr" }}Vue grille / liste{{ else }}Grid / List view{{ end }}">
+                    <div class="view-toggle" title="{{ t .T "dashboard.view.toggle_title" }}">
                         <button type="button" id="view-grid-btn" class="active" aria-pressed="true" aria-label="{{ t .T "dashboard.view.grid" }}">▦</button>
                         <button type="button" id="view-list-btn" aria-pressed="false" aria-label="{{ t .T "dashboard.view.list" }}">☰</button>
                     </div>
@@ -273,8 +273,8 @@
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
                         <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
-                        <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif. ↓{{ else }}Last modified ↓{{ end }}</option>
-                        <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ if eq .Lang "fr" }}Dernière modif. ↑{{ else }}Last modified ↑{{ end }}</option>
+                        <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.modified_desc" }}</option>
+                        <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ t .T "dashboard.sort.modified_asc" }}</option>
                         <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
                         <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
                     </select>
@@ -299,7 +299,7 @@
                             <span class="no-image">📖</span>
                         {{ end }}
                         <div class="work-badges">
-                            {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
+                            {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.T }}</span>{{ end }}
                             <span class="work-type-badge">
                                 {{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}
                                 {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }} · 18+{{ end }}
@@ -316,7 +316,7 @@
                             {{ t $.T "dashboard.chapter" }}
                             <div class="chapter-controls">
                                 <button class="chapter-btn minus" data-id="{{ .ID }}" title="-1">−</button>
-                                <strong class="chapter-value" data-id="{{ .ID }}" title="{{ if eq $.Lang "fr" }}Cliquer pour modifier{{ else }}Click to edit{{ end }}">{{ .Chapter }}</strong>
+                                <strong class="chapter-value" data-id="{{ .ID }}" title="{{ t $.T "dashboard.chapter.click_edit" }}">{{ .Chapter }}</strong>
                                 <button class="chapter-btn plus" data-id="{{ .ID }}" title="+1">+</button>
                             </div>
                         </div>
@@ -351,13 +351,13 @@
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
     <footer class="page-footer">
-        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a> · <span id="help-trigger" style="cursor:pointer; text-decoration:underline; text-underline-offset:2px;" role="button" tabindex="0">⌨️ {{ if eq .Lang "fr" }}Raccourcis{{ else }}Shortcuts{{ end }}</span></p></div>
+        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a> · <span id="help-trigger" style="cursor:pointer; text-decoration:underline; text-underline-offset:2px;" role="button" tabindex="0">⌨️ {{ t .T "dashboard.shortcuts.label" }}</span></p></div>
     </footer>
 
     <div id="edit-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-backdrop"></div>
         <div class="modal-dialog">
-            <button type="button" class="modal-close" aria-label="{{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}">×</button>
+            <button type="button" class="modal-close" aria-label="{{ t .T "common.close" }}">×</button>
             <div class="modal-content"></div>
         </div>
     </div>
@@ -376,24 +376,24 @@
     <div id="help-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-backdrop"></div>
         <div class="modal-dialog help-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="help-modal-heading">
-            <button type="button" class="modal-close help-modal-close" aria-label="{{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}">×</button>
+            <button type="button" class="modal-close help-modal-close" aria-label="{{ t .T "common.close" }}">×</button>
             <div class="modal-content help-modal-content">
-                <h2 id="help-modal-heading" class="help-modal-title">⌨️ {{ if eq .Lang "fr" }}Raccourcis clavier{{ else }}Keyboard shortcuts{{ end }}</h2>
+                <h2 id="help-modal-heading" class="help-modal-title">⌨️ {{ t .T "dashboard.shortcuts.title" }}</h2>
                 <ul class="help-shortcuts-list">
                     <li><kbd>N</kbd> <kbd>+</kbd> — {{ t .T "dashboard.shortcut.new_work" }}</li>
-                    <li><kbd>/</kbd> — {{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</li>
-                    <li><kbd>E</kbd> — {{ if eq .Lang "fr" }}Éditer (1er visible){{ else }}Edit (first visible){{ end }}</li>
-                    <li><kbd>S</kbd> — {{ if eq .Lang "fr" }}Statistiques{{ else }}Stats{{ end }}</li>
-                    <li><kbd>P</kbd> — {{ if eq .Lang "fr" }}Profil{{ else }}Profile{{ end }}</li>
-                    <li><kbd>U</kbd> — {{ if eq .Lang "fr" }}Utilisateurs{{ else }}Users{{ end }}</li>
+                    <li><kbd>/</kbd> — {{ t .T "dashboard.shortcut.search" }}</li>
+                    <li><kbd>E</kbd> — {{ t .T "dashboard.shortcut.edit_first" }}</li>
+                    <li><kbd>S</kbd> — {{ t .T "dashboard.shortcut.stats" }}</li>
+                    <li><kbd>P</kbd> — {{ t .T "dashboard.shortcut.profile" }}</li>
+                    <li><kbd>U</kbd> — {{ t .T "dashboard.shortcut.users" }}</li>
                     <li><kbd>G</kbd> — {{ t .T "dashboard.shortcut.dashboard" }}</li>
                     <li><kbd>V</kbd> — {{ t .T "dashboard.shortcut.view_toggle" }}</li>
                     <li><kbd>T</kbd> — {{ t .T "dashboard.shortcut.theme" }}</li>
-                    <li><kbd>1</kbd>-<kbd>5</kbd> — {{ if eq .Lang "fr" }}Filtrer par statut{{ else }}Filter by status{{ end }}</li>
+                    <li><kbd>1</kbd>-<kbd>5</kbd> — {{ t .T "dashboard.shortcut.filter_status" }}</li>
                     <li><kbd>?</kbd> <kbd>,</kbd> — {{ t .T "dashboard.shortcut.help" }}</li>
-                    <li><kbd>Esc</kbd> — {{ if eq .Lang "fr" }}Fermer{{ else }}Close{{ end }}</li>
+                    <li><kbd>Esc</kbd> — {{ t .T "common.close" }}</li>
                 </ul>
-                <button type="button" class="btn btn-primary help-modal-ok">{{ if eq .Lang "fr" }}OK{{ else }}OK{{ end }}</button>
+                <button type="button" class="btn btn-primary help-modal-ok">{{ t .T "common.ok" }}</button>
             </div>
         </div>
     </div>
@@ -668,7 +668,7 @@
                                         closeEditModal();
                                         window.location.reload();
                                     } else if (data && !data.ok) {
-                                        showAlert(data.error || '{{ if eq .Lang "fr" }}Erreur{{ else }}Error{{ end }}');
+                                        showAlert(data.error || '{{ t .T "common.error" }}');
                                     }
                                 }).catch(err => {
                                     if (submitBtn) { submitBtn.disabled = false; submitBtn.textContent = '✓ {{ t .T "work.form.submit.edit" }}'; }

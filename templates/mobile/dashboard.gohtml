@@ -24,17 +24,17 @@
                 <select id="mobile-filter-status" autocomplete="off">
                     <option value="">{{ t .T "dashboard.filter.all" }}</option>
                     {{ range .ReadingStatus }}
-                    <option value="{{ . }}">{{ translateStatus . $.Lang }}</option>
+                    <option value="{{ . }}">{{ translateStatus . $.T }}</option>
                     {{ end }}
                 </select>
                 <select id="mobile-sort" autocomplete="off">
                     <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>A→Z</option>
                     <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
-                    <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ if eq .Lang "fr" }}Récent{{ else }}Recent{{ end }}</option>
+                    <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.recent_short" }}</option>
                     <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
                 </select>
                 <select id="mobile-filter-adult" autocomplete="off">
-                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ if eq .Lang "fr" }}−18{{ else }}−18{{ end }}</option>
+                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ t .T "dashboard.filter.adult_short" }}</option>
                     <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>+18</option>
                 </select>
             </div>
@@ -52,7 +52,7 @@
                     </div>
 
                     <div class="work-mobile-meta">
-                        {{ if .Status.Valid }}<span class="work-mobile-tag">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
+                        {{ if .Status.Valid }}<span class="work-mobile-tag">{{ translateStatus .Status.String $.T }}</span>{{ end }}
                         {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
                         {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
                     </div>

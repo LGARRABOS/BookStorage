@@ -33,13 +33,13 @@
             <section class="page-section narrow auth-card">
                 <header class="section-header">
                     <h1>{{ t .T "register.title" }}</h1>
-                    <p>{{ if eq .Lang "fr" }}Créez un compte pour suivre vos lectures.{{ else }}Create an account to track your readings.{{ end }}</p>
+                    <p>{{ t .T "register.subtitle" }}</p>
                 </header>
                 {{ if or .RegisterErrorEmpty .RegisterErrorExists }}
                 <div class="flash-messages">
                     {{ if .RegisterErrorEmpty }}
                         <p>
-                            {{ if eq .Lang "fr" }}Veuillez renseigner tous les champs.{{ else }}Please fill in all fields.{{ end }}
+                            {{ t .T "register.error.required" }}
                         </p>
                     {{ end }}
                     {{ if .RegisterErrorExists }}
@@ -65,7 +65,7 @@
         </div>
     </main>
     <footer class="page-footer">
-        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div>
+        <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div>
     </footer>
     <script src="/static/js/appearance.js"></script>
 </body>

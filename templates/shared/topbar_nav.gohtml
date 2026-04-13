@@ -4,7 +4,8 @@
         <span aria-hidden="true">⚙️</span>
     </button>
     <div class="nav-dropdown-panel" id="nav-settings-panel" data-nav-dropdown-panel hidden role="menu">
-        <a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}">{{ if eq .Lang "fr" }}English{{ else }}Français{{ end }}</a>
+        {{ range .Languages }}{{ if ne .Code $.Lang }}<a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ .Code }}">{{ .Name }}</a>
+        {{ end }}{{ end }}
         <button type="button" role="menuitem" class="nav-dropdown-item theme-toggle nav-dropdown-theme-btn" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
             <span id="theme-icon" aria-hidden="true">🌙</span>
             <span>{{ t .T "nav.theme" }}</span>

@@ -8,8 +8,8 @@
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <link rel="manifest" href="/static/pwa/manifest.json">
     <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <title>BookStorage - {{ if eq .Lang "fr" }}Gérez vos lectures{{ else }}Track your reading{{ end }}</title>
-    <meta name="description" content="{{ if eq .Lang "fr" }}BookStorage est une application gratuite pour suivre vos lectures{{ else }}BookStorage is a free app to track your reading{{ end }}">
+    <title>BookStorage - {{ t .T "landing.meta.title" }}</title>
+    <meta name="description" content="{{ t .T "landing.meta.desc" }}">
     <link rel="stylesheet" href="/static/css/base.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
@@ -58,7 +58,7 @@
     <main class="page-body">
         <div class="container">
             <section class="landing-hero">
-                <h1>{{ t .T "landing.hero.title" }} <span class="highlight">{{ if eq .Lang "fr" }}lectures{{ else }}books{{ end }}</span></h1>
+                <h1>{{ t .T "landing.hero.title" }} <span class="highlight">{{ t .T "landing.hero.highlight" }}</span></h1>
                 <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
                 <div class="hero-buttons">
                     <a href="/register" class="btn btn-primary">{{ t .T "landing.hero.cta" }}</a>
@@ -86,18 +86,18 @@
                     </article>
                     <article class="feature-item">
                         <span class="icon">👥</span>
-                        <h3>{{ if eq .Lang "fr" }}Communauté{{ else }}Community{{ end }}</h3>
-                        <p>{{ if eq .Lang "fr" }}Explorez les listes des autres lecteurs et importez leurs recommandations.{{ else }}Explore other readers' lists and import their recommendations.{{ end }}</p>
+                        <h3>{{ t .T "landing.feature5.title" }}</h3>
+                        <p>{{ t .T "landing.feature5.desc" }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">🌓</span>
-                        <h3>{{ if eq .Lang "fr" }}Mode sombre{{ else }}Dark mode{{ end }}</h3>
-                        <p>{{ if eq .Lang "fr" }}Interface claire ou sombre selon vos préférences.{{ else }}Light or dark interface according to your preferences.{{ end }}</p>
+                        <h3>{{ t .T "landing.feature6.title" }}</h3>
+                        <p>{{ t .T "landing.feature6.desc" }}</p>
                     </article>
                     <article class="feature-item">
                         <span class="icon">🔐</span>
-                        <h3>{{ if eq .Lang "fr" }}Vie privée{{ else }}Privacy{{ end }}</h3>
-                        <p>{{ if eq .Lang "fr" }}Profil public ou privé : vous choisissez ce que vous partagez.{{ else }}Public or private profile: you choose what to share.{{ end }}</p>
+                        <h3>{{ t .T "landing.feature7.title" }}</h3>
+                        <p>{{ t .T "landing.feature7.desc" }}</p>
                     </article>
                 </div>
             </section>
@@ -110,9 +110,9 @@
 
             <section class="selfhost-banner">
                 <p>
-                    {{ if eq .Lang "fr" }}🚀 Envie d'héberger votre propre instance ? BookStorage est open source !{{ else }}🚀 Want to host your own instance? BookStorage is open source!{{ end }}
+                    {{ t .T "landing.opensource" }}
                     <br>
-                    <a href="https://github.com/LGARRABOS/BookStorage" target="_blank"><span class="github-icon">⭐</span>{{ if eq .Lang "fr" }}Voir sur GitHub{{ else }}View on GitHub{{ end }}</a>
+                    <a href="https://github.com/LGARRABOS/BookStorage" target="_blank"><span class="github-icon">⭐</span>{{ t .T "landing.github" }}</a>
                 </p>
             </section>
         </div>
@@ -120,7 +120,7 @@
 
     <footer class="page-footer">
         <div class="container">
-            <p>BookStorage — <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p>
+            <p>BookStorage — <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p>
         </div>
     </footer>
 

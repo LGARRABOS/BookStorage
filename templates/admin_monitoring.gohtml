@@ -36,7 +36,7 @@
             <section class="page-section">
                 <header class="section-header">
                     <h1 class="page-title">📈 {{ t .T "admin.monitoring.title" }}</h1>
-                    <p class="page-subtitle">{{ if eq .Lang "fr" }}Vue rapide santé & performances.{{ else }}Quick health & performance view.{{ end }}</p>
+                    <p class="page-subtitle">{{ t .T "monitoring.subtitle" }}</p>
                     <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
                         <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
                         <a class="admin-tab active" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
@@ -48,7 +48,7 @@
                     <article class="admin-kpi">
                         <h2>{{ t .T "monitoring.uptime" }}</h2>
                         <div class="kpi-value" id="mon-uptime">—</div>
-                        <div class="kpi-meta">{{ if eq .Lang "fr" }}Depuis le dernier redémarrage.{{ else }}Since last restart.{{ end }}</div>
+                        <div class="kpi-meta">{{ t .T "monitoring.uptime.desc" }}</div>
                     </article>
                     <article class="admin-kpi">
                         <h2>{{ t .T "monitoring.requests" }}</h2>

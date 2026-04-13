@@ -64,7 +64,7 @@ func isManhwaKeyword(s string) bool {
 }
 
 // anilistMediaTypeUpper returns uppercased Type, or infers from Format when Type is missing.
-// Certaines requêtes GraphQL n’incluent pas `type` sur Media ; sans cela, la Corée ne peut pas être mappée en Manhwa.
+// Some GraphQL queries don't include `type` on Media; without it, Korea cannot be mapped to Manhwa.
 func anilistMediaTypeUpper(media anilistMedia) string {
 	t := strings.ToUpper(strings.TrimSpace(media.Type))
 	if t != "" {
@@ -82,7 +82,7 @@ func anilistMediaTypeUpper(media anilistMedia) string {
 
 // Map AniList type, format, country, genres and tags to our reading types (Manga vs Webtoon vs Manhwa etc.)
 func mapAnilistReadingType(media anilistMedia) string {
-	// Corée : manhwa
+	// Korea: manhwa
 	country := strings.ToUpper(strings.TrimSpace(media.CountryOfOrigin))
 	t := anilistMediaTypeUpper(media)
 	if t == "MANGA" && (country == "KR" || country == "KP") {

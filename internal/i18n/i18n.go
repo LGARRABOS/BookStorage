@@ -1,689 +1,118 @@
 package i18n
 
-// Translations holds all text for both languages
+import (
+	"embed"
+	"encoding/json"
+	"sort"
+	"strings"
+)
+
+//go:embed locales/*.json
+var localesFS embed.FS
+
+// Translations holds all text for a single language.
 type Translations map[string]string
 
-// Language constants
+// LangInfo describes an available language for template dropdowns.
+type LangInfo struct {
+	Code string
+	Name string
+}
+
 const (
 	LangFR      = "fr"
 	LangEN      = "en"
 	DefaultLang = LangFR
 )
 
-// T returns translations for the given language
-func T(lang string) Translations {
-	if lang == LangEN {
-		return translationsEN
+var (
+	allTranslations = map[string]Translations{}
+	languages       []LangInfo
+)
+
+// statusKeyMap maps DB-stored status values (French) to i18n keys.
+var statusKeyMap = map[string]string{
+	"En cours":  "status.reading",
+	"Terminé":   "status.completed",
+	"En pause":  "status.on_hold",
+	"Abandonné": "status.dropped",
+	"À lire":    "status.plan_to_read",
+}
+
+func init() {
+	Load()
+}
+
+// Load reads all JSON locale files from the embedded filesystem.
+func Load() {
+	entries, err := localesFS.ReadDir("locales")
+	if err != nil {
+		panic("i18n: cannot read embedded locales: " + err.Error())
 	}
-	return translationsFR
+
+	loaded := map[string]Translations{}
+	var langs []LangInfo
+
+	for _, e := range entries {
+		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
+			continue
+		}
+		code := strings.TrimSuffix(e.Name(), ".json")
+
+		data, err := localesFS.ReadFile("locales/" + e.Name())
+		if err != nil {
+			panic("i18n: cannot read " + e.Name() + ": " + err.Error())
+		}
+
+		var t Translations
+		if err := json.Unmarshal(data, &t); err != nil {
+			panic("i18n: invalid JSON in " + e.Name() + ": " + err.Error())
+		}
+
+		name := t["_lang.name"]
+		if name == "" {
+			name = code
+		}
+		delete(t, "_lang.name")
+
+		loaded[code] = t
+		langs = append(langs, LangInfo{Code: code, Name: name})
+	}
+
+	sort.Slice(langs, func(i, j int) bool {
+		return langs[i].Code < langs[j].Code
+	})
+
+	allTranslations = loaded
+	languages = langs
 }
 
-var translationsFR = Translations{
-	// Navigation
-	"nav.dashboard": "Tableau de bord",
-	"nav.quick":     "Accès rapide",
-	"nav.stats":     "Statistiques",
-	"nav.readers":   "Lecteurs",
-	"nav.tools":     "Outils",
-	"nav.profile":   "Mon profil",
-	"nav.admin":     "Administration",
-	"nav.logout":    "Déconnexion",
-	"nav.login":     "Connexion",
-	"nav.register":  "Inscription",
-	"nav.menu":      "Menu",
-	"nav.more":      "Plus",
-	"nav.theme":     "Thème",
-
-	// Landing page
-	"landing.hero.title":     "Suivez vos lectures",
-	"landing.hero.subtitle":  "Organisez et suivez tous vos romans, mangas, webtoons et light novels en un seul endroit.",
-	"landing.hero.cta":       "Commencer gratuitement",
-	"landing.hero.login":     "J'ai déjà un compte",
-	"landing.features":       "Fonctionnalités",
-	"landing.feature1.title": "Multi-formats",
-	"landing.feature1.desc":  "Romans, mangas, manhwas, webtoons, light novels... Tous vos formats préférés.",
-	"landing.feature2.title": "Suivi de progression",
-	"landing.feature2.desc":  "Notez où vous en êtes dans chaque œuvre et ne perdez plus jamais le fil.",
-	"landing.feature3.title": "Notes & avis",
-	"landing.feature3.desc":  "Attribuez des étoiles et écrivez vos impressions personnelles.",
-	"landing.feature4.title": "Statistiques",
-	"landing.feature4.desc":  "Visualisez vos habitudes de lecture avec des graphiques détaillés.",
-	"landing.cta.title":      "Prêt à organiser vos lectures ?",
-	"landing.cta.subtitle":   "Rejoignez la communauté des lecteurs organisés.",
-	"landing.cta.button":     "Créer mon compte",
-
-	// Login page
-	"login.title":      "Connexion",
-	"login.username":   "Nom d'utilisateur",
-	"login.password":   "Mot de passe",
-	"login.submit":     "Se connecter",
-	"login.no_account": "Pas encore de compte ?",
-	"login.register":   "S'inscrire",
-	"login.error":      "Identifiants invalides",
-	"login.pending":    "Votre compte est en attente de validation par un administrateur.",
-	"login.expired":    "Votre session a expiré. Veuillez vous reconnecter.",
-
-	// Error pages
-	"error.401.title":      "Non autorisé",
-	"error.401.desc":       "Vous devez être connecté pour accéder à cette page.",
-	"error.403.title":      "Accès interdit",
-	"error.403.desc":       "Vous n'êtes pas autorisé à accéder à cette page.",
-	"error.404.title":      "Page introuvable",
-	"error.404.desc":       "Cette page n'existe pas (ou a été déplacée).",
-	"error.405.title":      "Méthode non autorisée",
-	"error.405.desc":       "L'action demandée n'est pas autorisée sur cette page.",
-	"error.500.title":      "Erreur serveur",
-	"error.500.desc":       "Une erreur interne s'est produite. Réessayez plus tard.",
-	"error.requested_path": "Chemin demandé :",
-	"error.go_home":        "Retour à l'accueil",
-
-	// Register page
-	"register.title":          "Inscription",
-	"register.username":       "Nom d'utilisateur",
-	"register.password":       "Mot de passe",
-	"register.confirm":        "Confirmer le mot de passe",
-	"register.submit":         "S'inscrire",
-	"register.has_account":    "Déjà un compte ?",
-	"register.login":          "Se connecter",
-	"register.success":        "Compte créé ! En attente de validation par un administrateur.",
-	"register.success_auto":   "Compte créé ! Vous pouvez vous connecter.",
-	"register.error.exists":   "Ce nom d'utilisateur existe déjà",
-	"register.error.mismatch": "Les mots de passe ne correspondent pas",
-
-	// Dashboard
-	"dashboard.title":                                     "Mon tableau de bord",
-	"dashboard.welcome":                                   "Bienvenue",
-	"dashboard.add_work":                                  "Ajouter une œuvre",
-	"dashboard.search":                                    "Rechercher...",
-	"dashboard.filter.all":                                "Tous",
-	"dashboard.filter.type":                               "Type",
-	"dashboard.filter.status":                             "Statut",
-	"dashboard.sort":                                      "Trier par",
-	"dashboard.sort.alpha":                                "Alphabétique",
-	"dashboard.sort.recent":                               "Plus récent",
-	"dashboard.sort.oldest":                               "Plus ancien",
-	"dashboard.sort.rating":                               "Note",
-	"dashboard.empty":                                     "Aucune œuvre trouvée",
-	"dashboard.empty.start":                               "Commencez par ajouter votre première lecture !",
-	"dashboard.stats.works":                               "Œuvres",
-	"dashboard.stats.chapters":                            "Chapitres lus",
-	"dashboard.stats.volumes":                             "Tomes lus",
-	"dashboard.chapter":                                   "Chapitre",
-	"dashboard.volume":                                    "Tome",
-	"dashboard.edit":                                      "Modifier",
-	"dashboard.delete":                                    "Supprimer",
-	"dashboard.delete.confirm":                            "Êtes-vous sûr de vouloir supprimer cette œuvre ?",
-	"dashboard.search.label":                              "Rechercher dans la bibliothèque",
-	"dashboard.reading_link":                              "Ouvrir le lien de lecture",
-	"dashboard.recommendations.title":                     "Pour vous",
-	"dashboard.recommendations.hint":                      "Suggestions basées sur vos œuvres liées au catalogue AniList.",
-	"dashboard.recommendations.loading":                   "Chargement des suggestions…",
-	"dashboard.recommendations.empty":                     "Aucune suggestion pour l’instant. Ajoutez des œuvres via la recherche catalogue (AniList) pour enrichir votre profil.",
-	"dashboard.recommendations.add":                       "Ajouter",
-	"dashboard.recommendations.error":                     "Impossible de charger les suggestions. Réessayez plus tard.",
-	"dashboard.recommendations.scroll_prev":               "Faire défiler les suggestions vers la gauche",
-	"dashboard.recommendations.scroll_next":               "Faire défiler les suggestions vers la droite",
-	"dashboard.recommendations.detail.close":              "Fermer",
-	"dashboard.recommendations.detail.synopsis":           "Présentation",
-	"dashboard.recommendations.detail.machine_translated": "Traduction automatique depuis l’anglais (source AniList).",
-	"dashboard.recommendations.detail.why":                "Pourquoi cette suggestion ?",
-	"dashboard.recommendations.detail.why_related":        "Recommandée par AniList en lien avec « {title} », une œuvre présente dans votre bibliothèque.",
-	"dashboard.recommendations.detail.why_browse_matched": "Genres et tags en commun avec votre profil : {details}.",
-	"dashboard.recommendations.detail.why_browse_profile": "Sélection parmi les titres populaires correspondant à vos genres ({genres}) et tags ({tags}) issus de vos lectures AniList.",
-	"dashboard.recommendations.detail.score":              "Scores AniList (moyenne / note)",
-	"dashboard.recommendations.detail.loading":            "Chargement des détails…",
-	"dashboard.recommendations.detail.error":              "Impossible de charger la fiche. Réessayez plus tard.",
-	"dashboard.recommendations.detail.add":                "Ajouter à ma bibliothèque",
-	"dashboard.recommendations.detail.genres_label":       "Genres",
-	"dashboard.recommendations.detail.tags_label":         "Tags",
-	"dashboard.recommendations.detail.open":               "Détails et présentation",
-	"dashboard.view.grid":                                 "Vue grille",
-	"dashboard.view.list":                                 "Vue liste",
-	"import.added":                                        "Ajoutés",
-	"import.updated":                                      "Mis à jour",
-	"import.skipped_dup":                                  "Doublons ignorés",
-	"import.skipped_invalid":                              "Lignes invalides",
-	"import.error.generic":                                "L'import a échoué. Vérifiez le format du fichier.",
-	"import.line_prefix":                                  "Ligne",
-	"profile.import.duplicate_mode":                       "Si le titre existe déjà",
-	"profile.import.duplicate_skip":                       "Ignorer",
-	"profile.import.duplicate_update":                     "Mettre à jour",
-
-	// Work types
-	"type.manga":       "Manga",
-	"type.novel":       "Roman",
-	"type.webtoon":     "Webtoon",
-	"type.manhwa":      "Manhwa",
-	"type.manhua":      "Manhua",
-	"type.light_novel": "Light Novel",
-	"type.comic":       "Comic",
-	"type.other":       "Autre",
-
-	// Work status
-	"status.reading":      "En cours",
-	"status.completed":    "Terminé",
-	"status.on_hold":      "En pause",
-	"status.dropped":      "Abandonné",
-	"status.plan_to_read": "À lire",
-
-	// Add/Edit work
-	"work.add.title":              "Ajouter une œuvre",
-	"work.edit.title":             "Modifier l'œuvre",
-	"work.form.title":             "Titre",
-	"work.form.type":              "Type",
-	"work.form.status":            "Statut",
-	"work.form.chapter":           "Chapitre actuel",
-	"work.form.volume":            "Tome actuel",
-	"work.form.image":             "Image de couverture",
-	"work.form.image.current":     "Image actuelle",
-	"work.form.image.change":      "Changer l'image",
-	"work.form.adult":             "Contenu +18",
-	"work.form.rating":            "Note",
-	"work.form.notes":             "Notes personnelles",
-	"work.form.notes.placeholder": "Vos impressions, commentaires...",
-	"work.form.submit.add":        "Ajouter",
-	"work.form.submit.edit":       "Enregistrer",
-	"work.form.cancel":            "Annuler",
-	"work.form.delete":            "Supprimer",
-	"work.section.info":           "Informations principales",
-	"work.section.media":          "Média",
-	"work.section.rating":         "Appréciation",
-
-	// Profile
-	"profile.title":                       "Mon profil",
-	"profile.username":                    "Nom d'utilisateur",
-	"profile.joined":                      "Membre depuis",
-	"profile.works":                       "œuvres",
-	"profile.avatar":                      "Avatar",
-	"profile.avatar.change":               "Changer l'avatar",
-	"profile.visibility":                  "Visibilité du profil",
-	"profile.public":                      "Public",
-	"profile.private":                     "Privé",
-	"profile.public.desc":                 "Les autres utilisateurs peuvent voir votre bibliothèque",
-	"profile.private.desc":                "Votre bibliothèque est cachée des autres utilisateurs",
-	"profile.password":                    "Changer le mot de passe",
-	"profile.password.current":            "Mot de passe actuel",
-	"profile.password.new":                "Nouveau mot de passe",
-	"profile.password.confirm":            "Confirmer",
-	"profile.save":                        "Enregistrer",
-	"profile.section.general":             "Général",
-	"profile.section.avatar":              "Avatar",
-	"profile.section.visibility":          "Visibilité",
-	"profile.section.security":            "Sécurité",
-	"profile.tab.identity":                "Identité",
-	"profile.tab.privacy":                 "Confidentialité",
-	"profile.tab.security":                "Sécurité",
-	"profile.tab.accessibility":           "Accessibilité",
-	"profile.open_tools":                  "Ouvrir les outils",
-	"profile.delete.title":                "Supprimer mon profil",
-	"profile.delete.desc":                 "Supprime definitivement votre compte, vos oeuvres et vos informations associees.",
-	"profile.delete.confirm_label":        "Confirmation",
-	"profile.delete.confirm_hint":         "Tapez SUPPRIMER pour confirmer.",
-	"profile.delete.action":               "Supprimer mon profil",
-	"profile.accessibility.title":         "Accessibilité et confort",
-	"profile.accessibility.text_size":     "Taille du texte",
-	"profile.accessibility.text_size.sm":  "Petite",
-	"profile.accessibility.text_size.md":  "Normale",
-	"profile.accessibility.text_size.lg":  "Grande",
-	"profile.accessibility.motion":        "Animations",
-	"profile.accessibility.motion.auto":   "Automatique (selon le système)",
-	"profile.accessibility.motion.reduce": "Réduire",
-	"profile.accessibility.motion.full":   "Afficher les animations",
-	"profile.accessibility.contrast":      "Contraste renforcé",
-	"profile.accessibility.scrollbars":    "Afficher les barres de défilement",
-	"profile.accessibility.hint":          "Ces réglages sont enregistrés dans ce navigateur uniquement.",
-
-	"tools.title":               "Outils",
-	"tools.subtitle":            "Import, export et installation de l'application.",
-	"tools.export.title":        "Exporter vos lectures",
-	"tools.export.subtitle":     "Téléchargez vos données pour sauvegarde ou migration.",
-	"tools.export.csv":          "Télécharger CSV",
-	"tools.export.json":         "Télécharger JSON",
-	"tools.import.title":        "Importer des lectures",
-	"tools.import.subtitle":     "Importez un fichier BookStorage, MyAnimeList ou AniList.",
-	"tools.import.action":       "Importer",
-	"tools.import.format_title": "Format CSV de référence",
-	"tools.pwa.title":           "Application mobile (PWA)",
-	"tools.pwa.subtitle":        "Installez BookStorage sur votre écran d'accueil.",
-	"tools.pwa.ios.title":       "iPhone / iPad (Safari)",
-	"tools.pwa.ios.step1":       "Ouvrez BookStorage dans Safari.",
-	"tools.pwa.ios.step2":       "Touchez l'icône de partage.",
-	"tools.pwa.ios.step3":       "Choisissez Sur l'écran d'accueil.",
-	"tools.pwa.ios.step4":       "Confirmez avec Ajouter.",
-	"tools.pwa.android.title":   "Android (Chrome)",
-	"tools.pwa.android.step1":   "Ouvrez BookStorage dans Chrome.",
-	"tools.pwa.android.step2":   "Ouvrez le menu du navigateur.",
-	"tools.pwa.android.step3":   "Choisissez Installer l'application.",
-	"tools.pwa.android.step4":   "Confirmez l'installation.",
-
-	"a11y.theme_toggle": "Basculer entre le thème clair et le thème sombre",
-	"a11y.nav_settings": "Langue et thème",
-
-	"dashboard.shortcut.new_work":    "Nouvelle œuvre (N ou +)",
-	"dashboard.shortcut.help":        "Afficher cette aide (? ou ,)",
-	"dashboard.shortcut.dashboard":   "Tableau de bord (G)",
-	"dashboard.shortcut.view_toggle": "Basculer grille / liste (V)",
-	"dashboard.shortcut.theme":       "Thème clair ou sombre (T)",
-
-	// Users / Readers
-	"users.title":   "Lecteurs",
-	"users.search":  "Rechercher un lecteur...",
-	"users.empty":   "Aucun lecteur trouvé",
-	"users.works":   "œuvres",
-	"users.view":    "Voir la bibliothèque",
-	"users.private": "Profil privé",
-
-	// User detail
-	"user.library":        "Bibliothèque de",
-	"user.empty":          "Cette bibliothèque est vide",
-	"user.import":         "Importer",
-	"user.import.success": "Œuvre importée avec succès !",
-
-	// Stats
-	"stats.title":          "Statistiques",
-	"stats.total_works":    "Total des œuvres",
-	"stats.total_chapters": "Chapitres lus",
-	"stats.total_volumes":  "Tomes lus",
-	"stats.avg_rating":     "Note moyenne",
-	"stats.by_type":        "Par type",
-	"stats.by_status":      "Par statut",
-	"stats.top_rated":      "Mieux notées",
-	"stats.recent":         "Ajoutées récemment",
-
-	// Admin
-	"admin.title":            "Administration",
-	"admin.accounts":         "Gestion des comptes",
-	"admin.monitoring":       "Monitoring",
-	"admin.update":           "Mise à jour",
-	"admin.monitoring.title": "Monitoring",
-	"admin.update.title":     "Mise à jour",
-	"admin.pending":          "En attente",
-	"admin.approved":         "Approuvés",
-	"admin.username":         "Utilisateur",
-	"admin.status":           "Statut",
-	"admin.role":             "Rôle",
-	"admin.actions":          "Actions",
-	"admin.approve":          "Approuver",
-	"admin.delete":           "Supprimer",
-	"admin.promote":          "Promouvoir admin",
-	"admin.demote":           "Rétrograder",
-	"admin.role.admin":       "Admin",
-	"admin.role.user":        "Utilisateur",
-	"admin.role.owner":       "Propriétaire",
-	"admin.no_action":        "Aucune action",
-	"admin.restricted":       "Restreint",
-
-	// Monitoring
-	"monitoring.uptime":         "Uptime",
-	"monitoring.requests":       "Requêtes",
-	"monitoring.requests_total": "requêtes au total",
-	"monitoring.latency":        "Latence",
-	"monitoring.latency.p95":    "P95",
-	"monitoring.latency.avg":    "Moyenne",
-	"monitoring.latency.max":    "Max",
-	"monitoring.runtime":        "Runtime",
-	"monitoring.goroutines":     "Goroutines",
-	"monitoring.heap":           "Heap",
-	"monitoring.gc":             "GC",
-
-	// Admin update
-	"update.current_version": "Version actuelle",
-	"update.latest":          "Mettre à jour vers la dernière version",
-	"update.latest_major":    "Mettre à jour vers la dernière version majeure",
-	"update.confirm":         "Confirmer la mise à jour ? L'application va redémarrer.",
-	"update.confirm.title":   "Mise à jour",
-	"update.confirm.ok":      "Mettre à jour",
-	"update.confirm.cancel":  "Annuler",
-	"update.in_progress":     "Mise à jour en cours...",
-	"update.success":         "Mise à jour lancée.",
-	"update.already":         "Déjà à jour.",
-	"update.error":           "Échec de la mise à jour.",
-
-	// Common
-	"common.save":    "Enregistrer",
-	"common.cancel":  "Annuler",
-	"common.delete":  "Supprimer",
-	"common.edit":    "Modifier",
-	"common.back":    "Retour",
-	"common.loading": "Chargement...",
-	"common.error":   "Erreur",
-	"common.success": "Succès",
-	"common.confirm": "Confirmer",
-	"common.yes":     "Oui",
-	"common.no":      "Non",
+// T returns translations for the given language, falling back to DefaultLang.
+func T(lang string) Translations {
+	if t, ok := allTranslations[lang]; ok {
+		return t
+	}
+	return allTranslations[DefaultLang]
 }
 
-var translationsEN = Translations{
-	// Navigation
-	"nav.dashboard": "Dashboard",
-	"nav.quick":     "Quick",
-	"nav.stats":     "Statistics",
-	"nav.readers":   "Readers",
-	"nav.tools":     "Tools",
-	"nav.profile":   "My Profile",
-	"nav.admin":     "Administration",
-	"nav.logout":    "Logout",
-	"nav.login":     "Login",
-	"nav.register":  "Register",
-	"nav.menu":      "Menu",
-	"nav.more":      "More",
-	"nav.theme":     "Theme",
+// Languages returns the list of available languages (sorted by code).
+func Languages() []LangInfo {
+	return languages
+}
 
-	// Landing page
-	"landing.hero.title":     "Track your reading",
-	"landing.hero.subtitle":  "Organize and track all your novels, manga, webtoons and light novels in one place.",
-	"landing.hero.cta":       "Get started for free",
-	"landing.hero.login":     "I already have an account",
-	"landing.features":       "Features",
-	"landing.feature1.title": "Multi-format",
-	"landing.feature1.desc":  "Novels, manga, manhwa, webtoons, light novels... All your favorite formats.",
-	"landing.feature2.title": "Progress tracking",
-	"landing.feature2.desc":  "Note where you are in each work and never lose track again.",
-	"landing.feature3.title": "Notes & reviews",
-	"landing.feature3.desc":  "Give star ratings and write your personal impressions.",
-	"landing.feature4.title": "Statistics",
-	"landing.feature4.desc":  "Visualize your reading habits with detailed charts.",
-	"landing.cta.title":      "Ready to organize your reading?",
-	"landing.cta.subtitle":   "Join the community of organized readers.",
-	"landing.cta.button":     "Create my account",
+// ValidLang reports whether lang is a loaded language.
+func ValidLang(lang string) bool {
+	_, ok := allTranslations[lang]
+	return ok
+}
 
-	// Login page
-	"login.title":      "Login",
-	"login.username":   "Username",
-	"login.password":   "Password",
-	"login.submit":     "Sign in",
-	"login.no_account": "Don't have an account yet?",
-	"login.register":   "Register",
-	"login.error":      "Invalid credentials",
-	"login.pending":    "Your account is pending administrator approval.",
-	"login.expired":    "Your session has expired. Please sign in again.",
-
-	// Error pages
-	"error.401.title":      "Unauthorized",
-	"error.401.desc":       "You must be signed in to access this page.",
-	"error.403.title":      "Access denied",
-	"error.403.desc":       "You are not allowed to access this page.",
-	"error.404.title":      "Page not found",
-	"error.404.desc":       "This page doesn't exist (or has been moved).",
-	"error.405.title":      "Method not allowed",
-	"error.405.desc":       "The requested action is not allowed on this page.",
-	"error.500.title":      "Server error",
-	"error.500.desc":       "An internal error occurred. Please try again later.",
-	"error.requested_path": "Requested path:",
-	"error.go_home":        "Go to home",
-
-	// Register page
-	"register.title":          "Register",
-	"register.username":       "Username",
-	"register.password":       "Password",
-	"register.confirm":        "Confirm password",
-	"register.submit":         "Register",
-	"register.has_account":    "Already have an account?",
-	"register.login":          "Sign in",
-	"register.success":        "Account created! Pending administrator approval.",
-	"register.success_auto":   "Account created! You can sign in.",
-	"register.error.exists":   "This username already exists",
-	"register.error.mismatch": "Passwords do not match",
-
-	// Dashboard
-	"dashboard.title":                                     "My Dashboard",
-	"dashboard.welcome":                                   "Welcome",
-	"dashboard.add_work":                                  "Add a work",
-	"dashboard.search":                                    "Search...",
-	"dashboard.filter.all":                                "All",
-	"dashboard.filter.type":                               "Type",
-	"dashboard.filter.status":                             "Status",
-	"dashboard.sort":                                      "Sort by",
-	"dashboard.sort.alpha":                                "Alphabetical",
-	"dashboard.sort.recent":                               "Most recent",
-	"dashboard.sort.oldest":                               "Oldest",
-	"dashboard.sort.rating":                               "Rating",
-	"dashboard.empty":                                     "No works found",
-	"dashboard.empty.start":                               "Start by adding your first reading!",
-	"dashboard.stats.works":                               "Works",
-	"dashboard.stats.chapters":                            "Chapters read",
-	"dashboard.stats.volumes":                             "Volumes read",
-	"dashboard.chapter":                                   "Chapter",
-	"dashboard.volume":                                    "Volume",
-	"dashboard.edit":                                      "Edit",
-	"dashboard.delete":                                    "Delete",
-	"dashboard.delete.confirm":                            "Are you sure you want to delete this work?",
-	"dashboard.search.label":                              "Search your library",
-	"dashboard.reading_link":                              "Open reading link",
-	"dashboard.recommendations.title":                     "For you",
-	"dashboard.recommendations.hint":                      "Suggestions based on works linked to the AniList catalog.",
-	"dashboard.recommendations.loading":                   "Loading suggestions…",
-	"dashboard.recommendations.empty":                     "No suggestions yet. Add works via catalog search (AniList) to build your taste profile.",
-	"dashboard.recommendations.add":                       "Add",
-	"dashboard.recommendations.error":                     "Could not load suggestions. Please try again later.",
-	"dashboard.recommendations.scroll_prev":               "Scroll suggestions left",
-	"dashboard.recommendations.scroll_next":               "Scroll suggestions right",
-	"dashboard.recommendations.detail.close":              "Close",
-	"dashboard.recommendations.detail.synopsis":           "Synopsis",
-	"dashboard.recommendations.detail.machine_translated": "Machine-translated from English (AniList source).",
-	"dashboard.recommendations.detail.why":                "Why this suggestion?",
-	"dashboard.recommendations.detail.why_related":        "Suggested by AniList next to « {title} », a title already in your library.",
-	"dashboard.recommendations.detail.why_browse_matched": "Overlaps your taste profile: {details}.",
-	"dashboard.recommendations.detail.why_browse_profile": "Picked from popular titles matching your top genres ({genres}) and tags ({tags}) from your AniList-linked reads.",
-	"dashboard.recommendations.detail.score":              "AniList scores (mean / average)",
-	"dashboard.recommendations.detail.loading":            "Loading details…",
-	"dashboard.recommendations.detail.error":              "Could not load this title. Please try again.",
-	"dashboard.recommendations.detail.add":                "Add to my library",
-	"dashboard.recommendations.detail.genres_label":       "Genres",
-	"dashboard.recommendations.detail.tags_label":         "Tags",
-	"dashboard.recommendations.detail.open":               "Details and synopsis",
-	"dashboard.view.grid":                                 "Grid view",
-	"dashboard.view.list":                                 "List view",
-	"import.added":                                        "Added",
-	"import.updated":                                      "Updated",
-	"import.skipped_dup":                                  "Duplicates skipped",
-	"import.skipped_invalid":                              "Invalid rows",
-	"import.error.generic":                                "Import failed. Check the file format.",
-	"import.line_prefix":                                  "Line",
-	"profile.import.duplicate_mode":                       "If title already exists",
-	"profile.import.duplicate_skip":                       "Skip",
-	"profile.import.duplicate_update":                     "Update",
-
-	// Work types
-	"type.manga":       "Manga",
-	"type.novel":       "Novel",
-	"type.webtoon":     "Webtoon",
-	"type.manhwa":      "Manhwa",
-	"type.manhua":      "Manhua",
-	"type.light_novel": "Light Novel",
-	"type.comic":       "Comic",
-	"type.other":       "Other",
-
-	// Work status
-	"status.reading":      "Reading",
-	"status.completed":    "Completed",
-	"status.on_hold":      "On Hold",
-	"status.dropped":      "Dropped",
-	"status.plan_to_read": "Plan to Read",
-
-	// Add/Edit work
-	"work.add.title":              "Add a work",
-	"work.edit.title":             "Edit work",
-	"work.form.title":             "Title",
-	"work.form.type":              "Type",
-	"work.form.status":            "Status",
-	"work.form.chapter":           "Current chapter",
-	"work.form.volume":            "Current volume",
-	"work.form.image":             "Cover image",
-	"work.form.image.current":     "Current image",
-	"work.form.image.change":      "Change image",
-	"work.form.adult":             "18+ content",
-	"work.form.rating":            "Rating",
-	"work.form.notes":             "Personal notes",
-	"work.form.notes.placeholder": "Your impressions, comments...",
-	"work.form.submit.add":        "Add",
-	"work.form.submit.edit":       "Save",
-	"work.form.cancel":            "Cancel",
-	"work.form.delete":            "Delete",
-	"work.section.info":           "Main information",
-	"work.section.media":          "Media",
-	"work.section.rating":         "Rating",
-
-	// Profile
-	"profile.title":                       "My Profile",
-	"profile.username":                    "Username",
-	"profile.joined":                      "Member since",
-	"profile.works":                       "works",
-	"profile.avatar":                      "Avatar",
-	"profile.avatar.change":               "Change avatar",
-	"profile.visibility":                  "Profile visibility",
-	"profile.public":                      "Public",
-	"profile.private":                     "Private",
-	"profile.public.desc":                 "Other users can see your library",
-	"profile.private.desc":                "Your library is hidden from other users",
-	"profile.password":                    "Change password",
-	"profile.password.current":            "Current password",
-	"profile.password.new":                "New password",
-	"profile.password.confirm":            "Confirm",
-	"profile.save":                        "Save",
-	"profile.section.general":             "General",
-	"profile.section.avatar":              "Avatar",
-	"profile.section.visibility":          "Visibility",
-	"profile.section.security":            "Security",
-	"profile.tab.identity":                "Identity",
-	"profile.tab.privacy":                 "Privacy",
-	"profile.tab.security":                "Security",
-	"profile.tab.accessibility":           "Accessibility",
-	"profile.open_tools":                  "Open tools",
-	"profile.delete.title":                "Delete my profile",
-	"profile.delete.desc":                 "Permanently deletes your account, works, and all associated information.",
-	"profile.delete.confirm_label":        "Confirmation",
-	"profile.delete.confirm_hint":         "Type SUPPRIMER to confirm.",
-	"profile.delete.action":               "Delete my profile",
-	"profile.accessibility.title":         "Accessibility & comfort",
-	"profile.accessibility.text_size":     "Text size",
-	"profile.accessibility.text_size.sm":  "Small",
-	"profile.accessibility.text_size.md":  "Default",
-	"profile.accessibility.text_size.lg":  "Large",
-	"profile.accessibility.motion":        "Animations",
-	"profile.accessibility.motion.auto":   "Automatic (match system)",
-	"profile.accessibility.motion.reduce": "Reduced",
-	"profile.accessibility.motion.full":   "Full animations",
-	"profile.accessibility.contrast":      "Increased contrast",
-	"profile.accessibility.scrollbars":    "Show scrollbars",
-	"profile.accessibility.hint":          "These settings are stored in this browser only.",
-
-	"tools.title":               "Tools",
-	"tools.subtitle":            "Import, export, and mobile app setup.",
-	"tools.export.title":        "Export your readings",
-	"tools.export.subtitle":     "Download your data for backup or migration.",
-	"tools.export.csv":          "Download CSV",
-	"tools.export.json":         "Download JSON",
-	"tools.import.title":        "Import readings",
-	"tools.import.subtitle":     "Import a BookStorage, MyAnimeList, or AniList file.",
-	"tools.import.action":       "Import",
-	"tools.import.format_title": "Reference CSV format",
-	"tools.pwa.title":           "Mobile app (PWA)",
-	"tools.pwa.subtitle":        "Install BookStorage on your home screen.",
-	"tools.pwa.ios.title":       "iPhone / iPad (Safari)",
-	"tools.pwa.ios.step1":       "Open BookStorage in Safari.",
-	"tools.pwa.ios.step2":       "Tap the share icon.",
-	"tools.pwa.ios.step3":       "Choose Add to Home Screen.",
-	"tools.pwa.ios.step4":       "Confirm with Add.",
-	"tools.pwa.android.title":   "Android (Chrome)",
-	"tools.pwa.android.step1":   "Open BookStorage in Chrome.",
-	"tools.pwa.android.step2":   "Open the browser menu.",
-	"tools.pwa.android.step3":   "Choose Install app.",
-	"tools.pwa.android.step4":   "Confirm the installation.",
-
-	"a11y.theme_toggle": "Toggle light and dark theme",
-	"a11y.nav_settings": "Language and theme",
-
-	"dashboard.shortcut.new_work":    "New work (N or +)",
-	"dashboard.shortcut.help":        "Show this help (? or ,)",
-	"dashboard.shortcut.dashboard":   "Dashboard (G)",
-	"dashboard.shortcut.view_toggle": "Toggle grid / list (V)",
-	"dashboard.shortcut.theme":       "Light or dark theme (T)",
-
-	// Users / Readers
-	"users.title":   "Readers",
-	"users.search":  "Search for a reader...",
-	"users.empty":   "No readers found",
-	"users.works":   "works",
-	"users.view":    "View library",
-	"users.private": "Private profile",
-
-	// User detail
-	"user.library":        "Library of",
-	"user.empty":          "This library is empty",
-	"user.import":         "Import",
-	"user.import.success": "Work imported successfully!",
-
-	// Stats
-	"stats.title":          "Statistics",
-	"stats.total_works":    "Total works",
-	"stats.total_chapters": "Chapters read",
-	"stats.total_volumes":  "Volumes read",
-	"stats.avg_rating":     "Average rating",
-	"stats.by_type":        "By type",
-	"stats.by_status":      "By status",
-	"stats.top_rated":      "Top rated",
-	"stats.recent":         "Recently added",
-
-	// Admin
-	"admin.title":            "Administration",
-	"admin.accounts":         "Account management",
-	"admin.monitoring":       "Monitoring",
-	"admin.update":           "Update",
-	"admin.monitoring.title": "Monitoring",
-	"admin.update.title":     "Update",
-	"admin.pending":          "Pending",
-	"admin.approved":         "Approved",
-	"admin.username":         "Username",
-	"admin.status":           "Status",
-	"admin.role":             "Role",
-	"admin.actions":          "Actions",
-	"admin.approve":          "Approve",
-	"admin.delete":           "Delete",
-	"admin.promote":          "Promote to admin",
-	"admin.demote":           "Demote",
-	"admin.role.admin":       "Admin",
-	"admin.role.user":        "User",
-	"admin.role.owner":       "Owner",
-	"admin.no_action":        "No action",
-	"admin.restricted":       "Restricted",
-
-	// Monitoring
-	"monitoring.uptime":         "Uptime",
-	"monitoring.requests":       "Requests",
-	"monitoring.requests_total": "requests total",
-	"monitoring.latency":        "Latency",
-	"monitoring.latency.p95":    "P95",
-	"monitoring.latency.avg":    "Average",
-	"monitoring.latency.max":    "Max",
-	"monitoring.runtime":        "Runtime",
-	"monitoring.goroutines":     "Goroutines",
-	"monitoring.heap":           "Heap",
-	"monitoring.gc":             "GC",
-
-	// Admin update
-	"update.current_version": "Current version",
-	"update.latest":          "Update to latest version",
-	"update.latest_major":    "Update to latest major version",
-	"update.confirm":         "Confirm update? The app will restart.",
-	"update.confirm.title":   "Update",
-	"update.confirm.ok":      "Update",
-	"update.confirm.cancel":  "Cancel",
-	"update.in_progress":     "Update in progress...",
-	"update.success":         "Update started.",
-	"update.already":         "Already up to date.",
-	"update.error":           "Update failed.",
-
-	// Common
-	"common.save":    "Save",
-	"common.cancel":  "Cancel",
-	"common.delete":  "Delete",
-	"common.edit":    "Edit",
-	"common.back":    "Back",
-	"common.loading": "Loading...",
-	"common.error":   "Error",
-	"common.success": "Success",
-	"common.confirm": "Confirm",
-	"common.yes":     "Yes",
-	"common.no":      "No",
+// TranslateStatus converts a DB-stored status (French) to the target language
+// using the translations map.
+func TranslateStatus(status string, t Translations) string {
+	if key, ok := statusKeyMap[status]; ok {
+		if val, ok := t[key]; ok {
+			return val
+		}
+	}
+	return status
 }

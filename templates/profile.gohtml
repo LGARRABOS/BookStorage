@@ -97,13 +97,13 @@
                 <header class="section-header">
                     <h1 class="page-title">👤 {{ t .T "profile.title" }}</h1>
                 </header>
-                {{ if .LogoutAllDone }}<div class="notice">{{ if eq .Lang "fr" }}Déconnexion globale effectuée.{{ else }}Logged out everywhere.{{ end }}</div>{{ end }}
+                {{ if .LogoutAllDone }}<div class="notice">{{ t .T "profile.logout_all.done" }}</div>{{ end }}
 
                 <div class="quick-stats">
                     <div class="stat-card"><div class="stat-icon purple">📚</div><div><div class="stat-value">{{ .TotalWorks }}</div><div class="stat-label">{{ t .T "dashboard.stats.works" }}</div></div></div>
                     <div class="stat-card"><div class="stat-icon orange">📖</div><div><div class="stat-value">{{ .TotalChapters }}</div><div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div></div></div>
-                    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">{{ .CompletedCount }}</div><div class="stat-label">{{ if eq .Lang "fr" }}Terminés{{ else }}Completed{{ end }}</div></div></div>
-                    <div class="stat-card"><div class="stat-icon blue">▶️</div><div><div class="stat-value">{{ .ReadingCount }}</div><div class="stat-label">{{ if eq .Lang "fr" }}En cours{{ else }}Reading{{ end }}</div></div></div>
+                    <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">{{ .CompletedCount }}</div><div class="stat-label">{{ t .T "profile.stats.completed" }}</div></div></div>
+                    <div class="stat-card"><div class="stat-icon blue">▶️</div><div><div class="stat-value">{{ .ReadingCount }}</div><div class="stat-label">{{ t .T "profile.stats.reading" }}</div></div></div>
                 </div>
 
                 <div class="profile-layout">
@@ -118,7 +118,7 @@
                         <div class="profile-name">{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ else }}{{ .User.Username }}{{ end }}</div>
                         <div class="profile-username">@{{ .User.Username }}</div>
                         {{ if .User.Email.Valid }}<div class="profile-email">{{ .User.Email.String }}</div>{{ end }}
-                        <div class="profile-bio {{ if not .User.Bio.Valid }}empty{{ end }}">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ else }}{{ if eq .Lang "fr" }}Aucune biographie{{ else }}No biography{{ end }}{{ end }}</div>
+                        <div class="profile-bio {{ if not .User.Bio.Valid }}empty{{ end }}">{{ if .User.Bio.Valid }}{{ .User.Bio.String }}{{ else }}{{ t .T "profile.bio.empty" }}{{ end }}</div>
                         <div class="visibility-badge {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}public{{ else }}private{{ end }}{{ else }}public{{ end }}">
                             {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}🌍 {{ t .T "profile.public" }}{{ else }}🔒 {{ t .T "profile.private" }}{{ end }}{{ else }}🌍 {{ t .T "profile.public" }}{{ end }}
                         </div>
@@ -138,14 +138,14 @@
                         <form method="POST" enctype="multipart/form-data">
                             <section class="tab-panel active" id="panel-identity">
                                 <h2 class="panel-title">{{ t .T "profile.section.general" }}</h2>
-                                <p class="panel-subtitle">{{ if eq .Lang "fr" }}Identité, avatar et infos de contact.{{ else }}Identity, avatar, and contact information.{{ end }}</p>
+                                <p class="panel-subtitle">{{ t .T "profile.tab.identity.subtitle" }}</p>
                                 <div class="form-row">
                                     <div class="form-group">
                                         <label for="username">{{ t .T "profile.username" }}</label>
                                         <input id="username" type="text" name="username" value="{{ .User.Username }}" required>
                                     </div>
                                     <div class="form-group">
-                                        <label for="display_name">{{ if eq .Lang "fr" }}Nom affiché{{ else }}Display name{{ end }}</label>
+                                        <label for="display_name">{{ t .T "profile.display_name" }}</label>
                                         <input id="display_name" type="text" name="display_name" value="{{ if .User.DisplayName.Valid }}{{ .User.DisplayName.String }}{{ end }}">
                                     </div>
                                 </div>
@@ -165,7 +165,7 @@
 
                             <section class="tab-panel" id="panel-privacy">
                                 <h2 class="panel-title">{{ t .T "profile.section.visibility" }}</h2>
-                                <p class="panel-subtitle">{{ if eq .Lang "fr" }}Contrôlez qui peut voir votre bibliothèque.{{ else }}Control who can view your library.{{ end }}</p>
+                                <p class="panel-subtitle">{{ t .T "profile.tab.privacy.subtitle" }}</p>
                                 <div class="visibility-options">
                                     <div class="visibility-option">
                                         <input type="radio" id="public" name="is_public" value="1" {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}checked{{ end }}{{ else }}checked{{ end }}>
@@ -180,7 +180,7 @@
 
                             <section class="tab-panel" id="panel-security">
                                 <h2 class="panel-title">{{ t .T "profile.section.security" }}</h2>
-                                <p class="panel-subtitle">{{ if eq .Lang "fr" }}Modifiez votre mot de passe en toute sécurité.{{ else }}Change your password securely.{{ end }}</p>
+                                <p class="panel-subtitle">{{ t .T "profile.tab.security.subtitle" }}</p>
                                 <div class="form-group">
                                     <label for="current_password">{{ t .T "profile.password.current" }}</label>
                                     <input id="current_password" type="password" name="current_password">
@@ -197,20 +197,20 @@
                                 </div>
 
                                 <div class="sessions-box">
-                                    <h3>{{ if eq .Lang "fr" }}Sessions actives{{ else }}Active sessions{{ end }}</h3>
-                                    <p>{{ if eq .Lang "fr" }}Liste des appareils connectés (approx. IP + user-agent).{{ else }}Devices currently signed in (approx. IP + user-agent).{{ end }}</p>
+                                    <h3>{{ t .T "profile.sessions.title" }}</h3>
+                                    <p>{{ t .T "profile.sessions.desc" }}</p>
                                     <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
-                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm('{{ if eq .Lang "fr" }}Se déconnecter partout ?{{ else }}Log out everywhere?{{ end }}');">
-                                            <button type="submit" class="btn btn-secondary">{{ if eq .Lang "fr" }}Se déconnecter partout{{ else }}Log out everywhere{{ end }}</button>
+                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm(PROFILE_I18N.logoutAllConfirm);">
+                                            <button type="submit" class="btn btn-secondary">{{ t .T "profile.sessions.logout_all" }}</button>
                                         </form>
                                     </div>
                                     <table class="sessions-table">
                                         <thead>
                                             <tr>
-                                                <th>{{ if eq .Lang "fr" }}Appareil{{ else }}Device{{ end }}</th>
+                                                <th>{{ t .T "profile.sessions.device" }}</th>
                                                 <th>IP</th>
-                                                <th>{{ if eq .Lang "fr" }}Dernier accès{{ else }}Last seen{{ end }}</th>
-                                                <th>{{ if eq .Lang "fr" }}Expire{{ else }}Expires{{ end }}</th>
+                                                <th>{{ t .T "profile.sessions.last_seen" }}</th>
+                                                <th>{{ t .T "profile.sessions.expires" }}</th>
                                             </tr>
                                         </thead>
                                         <tbody>
@@ -224,7 +224,7 @@
                                                 <td><code>{{ .ExpiresAt }}</code></td>
                                             </tr>
                                             {{ else }}
-                                            <tr><td colspan="4" style="color:var(--text-muted)">{{ if eq .Lang "fr" }}Aucune session active.{{ else }}No active sessions.{{ end }}</td></tr>
+                                            <tr><td colspan="4" style="color:var(--text-muted)">{{ t .T "profile.sessions.empty" }}</td></tr>
                                             {{ end }}
                                         </tbody>
                                     </table>
@@ -291,22 +291,20 @@
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
     <script>
+    const PROFILE_I18N = {
+        logoutAllConfirm: {{ jsstr (t .T "profile.sessions.logout_all.confirm") }},
+        deleteProfileConfirm: {{ jsstr (t .T "profile.delete.confirm_js") }}
+    };
     document.addEventListener('DOMContentLoaded', function() {
-        {{ if eq .Lang "fr" }}
         window.confirmDeleteProfile = function() {
-            return confirm("Cette action est irreversible. Voulez-vous vraiment supprimer votre profil et toutes les donnees associees ?");
+            return confirm(PROFILE_I18N.deleteProfileConfirm);
         };
-        {{ else }}
-        window.confirmDeleteProfile = function() {
-            return confirm("This action is irreversible. Do you really want to delete your profile and all associated data?");
-        };
-        {{ end }}
 
         const buttons = document.querySelectorAll('#profile-tabs .tabs-btn');
         const panels = {

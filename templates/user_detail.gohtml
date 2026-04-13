@@ -59,7 +59,7 @@
                                 <td>{{ .Title }}</td>
                                 <td>{{ .Chapter }}</td>
                                 <td>{{ if .Rating }}<span class="star-rating">{{ $rating := .Rating }}{{ range $i := seq 5 }}{{ if le $i $rating }}<span class="star filled">★</span>{{ else }}<span class="star">★</span>{{ end }}{{ end }}</span>{{ else }}—{{ end }}</td>
-                                <td>{{ if .Status.Valid }}{{ translateStatus .Status.String $.Lang }}{{ else }}—{{ end }}</td>
+                                <td>{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</td>
                                 <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}</td>
                                 {{ if $.CanImport }}
                                 <td>
@@ -80,7 +80,7 @@
         </div>
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}

@@ -51,7 +51,7 @@
                             <tr>
                                 <th>ID</th>
                                 <th>{{ t .T "admin.username" }}</th>
-                                <th>{{ if eq .Lang "fr" }}Validé{{ else }}Validated{{ end }}</th>
+                                <th>{{ t .T "admin.validated" }}</th>
                                 <th>Admin</th>
                                 <th>Superadmin</th>
                                 <th>{{ t .T "admin.actions" }}</th>
@@ -62,14 +62,14 @@
                             <tr>
                                 <td>{{ .ID }}</td>
                                 <td>{{ .Username }}</td>
-                                <td>{{ if eq .Validated 1 }}<span class="badge success">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}<span class="badge warning">{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}</span>{{ end }}</td>
-                                <td>{{ if eq .IsAdmin 1 }}<span class="badge success">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}{{ end }}</td>
-                                <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">{{ if eq $.Lang "fr" }}Oui{{ else }}Yes{{ end }}</span>{{ else }}{{ if eq $.Lang "fr" }}Non{{ else }}No{{ end }}{{ end }}</td>
+                                <td>{{ if eq .Validated 1 }}<span class="badge success">{{ t $.T "common.yes" }}</span>{{ else }}<span class="badge warning">{{ t $.T "common.no" }}</span>{{ end }}</td>
+                                <td>{{ if eq .IsAdmin 1 }}<span class="badge success">{{ t $.T "common.yes" }}</span>{{ else }}{{ t $.T "common.no" }}{{ end }}</td>
+                                <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">{{ t $.T "common.yes" }}</span>{{ else }}{{ t $.T "common.no" }}{{ end }}</td>
                                 <td>
                                     <div class="action-buttons">
                                         {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">{{ t $.T "admin.approve" }}</a>{{ end }}
                                         {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">{{ t $.T "admin.promote" }}</a>{{ end }}
-                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger js-confirm-delete" href="/admin/delete_account/{{ .ID }}" data-href="/admin/delete_account/{{ .ID }}" data-confirm="{{ if eq $.Lang "fr" }}Supprimer cet utilisateur ?{{ else }}Delete this user?{{ end }}">{{ t $.T "admin.delete" }}</a>{{ end }}
+                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger js-confirm-delete" href="/admin/delete_account/{{ .ID }}" data-href="/admin/delete_account/{{ .ID }}" data-confirm="{{ t $.T "admin.delete.confirm" }}">{{ t $.T "admin.delete" }}</a>{{ end }}
                                     </div>
                                 </td>
                             </tr>
@@ -78,13 +78,13 @@
                     </table>
                 </div>
                 {{ else }}
-                <p>{{ if eq .Lang "fr" }}Aucun utilisateur.{{ else }}No users.{{ end }}</p>
+                <p>{{ t .T "admin.empty" }}</p>
                 {{ end }}
             </section>
         </div>
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
@@ -95,7 +95,7 @@
                 if (del) {
                     e.preventDefault();
                     const href = del.getAttribute('data-href') || del.getAttribute('href');
-                    const msg = del.dataset.confirm || '{{ if eq .Lang "fr" }}Confirmer ?{{ else }}Confirm?{{ end }}';
+                    const msg = del.dataset.confirm || '{{ t .T "common.confirm.prompt" }}';
                     showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
                 }
             });

@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#4f46e5">
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
-    <title>{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal Notice{{ end }} - {{ .SiteName }}</title>
+    <title>{{ t .T "legal.title" }} - {{ .SiteName }}</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
@@ -41,20 +41,20 @@
 
     <main class="page-body">
         <div class="legal-container">
-            <a href="/" class="back-link">← {{ if eq .Lang "fr" }}Retour à l'accueil{{ else }}Back to home{{ end }}</a>
+            <a href="/" class="back-link">← {{ t .T "legal.back" }}</a>
             
             <div class="legal-header">
-                <h1>📜 {{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal Notice{{ end }}</h1>
-                <p>{{ if eq .Lang "fr" }}Informations légales et politique de confidentialité{{ else }}Legal information and privacy policy{{ end }}</p>
+                <h1>📜 {{ t .T "legal.title" }}</h1>
+                <p>{{ t .T "legal.subtitle" }}</p>
             </div>
 
             {{ if or .Legal.OwnerName .Legal.OwnerEmail .Legal.OwnerAddress }}
             <section class="legal-section">
-                <h2>👤 {{ if eq .Lang "fr" }}Éditeur du site{{ else }}Site Publisher{{ end }}</h2>
+                <h2>👤 {{ t .T "legal.publisher" }}</h2>
                 <div class="legal-info">
                     {{ if .Legal.OwnerName }}
                     <div class="legal-info-row">
-                        <span class="label">{{ if eq .Lang "fr" }}Responsable{{ else }}Owner{{ end }}</span>
+                        <span class="label">{{ t .T "legal.owner" }}</span>
                         <span class="value">{{ .Legal.OwnerName }}</span>
                     </div>
                     {{ end }}
@@ -66,7 +66,7 @@
                     {{ end }}
                     {{ if .Legal.OwnerAddress }}
                     <div class="legal-info-row">
-                        <span class="label">{{ if eq .Lang "fr" }}Adresse{{ else }}Address{{ end }}</span>
+                        <span class="label">{{ t .T "legal.address" }}</span>
                         <span class="value">{{ .Legal.OwnerAddress }}</span>
                     </div>
                     {{ end }}
@@ -76,17 +76,17 @@
 
             {{ if or .Legal.HostingProvider .Legal.HostingAddress }}
             <section class="legal-section">
-                <h2>🖥️ {{ if eq .Lang "fr" }}Hébergement{{ else }}Hosting{{ end }}</h2>
+                <h2>🖥️ {{ t .T "legal.hosting" }}</h2>
                 <div class="legal-info">
                     {{ if .Legal.HostingProvider }}
                     <div class="legal-info-row">
-                        <span class="label">{{ if eq .Lang "fr" }}Hébergeur{{ else }}Provider{{ end }}</span>
+                        <span class="label">{{ t .T "legal.provider" }}</span>
                         <span class="value">{{ .Legal.HostingProvider }}</span>
                     </div>
                     {{ end }}
                     {{ if .Legal.HostingAddress }}
                     <div class="legal-info-row">
-                        <span class="label">{{ if eq .Lang "fr" }}Adresse{{ else }}Address{{ end }}</span>
+                        <span class="label">{{ t .T "legal.address" }}</span>
                         <span class="value">{{ .Legal.HostingAddress }}</span>
                     </div>
                     {{ end }}
@@ -96,12 +96,12 @@
 
             {{ if or .Legal.DataUsage .Legal.DataRetention }}
             <section class="legal-section">
-                <h2>🔒 {{ if eq .Lang "fr" }}Données personnelles{{ else }}Personal Data{{ end }}</h2>
+                <h2>🔒 {{ t .T "legal.data" }}</h2>
                 {{ if .Legal.DataUsage }}
-                <p><strong>{{ if eq .Lang "fr" }}Utilisation des données{{ else }}Data Usage{{ end }}:</strong> {{ .Legal.DataUsage }}</p>
+                <p><strong>{{ t .T "legal.data_usage" }}:</strong> {{ .Legal.DataUsage }}</p>
                 {{ end }}
                 {{ if .Legal.DataRetention }}
-                <p><strong>{{ if eq .Lang "fr" }}Conservation{{ else }}Retention{{ end }}:</strong> {{ .Legal.DataRetention }}</p>
+                <p><strong>{{ t .T "legal.data_retention" }}:</strong> {{ .Legal.DataRetention }}</p>
                 {{ end }}
             </section>
             {{ end }}
@@ -115,7 +115,7 @@
 
             <section class="legal-section">
                 <h2>🍪 Cookies</h2>
-                <p>{{ if eq .Lang "fr" }}Ce site utilise uniquement des cookies techniques essentiels au fonctionnement du service (session utilisateur, préférences de langue et de thème). Aucun cookie publicitaire ou de suivi n'est utilisé.{{ else }}This site only uses essential technical cookies for the operation of the service (user session, language and theme preferences). No advertising or tracking cookies are used.{{ end }}</p>
+                <p>{{ t .T "legal.cookies" }}</p>
             </section>
         </div>
     </main>
