@@ -315,6 +315,18 @@ func (a *App) baseData(r *http.Request) map[string]any {
 	}
 }
 
+// MobileRedirectToDashboard redirects to /dashboard when in mobile mode.
+// Used for pages that are not part of the simplified mobile experience.
+func (a *App) MobileRedirectToDashboard(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if a.resolveViewMode(w, r) == "mobile" {
+			http.Redirect(w, r, "/dashboard", http.StatusFound)
+			return
+		}
+		next(w, r)
+	}
+}
+
 // RequireWebOnly blocks requests when resolved view mode is mobile.
 // This is used for admin pages that must not be available in the mobile web UI.
 func (a *App) RequireWebOnly(next http.HandlerFunc) http.HandlerFunc {

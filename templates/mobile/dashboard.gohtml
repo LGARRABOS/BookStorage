@@ -20,7 +20,6 @@
             <section class="mobile-panel">
                 <div class="dashboard-mobile-header">
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
-                    <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
                 </div>
 
                 {{ template "import_notice" . }}
@@ -53,13 +52,17 @@
                     <div class="work-mobile-top">
                         <div>
                             <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer" title="{{ t $.T "dashboard.reading_link" }}" aria-label="{{ t $.T "dashboard.reading_link" }}">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
-                            <div class="work-mobile-sub">{{ t $.T "dashboard.chapter" }} <strong>{{ .Chapter }}</strong></div>
                         </div>
                         <div class="work-mobile-badges">
                             {{ if .Status.Valid }}<span class="badge">{{ translateStatus .Status.String $.Lang }}</span>{{ end }}
                             {{ if .ReadingType.Valid }}<span class="badge">{{ .ReadingType.String }}</span>{{ end }}
                             {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="badge">18+</span>{{ end }}
                         </div>
+                    </div>
+                    <div class="work-mobile-chapter-controls">
+                        <button type="button" class="btn btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
+                        <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
+                        <button type="button" class="btn btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
                     </div>
                     {{ if gt .Rating 0 }}
                     <div class="work-mobile-sub">
@@ -122,6 +125,27 @@
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
       if (adult) adult.addEventListener("change", applyAdultFilter);
+    })();
+
+    (function () {
+      document.addEventListener("click", function (e) {
+        var btn = e.target.closest(".btn-chapter-inc, .btn-chapter-dec");
+        if (!btn) return;
+        e.preventDefault();
+        var id = btn.getAttribute("data-work-id");
+        var isInc = btn.classList.contains("btn-chapter-inc");
+        var url = "/api/" + (isInc ? "increment" : "decrement") + "/" + id;
+        var counter = document.getElementById("chapter-count-" + id);
+        btn.disabled = true;
+        fetch(url, { method: "POST", credentials: "same-origin" })
+          .then(function (r) {
+            if (!r.ok) throw new Error(r.status);
+            var cur = parseInt(counter.textContent, 10) || 0;
+            counter.textContent = isInc ? cur + 1 : Math.max(0, cur - 1);
+          })
+          .catch(function () { counter.classList.add("chapter-error"); })
+          .finally(function () { btn.disabled = false; });
+      });
     })();
     </script>
 </body>
