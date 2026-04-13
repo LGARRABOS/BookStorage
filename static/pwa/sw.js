@@ -1,4 +1,5 @@
-const CACHE_NAME = 'bookstorage-v3';
+// build: 20260413-1
+const CACHE_NAME = 'bookstorage-v5';
 const STATIC_ASSETS = [
   '/static/css/base.css',
   '/static/pwa/manifest.json'
