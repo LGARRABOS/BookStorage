@@ -8,9 +8,9 @@
     <link rel="manifest" href="/static/pwa/manifest.json">
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
-    <link rel="stylesheet" href="/static/css/base.css?v=4">
-    <link rel="stylesheet" href="/static/css/mobile.css?v=4">
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=4">
+    <link rel="stylesheet" href="/static/css/base.css?v=5">
+    <link rel="stylesheet" href="/static/css/mobile.css?v=5">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=5">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
@@ -92,6 +92,11 @@
     {{ template "mobile_bottom_nav" . }}
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
+    <script>
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('/static/pwa/sw.js').catch(function(){});
+    }
+    </script>
     <script>
     (function () {
       var search = document.getElementById("mobile-search");
