@@ -2,12 +2,16 @@
 <header class="topbar topbar-mobile">
     <div class="container nav-layout nav-layout-mobile">
         <a class="brand" href="/dashboard">📚 BookStorage</a>
-        <nav class="nav-links nav-links-mobile">
+        <div class="mobile-topbar-right">
+            <div class="mobile-topbar-search">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
+            </div>
             <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
             <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                 <span id="theme-icon">🌙</span>
             </button>
-        </nav>
+        </div>
     </div>
 </header>
 {{ end }}
