@@ -7,9 +7,18 @@
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off">
             </div>
-            <select class="lang-select" onchange="window.location.href='/lang/'+this.value" aria-label="{{ t .T "a11y.nav_settings" }}">{{ range .Languages }}
-                <option value="{{ .Code }}" {{ if eq .Code $.Lang }}selected{{ end }}>{{ upper .Code }}</option>{{ end }}
-            </select>
+            <div class="lang-burger" data-lang-burger>
+                <button type="button" class="lang-burger-toggle" data-lang-burger-toggle aria-expanded="false" aria-haspopup="true" aria-label="{{ t .T "a11y.nav_settings" }}">
+                    {{ range .Languages }}{{ if eq .Code $.Lang }}<span class="lang-burger-flag">{{ .Flag }}</span>{{ end }}{{ end }}
+                </button>
+                <div class="lang-burger-panel" data-lang-burger-panel hidden>
+                    {{ range .Languages }}<a class="lang-burger-item{{ if eq .Code $.Lang }} lang-burger-item--active{{ end }}" href="/lang/{{ .Code }}">
+                        <span class="lang-burger-item-flag">{{ .Flag }}</span>
+                        <span class="lang-burger-item-name">{{ .Name }}</span>
+                    </a>
+                    {{ end }}
+                </div>
+            </div>
             <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                 <span id="theme-icon">🌙</span>
             </button>

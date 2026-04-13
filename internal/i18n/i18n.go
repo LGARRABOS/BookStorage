@@ -17,12 +17,23 @@ type Translations map[string]string
 type LangInfo struct {
 	Code string
 	Name string
+	Flag string
+}
+
+// langFlags maps language codes to country flag emojis.
+var langFlags = map[string]string{
+	"de": "🇩🇪",
+	"en": "🇬🇧",
+	"es": "🇪🇸",
+	"fr": "🇫🇷",
+	"it": "🇮🇹",
+	"pt": "🇵🇹",
 }
 
 const (
 	LangFR      = "fr"
 	LangEN      = "en"
-	DefaultLang = LangFR
+	DefaultLang = LangEN
 )
 
 var (
@@ -76,7 +87,8 @@ func Load() {
 		delete(t, "_lang.name")
 
 		loaded[code] = t
-		langs = append(langs, LangInfo{Code: code, Name: name})
+		flag := langFlags[code]
+		langs = append(langs, LangInfo{Code: code, Name: name, Flag: flag})
 	}
 
 	sort.Slice(langs, func(i, j int) bool {
