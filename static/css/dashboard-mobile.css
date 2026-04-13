@@ -1,3 +1,10 @@
+/* SVG safety net */
+.mobile-dashboard-page svg,
+.mobile-bottom-nav svg {
+  max-width: 100%;
+  height: auto;
+}
+
 /* --- Search bar --- */
 .mobile-search-bar {
   position: relative;
