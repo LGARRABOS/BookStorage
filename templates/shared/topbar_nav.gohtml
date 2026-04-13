@@ -27,9 +27,7 @@
 </div>
 {{end}}
 
-{{define "nav_account_cluster"}}
-<div class="nav-topbar-cluster">
-    <a href="/profile" class="nav-cluster-link">{{ t .T "nav.profile" }}</a>
-    <a href="/logout" class="nav-cluster-link nav-cluster-link--logout">{{ t .T "nav.logout" }}</a>
-</div>
+{{define "nav_account_links"}}
+<a href="/profile">{{ t .T "nav.profile" }}</a>
+<a href="/logout">{{ t .T "nav.logout" }}</a>
 {{end}}
