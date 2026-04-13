@@ -82,7 +82,7 @@
                     </div>
                     <div class="stat-box">
                         <div class="stat-number">{{ .RatedCount }}</div>
-                        <div class="stat-label">{{ if eq .Lang "fr" }}Notées{{ else }}Rated{{ end }}</div>
+                        <div class="stat-label">{{ t .T "stats.rated" }}</div>
                     </div>
                 </div>
 
@@ -94,13 +94,13 @@
                             {{ $total := .TotalWorks }}
                             {{ range .ByStatus }}
                             <div class="stat-bar">
-                                <span class="stat-bar-label">{{ translateStatus .Status $.Lang }}</span>
+                                <span class="stat-bar-label">{{ translateStatus .Status $.T }}</span>
                                 <div class="stat-bar-track"><div class="stat-bar-fill" style="width: {{ if $total }}{{ printf "%.0f" (mulf (divf .Count $total) 100) }}%{{ else }}0%{{ end }};"></div></div>
                                 <span class="stat-bar-count">{{ .Count }}</span>
                             </div>
                             {{ end }}
                             {{ else }}
-                            <div class="empty-stat">{{ if eq $.Lang "fr" }}Aucune donnée{{ else }}No data{{ end }}</div>
+                            <div class="empty-stat">{{ t $.T "stats.no_data" }}</div>
                             {{ end }}
                         </div>
                     </section>
@@ -118,7 +118,7 @@
                             </div>
                             {{ end }}
                             {{ else }}
-                            <div class="empty-stat">{{ if eq $.Lang "fr" }}Aucune donnée{{ else }}No data{{ end }}</div>
+                            <div class="empty-stat">{{ t $.T "stats.no_data" }}</div>
                             {{ end }}
                         </div>
                     </section>
@@ -144,7 +144,7 @@
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}

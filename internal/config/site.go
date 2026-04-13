@@ -13,7 +13,7 @@ type SiteConfig struct {
 	Legal    LegalConfig `json:"legal"`
 }
 
-// LegalConfig holds legal/mentions légales information
+// LegalConfig holds legal notice information
 type LegalConfig struct {
 	OwnerName       string          `json:"owner_name"`
 	OwnerEmail      string          `json:"owner_email"`

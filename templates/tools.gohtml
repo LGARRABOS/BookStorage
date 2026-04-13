@@ -58,10 +58,10 @@
                     </article>
 
                     <article class="tool-card">
-                        <h2>{{ if eq .Lang "fr" }}Qualité des données{{ else }}Data quality{{ end }}</h2>
-                        <p>{{ if eq .Lang "fr" }}Détecter et fusionner les doublons dans ta bibliothèque.{{ else }}Detect and merge duplicates in your library.{{ end }}</p>
+                        <h2>{{ t .T "tools.data_quality.title" }}</h2>
+                        <p>{{ t .T "tools.data_quality.desc" }}</p>
                         <div class="tool-actions">
-                            <a href="/tools/duplicates" class="btn btn-secondary">{{ if eq .Lang "fr" }}Gérer les doublons{{ else }}Manage duplicates{{ end }}</a>
+                            <a href="/tools/duplicates" class="btn btn-secondary">{{ t .T "tools.data_quality.action" }}</a>
                         </div>
                     </article>
 
@@ -120,7 +120,7 @@
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}

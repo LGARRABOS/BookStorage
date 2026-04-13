@@ -40,11 +40,11 @@
                 </header>
                 <form method="GET" class="form-layout" style="margin-bottom: 1rem;">
                     <div class="form-field">
-                        <label for="q">{{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</label>
+                        <label for="q">{{ t .T "common.search" }}</label>
                         <input id="q" type="text" name="q" value="{{ .Query }}" placeholder="{{ t .T "users.search" }}">
                     </div>
                     <div class="form-actions">
-                        <button type="submit" class="btn btn-primary">{{ if eq .Lang "fr" }}Rechercher{{ else }}Search{{ end }}</button>
+                        <button type="submit" class="btn btn-primary">{{ t .T "common.search" }}</button>
                     </div>
                 </form>
                 {{ if .Users }}
@@ -65,7 +65,7 @@
         </div>
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}

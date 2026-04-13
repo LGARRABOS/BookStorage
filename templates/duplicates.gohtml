@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#4f46e5">
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
-    <title>{{ if eq .Lang "fr" }}Doublons{{ else }}Duplicates{{ end }} - BookStorage</title>
+    <title>{{ t .T "duplicates.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
@@ -44,24 +44,24 @@
         <div class="container">
             <section class="page-section">
                 <header class="section-header">
-                    <h1 class="page-title">🧹 {{ if eq .Lang "fr" }}Doublons{{ else }}Duplicates{{ end }}</h1>
-                    <p class="page-subtitle">{{ if eq .Lang "fr" }}Regroupe et fusionne les entrées qui semblent identiques (titre + type).{{ else }}Group and merge entries that look identical (title + type).{{ end }}</p>
+                    <h1 class="page-title">🧹 {{ t .T "duplicates.title" }}</h1>
+                    <p class="page-subtitle">{{ t .T "duplicates.subtitle" }}</p>
                 </header>
 
-                {{ if .MergedOK }}<div class="notice">{{ if eq .Lang "fr" }}Fusion effectuée.{{ else }}Merge done.{{ end }}</div>{{ end }}
+                {{ if .MergedOK }}<div class="notice">{{ t .T "duplicates.merged" }}</div>{{ end }}
 
                 {{ range .Groups }}
                 <div class="group">
                     <h2>{{ if .Works }}{{ (index .Works 0).Title }}{{ else }}{{ .NormTitle }}{{ end }}</h2>
-                    <p>{{ if eq $.Lang "fr" }}{{ .Count }} éléments détectés{{ else }}{{ .Count }} items detected{{ end }} — {{ if .ReadingTyp }}{{ .ReadingTyp }}{{ else }}{{ if eq $.Lang "fr" }}Type non défini{{ else }}No type{{ end }}{{ end }}</p>
+                    <p>{{ .Count }} {{ t $.T "duplicates.items_detected" }} — {{ if .ReadingTyp }}{{ .ReadingTyp }}{{ else }}{{ t $.T "duplicates.no_type" }}{{ end }}</p>
                     <table class="works">
                         <thead>
                             <tr>
                                 <th>ID</th>
-                                <th>{{ if eq $.Lang "fr" }}Chap.{{ else }}Ch.{{ end }}</th>
-                                <th>{{ if eq $.Lang "fr" }}Statut{{ else }}Status{{ end }}</th>
-                                <th>{{ if eq $.Lang "fr" }}Lien{{ else }}Link{{ end }}</th>
-                                <th>{{ if eq $.Lang "fr" }}Notes{{ else }}Notes{{ end }}</th>
+                                <th>{{ t $.T "duplicates.chapter_short" }}</th>
+                                <th>{{ t $.T "duplicates.status" }}</th>
+                                <th>{{ t $.T "duplicates.link" }}</th>
+                                <th>{{ t $.T "duplicates.notes" }}</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -70,36 +70,36 @@
                                 <td><code>{{ .ID }}</code></td>
                                 <td><code>{{ .Chapter }}</code></td>
                                 <td>{{ if .Status.Valid }}{{ .Status.String }}{{ else }}-{{ end }}</td>
-                                <td>{{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" rel="noreferrer">{{ if eq $.Lang "fr" }}ouvrir{{ else }}open{{ end }}</a>{{ else }}-{{ end }}</td>
+                                <td>{{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" rel="noreferrer">{{ t $.T "duplicates.open" }}</a>{{ else }}-{{ end }}</td>
                                 <td>{{ if .Notes.Valid }}{{ if .Notes.String }}…{{ else }}-{{ end }}{{ else }}-{{ end }}</td>
                             </tr>
                             {{ end }}
                         </tbody>
                     </table>
                     {{ if ge (len .Works) 2 }}
-                    <form method="POST" action="/tools/duplicates/merge" class="merge-row" onsubmit="return confirm('{{ if eq $.Lang "fr" }}Fusionner ces deux entrées ?{{ else }}Merge these two entries?{{ end }}');">
+                    <form method="POST" action="/tools/duplicates/merge" class="merge-row" onsubmit="return confirm('{{ t $.T "duplicates.merge_confirm" }}');">
                         <div>
-                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ if eq $.Lang "fr" }}Supprimer (from){{ else }}Delete (from){{ end }}</label>
+                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ t $.T "duplicates.delete_from" }}</label>
                             <select name="from_id">
                                 {{ range .Works }}<option value="{{ .ID }}">{{ .ID }} — {{ .Title }}</option>{{ end }}
                             </select>
                         </div>
                         <div>
-                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ if eq $.Lang "fr" }}Conserver (into){{ else }}Keep (into){{ end }}</label>
+                            <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ t $.T "duplicates.keep_into" }}</label>
                             <select name="into_id">
                                 {{ range .Works }}<option value="{{ .ID }}">{{ .ID }} — {{ .Title }}</option>{{ end }}
                             </select>
                         </div>
-                        <button type="submit" class="btn btn-secondary">{{ if eq $.Lang "fr" }}Fusionner{{ else }}Merge{{ end }}</button>
+                        <button type="submit" class="btn btn-secondary">{{ t $.T "duplicates.merge" }}</button>
                     </form>
                     {{ end }}
                 </div>
                 {{ else }}
                 <div class="empty-state">
                     <div class="empty-state-icon">✅</div>
-                    <h2>{{ if eq .Lang "fr" }}Aucun doublon détecté{{ else }}No duplicates detected{{ end }}</h2>
-                    <p>{{ if eq .Lang "fr" }}Rien à faire pour le moment.{{ else }}Nothing to do for now.{{ end }}</p>
-                    <a href="/tools" class="btn btn-secondary">{{ if eq .Lang "fr" }}Retour outils{{ else }}Back to tools{{ end }}</a>
+                    <h2>{{ t .T "duplicates.none_title" }}</h2>
+                    <p>{{ t .T "duplicates.none_desc" }}</p>
+                    <a href="/tools" class="btn btn-secondary">{{ t .T "duplicates.back_tools" }}</a>
                 </div>
                 {{ end }}
             </section>
@@ -107,7 +107,7 @@
     </main>
 
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
-    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ if eq .Lang "fr" }}Mentions légales{{ else }}Legal{{ end }}</a></p></div></footer>
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
 </body>

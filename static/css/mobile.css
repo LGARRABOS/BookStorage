@@ -56,6 +56,20 @@
     gap: 0.35rem;
   }
 
+  .lang-select {
+    -webkit-appearance: none;
+    appearance: none;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(148, 163, 184, 0.3);
+    border-radius: 0.4rem;
+    color: #e2e8f0;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 0.2rem 0.35rem;
+    min-height: 28px;
+    cursor: pointer;
+  }
+
   .mobile-topbar-right a,
   .mobile-topbar-right .btn,
   .mobile-topbar-right .theme-toggle {

@@ -102,23 +102,10 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 		},
 		// Translate status (database stores French values)
 		"hasPrefix": strings.HasPrefix,
-		"translateStatus": func(status, lang string) string {
-			if lang == i18n.LangEN {
-				switch status {
-				case "En cours":
-					return "Reading"
-				case "Terminé":
-					return "Completed"
-				case "En pause":
-					return "On Hold"
-				case "Abandonné":
-					return "Dropped"
-				case "À lire":
-					return "Plan to Read"
-				}
-			}
-			return status
+		"translateStatus": func(status string, t i18n.Translations) string {
+			return i18n.TranslateStatus(status, t)
 		},
+		"upper": strings.ToUpper,
 	}
 	webTpl := mustLoadTemplates(funcMap, []string{
 		filepath.Join("templates", "shared"),
@@ -197,7 +184,7 @@ func hashPassword(password string) (string, error) {
 	return string(hash), nil
 }
 
-// verifyPassword vérifie un mot de passe contre un hash.
+// verifyPassword checks a password against a hash.
 // Supporte bcrypt ($2a$, $2b$, $2y$), Werkzeug pbkdf2:sha256:iterations$salt$hash,
 // et la comparaison en clair (legacy).
 func verifyPassword(storedHash, password string) bool {
@@ -211,10 +198,10 @@ func verifyPassword(storedHash, password string) bool {
 	return storedHash == password
 }
 
-// verifyWerkzeugHash vérifie un mot de passe contre un hash Werkzeug.
+// verifyWerkzeugHash checks a password against a Werkzeug hash.
 // Format: pbkdf2:sha256:iterations$salt$hash
 func verifyWerkzeugHash(storedHash, password string) bool {
-	// Séparer method$salt$hash
+	// Split method$salt$hash
 	parts := strings.SplitN(storedHash, "$", 3)
 	if len(parts) != 3 {
 		return false
@@ -222,22 +209,22 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 
 	method := parts[0]  // pbkdf2:sha256:iterations
 	salt := parts[1]    // salt en clair
-	hashHex := parts[2] // hash en hexadécimal
+	hashHex := parts[2] // hex-encoded hash
 
-	// Extraire les paramètres de la méthode
+	// Extract method parameters
 	methodParts := strings.Split(method, ":")
 	if len(methodParts) < 3 || methodParts[0] != "pbkdf2" || methodParts[1] != "sha256" {
-		return false // Format non supporté
+		return false // Unsupported format
 	}
 
-	iterations := 260000 // Valeur par défaut de Werkzeug
+	iterations := 260000 // Werkzeug default
 	if len(methodParts) >= 3 {
 		if n, err := strconv.Atoi(methodParts[2]); err == nil {
 			iterations = n
 		}
 	}
 
-	// Décoder le hash attendu
+	// Decode expected hash
 	expectedHash, err := hex.DecodeString(hashHex)
 	if err != nil {
 		return false
@@ -246,7 +233,7 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 	// Calculer le hash PBKDF2
 	computed := pbkdf2.Key([]byte(password), []byte(salt), iterations, len(expectedHash), sha256.New)
 
-	// Comparaison en temps constant pour éviter les timing attacks
+	// Constant-time comparison to prevent timing attacks
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
@@ -257,7 +244,7 @@ func (a *App) currentUserID(r *http.Request) (int, bool) {
 
 func (a *App) currentLang(r *http.Request) string {
 	c, err := r.Cookie("lang")
-	if err != nil || (c.Value != i18n.LangFR && c.Value != i18n.LangEN) {
+	if err != nil || !i18n.ValidLang(c.Value) {
 		return i18n.DefaultLang
 	}
 	return c.Value
@@ -276,7 +263,7 @@ func (a *App) setLang(w http.ResponseWriter, lang string) {
 
 func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 	lang := r.PathValue("lang")
-	if lang != i18n.LangFR && lang != i18n.LangEN {
+	if !i18n.ValidLang(lang) {
 		lang = i18n.DefaultLang
 	}
 	a.setLang(w, lang)
@@ -308,6 +295,7 @@ func (a *App) baseData(r *http.Request) map[string]any {
 	return map[string]any{
 		"Lang":         lang,
 		"T":            i18n.T(lang),
+		"Languages":    i18n.Languages(),
 		"ViewMode":     mode,
 		"IsMobileView": isMobile,
 		"CurrentPath":  currentPath,
@@ -451,7 +439,7 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		_, token, ok := a.currentSession(r)
 		if !ok {
-			// Requêtes API : retourner 401 pour que le front puisse rediriger vers login
+			// API requests: return 401 so the frontend can redirect to login
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusUnauthorized)
@@ -519,7 +507,7 @@ func workImageURL(s *config.Settings, storedPath string) string {
 		return normalized
 	}
 
-	// Les images uploadées sont dans static/images/, donc on préfixe avec /static/
+	// Uploaded images are in static/images/, prefix with /static/
 	uploadPrefix := strings.Trim(s.UploadURLPath, "/")
 	avatarPrefix := strings.Trim(s.ProfileUploadURLPath, "/")
 
@@ -728,7 +716,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Par statut
+	// By status
 	type statusCount struct {
 		Status string
 		Count  int
@@ -746,7 +734,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Par type
+	// By type
 	type typeCount struct {
 		Type  string
 		Count int
@@ -764,7 +752,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	// Moyenne des notes (seulement les œuvres notées)
+	// Average rating (only rated works)
 	var avgRating float64
 	var ratedCount int
 	if err := a.DB.QueryRow(`SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM works WHERE user_id = ? AND rating > 0`, userID).Scan(&avgRating, &ratedCount); err != nil {
@@ -839,7 +827,7 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/register?error=exists", http.StatusFound)
 			return
 		}
-		// Succès : compte créé.
+		// Success: account created.
 		if validated == 1 {
 			http.Redirect(w, r, "/login?registered=1&auto=1", http.StatusFound)
 			return
@@ -888,13 +876,13 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Vérification du mot de passe (supporte Werkzeug et clair)
+		// Verify password (supports Werkzeug and plaintext)
 		if !verifyPassword(u.Password, password) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
 		if (a.Settings == nil || a.Settings.RequireAccountValidation) && u.Validated == 0 && u.IsAdmin == 0 {
-			// Compte non encore validé par le staff
+			// Account not yet validated by staff
 			http.Redirect(w, r, "/login?pending=1", http.StatusFound)
 			return
 		}
@@ -948,7 +936,7 @@ type workRow struct {
 func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
-	// Vérifier si l'utilisateur est admin
+	// Check if user is admin
 	var isAdmin int
 	_ = a.DB.QueryRow(`SELECT is_admin FROM users WHERE id = ?`, userID).Scan(&isAdmin)
 
@@ -969,7 +957,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	case "oldest":
 		orderClause = "ORDER BY id ASC"
 	case "modified", "modified_desc":
-		// Alias \"modified\" conservé pour compatibilité rétro
+		// Alias "modified" kept for backward compatibility
 		sortBy = "modified_desc"
 		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') DESC"
 	case "modified_asc":
@@ -1048,7 +1036,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	a.renderTemplate(w, r, "dashboard", a.mergeData(r, data))
 }
 
-// Ajout d’une œuvre (avec support basique d’upload d’image)
+// Add a work (with basic image upload support)
 type catalogSearchResult struct {
 	Source      string `json:"source"`
 	CatalogID   int64  `json:"catalog_id,omitempty"`
@@ -1848,7 +1836,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		// Stats pour le profil
+		// Profile stats
 		var totalWorks int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
 		var totalChapters int
@@ -1912,7 +1900,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/profile", http.StatusFound)
 				return
 			}
-			// NOTE : on garde un stockage en clair pour rester cohérent avec le reste de l’app Go.
+			// NOTE: storing in plaintext to stay consistent with the rest of the Go app.
 			hashedPassword, err := hashPassword(newPassword)
 			if err != nil {
 				http.Redirect(w, r, "/profile", http.StatusFound)
