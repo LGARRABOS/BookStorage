@@ -316,42 +316,44 @@ a:focus-visible {
   color: #f8fafc;
 }
 
-.nav-link-profile {
-  position: relative;
-  margin-left: 0.35rem;
-  padding-left: 0.85rem !important;
-}
-
-.nav-link-profile::before {
-  content: "";
-  position: absolute;
-  left: -0.15rem;
-  top: 20%;
-  bottom: 20%;
-  width: 1px;
-  background: rgba(226, 232, 240, 0.25);
-}
-
-.nav-link-logout {
-  color: rgba(248, 250, 252, 0.6) !important;
-  font-size: 0.85rem;
-}
-
-.nav-link-logout:hover,
-.nav-link-logout:focus-visible {
-  background-color: rgba(239, 68, 68, 0.15) !important;
-  color: #fecaca !important;
-}
-
-/* Cluster : regroupe les dropdowns (Plus + Réglages) */
+/* Cluster : regroupe profil + déconnexion */
 .nav-topbar-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
+  gap: 0.15rem;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(226, 232, 240, 0.15);
-  border-radius: 0.65rem;
-  padding: 0.2rem;
+  border-radius: 0.55rem;
+  padding: 0.15rem;
+}
+
+.nav-cluster-link {
+  color: #e2e8f0 !important;
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 0.3rem 0.65rem;
+  height: 30px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  border-radius: 0.4rem;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.nav-cluster-link:hover,
+.nav-cluster-link:focus-visible {
+  background: rgba(255, 255, 255, 0.1) !important;
+  color: #f8fafc !important;
+}
+
+.nav-cluster-link--logout {
+  color: rgba(248, 250, 252, 0.55) !important;
+}
+
+.nav-cluster-link--logout:hover,
+.nav-cluster-link--logout:focus-visible {
+  background: rgba(239, 68, 68, 0.15) !important;
+  color: #fecaca !important;
 }
 
 .nav-dropdown {
@@ -1241,20 +1243,13 @@ body {
   }
 
   .nav-topbar-cluster {
-    padding: 0.25rem;
+    padding: 0.2rem;
   }
 
-  .nav-topbar-cluster .nav-dropdown-toggle {
+  .nav-cluster-link {
     min-height: 40px;
-    padding-left: 0.85rem;
-    padding-right: 0.85rem;
+    padding: 0.5rem 0.85rem;
     -webkit-tap-highlight-color: transparent;
-  }
-
-  .nav-topbar-cluster .nav-dropdown-toggle--icon {
-    width: 40px;
-    height: 40px;
-    min-width: 40px;
   }
 
   .content-card {
