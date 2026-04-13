@@ -294,15 +294,15 @@ a:focus-visible {
 .nav-links {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
 .nav-links a {
   color: #e2e8f0;
   font-weight: 500;
-  font-size: 0.9rem;
-  padding: 0 0.5rem;
-  height: 36px;
+  font-size: 0.875rem;
+  padding: 0 0.6rem;
+  height: 34px;
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
@@ -320,23 +320,23 @@ a:focus-visible {
 .nav-topbar-cluster {
   display: inline-flex;
   align-items: center;
-  gap: 0.15rem;
+  gap: 0.2rem;
   background: rgba(255, 255, 255, 0.07);
   border: 1px solid rgba(226, 232, 240, 0.15);
-  border-radius: 0.55rem;
+  border-radius: 0.6rem;
   padding: 0.15rem;
 }
 
 .nav-cluster-link {
   color: #e2e8f0 !important;
   font-weight: 500;
-  font-size: 0.85rem;
-  padding: 0.3rem 0.65rem;
+  font-size: 0.875rem;
+  padding: 0 0.55rem;
   height: 30px;
   display: inline-flex;
   align-items: center;
   white-space: nowrap;
-  border-radius: 0.4rem;
+  border-radius: 0.45rem;
   transition: background 0.15s ease, color 0.15s ease;
 }
 
@@ -347,7 +347,7 @@ a:focus-visible {
 }
 
 .nav-cluster-link--logout {
-  color: rgba(248, 250, 252, 0.55) !important;
+  color: rgba(248, 250, 252, 0.5) !important;
 }
 
 .nav-cluster-link--logout:hover,
@@ -367,9 +367,9 @@ a:focus-visible {
   color: #f8fafc;
   font: inherit;
   font-weight: 600;
-  font-size: 0.85rem;
-  height: 32px;
-  padding: 0 0.7rem;
+  font-size: 0.875rem;
+  height: 34px;
+  padding: 0 0.65rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -380,23 +380,23 @@ a:focus-visible {
 
 .nav-dropdown-toggle:hover,
 .nav-dropdown-toggle:focus-visible {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.1);
   outline: none;
 }
 
 .nav-dropdown-toggle--icon {
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   justify-content: center;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
 }
 
 .nav-dropdown-caret {
   display: inline-block;
   font-size: 0.6rem;
-  opacity: 0.75;
-  margin-left: 0.15rem;
+  opacity: 0.7;
+  margin-left: 0.2rem;
 }
 
 .nav-dropdown-panel {
@@ -1232,14 +1232,22 @@ body {
   }
 
   .nav-links a,
-  .nav-links .btn {
+  .nav-links .btn,
+  .nav-dropdown-toggle {
     min-height: 44px;
     min-width: 44px;
-    padding: 0.6rem 1rem;
+    padding: 0.5rem 0.85rem;
     display: inline-flex;
     align-items: center;
     justify-content: center;
+    font-size: 0.875rem;
     -webkit-tap-highlight-color: transparent;
+  }
+
+  .nav-dropdown-toggle--icon {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
   }
 
   .nav-topbar-cluster {
@@ -1248,7 +1256,8 @@ body {
 
   .nav-cluster-link {
     min-height: 40px;
-    padding: 0.5rem 0.85rem;
+    padding: 0.5rem 0.8rem;
+    font-size: 0.875rem;
     -webkit-tap-highlight-color: transparent;
   }
 
