@@ -29,13 +29,10 @@
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
-                <a href="/stats">{{ t .T "nav.stats" }}</a>
-                <a href="/users">{{ t .T "nav.readers" }}</a>
-                <a href="/tools">{{ t .T "nav.tools" }}</a>
-                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false"><span id="theme-icon">🌙</span></button>
-                <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
-                <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_settings_dropdown" .}}
+                <a href="/profile">{{ t .T "nav.profile" }}</a>
+                <a href="/logout" class="nav-link-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>
     </header>

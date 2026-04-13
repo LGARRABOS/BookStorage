@@ -1,0 +1,28 @@
+{{define "nav_settings_dropdown"}}
+<div class="nav-dropdown" data-nav-dropdown>
+    <button type="button" class="nav-dropdown-toggle nav-dropdown-toggle--icon" data-nav-dropdown-toggle aria-expanded="false" aria-haspopup="true" aria-controls="nav-settings-panel" aria-label="{{ t .T "a11y.nav_settings" }}">
+        <span aria-hidden="true">⚙️</span>
+    </button>
+    <div class="nav-dropdown-panel" id="nav-settings-panel" data-nav-dropdown-panel hidden role="menu">
+        <a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}">{{ if eq .Lang "fr" }}English{{ else }}Français{{ end }}</a>
+        <button type="button" role="menuitem" class="nav-dropdown-item theme-toggle nav-dropdown-theme-btn" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
+            <span id="theme-icon" aria-hidden="true">🌙</span>
+            <span>{{ t .T "nav.theme" }}</span>
+        </button>
+    </div>
+</div>
+{{end}}
+
+{{define "nav_more_menu"}}
+<div class="nav-dropdown" data-nav-dropdown>
+    <button type="button" class="nav-dropdown-toggle" data-nav-dropdown-toggle aria-expanded="false" aria-haspopup="true" aria-controls="nav-more-panel">
+        {{ t .T "nav.more" }}<span class="nav-dropdown-caret" aria-hidden="true">▾</span>
+    </button>
+    <div class="nav-dropdown-panel" id="nav-more-panel" data-nav-dropdown-panel hidden role="menu">
+        <a role="menuitem" class="nav-dropdown-item" href="/stats">{{ t .T "nav.stats" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/users">{{ t .T "nav.readers" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/tools">{{ t .T "nav.tools" }}</a>
+        {{ if or .IsAdmin (hasPrefix .CurrentPath "/admin") }}<a role="menuitem" class="nav-dropdown-item" href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
+    </div>
+</div>
+{{end}}

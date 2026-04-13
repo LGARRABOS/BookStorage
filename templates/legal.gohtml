@@ -34,10 +34,7 @@
         <div class="container nav-layout">
             <a class="brand" href="/">📚 {{ .SiteName }}</a>
             <nav class="nav-links">
-                <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
-                <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
-                    <span id="theme-icon">🌙</span>
-                </button>
+                {{template "nav_settings_dropdown" .}}
             </nav>
         </div>
     </header>
