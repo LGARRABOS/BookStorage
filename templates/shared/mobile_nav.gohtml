@@ -2,22 +2,11 @@
 <header class="topbar topbar-mobile">
     <div class="container nav-layout nav-layout-mobile">
         <a class="brand" href="/dashboard">📚 BookStorage</a>
-        <button type="button" class="mobile-menu-toggle" data-mobile-menu-toggle aria-expanded="false" aria-controls="mobile-main-nav">
-            <span class="sr-only">{{ t .T "nav.menu" }}</span>
-            ☰
-        </button>
-        <nav id="mobile-main-nav" class="nav-links nav-links-mobile" data-mobile-menu>
-            <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
-            {{ if eq .CurrentPath "/dashboard" }}<a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>{{ end }}
-            <a href="/stats">{{ t .T "nav.stats" }}</a>
-            <a href="/users">{{ t .T "nav.readers" }}</a>
-            <a href="/tools">{{ t .T "nav.tools" }}</a>
-            {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
+        <nav class="nav-links nav-links-mobile">
             <a href="/lang/{{ if eq .Lang "fr" }}en{{ else }}fr{{ end }}" class="lang-toggle">{{ if eq .Lang "fr" }}EN{{ else }}FR{{ end }}</a>
             <button class="theme-toggle" onclick="toggleTheme()" type="button" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
                 <span id="theme-icon">🌙</span>
             </button>
-            <a href="/profile" class="btn btn-nav">{{ t .T "nav.profile" }}</a>
             <a href="/logout" class="btn btn-logout">{{ t .T "nav.logout" }}</a>
         </nav>
     </div>
@@ -27,8 +16,7 @@
 {{ define "mobile_bottom_nav" }}
 <nav class="mobile-bottom-nav" aria-label="{{ t .T "nav.quick" }}">
     <a href="/dashboard" class="mobile-bottom-link" data-nav="/dashboard">{{ t .T "nav.dashboard" }}</a>
-    {{ if eq .CurrentPath "/dashboard" }}<a href="/add_work" class="mobile-bottom-link" data-nav="/add_work">{{ t .T "dashboard.add_work" }}</a>{{ end }}
-    <a href="/stats" class="mobile-bottom-link" data-nav="/stats">{{ t .T "nav.stats" }}</a>
-    <a href="/profile" class="mobile-bottom-link" data-nav="/profile">{{ t .T "nav.profile" }}</a>
+    <a href="/add_work" class="mobile-bottom-link" data-nav="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
+    <a href="/logout" class="mobile-bottom-link" data-nav="/logout">{{ t .T "nav.logout" }}</a>
 </nav>
 {{ end }}

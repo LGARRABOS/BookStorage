@@ -93,6 +93,61 @@
   justify-content: center;
 }
 
+.work-mobile-chapter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-top: 0.5rem;
+}
+
+.work-mobile-chapter-count {
+  font-size: 1.1rem;
+  font-weight: 700;
+  min-width: 2.5rem;
+  text-align: center;
+  color: var(--text-primary);
+}
+
+.work-mobile-chapter-count.chapter-error {
+  color: #ef4444;
+}
+
+.btn-chapter-inc,
+.btn-chapter-dec {
+  -webkit-appearance: none;
+  appearance: none;
+  border: 0;
+  background: var(--accent, #6366f1);
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 700;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.1s ease;
+  line-height: 1;
+}
+
+.btn-chapter-inc:active,
+.btn-chapter-dec:active {
+  transform: scale(0.9);
+}
+
+.btn-chapter-inc:disabled,
+.btn-chapter-dec:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-chapter-dec {
+  background: var(--surface-hover, #374151);
+  color: var(--text-primary);
+}
+
 @media (min-width: 769px) {
   .works-mobile-list {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
