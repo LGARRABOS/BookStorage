@@ -275,10 +275,12 @@ a:focus-visible {
 .nav-layout {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  gap: 0.75rem 1.25rem;
-  padding: 1.1rem 0;
+  gap: 1rem;
+  padding: 0.85rem 0;
+}
+
+.nav-layout .nav-links {
+  margin-left: auto;
 }
 
 .brand {
@@ -292,17 +294,20 @@ a:focus-visible {
 .nav-links {
   display: flex;
   align-items: center;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 0.5rem 0.85rem;
+  gap: 0.6rem;
 }
 
 .nav-links a {
   color: #e2e8f0;
   font-weight: 500;
-  padding: 0.45rem 0.9rem;
+  font-size: 0.9rem;
+  padding: 0 0.5rem;
+  height: 36px;
+  display: inline-flex;
+  align-items: center;
   white-space: nowrap;
-  border-radius: 999px;
+  border-radius: 0.5rem;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
 .nav-links a:hover,
@@ -311,33 +316,42 @@ a:focus-visible {
   color: #f8fafc;
 }
 
-.nav-links .btn {
-  color: #0f172a;
-}
-
-.nav-links .btn-nav,
-.nav-links .btn-logout {
-  color: #f8fafc;
-}
-
-.nav-links .btn-nav {
+.nav-link-profile {
+  position: relative;
   margin-left: 0.35rem;
+  padding-left: 0.85rem !important;
 }
 
-.nav-links .btn-logout {
-  margin-left: 0.15rem;
+.nav-link-profile::before {
+  content: "";
+  position: absolute;
+  left: -0.15rem;
+  top: 20%;
+  bottom: 20%;
+  width: 1px;
+  background: rgba(226, 232, 240, 0.25);
 }
 
 .nav-link-logout {
-  color: rgba(248, 250, 252, 0.85) !important;
-  border: 1px solid rgba(248, 250, 252, 0.25);
+  color: rgba(248, 250, 252, 0.6) !important;
+  font-size: 0.85rem;
 }
 
 .nav-link-logout:hover,
 .nav-link-logout:focus-visible {
-  background-color: rgba(239, 68, 68, 0.2) !important;
-  border-color: rgba(252, 165, 165, 0.45);
+  background-color: rgba(239, 68, 68, 0.15) !important;
   color: #fecaca !important;
+}
+
+/* Cluster : regroupe les dropdowns (Plus + Réglages) */
+.nav-topbar-cluster {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(226, 232, 240, 0.15);
+  border-radius: 0.65rem;
+  padding: 0.2rem;
 }
 
 .nav-dropdown {
@@ -345,42 +359,42 @@ a:focus-visible {
 }
 
 .nav-dropdown-toggle {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(226, 232, 240, 0.25);
-  border-radius: 999px;
+  background: transparent;
+  border: none;
+  border-radius: 0.5rem;
   color: #f8fafc;
   font: inherit;
   font-weight: 600;
-  font-size: 0.9rem;
-  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  height: 32px;
+  padding: 0 0.7rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 0.35rem;
+  gap: 0.3rem;
   white-space: nowrap;
-  transition: background 0.2s ease, border-color 0.2s ease;
+  transition: background 0.15s ease;
 }
 
 .nav-dropdown-toggle:hover,
 .nav-dropdown-toggle:focus-visible {
-  background: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.12);
   outline: none;
 }
 
 .nav-dropdown-toggle--icon {
-  width: 40px;
-  height: 40px;
+  width: 32px;
+  height: 32px;
   padding: 0;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.05rem;
 }
 
 .nav-dropdown-caret {
   display: inline-block;
-  font-size: 0.65rem;
-  opacity: 0.9;
-  margin-left: 0.35rem;
-  transform: translateY(0.05em);
+  font-size: 0.6rem;
+  opacity: 0.75;
+  margin-left: 0.15rem;
 }
 
 .nav-dropdown-panel {
@@ -1226,23 +1240,21 @@ body {
     -webkit-tap-highlight-color: transparent;
   }
 
-  .theme-toggle {
-    min-width: 44px;
-    min-height: 44px;
+  .nav-topbar-cluster {
+    padding: 0.25rem;
+  }
+
+  .nav-topbar-cluster .nav-dropdown-toggle {
+    min-height: 40px;
+    padding-left: 0.85rem;
+    padding-right: 0.85rem;
     -webkit-tap-highlight-color: transparent;
   }
 
-  .nav-dropdown-toggle {
-    min-height: 44px;
-    padding-left: 0.9rem;
-    padding-right: 0.9rem;
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  .nav-dropdown-toggle--icon {
-    width: 44px;
-    height: 44px;
-    min-width: 44px;
+  .nav-topbar-cluster .nav-dropdown-toggle--icon {
+    width: 40px;
+    height: 40px;
+    min-width: 40px;
   }
 
   .content-card {

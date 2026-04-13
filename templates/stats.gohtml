@@ -52,9 +52,8 @@
             <a class="brand" href="/dashboard">📚 BookStorage</a>
             <nav class="nav-links">
                 <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
-                {{template "nav_more_menu" .}}
-                {{template "nav_settings_dropdown" .}}
-                <a href="/profile">{{ t .T "nav.profile" }}</a>
+                {{template "nav_menus_cluster" .}}
+                <a href="/profile" class="nav-link-profile">{{ t .T "nav.profile" }}</a>
                 <a href="/logout" class="nav-link-logout">{{ t .T "nav.logout" }}</a>
             </nav>
         </div>

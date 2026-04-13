@@ -26,3 +26,16 @@
     </div>
 </div>
 {{end}}
+
+{{define "nav_menus_cluster"}}
+<div class="nav-topbar-cluster">
+    {{template "nav_more_menu" .}}
+    {{template "nav_settings_dropdown" .}}
+</div>
+{{end}}
+
+{{define "nav_settings_cluster"}}
+<div class="nav-topbar-cluster">
+    {{template "nav_settings_dropdown" .}}
+</div>
+{{end}}
