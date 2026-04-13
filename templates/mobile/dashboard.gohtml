@@ -161,6 +161,19 @@
           .finally(function () { btn.disabled = false; });
       });
     })();
+
+    (function () {
+      var lastLoad = Date.now();
+      var STALE_MS = 5000;
+      document.addEventListener("visibilitychange", function () {
+        if (document.visibilityState === "visible" && Date.now() - lastLoad > STALE_MS) {
+          window.location.reload();
+        }
+      });
+      window.addEventListener("pageshow", function (e) {
+        if (e.persisted) window.location.reload();
+      });
+    })();
     </script>
 </body>
 </html>
