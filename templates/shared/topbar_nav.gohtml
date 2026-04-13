@@ -6,13 +6,11 @@
     <div class="nav-dropdown-panel" id="nav-settings-panel" data-nav-dropdown-panel hidden role="menu">
         {{ range .Languages }}{{ if ne .Code $.Lang }}<a role="menuitem" class="nav-dropdown-item nav-dropdown-item--lang" href="/lang/{{ .Code }}">{{ .Flag }} {{ .Name }}</a>
         {{ end }}{{ end }}
-        <div class="nav-dropdown-separator"></div>
-        <button type="button" role="menuitem" class="nav-dropdown-item theme-toggle nav-dropdown-theme-btn" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
-            <span id="theme-icon" aria-hidden="true">🌙</span>
-            <span>{{ t .T "nav.theme" }}</span>
-        </button>
     </div>
 </div>
+<button type="button" class="nav-dropdown-toggle nav-dropdown-toggle--icon theme-toggle" onclick="toggleTheme()" aria-label="{{ t .T "a11y.theme_toggle" }}" aria-pressed="false">
+    <span id="theme-icon" aria-hidden="true">🌙</span>
+</button>
 {{end}}
 
 {{define "nav_more_menu"}}

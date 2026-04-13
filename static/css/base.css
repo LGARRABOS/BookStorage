@@ -358,12 +358,6 @@ a:focus-visible {
   font-size: 1.1rem;
 }
 
-.nav-dropdown-separator {
-  height: 1px;
-  margin: 0.3rem 0.6rem;
-  background: rgba(148, 163, 184, 0.2);
-}
-
 .nav-dropdown-caret {
   display: inline-block;
   font-size: 0.6rem;
