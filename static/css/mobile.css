@@ -56,18 +56,82 @@
     gap: 0.35rem;
   }
 
-  .lang-select {
-    -webkit-appearance: none;
-    appearance: none;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(148, 163, 184, 0.3);
-    border-radius: 0.4rem;
-    color: #e2e8f0;
-    font-size: 0.7rem;
-    font-weight: 600;
-    padding: 0.2rem 0.35rem;
-    min-height: 28px;
+  /* --- Language burger menu --- */
+  .lang-burger {
+    position: relative;
+  }
+
+  .lang-burger-toggle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
     cursor: pointer;
+    padding: 0.15rem;
+    min-height: 32px;
+    min-width: 32px;
+    border-radius: 0.4rem;
+    transition: background 0.15s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .lang-burger-toggle:hover,
+  .lang-burger-toggle:focus-visible {
+    background: rgba(255, 255, 255, 0.1);
+  }
+
+  .lang-burger-flag {
+    font-size: 1.25rem;
+    line-height: 1;
+  }
+
+  .lang-burger-panel {
+    position: absolute;
+    top: 100%;
+    right: 0;
+    z-index: 200;
+    min-width: 160px;
+    margin-top: 0.35rem;
+    padding: 0.35rem 0;
+    background: var(--surface, #1e293b);
+    border: 1px solid rgba(148, 163, 184, 0.25);
+    border-radius: 0.65rem;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+    overflow: hidden;
+  }
+
+  .lang-burger-item {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.55rem 0.85rem;
+    text-decoration: none;
+    color: var(--text, #e2e8f0);
+    font-size: 0.85rem;
+    font-weight: 500;
+    transition: background 0.12s ease;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .lang-burger-item:hover,
+  .lang-burger-item:focus-visible {
+    background: rgba(129, 140, 248, 0.15);
+  }
+
+  .lang-burger-item--active {
+    color: var(--primary, #818cf8);
+    font-weight: 700;
+    background: rgba(129, 140, 248, 0.08);
+  }
+
+  .lang-burger-item-flag {
+    font-size: 1.2rem;
+    line-height: 1;
+  }
+
+  .lang-burger-item-name {
+    flex: 1;
   }
 
   .mobile-topbar-right a,

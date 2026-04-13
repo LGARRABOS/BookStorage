@@ -17,4 +17,26 @@
       links[i].classList.add('is-active');
     }
   }
+
+  var langToggle = document.querySelector('[data-lang-burger-toggle]');
+  var langPanel = document.querySelector('[data-lang-burger-panel]');
+  if (langToggle && langPanel) {
+    langToggle.addEventListener('click', function (e) {
+      e.stopPropagation();
+      var open = langPanel.hasAttribute('hidden');
+      if (open) {
+        langPanel.removeAttribute('hidden');
+        langToggle.setAttribute('aria-expanded', 'true');
+      } else {
+        langPanel.setAttribute('hidden', '');
+        langToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+    document.addEventListener('click', function (e) {
+      if (!langPanel.hasAttribute('hidden') && !langPanel.contains(e.target) && e.target !== langToggle) {
+        langPanel.setAttribute('hidden', '');
+        langToggle.setAttribute('aria-expanded', 'false');
+      }
+    });
+  }
 })();
