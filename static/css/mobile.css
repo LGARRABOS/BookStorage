@@ -33,14 +33,20 @@
 }
 
 @media (max-width: 768px) {
+  .topbar-mobile {
+    position: relative !important;
+  }
+
   .topbar-mobile .brand {
     font-size: 1.1rem;
   }
 
   .topbar-mobile .nav-layout-mobile {
     display: flex;
+    flex-direction: row;
     justify-content: space-between;
     align-items: center;
+    gap: 0.5rem;
     padding: 0.6rem 0;
   }
 
@@ -100,7 +106,7 @@
   }
 
   .page-body.mobile-page {
-    padding-top: 60px;
+    padding-top: 0.5rem;
     padding-bottom: 4.5rem;
   }
 
