@@ -1,3 +1,8 @@
+/* Force padding under fixed topbar -- must win over base.css */
+.page-body.mobile-page.mobile-dashboard-page {
+  padding-top: 60px !important;
+}
+
 /* SVG safety net */
 .mobile-dashboard-page svg,
 .mobile-bottom-nav svg {
