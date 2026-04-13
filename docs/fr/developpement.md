@@ -61,6 +61,10 @@ Les cibles `make` recouvrent en partie `bsctl`. Préférez **`bsctl help`** comm
 | `make build-prod` | Binaire optimisé avec `-ldflags` et `APP_VERSION` du Makefile |
 | `make run` | `go run ./cmd/bookstorage` |
 | `make clean` | Supprime le binaire `bookstorage` à la racine du dépôt |
+| `make test` | Tests unitaires avec profil de couverture (`coverage.out`) |
+| `make test-race` | Suite de tests avec détecteur de race |
+| `make lint` | Vérifie `gofmt -l .` + exécute `golangci-lint` |
+| `make ci-local` | Parité CI locale (`lint`, `test`, `test-race`) |
 | `make help` | Aide courte (messages parfois en français) |
 
 Les cibles orientées production (`install`, `uninstall`, `update`, etc.) nécessitent root ou une machine configurée ; elles sont décrites côté opérateur dans [Hébergement](hebergement.md).
@@ -102,6 +106,8 @@ La CI exécute aussi `gofmt` en mode strict et un job **smoke-http** qui lance `
 
 - Les requêtes mutatrices authentifiées (POST/PATCH/DELETE/PUT) sont filtrées via vérification d’origine (`Origin`/`Referer`) pour limiter les risques CSRF.
 - Un rate limiting léger est appliqué sur les endpoints sensibles (authentification et écritures fréquentes).
+- Le serveur HTTP est démarré avec des timeouts explicites (`ReadHeaderTimeout`, `ReadTimeout`, `WriteTimeout`, `IdleTimeout`) dans `cmd/bookstorage/main.go` pour une meilleure résilience sous charge et face au trafic de type slowloris.
+- L'implémentation actuelle de la recherche utilise des patterns SQL `LIKE` ; si la bibliothèque atteint une taille significative, un chemin FTS5 peut être introduit tout en conservant le contrat API stable.
 
 ---
 

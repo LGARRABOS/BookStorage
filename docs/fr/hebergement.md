@@ -69,7 +69,7 @@ bsctl help     # Afficher l'aide
 | `bsctl update <branche>` | Avancé : depuis `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
 
-**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v4.4.0` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
+**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v5.4.1` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
 
 Si vous déployez depuis un artefact GitHub Actions plutôt qu’un clone, extrayez l’archive, copiez `bookstorage`, `bsctl` et `deploy/bookstorage.service` aux bons emplacements, puis utilisez `bsctl install` / `bsctl update` comme d’habitude. Voir [Développement — Workflow de déploiement](developpement.md#workflow-de-déploiement).
 
@@ -111,6 +111,10 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_PORT`       | Port                             | `5000`                     |
 | `BOOKSTORAGE_DATABASE`   | Chemin de la base SQLite         | `database.db`              |
 | `BOOKSTORAGE_SECRET_KEY` | Clé secrète de session (min. 32 octets si `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`     |
+
+### Durée de vie des sessions
+
+Les sessions utilisent un **TTL glissant de 2 heures** et un **TTL absolu de 24 heures**. Si un utilisateur est inactif pendant plus de 2 heures, il doit se reconnecter. Quelle que soit l'activité, chaque session expire 24 heures après sa création.
 | `BOOKSTORAGE_ENV` | `development` ou `production` (la production interdit la clé par défaut) | `development` |
 | `BOOKSTORAGE_ENABLE_HSTS` | `true` ou `1` pour l’en-tête HSTS (uniquement derrière HTTPS) | (désactivé) |
 
@@ -145,9 +149,9 @@ Puis éditez `config/site.json` avec vos informations :
 
 ## Utilisation de l’application
 
-### Raccourcis clavier
+### Raccourcis clavier (bureau)
 
-Sur le tableau de bord :
+Sur le tableau de bord (vue web bureau uniquement — non disponibles sur la PWA mobile) :
 
 | Touche | Action                  |
 |--------|-------------------------|
@@ -158,7 +162,13 @@ Sur le tableau de bord :
 | `?`    | Afficher l’aide         |
 | `Esc`  | Fermer / retirer le focus |
 
-### Export / import
+### PWA mobile
+
+La vue mobile offre une **expérience simplifiée** centrée sur le suivi quotidien. Fonctionnalités disponibles : tableau de bord (recherche, filtres, tri), ajout/édition d'œuvres, et boutons rapides +/- pour les chapitres. Les pages Statistiques, Profil, Outils, Utilisateurs, Admin, Export/Import et Mentions légales ne sont **accessibles que depuis la vue web bureau** et redirigent vers le tableau de bord sur mobile.
+
+L'application mobile **se rafraîchit automatiquement** lorsqu'elle revient au premier plan (ex. après être passé sur la version web bureau), les modifications se synchronisent donc automatiquement.
+
+### Export / import (bureau)
 
 **Export :** Profil → télécharger la bibliothèque en CSV, ou **JSON** pour une sauvegarde versionnée (`export_version`) réimportable.
 
@@ -171,6 +181,8 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 
 **Valeurs de statut** : En cours, Terminé, En pause, Abandonné, À lire  
 **Valeurs de type** : Webtoon, Manga, Roman, Light Novel, Manhwa, Manhua, Autre
+
+> **Note :** L'export et l'import ne sont accessibles que depuis la vue web bureau (page Profil).
 
 ---
 
