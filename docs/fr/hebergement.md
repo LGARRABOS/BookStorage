@@ -33,7 +33,7 @@ Le script installe notamment :
 - Le service systemd (charge en option `EnvironmentFile=-/opt/bookstorage/.env`)
 - La configuration du pare-feu
 
-**Prometheus (optionnel) :** définissez `INSTALL_WITH_PROMETHEUS=1` lors de l’installation pour installer le paquet `prometheus` de la distribution, générer `BOOKSTORAGE_METRICS_TOKEN` s’il manque, et activer l’unité systemd `bookstorage-prometheus` (UI sur `http://127.0.0.1:9091`, scrape avec fichier bearer). Après ajout du jeton dans `.env`, exécutez `systemctl restart bookstorage`. `bsctl update` **ne relance pas** cette étape ; sur le serveur, utilisez `INSTALL_APP_DIR=/opt/bookstorage sudo -E ./deploy/setup-bookstorage-prometheus.sh` si besoin.
+**Prometheus (optionnel) :** définissez `INSTALL_WITH_PROMETHEUS=1` lors de l’installation pour installer le paquet `prometheus` de la distribution, générer `BOOKSTORAGE_METRICS_TOKEN` s’il manque, et activer l’unité systemd `bookstorage-prometheus` (UI sur `http://127.0.0.1:9091`, scrape avec fichier bearer). Après ajout du jeton dans `.env`, exécutez `systemctl restart bookstorage`. `bsctl update` **ne relance pas** cette étape ; sur le serveur : `INSTALL_APP_DIR=/opt/bookstorage bash /opt/bookstorage/deploy/setup-bookstorage-prometheus.sh` (préférez `bash` pour éviter l’erreur « Permission non accordée » si le script n’est pas exécutable).
 
 ### Démarrer le service
 
@@ -158,7 +158,7 @@ BookStorage expose **`GET /metrics`** au format texte Prometheus (compteurs et h
 - **Sans `BOOKSTORAGE_METRICS_TOKEN` :** le scraper doit se connecter en **loopback** (`127.0.0.1` / `::1`). Adapté à un Prometheus sur la même machine.
 - **Avec `BOOKSTORAGE_METRICS_TOKEN` :** envoyez `Authorization: Bearer <jeton>` ou `GET /metrics?token=<jeton>` (préférez Bearer dans `bearer_token` / `bearer_token_file` côté Prometheus).
 
-**Installation automatique (installateur Linux) :** `INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh` exécute `deploy/setup-bookstorage-prometheus.sh`, installe le paquet `prometheus`, écrit `/etc/bookstorage/prometheus-bs.yml` et le fichier bearer, et active **`bookstorage-prometheus`** (`127.0.0.1:9091`, TSDB sous `/var/lib/prometheus-bookstorage`). Puis :
+**Installation automatique (installateur Linux) :** `INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh` lance `deploy/setup-bookstorage-prometheus.sh` via `bash`, installe le paquet `prometheus`, écrit `/etc/bookstorage/prometheus-bs.yml` et le fichier bearer, et active **`bookstorage-prometheus`** (`127.0.0.1:9091`, TSDB sous `/var/lib/prometheus-bookstorage`). Puis :
 
 ```bash
 sudo systemctl restart bookstorage   # recharge .env si le jeton vient d’être ajouté
