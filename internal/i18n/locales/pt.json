@@ -376,7 +376,7 @@
   "admin.enrich.note": "Limitado (~400 ms entre chamadas AniList). Correspondência com várias formas do título (sem parênteses), depois sobreposição de palavras se houver vários resultados; um único resultado continua sendo o fallback.",
   "admin.enrich.error_http": "Erro HTTP",
   "admin.enrich.error_read": "Resposta não JSON:",
-  "admin.enrich.error_maintenance": "O servidor devolveu uma página HTML de manutenção em vez de JSON — muitas vezes o proxy reverso serve uma página estática durante o reinício ou a atualização. Tente de novo quando o site estiver no ar ou configure o proxy para que /api/ continue a chegar à aplicação Go.",
+  "admin.enrich.error_maintenance": "O servidor devolveu HTML (muitas vezes a página de manutenção) em vez de JSON. Causas frequentes sem a app cair: (1) timeout do proxy (504) — o lote AniList pode demorar; aumente proxy_read_timeout / proxy_send_timeout (ex.: 120–300 s) no NPM; (2) 502/503/504 breves. Veja o código HTTP no separador Rede.",
   "admin.enrich.run": "Executar lote (10 obras)",
   "admin.enrich.queue": "Fila de exemplo (sem ligação ao catálogo)",
   "admin.enrich.empty": "(nenhuma nesta amostra)",
