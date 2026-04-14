@@ -190,6 +190,7 @@ func main() {
 	mux.HandleFunc("POST /import", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleImport)))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminMonitoring)))
+	mux.HandleFunc("/admin/database", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminDatabase)))
 	mux.HandleFunc("/admin/enrich", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminEnrich)))
 	mux.HandleFunc("POST /api/admin/enrich/run", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichRun)))
 	mux.HandleFunc("GET /api/admin/prometheus/summary", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminPrometheusSummary)))

@@ -625,6 +625,7 @@ func TestSafePostLoginRedirect(t *testing.T) {
 		in, want string
 	}{
 		{"/admin/accounts", "/admin/accounts"},
+		{"/admin/database", "/admin/database"},
 		{"/admin/accounts?x=1", "/admin/accounts?x=1"},
 		{"", ""},
 		{"http://evil.com", ""},
@@ -638,6 +639,44 @@ func TestSafePostLoginRedirect(t *testing.T) {
 	for _, tc := range cases {
 		if got := safePostLoginRedirect(tc.in); got != tc.want {
 			t.Fatalf("safePostLoginRedirect(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestBuildAdminDatabaseSections_omitsSensitiveColumns(t *testing.T) {
+	db, _ := openTestDB(t)
+	sections, err := buildAdminDatabaseSections(db)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var usersSec *adminDatabaseSection
+	for i := range sections {
+		if sections[i].Table == "users" {
+			usersSec = &sections[i]
+			break
+		}
+	}
+	if usersSec == nil {
+		t.Fatal("expected users section")
+	}
+	for _, c := range usersSec.Columns {
+		if c == "username" || c == "password" {
+			t.Fatalf("users table should not expose column %q", c)
+		}
+	}
+	var sessSec *adminDatabaseSection
+	for i := range sections {
+		if sections[i].Table == "sessions" {
+			sessSec = &sections[i]
+			break
+		}
+	}
+	if sessSec == nil {
+		t.Fatal("expected sessions section")
+	}
+	for _, c := range sessSec.Columns {
+		if c == "token_hash" {
+			t.Fatalf("sessions should not expose token_hash")
 		}
 	}
 }

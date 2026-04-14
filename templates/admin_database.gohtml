@@ -1,0 +1,102 @@
+{{ define "admin_database" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.database.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .lang-toggle:hover { background: var(--primary); color: white; }
+        .db-intro { margin: 0 0 1rem 0; padding: 0.85rem 1rem; border-radius: 0.75rem; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; }
+        .db-section { margin-bottom: 1rem; border: 1px solid var(--border-subtle); border-radius: 0.85rem; background: var(--surface); overflow: hidden; }
+        .db-section > summary { cursor: pointer; padding: 0.75rem 1rem; font-weight: 600; color: var(--text-primary); list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
+        .db-section > summary::-webkit-details-marker { display: none; }
+        .db-section > summary::before { content: "▸"; display: inline-block; margin-right: 0.35rem; transition: transform 0.15s; color: var(--text-muted); }
+        .db-section[open] > summary::before { transform: rotate(90deg); }
+        .db-section .db-meta { font-weight: 500; font-size: 0.82rem; color: var(--text-muted); }
+        .db-section .db-hint { margin: 0; padding: 0 1rem 0.65rem; font-size: 0.82rem; color: var(--text-muted); }
+        .db-section .table-wrapper { border-top: 1px solid var(--border-subtle); max-height: min(70vh, 28rem); overflow: auto; }
+        .db-section .data-table { font-size: 0.8rem; }
+        .db-section .data-table th, .db-section .data-table td { max-width: 14rem; overflow-wrap: anywhere; vertical-align: top; }
+        .db-empty { padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
+    </style>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_account_links" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">🗄 {{ t .T "admin.database.title" }}</h1>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab active" href="/admin/database">{{ t .T "admin.database" }}</a>
+                        <a class="admin-tab" href="/admin/enrich">{{ t .T "admin.enrich" }}</a>
+                        <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </nav>
+                </header>
+
+                <p class="db-intro">{{ t .T "admin.database.intro" }}</p>
+
+                {{ range .DBSections }}
+                <details class="db-section" open>
+                    <summary>
+                        <span>{{ .Table }}</span>
+                        <span class="db-meta">{{ .Total }} {{ t $.T "admin.database.rows" }}{{ if .Truncated }} · {{ t $.T "admin.database.truncated" }}{{ end }}</span>
+                    </summary>
+                    {{ if ne .HintKey "" }}<p class="db-hint">{{ t $.T .HintKey }}</p>{{ end }}
+                    {{ if eq .Total 0 }}
+                    <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
+                    {{ else if .Rows }}
+                    <div class="table-wrapper">
+                        <table class="data-table">
+                            <thead>
+                                <tr>
+                                    {{ range .Columns }}<th>{{ . }}</th>{{ end }}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {{ range .Rows }}
+                                <tr>
+                                    {{ range . }}<td>{{ . }}</td>{{ end }}
+                                </tr>
+                                {{ end }}
+                            </tbody>
+                        </table>
+                    </div>
+                    {{ else }}
+                    <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
+                    {{ end }}
+                </details>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
+</body>
+</html>
+{{ end }}

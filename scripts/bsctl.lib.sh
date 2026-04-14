@@ -174,6 +174,115 @@ prompt_release_choice() {
     done
 }
 
+# Rollback for bsctl update (after git moved, until service is healthy).
+# Set by bsctl_update_save_rollback_state: BSCTL_UPDATE_ROLLBACK_DIR, BSCTL_UPDATE_PREV_HEAD (optional file copies).
+bsctl_update_save_rollback_state() {
+    if [[ "${BSCTL_UPDATE_NO_ROLLBACK:-}" == "1" ]]; then
+        export BSCTL_UPDATE_ROLLBACK_DIR=""
+        export BSCTL_UPDATE_PREV_HEAD=""
+        return 0
+    fi
+    local repo
+    repo="$(bsctl_repo_dir)" || return 1
+    BSCTL_UPDATE_ROLLBACK_DIR="$(mktemp -d /tmp/bookstorage-bsctl-update.XXXXXX 2>/dev/null || mktemp -d -t bookstorage-bsctl.XXXXXX 2>/dev/null || true)"
+    if [[ -z "${BSCTL_UPDATE_ROLLBACK_DIR}" || ! -d "${BSCTL_UPDATE_ROLLBACK_DIR}" ]]; then
+        print_error "Could not create rollback directory under /tmp."
+        return 1
+    fi
+    export BSCTL_UPDATE_ROLLBACK_DIR
+    BSCTL_UPDATE_PREV_HEAD="$(bsctl_git rev-parse HEAD 2>/dev/null)" || { rm -rf "${BSCTL_UPDATE_ROLLBACK_DIR}"; return 1; }
+    export BSCTL_UPDATE_PREV_HEAD
+    printf '%s\n' "$BSCTL_UPDATE_PREV_HEAD" >"${BSCTL_UPDATE_ROLLBACK_DIR}/PREV_HEAD"
+    bsctl_git symbolic-ref -q HEAD 2>/dev/null >"${BSCTL_UPDATE_ROLLBACK_DIR}/PREV_REF" || true
+    if [[ -x "${BIN_DIR}/${APP_NAME}" ]]; then
+        cp -a "${BIN_DIR}/${APP_NAME}" "${BSCTL_UPDATE_ROLLBACK_DIR}/bookstorage" || true
+    fi
+    if [[ -f "${BIN_DIR}/bsctl" ]]; then
+        cp -a "${BIN_DIR}/bsctl" "${BSCTL_UPDATE_ROLLBACK_DIR}/bsctl" || true
+    fi
+    if [[ -f "${BIN_DIR}/bsctl.lib.sh" ]]; then
+        cp -a "${BIN_DIR}/bsctl.lib.sh" "${BSCTL_UPDATE_ROLLBACK_DIR}/bsctl.lib.sh" || true
+    fi
+    print_info "Rollback snapshot: git ${BSCTL_UPDATE_PREV_HEAD:0:12}… + previous binaries (if any) in ${BSCTL_UPDATE_ROLLBACK_DIR}"
+}
+
+bsctl_update_clear_rollback_state() {
+    local rb="${BSCTL_UPDATE_ROLLBACK_DIR:-}"
+    if [[ -n "$rb" && -d "$rb" ]]; then
+        rm -rf "$rb" 2>/dev/null || true
+    fi
+    unset BSCTL_UPDATE_ROLLBACK_DIR BSCTL_UPDATE_PREV_HEAD 2>/dev/null || true
+}
+
+# Restore git + /usr/local binaries from snapshot, restart service, then exit 1.
+bsctl_update_rollback_and_exit() {
+    local reason="${1:-Update failed}"
+    local rb="${BSCTL_UPDATE_ROLLBACK_DIR:-}"
+    local prev=""
+    local prev_ref=""
+
+    printf "\n"
+    print_error "${reason}"
+    printf "${YELLOW}▶ Rolling back to the previous version…${NC}\n"
+
+    if [[ -n "$rb" && -f "${rb}/PREV_HEAD" ]]; then
+        prev="$(tr -d '\r\n' <"${rb}/PREV_HEAD")"
+    fi
+    if [[ -z "$prev" && -n "${BSCTL_UPDATE_PREV_HEAD:-}" ]]; then
+        prev="$BSCTL_UPDATE_PREV_HEAD"
+    fi
+    if [[ -n "$rb" && -f "${rb}/PREV_REF" ]]; then
+        prev_ref="$(tr -d '\r\n' <"${rb}/PREV_REF")"
+    fi
+
+    if [[ -n "$prev" ]]; then
+        if [[ -n "$prev_ref" && "$prev_ref" == refs/heads/* ]]; then
+            local br="${prev_ref#refs/heads/}"
+            print_info "Checking out previous branch ${br}…"
+            bsctl_git checkout -f -q "$br" 2>/dev/null || true
+        fi
+        print_info "Resetting repository to saved revision…"
+        if bsctl_git reset --hard -q "$prev" 2>/dev/null; then
+            print_success "Git tree restored."
+        else
+            print_error "Git reset failed — check the repo under ${INSTALL_DIR:-/opt/bookstorage}."
+        fi
+    else
+        print_error "No saved git revision — cannot restore sources."
+    fi
+
+    if [[ -n "$rb" && -f "${rb}/bookstorage" ]]; then
+        print_info "Restoring bookstorage binary…"
+        cp -a "${rb}/bookstorage" "${BIN_DIR}/${APP_NAME}" && chmod 755 "${BIN_DIR}/${APP_NAME}" 2>/dev/null || print_error "Could not restore ${BIN_DIR}/${APP_NAME}"
+    fi
+    if [[ -n "$rb" && -f "${rb}/bsctl" ]]; then
+        cp -a "${rb}/bsctl" "${BIN_DIR}/bsctl" && chmod 755 "${BIN_DIR}/bsctl" 2>/dev/null || true
+    fi
+    if [[ -n "$rb" && -f "${rb}/bsctl.lib.sh" ]]; then
+        cp -a "${rb}/bsctl.lib.sh" "${BIN_DIR}/bsctl.lib.sh" && chmod 644 "${BIN_DIR}/bsctl.lib.sh" 2>/dev/null || true
+    fi
+
+    if [[ -x "${BIN_DIR}/${APP_NAME}" ]]; then
+        print_info "Restarting ${APP_NAME}…"
+        if systemctl restart "${APP_NAME}" 2>/dev/null; then
+            sleep 0.5
+            if systemctl is-active --quiet "${APP_NAME}"; then
+                print_success "Service is active after rollback."
+            else
+                print_error "Service not active after rollback."
+                journalctl -u "${APP_NAME}" -n 20 --no-pager 2>/dev/null || true
+            fi
+        else
+            print_error "systemctl restart failed during rollback."
+            journalctl -u "${APP_NAME}" -n 15 --no-pager 2>/dev/null || true
+        fi
+    fi
+
+    bsctl_update_clear_rollback_state
+    printf "\n${YELLOW}Update aborted (rollback attempted).${NC}\n"
+    exit 1
+}
+
 # Shared tail: build, install, restart (steps 4–8)
 cmd_update_finish() {
     local build_version="${1:-}"
@@ -185,22 +294,32 @@ cmd_update_finish() {
         build_version="$(sed -n 's/^APP_VERSION="\([^"]\+\)".*/\1/p' "${repo}/scripts/bsctl" | head -n 1 || true)"
     fi
     if [[ -n "$build_version" ]]; then
-        cmd_build_prod "$build_version"
+        if ! cmd_build_prod "$build_version"; then
+            bsctl_update_rollback_and_exit "Production build failed."
+        fi
     else
-        cmd_build_prod
+        if ! cmd_build_prod; then
+            bsctl_update_rollback_and_exit "Production build failed."
+        fi
     fi
     printf "\n"
 
     print_step "5/8" "Installing binary..."
-    cp "${repo}/${APP_NAME}" ${BIN_DIR}/
+    if ! cp "${repo}/${APP_NAME}" "${BIN_DIR}/"; then
+        bsctl_update_rollback_and_exit "Could not install binary to ${BIN_DIR}/."
+    fi
     print_success "Binary installed to ${BIN_DIR}/"
     printf "\n"
 
     print_step "6/8" "Updating bsctl script..."
-    bsctl_install_script_strip_cr "${repo}/scripts/bsctl" "${BIN_DIR}/bsctl" 755
-    bsctl_install_script_strip_cr "${repo}/scripts/bsctl.lib.sh" "${BIN_DIR}/bsctl.lib.sh" 644
+    if ! bsctl_install_script_strip_cr "${repo}/scripts/bsctl" "${BIN_DIR}/bsctl" 755; then
+        bsctl_update_rollback_and_exit "Could not install bsctl to ${BIN_DIR}/."
+    fi
+    if ! bsctl_install_script_strip_cr "${repo}/scripts/bsctl.lib.sh" "${BIN_DIR}/bsctl.lib.sh" 644; then
+        bsctl_update_rollback_and_exit "Could not install bsctl.lib.sh to ${BIN_DIR}/."
+    fi
     print_success "bsctl updated"
-    install_bsctl_bash_completion "$repo"
+    install_bsctl_bash_completion "$repo" || true
     printf "\n"
 
     print_step "7/8" "Fixing permissions..."
@@ -213,9 +332,7 @@ cmd_update_finish() {
         print_error "systemctl restart failed."
         printf "${YELLOW}Last journal lines:${NC}\n"
         journalctl -u ${APP_NAME} -n 20 --no-pager 2>/dev/null || true
-        printf "\n${BLUE}More detail:${NC} sudo journalctl -u ${APP_NAME} -xe\n"
-        printf "${BLUE}Service status:${NC} sudo systemctl status ${APP_NAME}\n"
-        exit 1
+        bsctl_update_rollback_and_exit "systemctl restart failed."
     fi
 
     sleep 0.5
@@ -223,6 +340,7 @@ cmd_update_finish() {
 
     if systemctl is-active --quiet ${APP_NAME}; then
         print_success "Service restarted and running."
+        bsctl_update_clear_rollback_state
         printf "\n"
         printf "${GREEN}╔════════════════════════════════════════╗${NC}\n"
         printf "${GREEN}║         UPDATE COMPLETE ✓              ║${NC}\n"
@@ -232,10 +350,7 @@ cmd_update_finish() {
         print_error "Service is not active after restart."
         printf "${YELLOW}Last journal lines:${NC}\n"
         journalctl -u ${APP_NAME} -n 25 --no-pager 2>/dev/null || true
-        printf "\n${BLUE}To diagnose:${NC}\n"
-        printf "  sudo journalctl -u ${APP_NAME} -xe\n"
-        printf "  sudo systemctl status ${APP_NAME}\n"
-        exit 1
+        bsctl_update_rollback_and_exit "Service did not stay active after restart."
     fi
 }
 
@@ -299,12 +414,18 @@ cmd_update_at_tag() {
         exit 1
     fi
 
+    bsctl_update_save_rollback_state || exit 1
+
     print_step "2/8" "Checking out release ${tag}..."
-    bsctl_git -c advice.detachedHead=false checkout -f -q "$tag"
+    if ! bsctl_git -c advice.detachedHead=false checkout -f -q "$tag"; then
+        bsctl_update_rollback_and_exit "Git checkout of ${tag} failed."
+    fi
     printf "\n"
 
     print_step "3/8" "Aligning on release ${tag}..."
-    bsctl_git reset --hard -q "$tag"
+    if ! bsctl_git reset --hard -q "$tag"; then
+        bsctl_update_rollback_and_exit "Git reset to ${tag} failed."
+    fi
     print_success "Now at ${tag}."
     printf "\n"
 
@@ -349,14 +470,17 @@ cmd_update_branch() {
         return 0
     fi
 
+    bsctl_update_save_rollback_state || exit 1
+
     print_step "2/8" "Checking out branch ${branch}..."
-    bsctl_git checkout -f -q "$branch"
+    if ! bsctl_git checkout -f -q "$branch"; then
+        bsctl_update_rollback_and_exit "Git checkout of ${branch} failed."
+    fi
     printf "\n"
 
     print_step "3/8" "Aligning on origin/${branch}..."
     if ! bsctl_git reset --hard -q "origin/${branch}"; then
-        print_error "Could not align with origin/${branch}."
-        exit 1
+        bsctl_update_rollback_and_exit "Could not align with origin/${branch}."
     fi
     print_success "Branch matches origin/${branch}."
     printf "\n"
@@ -387,6 +511,8 @@ cmd_help() {
     printf "    ${GREEN}update${NC}         Interactive release menu or ${GREEN}BSCTL_UPDATE_TAG${NC}\n"
     printf "    ${GREEN}update main${NC}    Update from origin/main\n"
     printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch>\n"
+    printf "                      After checkout, a failed build/install/restart rolls back git + binaries\n"
+    printf "                      and restarts ${APP_NAME}. Set ${GREEN}BSCTL_UPDATE_NO_ROLLBACK=1${NC} to disable.\n"
     printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
     printf "\n"
     printf "${BOLD}SERVICE${NC}\n"
