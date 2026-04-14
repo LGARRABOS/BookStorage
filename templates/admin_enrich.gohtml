@@ -90,6 +90,7 @@
                     data-working="{{ t .T "admin.enrich.working" }}"
                     data-no-results="{{ t .T "admin.enrich.search.empty" }}"
                     data-confirm-unlink="{{ t .T "admin.enrich.confirm.unlink" }}"
+                    data-err-maintenance="{{ t .T "admin.enrich.error_maintenance" }}"
                 ></div>
                 <button type="button" class="btn btn-primary" id="enrich-run">{{ t .T "admin.enrich.run" }}</button>
                 <div id="enrich-panel">
@@ -125,6 +126,16 @@
 (function () {
   var box = document.getElementById("enrich-i18n");
   function L(k, fb) { return (box && box.getAttribute("data-" + k)) || fb; }
+
+  /** Reverse proxies sometimes return a static HTML maintenance page (HTTP 200) for every path including /api/. */
+  function looksLikeApiGotHTMLMaintenance(s) {
+    s = s || "";
+    if (/^\s*</.test(s)) return true;
+    if (s.indexOf("<title>Maintenance") !== -1) return true;
+    if (s.indexOf("Maintenance — BookStorage") !== -1) return true;
+    if (s.indexOf("under maintenance") !== -1) return true;
+    return false;
+  }
 
   function anilistURL(id) { return "https://anilist.co/manga/" + encodeURIComponent(id); }
 
@@ -406,6 +417,10 @@
         body: JSON.stringify({ limit: 10 }),
       });
       var raw = await res.text();
+      if (looksLikeApiGotHTMLMaintenance(raw)) {
+        if (idle) idle.textContent = L("err-maintenance", "Maintenance page received instead of API JSON. Retry when the app is up, or allow /api/ through your reverse proxy.");
+        return;
+      }
       if (!res.ok) {
         if (idle) idle.textContent = errHttp + " " + res.status + "\n" + raw.slice(0, 800);
         return;

@@ -376,6 +376,7 @@
   "admin.enrich.note": "Débit limité (~400 ms entre chaque appel AniList). Correspondance sur plusieurs formes de titre (dont sans parenthèses), puis similarité de mots si plusieurs résultats ; un seul résultat AniList sert encore de repli.",
   "admin.enrich.error_http": "Erreur HTTP",
   "admin.enrich.error_read": "Réponse non JSON :",
+  "admin.enrich.error_maintenance": "Le serveur renvoie une page de maintenance (HTML) au lieu de l’API JSON — souvent le reverse proxy (Caddy, nginx, etc.) sert une page statique pendant un redémarrage ou une mise à jour. Réessayez quand le site fonctionne à nouveau, ou configurez le proxy pour que les chemins /api/ continuent d’atteindre l’application Go.",
   "admin.enrich.run": "Lancer un lot (10 œuvres)",
   "admin.enrich.queue": "File d’attente (extrait, sans lien catalogue)",
   "admin.enrich.empty": "(aucune dans cet extrait)",

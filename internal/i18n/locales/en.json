@@ -376,6 +376,7 @@
   "admin.enrich.note": "Throttled (~400 ms between AniList calls). Matching uses several title shapes (including text without parentheses), then word overlap when several results exist; a single AniList hit is still used as a fallback.",
   "admin.enrich.error_http": "HTTP error",
   "admin.enrich.error_read": "Non-JSON response:",
+  "admin.enrich.error_maintenance": "The server returned an HTML maintenance page instead of API JSON — often the reverse proxy serves a static page while the app restarts or updates. Retry when the site is back, or configure the proxy so /api/ still reaches the Go application.",
   "admin.enrich.run": "Run batch (10 works)",
   "admin.enrich.queue": "Sample queue (no catalog link)",
   "admin.enrich.empty": "(none in this sample)",
