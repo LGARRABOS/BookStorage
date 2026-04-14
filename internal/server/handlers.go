@@ -1001,29 +1001,30 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	var isAdmin int
 	_ = a.DB.QueryRow(`SELECT is_admin FROM users WHERE id = ?`, userID).Scan(&isAdmin)
 
-	// Option de tri (regroupement série en premier : parent puis enfants)
+	// Tri dashboard : uniquement le critère utilisateur en tête.
+	// (Un préfixe « série » COALESCE(parent_work_id, id) cassait tous les tris pour les œuvres sans parent :
+	// une clé différente par ligne forçait l’ordre d’insertion avant le titre / dates.)
 	sortBy := r.URL.Query().Get("sort")
-	seriesOrder := "COALESCE(parent_work_id, id), CASE WHEN parent_work_id IS NULL THEN 0 ELSE 1 END, COALESCE(series_sort, 0) ASC, "
-	orderClause := "ORDER BY " + seriesOrder + "LOWER(title)"
+	orderClause := "ORDER BY LOWER(title), id"
 	switch sortBy {
 	case "title_desc":
-		orderClause = "ORDER BY " + seriesOrder + "LOWER(title) DESC"
+		orderClause = "ORDER BY LOWER(title) DESC, id DESC"
 	case "chapter":
-		orderClause = "ORDER BY " + seriesOrder + "chapter DESC"
+		orderClause = "ORDER BY chapter DESC, LOWER(title), id"
 	case "status":
-		orderClause = "ORDER BY " + seriesOrder + "status, LOWER(title)"
+		orderClause = "ORDER BY status, LOWER(title), id"
 	case "type":
-		orderClause = "ORDER BY " + seriesOrder + "reading_type, LOWER(title)"
+		orderClause = "ORDER BY reading_type, LOWER(title), id"
 	case "recent":
-		orderClause = "ORDER BY " + seriesOrder + "id DESC"
+		orderClause = "ORDER BY id DESC"
 	case "oldest":
-		orderClause = "ORDER BY " + seriesOrder + "id ASC"
+		orderClause = "ORDER BY id ASC"
 	case "modified", "modified_desc":
 		// Alias "modified" kept for backward compatibility
 		sortBy = "modified_desc"
-		orderClause = "ORDER BY " + seriesOrder + "COALESCE(updated_at, '1970-01-01') DESC"
+		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') DESC, id DESC"
 	case "modified_asc":
-		orderClause = "ORDER BY " + seriesOrder + "COALESCE(updated_at, '1970-01-01') ASC"
+		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') ASC, id ASC"
 	default:
 		sortBy = "title"
 	}
