@@ -91,6 +91,13 @@
                     data-no-results="{{ t .T "admin.enrich.search.empty" }}"
                     data-confirm-unlink="{{ t .T "admin.enrich.confirm.unlink" }}"
                     data-err-maintenance="{{ t .T "admin.enrich.error_maintenance" }}"
+                    data-col-id="{{ t .T "admin.enrich.col.id" }}"
+                    data-col-user="{{ t .T "admin.enrich.col.user" }}"
+                    data-catalog-linked="{{ t .T "admin.enrich.catalog.linked" }}"
+                    data-catalog-none="{{ t .T "admin.enrich.catalog.none" }}"
+                    data-col-anilist="{{ t .T "admin.enrich.col.anilist" }}"
+                    data-btn-manual="{{ t .T "admin.enrich.btn.manual" }}"
+                    data-works-all-meta="{{ t .T "admin.enrich.works_all.meta" }}"
                 ></div>
                 <button type="button" class="btn btn-primary" id="enrich-run">{{ t .T "admin.enrich.run" }}</button>
                 <div id="enrich-panel">
@@ -117,6 +124,29 @@
                     <li>{{ t .T "admin.enrich.empty" }}</li>
                     {{ end }}
                 </ul>
+                <h2 style="margin-top:1.75rem;font-size:1.05rem;">{{ t .T "admin.enrich.works_all.title" }}</h2>
+                <p class="enrich-help" style="margin-bottom:0.65rem;line-height:1.5;color:var(--text-secondary);font-size:0.9rem;">{{ t .T "admin.enrich.works_all.hint" }}</p>
+                <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:0.65rem;">
+                    <button type="button" class="btn btn-secondary" id="enrich-all-load">{{ t .T "admin.enrich.works_all.load" }}</button>
+                    <input type="search" id="enrich-all-q" placeholder="{{ t .T "admin.enrich.works_all.search_ph" }}" style="min-width:12rem;padding:0.4rem 0.55rem;border-radius:0.45rem;border:1px solid var(--border-subtle);font-size:0.88rem;" />
+                    <button type="button" class="btn btn-primary" id="enrich-all-search">{{ t .T "admin.enrich.works_all.search_btn" }}</button>
+                    <span id="enrich-all-meta" style="font-size:0.85rem;color:var(--text-muted);"></span>
+                </div>
+                <div class="enrich-table-wrap">
+                    <table class="enrich-results-table" id="enrich-all-table" aria-label="{{ t .T "admin.enrich.works_all.title" }}">
+                        <thead>
+                            <tr>
+                                <th>{{ t .T "admin.enrich.col.id" }}</th>
+                                <th>{{ t .T "admin.enrich.col.user" }}</th>
+                                <th>{{ t .T "admin.enrich.col.work" }}</th>
+                                <th>{{ t .T "admin.enrich.col.catalog" }}</th>
+                                <th>{{ t .T "admin.enrich.col.anilist" }}</th>
+                                <th>{{ t .T "admin.enrich.col.actions" }}</th>
+                            </tr>
+                        </thead>
+                        <tbody id="enrich-all-tbody"></tbody>
+                    </table>
+                </div>
             </section>
         </div>
     </main>
@@ -179,9 +209,16 @@
           }
           x.j.results.forEach(function (c) {
             var li = document.createElement("li");
+            var titleA = document.createElement("a");
+            titleA.href = c.anilist_url || anilistURL(c.anilist_id);
+            titleA.target = "_blank";
+            titleA.rel = "noopener noreferrer";
+            titleA.textContent = c.title || ("#" + c.anilist_id);
+            li.appendChild(titleA);
+            li.appendChild(document.createTextNode(" · "));
             var b = document.createElement("button");
             b.type = "button";
-            b.textContent = labels.use + " #" + c.anilist_id + " — " + (c.title || "");
+            b.textContent = labels.use + " #" + c.anilist_id;
             b.addEventListener("click", function () {
               b.disabled = true;
               fetch("/api/admin/enrich/link", {
@@ -194,20 +231,44 @@
                 if (!y.ok) throw new Error((y.j && y.j.error) || "link failed");
                 var tr = div.closest("tr");
                 if (tr) {
-                  tr.querySelectorAll("td")[1].innerHTML = "";
-                  tr.querySelectorAll("td")[1].appendChild(statusBadge("linked", labels));
-                  var matchTd = tr.querySelectorAll("td")[2];
-                  matchTd.innerHTML = "";
-                  var a = document.createElement("a");
-                  a.href = anilistURL(c.anilist_id);
-                  a.target = "_blank";
-                  a.rel = "noopener noreferrer";
-                  a.textContent = (y.j.matched_title || c.title || ("#" + c.anilist_id));
-                  matchTd.appendChild(a);
-                  matchTd.appendChild(document.createTextNode(" · "));
-                  var small = document.createElement("small");
-                  small.textContent = labels.catalogId + " " + (y.j.catalog_id || "");
-                  matchTd.appendChild(small);
+                  if (tr.closest("#enrich-all-tbody")) {
+                    var cells = tr.querySelectorAll("td");
+                    var catTd = cells[3];
+                    catTd.innerHTML = "";
+                    catTd.appendChild(statusBadge("linked", labels));
+                    catTd.appendChild(document.createElement("br"));
+                    var smx = document.createElement("small");
+                    smx.style.color = "var(--text-muted)";
+                    smx.textContent = (y.j.matched_title || c.title || "") + " · anilist";
+                    catTd.appendChild(smx);
+                    var aniTd = cells[4];
+                    aniTd.innerHTML = "";
+                    var ax = document.createElement("a");
+                    ax.href = c.anilist_url || anilistURL(c.anilist_id);
+                    ax.target = "_blank";
+                    ax.rel = "noopener noreferrer";
+                    ax.textContent = L("col-anilist", "AniList") + " #" + c.anilist_id;
+                    aniTd.appendChild(ax);
+                    var actTd = cells[5];
+                    actTd.innerHTML = "";
+                    actTd.className = "enrich-actions";
+                    actTd.appendChild(makeAllWorksActionsRow(workId, true, labels, tr));
+                  } else {
+                    tr.querySelectorAll("td")[1].innerHTML = "";
+                    tr.querySelectorAll("td")[1].appendChild(statusBadge("linked", labels));
+                    var matchTd = tr.querySelectorAll("td")[2];
+                    matchTd.innerHTML = "";
+                    var a = document.createElement("a");
+                    a.href = c.anilist_url || anilistURL(c.anilist_id);
+                    a.target = "_blank";
+                    a.rel = "noopener noreferrer";
+                    a.textContent = (y.j.matched_title || c.title || ("#" + c.anilist_id));
+                    matchTd.appendChild(a);
+                    matchTd.appendChild(document.createTextNode(" · "));
+                    var small = document.createElement("small");
+                    small.textContent = labels.catalogId + " " + (y.j.catalog_id || "");
+                    matchTd.appendChild(small);
+                  }
                   div.classList.remove("open");
                 }
               }).catch(function () { b.disabled = false; alert("link failed"); });
@@ -294,7 +355,7 @@
       var tdMatch = document.createElement("td");
       if (it.status === "linked" && it.anilist_id) {
         var a = document.createElement("a");
-        a.href = anilistURL(it.anilist_id);
+        a.href = it.anilist_url || anilistURL(it.anilist_id);
         a.target = "_blank";
         a.rel = "noopener noreferrer";
         a.textContent = it.matched_title || ("#" + it.anilist_id);
@@ -308,6 +369,13 @@
         ulc.className = "enrich-cand-list";
         it.candidates.forEach(function (c) {
           var li = document.createElement("li");
+          var ta = document.createElement("a");
+          ta.href = c.anilist_url || anilistURL(c.anilist_id);
+          ta.target = "_blank";
+          ta.rel = "noopener noreferrer";
+          ta.textContent = c.title || ("#" + c.anilist_id);
+          li.appendChild(ta);
+          li.appendChild(document.createTextNode(" · "));
           var btn = document.createElement("button");
           btn.type = "button";
           btn.textContent = labels.use + " #" + c.anilist_id;
@@ -341,7 +409,6 @@
             }).catch(function () { btn.disabled = false; });
           });
           li.appendChild(btn);
-          li.appendChild(document.createTextNode(" " + (c.title || "")));
           ulc.appendChild(li);
         });
         tdMatch.appendChild(ulc);
@@ -359,6 +426,151 @@
     });
 
     if (jsonPre) jsonPre.textContent = JSON.stringify(d, null, 2);
+  }
+
+  function makeAllWorksActionsRow(workId, linked, labels, tr) {
+    var frag = document.createDocumentFragment();
+    var catalogCell = tr.cells[3];
+    if (!linked) {
+      var man = document.createElement("button");
+      man.type = "button";
+      man.textContent = labels.manual;
+      man.addEventListener("click", function () {
+        var panel = tr.querySelector(".enrich-fix");
+        if (!panel) {
+          panel = buildFixPanel(workId, labels);
+          catalogCell.appendChild(panel);
+        }
+        panel.classList.toggle("open");
+      });
+      frag.appendChild(man);
+      return frag;
+    }
+    var u = document.createElement("button");
+    u.type = "button";
+    u.className = "danger";
+    u.textContent = labels.unlink;
+    u.addEventListener("click", function () {
+      if (!confirm(labels.confirmUnlink)) return;
+      u.disabled = true;
+      fetch("/api/admin/enrich/unlink", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ work_id: workId }),
+      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
+        if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+      }).catch(function () { u.disabled = false; });
+    });
+    frag.appendChild(u);
+    var w = document.createElement("button");
+    w.type = "button";
+    w.textContent = labels.wrong;
+    w.addEventListener("click", function () {
+      var panel = tr.querySelector(".enrich-fix");
+      if (!panel) {
+        panel = buildFixPanel(workId, labels);
+        catalogCell.appendChild(panel);
+      }
+      panel.classList.toggle("open");
+    });
+    frag.appendChild(w);
+    return frag;
+  }
+
+  function renderAllWorksRows(payload) {
+    var tbody = document.getElementById("enrich-all-tbody");
+    var meta = document.getElementById("enrich-all-meta");
+    if (!tbody) return;
+    var labels = {
+      linked: L("status-linked", "linked"),
+      skipped: L("status-skipped", "skipped"),
+      error: L("status-error", "error"),
+      unlink: L("btn-unlink", "Unlink"),
+      confirmUnlink: L("confirm-unlink", "Unlink?"),
+      wrong: L("btn-wrong", "Wrong"),
+      use: L("btn-use", "Use"),
+      searchPh: L("search-ph", "Search…"),
+      openAni: L("open-anilist", "AniList"),
+      catalogId: L("catalog-id", "catalog_id"),
+      noResults: L("no-results", "(no results)"),
+      manual: L("btn-manual", "Manual link"),
+      catLinked: L("catalog-linked", "Linked"),
+      catNone: L("catalog-none", "Not linked"),
+      colAni: L("col-anilist", "AniList"),
+    };
+    tbody.innerHTML = "";
+    var works = payload.works || [];
+    works.forEach(function (w) {
+      var tr = document.createElement("tr");
+      var linked = w.catalog_id != null && w.catalog_id !== undefined;
+      var td0 = document.createElement("td");
+      td0.textContent = String(w.id);
+      tr.appendChild(td0);
+      var td1 = document.createElement("td");
+      td1.textContent = String(w.user_id);
+      tr.appendChild(td1);
+      var td2 = document.createElement("td");
+      td2.textContent = (w.title || "") + (w.reading_type ? " (" + w.reading_type + ")" : "");
+      tr.appendChild(td2);
+      var td3 = document.createElement("td");
+      var badge = document.createElement("span");
+      badge.className = "enrich-badge " + (linked ? "ok" : "skip");
+      badge.textContent = linked ? labels.catLinked : labels.catNone;
+      td3.appendChild(badge);
+      if (linked && (w.catalog_title || w.catalog_source)) {
+        td3.appendChild(document.createElement("br"));
+        var sm = document.createElement("small");
+        sm.style.color = "var(--text-muted)";
+        sm.textContent = (w.catalog_title || "") + (w.catalog_source ? " · " + w.catalog_source : "");
+        td3.appendChild(sm);
+      }
+      tr.appendChild(td3);
+      var td4 = document.createElement("td");
+      if (linked && w.catalog_source === "anilist" && w.catalog_external_id) {
+        var aid = parseInt(w.catalog_external_id, 10);
+        if (!isNaN(aid)) {
+          var a = document.createElement("a");
+          a.href = anilistURL(aid);
+          a.target = "_blank";
+          a.rel = "noopener noreferrer";
+          a.textContent = labels.colAni + " #" + aid;
+          td4.appendChild(a);
+        } else td4.textContent = "—";
+      } else td4.textContent = "—";
+      tr.appendChild(td4);
+      var td5 = document.createElement("td");
+      td5.className = "enrich-actions";
+      td5.appendChild(makeAllWorksActionsRow(w.id, linked, labels, tr));
+      tr.appendChild(td5);
+      tbody.appendChild(tr);
+    });
+    if (meta) {
+      var tpl = L("works-all-meta", "Total: {total} — shown: {shown}");
+      meta.textContent = tpl.replace("{total}", String(payload.total != null ? payload.total : works.length)).replace("{shown}", String(works.length));
+    }
+  }
+
+  function fetchAllWorks(q) {
+    var tbody = document.getElementById("enrich-all-tbody");
+    var meta = document.getElementById("enrich-all-meta");
+    if (tbody) tbody.innerHTML = "";
+    if (meta) meta.textContent = L("working", "…");
+    var qs = new URLSearchParams();
+    qs.set("limit", "500");
+    qs.set("offset", "0");
+    if (q) qs.set("q", q);
+    return fetch("/api/admin/enrich/works?" + qs.toString(), {
+      method: "GET",
+      headers: { Accept: "application/json" },
+      credentials: "same-origin",
+    }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+    .then(function (x) {
+      if (!x.ok) throw new Error((x.j && x.j.error) || "load failed");
+      renderAllWorksRows(x.j);
+    });
   }
 
   function makeActionsRow(workId, showWrongAndUnlink, labels, tr) {
@@ -434,6 +646,22 @@
     } catch (e) {
       if (idle) idle.textContent = String(e);
     }
+  });
+
+  var enrichAllQ = document.getElementById("enrich-all-q");
+  document.getElementById("enrich-all-load").addEventListener("click", function () {
+    var q = enrichAllQ ? (enrichAllQ.value || "").trim() : "";
+    fetchAllWorks(q).catch(function (e) {
+      var meta = document.getElementById("enrich-all-meta");
+      if (meta) meta.textContent = String(e);
+    });
+  });
+  document.getElementById("enrich-all-search").addEventListener("click", function () {
+    var q = enrichAllQ ? (enrichAllQ.value || "").trim() : "";
+    fetchAllWorks(q).catch(function (e) {
+      var meta = document.getElementById("enrich-all-meta");
+      if (meta) meta.textContent = String(e);
+    });
   });
 })();
     </script>

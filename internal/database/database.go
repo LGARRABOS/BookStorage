@@ -3,6 +3,8 @@ package database
 import (
 	"database/sql"
 	"fmt"
+	"path/filepath"
+	"strings"
 
 	"bookstorage/internal/config"
 
@@ -96,9 +98,26 @@ var workColumns = map[string]string{
 	"catalog_id":   "INTEGER REFERENCES catalog(id)",
 }
 
+// sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).
+func sqliteDataSourceName(dbPath string) string {
+	p := filepath.ToSlash(dbPath)
+	const opts = "_fk=1&_journal_mode=WAL&_busy_timeout=20000"
+	if strings.HasPrefix(p, ":memory:") {
+		if strings.Contains(p, "?") {
+			return p + "&" + opts
+		}
+		return p + "?" + opts
+	}
+	sep := "?"
+	if strings.Contains(p, "?") {
+		sep = "&"
+	}
+	return p + sep + opts
+}
+
 // Open opens a database connection
 func Open(settings *config.Settings) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", settings.Database)
+	db, err := sql.Open("sqlite3", sqliteDataSourceName(settings.Database))
 	if err != nil {
 		return nil, err
 	}

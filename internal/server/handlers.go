@@ -1061,14 +1061,39 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		works = append(works, wRow)
 	}
 
+	catalogCoverByWorkID := map[int]string{}
+	coverQuery := `SELECT w.id, COALESCE(c.image_url, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id ` + whereClause
+	coverRows, err := a.DB.Query(coverQuery, args...)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = coverRows.Close() }()
+	for coverRows.Next() {
+		var wid int
+		var imageURL string
+		if err := coverRows.Scan(&wid, &imageURL); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if strings.TrimSpace(imageURL) != "" {
+			catalogCoverByWorkID[wid] = strings.TrimSpace(imageURL)
+		}
+	}
+	if err := coverRows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]any{
-		"Works":         works,
-		"ReadingTypes":  readingTypes,
-		"ReadingStatus": readingStatuses,
-		"IsAdmin":       isAdmin == 1,
-		"SortBy":        sortBy,
-		"AdultFilter":   adultFilter,
-		"SearchQuery":   r.URL.Query().Get("q"),
+		"Works":                works,
+		"CatalogCoverByWorkID": catalogCoverByWorkID,
+		"ReadingTypes":         readingTypes,
+		"ReadingStatus":        readingStatuses,
+		"IsAdmin":              isAdmin == 1,
+		"SortBy":               sortBy,
+		"AdultFilter":          adultFilter,
+		"SearchQuery":          r.URL.Query().Get("q"),
 	}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)
@@ -1881,6 +1906,19 @@ func deleteMediaFile(folder, storedPath string) {
 	}
 	target := filepath.Join(folder, filename)
 	_ = os.Remove(target)
+}
+
+// clearWorkUploadedImage removes the work's locally stored cover file (if any) and clears image_path.
+func (a *App) clearWorkUploadedImage(workID int) error {
+	var path sql.NullString
+	if err := a.DB.QueryRow(`SELECT image_path FROM works WHERE id = ?`, workID).Scan(&path); err != nil {
+		return err
+	}
+	if path.Valid && strings.TrimSpace(path.String) != "" {
+		deleteMediaFile(a.Settings.UploadFolder, path.String)
+	}
+	_, err := a.DB.Exec(`UPDATE works SET image_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, workID)
+	return err
 }
 
 func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
