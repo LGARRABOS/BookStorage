@@ -3,6 +3,7 @@ package catalog
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strings"
 	"time"
@@ -13,14 +14,16 @@ const anilistTimeout = 8 * time.Second
 
 // AnilistResult represents one search result from AniList
 type AnilistResult struct {
-	ID          int      `json:"id"`
-	Title       string   `json:"title"`
-	Type        string   `json:"type"`
-	ImageURL    string   `json:"image_url"`
-	ReadingType string   `json:"reading_type"` // mapped for our app
-	IsAdult     bool     `json:"is_adult"`
-	Genres      []string `json:"genres,omitempty"`
-	Tags        []string `json:"tags,omitempty"` // tag names only
+	ID           int      `json:"id"`
+	Title        string   `json:"title"`
+	TitleRomaji  string   `json:"title_romaji,omitempty"`
+	TitleEnglish string   `json:"title_english,omitempty"`
+	Type         string   `json:"type"`
+	ImageURL     string   `json:"image_url"`
+	ReadingType  string   `json:"reading_type"` // mapped for our app
+	IsAdult      bool     `json:"is_adult"`
+	Genres       []string `json:"genres,omitempty"`
+	Tags         []string `json:"tags,omitempty"` // tag names only
 }
 
 type anilistMedia struct {
@@ -167,26 +170,33 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return nil, fmt.Errorf("anilist_http_%d", resp.StatusCode)
+	}
 	var out anilistResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
 		return nil, err
 	}
 	var results []AnilistResult
 	for _, m := range out.Data.Page.Media {
-		title := m.Title.Romaji
-		if m.Title.English != "" {
-			title = m.Title.English
+		romaji := strings.TrimSpace(m.Title.Romaji)
+		english := strings.TrimSpace(m.Title.English)
+		title := romaji
+		if english != "" {
+			title = english
 		}
 		if title == "" {
-			title = m.Title.Romaji
+			title = romaji
 		}
 		results = append(results, AnilistResult{
-			ID:          m.ID,
-			Title:       title,
-			Type:        m.Type,
-			ImageURL:    m.CoverImage.Large,
-			ReadingType: mapAnilistReadingType(m),
-			IsAdult:     m.IsAdult,
+			ID:           m.ID,
+			Title:        title,
+			TitleRomaji:  romaji,
+			TitleEnglish: english,
+			Type:         m.Type,
+			ImageURL:     m.CoverImage.Large,
+			ReadingType:  mapAnilistReadingType(m),
+			IsAdult:      m.IsAdult,
 		})
 	}
 	return results, nil

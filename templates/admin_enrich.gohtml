@@ -12,7 +12,28 @@
     <script src="/static/js/appearance-init.js"></script>
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
-        #enrich-out { margin-top: 1rem; font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: pre-wrap; }
+        #enrich-panel { margin-top: 1rem; }
+        .enrich-summary { font-size: 0.92rem; margin-bottom: 0.75rem; color: var(--text-secondary); }
+        .enrich-table-wrap { overflow-x: auto; border: 1px solid var(--border-subtle); border-radius: 0.75rem; margin-bottom: 1rem; }
+        .enrich-results-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .enrich-results-table th, .enrich-results-table td { padding: 0.5rem 0.65rem; text-align: left; border-bottom: 1px solid var(--border-subtle); vertical-align: top; }
+        .enrich-results-table th { background: rgba(15, 23, 42, 0.04); font-weight: 600; color: var(--text-secondary); white-space: nowrap; }
+        .enrich-results-table tr:last-child td { border-bottom: none; }
+        .enrich-badge { display: inline-block; padding: 0.15rem 0.45rem; border-radius: 0.35rem; font-size: 0.78rem; font-weight: 600; }
+        .enrich-badge.ok { background: rgba(22, 163, 74, 0.15); color: #15803d; }
+        .enrich-badge.skip { background: rgba(234, 179, 8, 0.2); color: #a16207; }
+        .enrich-badge.err { background: rgba(220, 38, 38, 0.12); color: #b91c1c; }
+        .enrich-actions { display: flex; flex-wrap: wrap; gap: 0.35rem; align-items: center; justify-content: flex-end; }
+        .enrich-actions button, .enrich-actions .btn-linkish { font-size: 0.78rem; padding: 0.28rem 0.5rem; border-radius: 0.4rem; cursor: pointer; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-primary); }
+        .enrich-actions button:hover { background: rgba(79, 70, 229, 0.08); }
+        .enrich-actions .danger { border-color: rgba(185, 28, 28, 0.35); color: #b91c1c; background: rgba(185, 28, 28, 0.06); }
+        .enrich-fix { margin-top: 0.5rem; padding: 0.6rem; border-radius: 0.5rem; border: 1px dashed var(--border-subtle); background: rgba(15, 23, 42, 0.02); display: none; }
+        .enrich-fix.open { display: block; }
+        .enrich-fix input[type="search"] { width: 100%; max-width: 22rem; padding: 0.4rem 0.55rem; margin: 0.35rem 0; border-radius: 0.45rem; border: 1px solid var(--border-subtle); font-size: 0.85rem; }
+        .enrich-cand-list { max-height: 11rem; overflow-y: auto; font-size: 0.8rem; margin: 0.25rem 0 0 0; padding-left: 1.1rem; }
+        .enrich-cand-list li { margin: 0.2rem 0; }
+        .enrich-json-pre { font-family: ui-monospace, monospace; font-size: 0.78rem; white-space: pre-wrap; word-break: break-word; margin: 0; padding: 0.75rem; max-height: 18rem; overflow: auto; background: rgba(15, 23, 42, 0.04); border-radius: 0.5rem; }
+        .enrich-details { margin-top: 0.75rem; }
     </style>
 </head>
 <body>
@@ -43,9 +64,50 @@
                         <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
                     </nav>
                 </header>
+                <p class="enrich-help" style="margin-bottom:0.75rem;line-height:1.55;color:var(--text-secondary);font-size:0.92rem;">{{ t .T "admin.enrich.help" }}</p>
                 <p>{{ t .T "admin.enrich.note" }}</p>
+                <div id="enrich-i18n" hidden
+                    data-err-http="{{ t .T "admin.enrich.error_http" }}"
+                    data-err-read="{{ t .T "admin.enrich.error_read" }}"
+                    data-col-work="{{ t .T "admin.enrich.col.work" }}"
+                    data-col-status="{{ t .T "admin.enrich.col.status" }}"
+                    data-col-match="{{ t .T "admin.enrich.col.match" }}"
+                    data-col-actions="{{ t .T "admin.enrich.col.actions" }}"
+                    data-status-linked="{{ t .T "admin.enrich.status.linked" }}"
+                    data-status-skipped="{{ t .T "admin.enrich.status.skipped" }}"
+                    data-status-error="{{ t .T "admin.enrich.status.error" }}"
+                    data-sum-processed="{{ t .T "admin.enrich.sum.processed" }}"
+                    data-sum-linked="{{ t .T "admin.enrich.sum.linked" }}"
+                    data-sum-skipped="{{ t .T "admin.enrich.sum.skipped" }}"
+                    data-sum-errors="{{ t .T "admin.enrich.sum.errors" }}"
+                    data-btn-unlink="{{ t .T "admin.enrich.btn.unlink" }}"
+                    data-btn-wrong="{{ t .T "admin.enrich.btn.wrong" }}"
+                    data-btn-use="{{ t .T "admin.enrich.btn.use" }}"
+                    data-search-ph="{{ t .T "admin.enrich.search.placeholder" }}"
+                    data-open-anilist="{{ t .T "admin.enrich.open_anilist" }}"
+                    data-catalog-id="{{ t .T "admin.enrich.catalog_id" }}"
+                    data-raw-json="{{ t .T "admin.enrich.raw_json" }}"
+                    data-working="{{ t .T "admin.enrich.working" }}"
+                    data-no-results="{{ t .T "admin.enrich.search.empty" }}"
+                    data-confirm-unlink="{{ t .T "admin.enrich.confirm.unlink" }}"
+                ></div>
                 <button type="button" class="btn btn-primary" id="enrich-run">{{ t .T "admin.enrich.run" }}</button>
-                <div id="enrich-out">{{ if .EnrichLast }}{{ .EnrichLast }}{{ else }}{{ t .T "admin.enrich.idle" }}{{ end }}</div>
+                <div id="enrich-panel">
+                    {{ if .EnrichLast }}
+                    <details class="enrich-details" open><summary>{{ t .T "admin.enrich.raw_json" }}</summary><pre class="enrich-json-pre">{{ .EnrichLast }}</pre></details>
+                    {{ end }}
+                    <p id="enrich-idle" {{ if .EnrichLast }}style="display:none"{{ end }}>{{ t .T "admin.enrich.idle" }}</p>
+                    <div id="enrich-results" style="display:none;">
+                        <p class="enrich-summary" id="enrich-summary"></p>
+                        <div class="enrich-table-wrap">
+                            <table class="enrich-results-table" id="enrich-table" aria-describedby="enrich-summary">
+                                <thead><tr id="enrich-thead-row"></tr></thead>
+                                <tbody id="enrich-tbody"></tbody>
+                            </table>
+                        </div>
+                        <details class="enrich-details"><summary id="enrich-json-summary">{{ t .T "admin.enrich.raw_json" }}</summary><pre class="enrich-json-pre" id="enrich-json"></pre></details>
+                    </div>
+                </div>
                 <h2 style="margin-top:1.5rem;font-size:1rem;">{{ t .T "admin.enrich.queue" }}</h2>
                 <ul>
                     {{ range .EnrichQueue }}
@@ -60,21 +122,305 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
     <script src="/static/js/appearance.js"></script>
     <script>
-      document.getElementById("enrich-run").addEventListener("click", async () => {
-        const out = document.getElementById("enrich-out");
-        out.textContent = "…";
-        try {
-          const res = await fetch("/api/admin/enrich/run", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            body: JSON.stringify({ limit: 10 }),
+(function () {
+  var box = document.getElementById("enrich-i18n");
+  function L(k, fb) { return (box && box.getAttribute("data-" + k)) || fb; }
+
+  function anilistURL(id) { return "https://anilist.co/manga/" + encodeURIComponent(id); }
+
+  function statusBadge(status, labels) {
+    var span = document.createElement("span");
+    span.className = "enrich-badge";
+    if (status === "linked") { span.className += " ok"; span.textContent = labels.linked; }
+    else if (status === "skipped") { span.className += " skip"; span.textContent = labels.skipped; }
+    else { span.className += " err"; span.textContent = labels.error; }
+    return span;
+  }
+
+  function buildFixPanel(workId, labels) {
+    var div = document.createElement("div");
+    div.className = "enrich-fix";
+    var inp = document.createElement("input");
+    inp.type = "search";
+    inp.placeholder = labels.searchPh;
+    var ul = document.createElement("ul");
+    ul.className = "enrich-cand-list";
+    var timer = null;
+    inp.addEventListener("input", function () {
+      clearTimeout(timer);
+      var q = (inp.value || "").trim();
+      ul.innerHTML = "";
+      if (q.length < 2) return;
+      timer = setTimeout(function () {
+        fetch("/api/admin/enrich/search", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ q: q, limit: 12 }),
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (x) {
+          ul.innerHTML = "";
+          if (!x.ok || !x.j.results || !x.j.results.length) {
+            var li0 = document.createElement("li");
+            li0.textContent = labels.noResults;
+            ul.appendChild(li0);
+            return;
+          }
+          x.j.results.forEach(function (c) {
+            var li = document.createElement("li");
+            var b = document.createElement("button");
+            b.type = "button";
+            b.textContent = labels.use + " #" + c.anilist_id + " — " + (c.title || "");
+            b.addEventListener("click", function () {
+              b.disabled = true;
+              fetch("/api/admin/enrich/link", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", Accept: "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ work_id: workId, anilist_id: c.anilist_id }),
+              }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+              .then(function (y) {
+                if (!y.ok) throw new Error((y.j && y.j.error) || "link failed");
+                var tr = div.closest("tr");
+                if (tr) {
+                  tr.querySelectorAll("td")[1].innerHTML = "";
+                  tr.querySelectorAll("td")[1].appendChild(statusBadge("linked", labels));
+                  var matchTd = tr.querySelectorAll("td")[2];
+                  matchTd.innerHTML = "";
+                  var a = document.createElement("a");
+                  a.href = anilistURL(c.anilist_id);
+                  a.target = "_blank";
+                  a.rel = "noopener noreferrer";
+                  a.textContent = (y.j.matched_title || c.title || ("#" + c.anilist_id));
+                  matchTd.appendChild(a);
+                  matchTd.appendChild(document.createTextNode(" · "));
+                  var small = document.createElement("small");
+                  small.textContent = labels.catalogId + " " + (y.j.catalog_id || "");
+                  matchTd.appendChild(small);
+                  div.classList.remove("open");
+                }
+              }).catch(function () { b.disabled = false; alert("link failed"); });
+            });
+            li.appendChild(b);
+            ul.appendChild(li);
           });
-          const d = await res.json();
-          out.textContent = JSON.stringify(d, null, 2);
-        } catch (e) {
-          out.textContent = String(e);
-        }
+        }).catch(function () {
+          ul.innerHTML = "";
+          var li = document.createElement("li");
+          li.textContent = labels.noResults;
+          ul.appendChild(li);
+        });
+      }, 400);
+    });
+    div.appendChild(inp);
+    div.appendChild(ul);
+    return div;
+  }
+
+  function renderResults(d) {
+    var idle = document.getElementById("enrich-idle");
+    var results = document.getElementById("enrich-results");
+    var summary = document.getElementById("enrich-summary");
+    var thead = document.getElementById("enrich-thead-row");
+    var tbody = document.getElementById("enrich-tbody");
+    var jsonPre = document.getElementById("enrich-json");
+    if (!results || !thead || !tbody) return;
+
+    var labels = {
+      linked: L("status-linked", "linked"),
+      skipped: L("status-skipped", "skipped"),
+      error: L("status-error", "error"),
+      unlink: L("btn-unlink", "Unlink"),
+      confirmUnlink: L("confirm-unlink", "Unlink this work from catalog?"),
+      wrong: L("btn-wrong", "Wrong match"),
+      use: L("btn-use", "Use"),
+      searchPh: L("search-ph", "Search…"),
+      openAni: L("open-anilist", "AniList"),
+      catalogId: L("catalog-id", "catalog_id"),
+      noResults: L("no-results", "(no results)"),
+    };
+
+    if (idle) idle.style.display = "none";
+    results.style.display = "block";
+    summary.textContent =
+      L("sum-processed", "Processed") + ": " + (d.processed || 0) + " · " +
+      L("sum-linked", "Linked") + ": " + (d.linked || 0) + " · " +
+      L("sum-skipped", "Skipped") + ": " + (d.skipped || 0) + " · " +
+      L("sum-errors", "Errors") + ": " + (d.errors || 0);
+
+    thead.innerHTML = "";
+    [L("col-work", "Work"), L("col-status", "Status"), L("col-match", "Match"), L("col-actions", "Actions")].forEach(function (text) {
+      var th = document.createElement("th");
+      th.textContent = text;
+      thead.appendChild(th);
+    });
+
+    tbody.innerHTML = "";
+    (d.items || []).forEach(function (it) {
+      var tr = document.createElement("tr");
+      var tdWork = document.createElement("td");
+      tdWork.textContent = "#" + it.work_id + " — " + (it.title || "");
+      tr.appendChild(tdWork);
+
+      var tdSt = document.createElement("td");
+      tdSt.appendChild(statusBadge(it.status, labels));
+      if (it.status === "skipped" && it.reason_label) {
+        tdSt.appendChild(document.createElement("br"));
+        var sm = document.createElement("small");
+        sm.style.color = "var(--text-muted)";
+        sm.textContent = it.reason_label;
+        tdSt.appendChild(sm);
+      }
+      if (it.status === "error" && it.error) {
+        tdSt.appendChild(document.createElement("br"));
+        var sme = document.createElement("small");
+        sme.style.color = "var(--text-muted)";
+        sme.textContent = it.error;
+        tdSt.appendChild(sme);
+      }
+      tr.appendChild(tdSt);
+
+      var tdMatch = document.createElement("td");
+      if (it.status === "linked" && it.anilist_id) {
+        var a = document.createElement("a");
+        a.href = anilistURL(it.anilist_id);
+        a.target = "_blank";
+        a.rel = "noopener noreferrer";
+        a.textContent = it.matched_title || ("#" + it.anilist_id);
+        tdMatch.appendChild(a);
+        tdMatch.appendChild(document.createTextNode(" · "));
+        var sm2 = document.createElement("small");
+        sm2.textContent = labels.catalogId + " " + (it.catalog_id || "");
+        tdMatch.appendChild(sm2);
+      } else if (it.status === "skipped" && it.candidates && it.candidates.length) {
+        var ulc = document.createElement("ul");
+        ulc.className = "enrich-cand-list";
+        it.candidates.forEach(function (c) {
+          var li = document.createElement("li");
+          var btn = document.createElement("button");
+          btn.type = "button";
+          btn.textContent = labels.use + " #" + c.anilist_id;
+          btn.title = c.title || "";
+          btn.addEventListener("click", function () {
+            btn.disabled = true;
+            fetch("/api/admin/enrich/link", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ work_id: it.work_id, anilist_id: c.anilist_id }),
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (x) {
+              if (!x.ok) throw new Error((x.j && x.j.error) || "link failed");
+              tr.querySelectorAll("td")[1].innerHTML = "";
+              tr.querySelectorAll("td")[1].appendChild(statusBadge("linked", labels));
+              tdMatch.innerHTML = "";
+              var a2 = document.createElement("a");
+              a2.href = anilistURL(c.anilist_id);
+              a2.target = "_blank";
+              a2.rel = "noopener noreferrer";
+              a2.textContent = (x.j.matched_title || c.title || ("#" + c.anilist_id));
+              tdMatch.appendChild(a2);
+              tdMatch.appendChild(document.createTextNode(" · "));
+              var sm3 = document.createElement("small");
+              sm3.textContent = labels.catalogId + " " + (x.j.catalog_id || "");
+              tdMatch.appendChild(sm3);
+              var actTd = tr.querySelectorAll("td")[3];
+              actTd.innerHTML = "";
+              actTd.appendChild(makeActionsRow(it.work_id, true, labels, tr));
+            }).catch(function () { btn.disabled = false; });
+          });
+          li.appendChild(btn);
+          li.appendChild(document.createTextNode(" " + (c.title || "")));
+          ulc.appendChild(li);
+        });
+        tdMatch.appendChild(ulc);
+      } else {
+        tdMatch.textContent = "—";
+      }
+      tr.appendChild(tdMatch);
+
+      var tdAct = document.createElement("td");
+      tdAct.className = "enrich-actions";
+      tdAct.appendChild(makeActionsRow(it.work_id, it.status === "linked", labels, tr));
+      tr.appendChild(tdAct);
+
+      tbody.appendChild(tr);
+    });
+
+    if (jsonPre) jsonPre.textContent = JSON.stringify(d, null, 2);
+  }
+
+  function makeActionsRow(workId, showWrongAndUnlink, labels, tr) {
+    var frag = document.createDocumentFragment();
+    if (showWrongAndUnlink) {
+      var u = document.createElement("button");
+      u.type = "button";
+      u.className = "danger";
+      u.textContent = labels.unlink;
+      u.addEventListener("click", function () {
+        if (!confirm(labels.confirmUnlink)) return;
+        u.disabled = true;
+        fetch("/api/admin/enrich/unlink", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ work_id: workId }),
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (x) {
+          if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
+          if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+        }).catch(function () { u.disabled = false; });
       });
+      frag.appendChild(u);
+
+      var w = document.createElement("button");
+      w.type = "button";
+      w.textContent = labels.wrong;
+      w.addEventListener("click", function () {
+        var panel = tr.querySelector(".enrich-fix");
+        if (!panel) {
+          panel = buildFixPanel(workId, labels);
+          tr.cells[2].appendChild(panel);
+        }
+        panel.classList.toggle("open");
+      });
+      frag.appendChild(w);
+    }
+    return frag;
+  }
+
+  document.getElementById("enrich-run").addEventListener("click", async function () {
+    var outPanel = document.getElementById("enrich-panel");
+    var errHttp = L("err-http", "HTTP error");
+    var errRead = L("err-read", "Invalid JSON");
+    var working = L("working", "…");
+    var idle = document.getElementById("enrich-idle");
+    if (idle) { idle.style.display = "block"; idle.textContent = working; }
+    var results = document.getElementById("enrich-results");
+    if (results) results.style.display = "none";
+    try {
+      var res = await fetch("/api/admin/enrich/run", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ limit: 10 }),
+      });
+      var raw = await res.text();
+      if (!res.ok) {
+        if (idle) idle.textContent = errHttp + " " + res.status + "\n" + raw.slice(0, 800);
+        return;
+      }
+      var d;
+      try { d = JSON.parse(raw); } catch (e) {
+        if (idle) idle.textContent = errRead + "\n" + raw.slice(0, 800);
+        return;
+      }
+      renderResults(d);
+    } catch (e) {
+      if (idle) idle.textContent = String(e);
+    }
+  });
+})();
     </script>
 </body>
 </html>
