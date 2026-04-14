@@ -385,7 +385,7 @@ cmd_help() {
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "    - BOOKSTORAGE_METRICS_TOKEN (optional) secures GET /metrics for Prometheus scrapers\n"
     printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v4.0.1 — non-interactive ${GREEN}bsctl update${NC}\n"
-    printf "    Prometheus sidecar (not run by ${GREEN}bsctl update${NC}): ${BLUE}INSTALL_APP_DIR=/opt/bookstorage sudo -E ./deploy/setup-bookstorage-prometheus.sh${NC}\n"
+    printf "    Prometheus sidecar (not run by ${GREEN}bsctl update${NC}): ${BLUE}INSTALL_APP_DIR=/opt/bookstorage bash /opt/bookstorage/deploy/setup-bookstorage-prometheus.sh${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
     printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
