@@ -30,6 +30,8 @@ type Settings struct {
 	TranslateAPIKey string
 	// MetricsToken, if non-empty, protects GET /metrics (Bearer or ?token=). If empty, /metrics is only reachable from loopback clients.
 	MetricsToken string
+	// PrometheusQueryURL is the base URL for Prometheus HTTP API (instant queries) used by the admin monitoring page. Empty defaults to http://127.0.0.1:9091. Host must be loopback.
+	PrometheusQueryURL string
 }
 
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
@@ -185,6 +187,7 @@ func Load(rootPath string) (*Settings, error) {
 		TranslateURL:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
 		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 		MetricsToken:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_METRICS_TOKEN")),
+		PrometheusQueryURL:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_PROMETHEUS_QUERY_URL")),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err

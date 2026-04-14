@@ -117,6 +117,7 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_ENV`          | `development` or `production` (production forbids default secret) | `development` |
 | `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
 | `BOOKSTORAGE_METRICS_TOKEN` | If set, secures `GET /metrics` with `Authorization: Bearer …` or `?token=…` for Prometheus. If empty, only loopback clients may scrape `/metrics`. | (empty) |
+| `BOOKSTORAGE_PROMETHEUS_QUERY_URL` | Base URL for Prometheus’s HTTP API (**Admin → Monitoring** embedded summary). Default `http://127.0.0.1:9091`. **Loopback hosts only** (`127.0.0.1`, `localhost`, `::1`). | (default) |
 
 ### Session lifetime
 
@@ -185,7 +186,7 @@ scrape_configs:
 
 4. Point Grafana at your Prometheus server as usual.
 
-The **Admin → Monitoring** page documents the local scrape URL and whether a token is configured.
+The **Admin → Monitoring** page shows a short **embedded summary** (scrape health, request counter, 5‑minute rate) by querying the Prometheus HTTP API on the server (`BOOKSTORAGE_PROMETHEUS_QUERY_URL`, default `http://127.0.0.1:9091`), plus the local `/metrics` scrape URL and token hints. It auto-refreshes in the browser.
 
 ---
 
