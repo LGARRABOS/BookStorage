@@ -8,6 +8,7 @@ import (
 	"os"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"time"
 
 	"bookstorage/internal/config"
@@ -43,6 +44,8 @@ ENVIRONMENT VARIABLES
     BOOKSTORAGE_SECRET_KEY           Secret key for sessions
     BOOKSTORAGE_SUPERADMIN_USERNAME  Super admin username (default: superadmin)
     BOOKSTORAGE_SUPERADMIN_PASSWORD  Super admin password
+    BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC  Seconds to read the full request (default 15)
+    BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC Seconds until response must be fully written (default 120; includes handler time — raise for slow admin batches)
 
 EXAMPLES
     # Run with default settings
@@ -68,6 +71,19 @@ MORE INFO
 
 func printVersion() {
 	fmt.Printf("%s v%s\n", appName, Version)
+}
+
+// httpTimeoutSeconds parses BOOKSTORAGE_HTTP_*_TIMEOUT_SEC; invalid or empty uses defaultSec.
+func httpTimeoutSeconds(envKey string, defaultSec int) time.Duration {
+	v := strings.TrimSpace(os.Getenv(envKey))
+	if v == "" {
+		return time.Duration(defaultSec) * time.Second
+	}
+	n, err := strconv.Atoi(v)
+	if err != nil || n <= 0 {
+		return time.Duration(defaultSec) * time.Second
+	}
+	return time.Duration(n) * time.Second
 }
 
 func main() {
@@ -207,12 +223,14 @@ func main() {
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
 	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))))
+	readTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC", 15)
+	writeTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC", 120)
 	srv := &http.Server{
 		Addr:              addr,
 		Handler:           handler,
 		ReadHeaderTimeout: 5 * time.Second,
-		ReadTimeout:       15 * time.Second,
-		WriteTimeout:      30 * time.Second,
+		ReadTimeout:       readTO,
+		WriteTimeout:      writeTO,
 		IdleTimeout:       60 * time.Second,
 	}
 	if err := srv.ListenAndServe(); err != nil {
