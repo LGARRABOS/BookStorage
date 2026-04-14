@@ -228,6 +228,23 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 
 ## Dépannage
 
+### `BOOKSTORAGE_SECRET_KEY must be at least 32 bytes when BOOKSTORAGE_ENV=production`
+
+L’unité systemd charge `/opt/bookstorage/.env` via `EnvironmentFile`. En **production**, `BOOKSTORAGE_SECRET_KEY` doit être une chaîne **d’au moins 32 caractères** (et différente de la valeur de développement par défaut).
+
+**Correctif :**
+
+```bash
+openssl rand -base64 48
+```
+
+Copiez le résultat dans `/opt/bookstorage/.env` : `BOOKSTORAGE_SECRET_KEY=...` (évitez guillemets et espaces en fin de ligne). Puis :
+
+```bash
+chmod 600 /opt/bookstorage/.env
+systemctl restart bookstorage
+```
+
 ### `sudo: bsctl : commande introuvable`
 
 `bsctl` est installé dans `/usr/local/bin`. Certaines configurations **sudo** restreignent le `PATH` (`secure_path` dans `/etc/sudoers`) et **excluent** `/usr/local/bin`, d’où l’échec de `sudo bsctl …` alors que `bsctl` fonctionne dans un shell root interactif.
