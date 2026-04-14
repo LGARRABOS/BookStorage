@@ -1,0 +1,87 @@
+{{ define "tools_csv_import" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "tools.csv_import.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        .csv-preview { overflow-x: auto; margin-top: 1rem; }
+        .csv-preview table { border-collapse: collapse; width: 100%; font-size: 0.85rem; }
+        .csv-preview th, .csv-preview td { border: 1px solid var(--border-subtle); padding: 0.35rem 0.5rem; }
+        .err { color: #b91c1c; margin: 0.5rem 0; }
+    </style>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_account_links" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container content-card">
+            <p><a href="/tools">← {{ t .T "tools.csv_import.back" }}</a></p>
+            <h1>{{ t .T "tools.csv_import.title" }}</h1>
+            <p>{{ t .T "tools.csv_import.subtitle" }}</p>
+            {{ if .CSVError }}<p class="err">{{ t .T "tools.csv_import.error" }}: {{ .CSVError }}</p>{{ end }}
+
+            {{ if .CSVSessionID }}
+            <h2>{{ t .T "tools.csv_import.mapping" }}</h2>
+            <p>{{ t .T "tools.csv_import.rows" }}: <strong>{{ .CSVNumRows }}</strong></p>
+            <div class="csv-preview">
+                <table>
+                    {{ range $i, $row := .CSVPreview }}
+                    <tr>{{ range $j, $cell := $row }}<td>{{ $cell }}</td>{{ end }}</tr>
+                    {{ end }}
+                </table>
+            </div>
+            <form method="POST" enctype="multipart/form-data" class="form-layout" style="margin-top:1rem;">
+                <input type="hidden" name="action" value="confirm">
+                <input type="hidden" name="session_id" value="{{ .CSVSessionID }}">
+                <div class="form-field">
+                    <label for="col_title">{{ t .T "tools.csv_import.col_title" }}</label>
+                    <input id="col_title" name="col_title" type="number" min="0" value="0" required>
+                </div>
+                <div class="form-field">
+                    <label for="col_chapter">{{ t .T "tools.csv_import.col_chapter" }}</label>
+                    <input id="col_chapter" name="col_chapter" type="number" min="0" placeholder="—">
+                </div>
+                <div class="form-field">
+                    <label for="col_status">{{ t .T "tools.csv_import.col_status" }}</label>
+                    <input id="col_status" name="col_status" type="number" min="0" placeholder="—">
+                </div>
+                <div class="form-field">
+                    <label for="col_reading_type">{{ t .T "tools.csv_import.col_reading_type" }}</label>
+                    <input id="col_reading_type" name="col_reading_type" type="number" min="0" placeholder="—">
+                </div>
+                <button type="submit" class="btn btn-primary">{{ t .T "tools.csv_import.confirm" }}</button>
+            </form>
+            {{ else }}
+            <form method="POST" enctype="multipart/form-data" class="form-layout">
+                <div class="form-field">
+                    <label for="csvfile">{{ t .T "tools.csv_import.file" }}</label>
+                    <input id="csvfile" name="csvfile" type="file" accept=".csv,text/csv" required>
+                </div>
+                <button type="submit" class="btn btn-primary">{{ t .T "tools.csv_import.upload" }}</button>
+            </form>
+            {{ end }}
+        </div>
+    </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

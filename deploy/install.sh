@@ -197,6 +197,16 @@ fi
 # Prometheus (opt-in : INSTALL_WITH_PROMETHEUS=1)
 # ============================================================================
 
+if [ "${INSTALL_WITH_BACKUP_TIMER:-}" = "1" ]; then
+    print_step "Backup" "Timer systemd (INSTALL_WITH_BACKUP_TIMER=1)..."
+    mkdir -p /var/lib/bookstorage/backups
+    chmod 755 /var/lib/bookstorage/backups
+    cp "$APP_DIR/deploy/bookstorage-backup.service" /etc/systemd/system/ 2>/dev/null || true
+    cp "$APP_DIR/deploy/bookstorage-backup.timer" /etc/systemd/system/ 2>/dev/null || true
+    systemctl daemon-reload
+    systemctl enable --now bookstorage-backup.timer 2>/dev/null && print_success "Timer bookstorage-backup actif" || print_warn "Timer backup non activé (unités manquantes ou erreur systemctl)"
+fi
+
 if [ "${INSTALL_WITH_PROMETHEUS:-}" = "1" ]; then
     print_step "Prometheus" "Installation optionnelle (INSTALL_WITH_PROMETHEUS=1)..."
     export INSTALL_APP_DIR="$APP_DIR"
@@ -237,6 +247,7 @@ printf "\n"
 
 printf "L'application sera accessible sur: ${BOLD}http://$(hostname -I | awk '{print $1}'):5000${NC}\n"
 printf "\n"
+printf "Sauvegardes planifiées (optionnel) : ${BLUE}INSTALL_WITH_BACKUP_TIMER=1 sudo -E ./deploy/install.sh${NC}  (timer 03:15, ${BLUE}bsctl backup${NC})\n"
 printf "Prometheus (optionnel) : ${BLUE}INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh${NC}\n"
 printf "  ou après coup : ${BLUE}INSTALL_APP_DIR=$APP_DIR bash $APP_DIR/deploy/setup-bookstorage-prometheus.sh${NC}\n"
 printf "\n"

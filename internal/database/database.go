@@ -184,6 +184,9 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 	if err := ApplyMigrations(db); err != nil {
 		return err
 	}
+	if err := ensureWorksFTS5(db); err != nil {
+		return err
+	}
 	if err := ensureSuperAdmin(db, s); err != nil {
 		return err
 	}

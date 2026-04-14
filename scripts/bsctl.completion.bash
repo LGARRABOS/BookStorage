@@ -15,7 +15,7 @@ _bsctl_completion() {
     cur="${COMP_WORDS[COMP_CWORD]}"
     subcmd="${COMP_WORDS[1]}"
 
-    local cmds='help -h --help version -v --version build build-prod run clean install uninstall update fix-perms start stop restart status logs'
+    local cmds='help -h --help version -v --version build build-prod run clean install uninstall update fix-perms backup start stop restart status logs'
 
     # If the user is completing just "bsctl" (no space yet), do not fall back to file completion.
     if [[ ${COMP_CWORD} -eq 0 ]]; then
@@ -56,7 +56,7 @@ _bsctl_completion() {
                 return 0
             fi
             ;;
-        help|-h|--help|version|-v|--version|build|build-prod|run|clean|install|uninstall|fix-perms|start|stop|restart|status|logs)
+        help|-h|--help|version|-v|--version|build|build-prod|run|clean|install|uninstall|fix-perms|backup|start|stop|restart|status|logs)
             # These subcommands don't accept (or need) arguments; return empty completion
             # to avoid falling back to file/path completion.
             ;;

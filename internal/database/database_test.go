@@ -44,4 +44,18 @@ func TestEnsureSchemaAndMigrations(t *testing.T) {
 	if idxCount != 1 {
 		t.Fatalf("expected idx_works_user_id index, got %d", idxCount)
 	}
+	if _, err := db.Exec(`INSERT INTO works (title, chapter, user_id, status, reading_type, rating) VALUES ('UniqueFTSTestTitle', 1, 1, 'En cours', 'Manga', 0)`); err != nil {
+		t.Fatal(err)
+	}
+	if !WorksFTSEnabled(db) {
+		t.Log("skipping FTS5 assertions: SQLite build without ENABLE_FTS5")
+		return
+	}
+	var ftsHits int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM works_fts WHERE works_fts MATCH '"UniqueFTSTest"'`).Scan(&ftsHits); err != nil {
+		t.Fatal(err)
+	}
+	if ftsHits < 1 {
+		t.Fatalf("expected FTS hit for inserted work, got %d", ftsHits)
+	}
 }

@@ -1,0 +1,80 @@
+{{ define "admin_enrich" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.enrich.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
+        #enrich-out { margin-top: 1rem; font-family: ui-monospace, monospace; font-size: 0.85rem; white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_account_links" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">{{ t .T "admin.enrich.title" }}</h1>
+                    <p class="page-subtitle">{{ t .T "admin.enrich.subtitle" }}</p>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab active" href="/admin/enrich">{{ t .T "admin.enrich" }}</a>
+                        <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
+                    </nav>
+                </header>
+                <p>{{ t .T "admin.enrich.note" }}</p>
+                <button type="button" class="btn btn-primary" id="enrich-run">{{ t .T "admin.enrich.run" }}</button>
+                <div id="enrich-out">{{ if .EnrichLast }}{{ .EnrichLast }}{{ else }}{{ t .T "admin.enrich.idle" }}{{ end }}</div>
+                <h2 style="margin-top:1.5rem;font-size:1rem;">{{ t .T "admin.enrich.queue" }}</h2>
+                <ul>
+                    {{ range .EnrichQueue }}
+                    <li>#{{ .ID }} — {{ .Title }} <small>({{ .ReadingType }})</small></li>
+                    {{ else }}
+                    <li>{{ t .T "admin.enrich.empty" }}</li>
+                    {{ end }}
+                </ul>
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    <script>
+      document.getElementById("enrich-run").addEventListener("click", async () => {
+        const out = document.getElementById("enrich-out");
+        out.textContent = "…";
+        try {
+          const res = await fetch("/api/admin/enrich/run", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            body: JSON.stringify({ limit: 10 }),
+          });
+          const d = await res.json();
+          out.textContent = JSON.stringify(d, null, 2);
+        } catch (e) {
+          out.textContent = String(e);
+        }
+      });
+    </script>
+</body>
+</html>
+{{ end }}

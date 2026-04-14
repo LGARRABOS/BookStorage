@@ -39,6 +39,23 @@ CREATE INDEX IF NOT EXISTS idx_works_catalog_id ON works(catalog_id);
 CREATE INDEX IF NOT EXISTS idx_catalog_source_external_id ON catalog(source, external_id);
 CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
 `},
+	// FTS5 is applied in ensureWorksFTS5 (after migrations) so builds without ENABLE_FTS5 (e.g. some Windows SQLite) still pass tests.
+	{Version: 6, Name: "works_fts5_placeholder", Up: ""},
+	{Version: 7, Name: "works_series_parent", Up: `
+ALTER TABLE works ADD COLUMN parent_work_id INTEGER REFERENCES works(id);
+ALTER TABLE works ADD COLUMN series_sort INTEGER DEFAULT 0;
+CREATE INDEX IF NOT EXISTS idx_works_parent_work_id ON works(parent_work_id);
+`},
+	{Version: 8, Name: "csv_import_sessions", Up: `
+CREATE TABLE IF NOT EXISTS csv_import_sessions (
+	id TEXT PRIMARY KEY,
+	user_id INTEGER NOT NULL,
+	raw_csv TEXT NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_csv_import_sessions_user ON csv_import_sessions(user_id);
+`},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.

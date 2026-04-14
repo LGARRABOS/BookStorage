@@ -71,6 +71,9 @@ bsctl help     # Afficher l'aide
 | `bsctl update main` | Mettre à jour depuis `origin/main` (fast-forward) + build + restart |
 | `bsctl update <branche>` | Avancé : depuis `origin/<branche>` (fast-forward) + build + restart |
 | `bsctl fix-perms`   | Corriger les permissions des fichiers     |
+| `bsctl backup`      | Copie du fichier SQLite indiqué par `BOOKSTORAGE_DATABASE` dans le `.env` (`sqlite3 .backup` si disponible, sinon `cp`), rétention via `BOOKSTORAGE_BACKUP_RETENTION_DAYS` (défaut 14), répertoire `BOOKSTORAGE_BACKUP_DIR` (défaut `/var/lib/bookstorage/backups`) |
+
+**Sauvegardes planifiées :** définir `INSTALL_WITH_BACKUP_TIMER=1` lors de l’exécution de [`deploy/install.sh`](../../deploy/install.sh) pour installer et activer `bookstorage-backup.timer` (snapshot quotidien ; adaptez l’unité timer si besoin). Journaux : `journalctl -u bookstorage-backup.service`.
 
 **Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v5.5.0` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
 
