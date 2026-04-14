@@ -273,32 +273,59 @@ func (a *App) HandleAdminEnrich(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	last := r.URL.Query().Get("last")
+	// La file « sans catalogue » est chargée en JSON via GET /api/admin/enrich/queue (toujours à jour).
+	a.renderTemplate(w, r, "admin_enrich", a.mergeData(r, map[string]any{
+		"EnrichLast": last,
+	}))
+}
+
+const enrichQueueListLimit = 200
+
+type enrichQueueWork struct {
+	ID          int    `json:"id"`
+	Title       string `json:"title"`
+	ReadingType string `json:"reading_type"`
+}
+
+// HandleAPIAdminEnrichQueue GET — œuvres sans catalog_id (file enrichissement), pour actualisation UI.
+func (a *App) HandleAPIAdminEnrichQueue(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var total int
+	if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE catalog_id IS NULL`).Scan(&total); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+		return
+	}
 	rows, err := a.DB.Query(
-		`SELECT id, title, COALESCE(reading_type, '') FROM works WHERE catalog_id IS NULL ORDER BY id ASC LIMIT 200`,
+		`SELECT id, title, COALESCE(reading_type, '') FROM works WHERE catalog_id IS NULL ORDER BY id ASC LIMIT ?`,
+		enrichQueueListLimit,
 	)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
 		return
 	}
 	defer func() { _ = rows.Close() }()
-	type row struct {
-		ID          int
-		Title       string
-		ReadingType string
-	}
-	var list []row
+	var works []enrichQueueWork
 	for rows.Next() {
-		var x row
-		if err := rows.Scan(&x.ID, &x.Title, &x.ReadingType); err != nil {
-			continue
+		var qw enrichQueueWork
+		if err := rows.Scan(&qw.ID, &qw.Title, &qw.ReadingType); err != nil {
+			a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+			return
 		}
-		list = append(list, x)
+		works = append(works, qw)
 	}
-	last := r.URL.Query().Get("last")
-	a.renderTemplate(w, r, "admin_enrich", a.mergeData(r, map[string]any{
-		"EnrichQueue": list,
-		"EnrichLast":  last,
-	}))
+	if err := rows.Err(); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"works": works,
+		"total": total,
+	})
 }
 
 // HandleAPIAdminEnrichRun POST JSON { "limit": 10 } — AniList only, conservative match.
