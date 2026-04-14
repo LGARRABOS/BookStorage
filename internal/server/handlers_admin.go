@@ -129,11 +129,32 @@ func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	tokenSet := strings.TrimSpace(a.Settings.MetricsToken) != ""
+	summary := FetchPrometheusAdminSummary(a.Settings)
 	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{
 		"MetricsTokenConfigured": tokenSet,
 		"MetricsURL":             fmt.Sprintf("http://127.0.0.1:%d/metrics", a.Settings.Port),
-		"PrometheusUIURL":        "http://127.0.0.1:9091",
+		"PrometheusUIURL":        strings.TrimRight(prometheusQueryBaseForSettings(a.Settings), "/"),
+		"PrometheusSummary":      summary,
 	}))
+}
+
+func (a *App) HandleAPIAdminPrometheusSummary(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	s := FetchPrometheusAdminSummary(a.Settings)
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"reachable":       s.Reachable,
+		"query_base":      s.QueryBase,
+		"up":              s.Up,
+		"scrape_ok":       s.ScrapeJobHealthy,
+		"requests_total":  s.RequestsTotal,
+		"request_rate_5m": s.RequestRate5m,
+		"error":           s.Error,
+		"invalid_url":     s.Error == "invalid_prometheus_url",
+	})
 }
 
 func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {

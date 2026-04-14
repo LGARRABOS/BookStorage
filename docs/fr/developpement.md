@@ -99,6 +99,7 @@ La CI exécute aussi `gofmt` en mode strict et un job **smoke-http** qui lance `
 ### Notes API et import
 
 - `GET /metrics` expose les métriques au format texte Prometheus (`bookstorage_http_*`). Sans `BOOKSTORAGE_METRICS_TOKEN`, seul le loopback peut scraper ; sinon `Authorization: Bearer …` ou `?token=…`. Voir [Hébergement — Metriques Prometheus](hebergement.md#metriques-prometheus-optionnel).
+- `GET /api/admin/prometheus/summary` (admin, vue bureau) renvoie un petit JSON issu de l’API HTTP Prometheus locale (`BOOKSTORAGE_PROMETHEUS_QUERY_URL`, loopback uniquement) pour la page Monitoring.
 - `GET /api/works` supporte la pagination (`page`, `limit`), des filtres (`status`, `reading_type`, `search`) et le tri (`sort`).
 - La réponse inclut `data` et `meta` (`total`, `total_pages`, `has_next`, `has_prev`).
 - L’import accepte en plus des exports BookStorage les formats externes courants **MyAnimeList** (CSV) et **AniList** (JSON/CSV).
