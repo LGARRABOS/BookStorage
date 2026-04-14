@@ -228,6 +228,19 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 
 ## Troubleshooting
 
+### `sudo: bsctl: command not found`
+
+`bsctl` is installed under `/usr/local/bin`. Some `sudo` configurations use a **restricted `PATH`** (`secure_path` in `/etc/sudoers`) that omits `/usr/local/bin`, so `sudo bsctl …` fails even though `bsctl` works in an interactive root shell.
+
+**Fix:** call the full path, for example:
+
+```bash
+sudo /usr/local/bin/bsctl install
+sudo /usr/local/bin/bsctl update main
+```
+
+If you are **already logged in as root**, run `bsctl install` **without** `sudo` (your shell already has the correct `PATH`).
+
 ### "readonly database" error
 
 ```bash

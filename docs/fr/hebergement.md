@@ -228,6 +228,19 @@ My Manga;42;https://...;En cours;Webtoon;4;Great series;;;0;
 
 ## Dépannage
 
+### `sudo: bsctl : commande introuvable`
+
+`bsctl` est installé dans `/usr/local/bin`. Certaines configurations **sudo** restreignent le `PATH` (`secure_path` dans `/etc/sudoers`) et **excluent** `/usr/local/bin`, d’où l’échec de `sudo bsctl …` alors que `bsctl` fonctionne dans un shell root interactif.
+
+**Correctif :** utilisez le chemin complet, par exemple :
+
+```bash
+sudo /usr/local/bin/bsctl install
+sudo /usr/local/bin/bsctl update main
+```
+
+Si vous êtes **déjà connecté en root**, lancez `bsctl install` **sans** `sudo`.
+
 ### Erreur « readonly database »
 
 ```bash
