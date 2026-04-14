@@ -17,12 +17,14 @@ type Settings struct {
 	UploadURLPath        string
 	ProfileUploadFolder  string
 	ProfileUploadURLPath string
-	SuperadminUsername   string
-	SuperadminPassword   string
-	Environment          string
-	Host                 string
-	Port                 int
-	EnableHSTS           bool
+	// WebStaticRoot is the app "static/" bundle directory (CSS, JS, icons). Used to serve /static/* together with upload folders.
+	WebStaticRoot      string
+	SuperadminUsername string
+	SuperadminPassword string
+	Environment        string
+	Host               string
+	Port               int
+	EnableHSTS         bool
 	// RequireAccountValidation controls whether non-admin accounts must be approved (validated=1) before login.
 	RequireAccountValidation bool
 	// TranslateURL is a LibreTranslate-compatible API base URL (no trailing slash), e.g. https://libretranslate.com — empty disables auto-translation.
@@ -169,6 +171,8 @@ func Load(rootPath string) (*Settings, error) {
 	enableHSTS := strings.EqualFold(strings.TrimSpace(os.Getenv("BOOKSTORAGE_ENABLE_HSTS")), "true") ||
 		os.Getenv("BOOKSTORAGE_ENABLE_HSTS") == "1"
 
+	webStaticRoot := filepath.Join(root, "static")
+
 	s := &Settings{
 		SecretKey:                secret,
 		Database:                 dbPath,
@@ -177,6 +181,7 @@ func Load(rootPath string) (*Settings, error) {
 		UploadURLPath:            uploadURL,
 		ProfileUploadFolder:      avatarFolder,
 		ProfileUploadURLPath:     avatarURL,
+		WebStaticRoot:            webStaticRoot,
 		SuperadminUsername:       envOr("BOOKSTORAGE_SUPERADMIN_USERNAME", defaultSuperadminUser),
 		SuperadminPassword:       envOr("BOOKSTORAGE_SUPERADMIN_PASSWORD", defaultSuperadminPass),
 		Environment:              env,

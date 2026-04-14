@@ -34,6 +34,7 @@ func testSettings(dir string) *config.Settings {
 		ProfileUploadFolder:  filepath.Join(dir, "av"),
 		UploadURLPath:        "images",
 		ProfileUploadURLPath: "avatars",
+		WebStaticRoot:        filepath.Join(dir, "static"),
 	}
 }
 
