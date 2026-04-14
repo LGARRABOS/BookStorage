@@ -1,29 +1,32 @@
 #!/usr/bin/env bash
 # Bash completion for bsctl (BookStorage Control)
 #
+# Installed to:
+#   /etc/bash_completion.d/bsctl              (legacy, if dir exists)
+#   /usr/share/bash-completion/completions/bsctl  (Debian/Ubuntu bash-completion)
+#
 # Usage (development):
 #   source scripts/bsctl.completion.bash
 #
-# System-wide (after copying bsctl to /usr/local/bin):
-#   sudo cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
-#   # open a new terminal, or: source /etc/bash_completion.d/bsctl
-#
-# Requires an interactive bash with programmable completion (default on most Linux distros).
+# Requires programmable completion (bash-completion package recommended on Debian/Ubuntu).
 
 _bsctl_completion() {
     local cur subcmd
-    cur="${COMP_WORDS[COMP_CWORD]}"
-    subcmd="${COMP_WORDS[1]}"
+    # Avoid falling back to directory listing when COMPREPLY is empty.
+    compopt +o filenames +o dirnames 2>/dev/null || true
+
+    cur="${COMP_WORDS[COMP_CWORD]//$'\r'/}"
+    subcmd="${COMP_WORDS[1]//$'\r'/}"
 
     local cmds='help -h --help version -v --version build build-prod run clean install uninstall update fix-perms backup start stop restart status logs'
 
-    # If the user is completing just "bsctl" (no space yet), do not fall back to file completion.
+    # Completing the command name itself (rare); never offer filesystem paths.
     if [[ ${COMP_CWORD} -eq 0 ]]; then
         COMPREPLY=()
         return 0
     fi
 
-    # Subcommand
+    # First argument after bsctl: subcommands
     if [[ ${COMP_CWORD} -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "${cmds}" -- "${cur}") )
         return 0
@@ -32,7 +35,6 @@ _bsctl_completion() {
     case "${subcmd}" in
         update)
             # Arguments for "update": branch (e.g. main) or release tag (vX.Y.Z).
-            # Works from inside the repo, and falls back to /opt/bookstorage if present.
             if [[ ${COMP_CWORD} -eq 2 ]] && command -v git >/dev/null 2>&1; then
                 local git_args=()
                 if git rev-parse --git-dir >/dev/null 2>&1; then
@@ -55,13 +57,14 @@ _bsctl_completion() {
                 COMPREPLY=( $(compgen -W "${words}" -- "${cur}") )
                 return 0
             fi
+            if [[ ${COMP_CWORD} -eq 2 ]]; then
+                COMPREPLY=( $(compgen -W "main" -- "${cur}") )
+                return 0
+            fi
             ;;
         help|-h|--help|version|-v|--version|build|build-prod|run|clean|install|uninstall|fix-perms|backup|start|stop|restart|status|logs)
-            # These subcommands don't accept (or need) arguments; return empty completion
-            # to avoid falling back to file/path completion.
             ;;
         *)
-            # Unknown / not yet completed: return empty completion
             ;;
     esac
 

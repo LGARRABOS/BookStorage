@@ -126,6 +126,10 @@ if [ -d /etc/bash_completion.d ]; then
     cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
     chmod 644 /etc/bash_completion.d/bsctl
 fi
+if [ -d /usr/share/bash-completion/completions ]; then
+    cp scripts/bsctl.completion.bash /usr/share/bash-completion/completions/bsctl
+    chmod 644 /usr/share/bash-completion/completions/bsctl
+fi
 print_success "Binaires installés dans /usr/local/bin/"
 
 # ============================================================================
