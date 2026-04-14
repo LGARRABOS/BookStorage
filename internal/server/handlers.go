@@ -16,6 +16,7 @@ import (
 	"log"
 	"mime/multipart"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -235,6 +236,50 @@ func verifyWerkzeugHash(storedHash, password string) bool {
 	return subtle.ConstantTimeCompare(computed, expectedHash) == 1
 }
 
+const maxPostLoginRedirectLen = 1024
+
+// safePostLoginRedirect returns a same-origin path+query safe to use after login, or "".
+func safePostLoginRedirect(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" || len(s) > maxPostLoginRedirectLen {
+		return ""
+	}
+	if !strings.HasPrefix(s, "/") {
+		return ""
+	}
+	if strings.HasPrefix(s, "//") {
+		return ""
+	}
+	if strings.Contains(s, "://") {
+		return ""
+	}
+	if strings.ContainsAny(s, "\r\n\x00") {
+		return ""
+	}
+	if strings.Contains(s, `\`) {
+		return ""
+	}
+	if strings.HasPrefix(s, "/login") || strings.HasPrefix(s, "/register") {
+		return ""
+	}
+	return s
+}
+
+func loginRedirectURL(r *http.Request) string {
+	if r == nil || r.URL == nil {
+		return "/login"
+	}
+	next := r.URL.Path
+	if r.URL.RawQuery != "" {
+		next += "?" + r.URL.RawQuery
+	}
+	next = safePostLoginRedirect(next)
+	if next == "" {
+		return "/login"
+	}
+	return "/login?next=" + url.QueryEscape(next)
+}
+
 func (a *App) currentUserID(r *http.Request) (int, bool) {
 	id, _, ok := a.currentSession(r)
 	return id, ok
@@ -444,7 +489,7 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 				_, _ = w.Write([]byte(`{"error":"session_expired"}`))
 				return
 			}
-			http.Redirect(w, r, "/login", http.StatusFound)
+			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 			return
 		}
 		// Sliding expiration (DB + cookie)
@@ -530,7 +575,7 @@ func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		userID, ok := a.currentUserID(r)
 		if !ok {
-			http.Redirect(w, r, "/login", http.StatusFound)
+			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 			return
 		}
 		var isAdmin, isSuper int
@@ -850,12 +895,14 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		// Messages de feedback via query string
 		q := r.URL.Query()
+		loginNext := safePostLoginRedirect(q.Get("next"))
 		data := a.mergeData(r, map[string]any{
 			"LoginError":      q.Get("error") != "",
 			"LoginPending":    q.Get("pending") != "",
 			"RegisterSuccess": q.Get("registered") != "",
 			"RegisterAuto":    q.Get("auto") == "1",
 			"SessionExpired":  q.Get("expired") != "",
+			"LoginNext":       loginNext,
 		})
 		a.renderTemplate(w, r, "login", data)
 	case http.MethodPost:
@@ -891,7 +938,11 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.setSessionCookie(w, token, sessionSlidingTTL)
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		dest := safePostLoginRedirect(strings.TrimSpace(r.FormValue("next")))
+		if dest == "" {
+			dest = "/dashboard"
+		}
+		http.Redirect(w, r, dest, http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -1808,7 +1859,7 @@ func deleteMediaFile(folder, storedPath string) {
 func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := a.currentUserID(r)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
 
@@ -1828,7 +1879,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		&u.IsPublic,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
 
@@ -2001,7 +2052,7 @@ func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, ok := a.currentUserID(r)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
 	currentPassword := r.FormValue("current_password")
@@ -2252,7 +2303,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	}
 	viewerID, ok := a.currentUserID(r)
 	if !ok {
-		http.Redirect(w, r, "/login", http.StatusFound)
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
 	targetID, _ := strconv.Atoi(r.PathValue("user_id"))

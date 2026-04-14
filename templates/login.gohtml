@@ -52,6 +52,9 @@
                 </div>
                 {{ end }}
                 <form method="POST" class="form-layout">
+                    {{ if .LoginNext }}
+                    <input type="hidden" name="next" value="{{ .LoginNext }}">
+                    {{ end }}
                     <div class="form-field">
                         <label for="username">{{ t .T "login.username" }}</label>
                         <input id="username" type="text" name="username" autocomplete="username" required>
