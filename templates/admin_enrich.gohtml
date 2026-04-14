@@ -91,6 +91,9 @@
                     data-no-results="{{ t .T "admin.enrich.search.empty" }}"
                     data-confirm-unlink="{{ t .T "admin.enrich.confirm.unlink" }}"
                     data-err-maintenance="{{ t .T "admin.enrich.error_maintenance" }}"
+                    data-queue-empty="{{ t .T "admin.enrich.queue_empty" }}"
+                    data-queue-more="{{ t .T "admin.enrich.queue_more" }}"
+                    data-batch-no-pending="{{ t .T "admin.enrich.batch_no_pending" }}"
                     data-col-id="{{ t .T "admin.enrich.col.id" }}"
                     data-col-user="{{ t .T "admin.enrich.col.user" }}"
                     data-catalog-linked="{{ t .T "admin.enrich.catalog.linked" }}"
@@ -117,13 +120,8 @@
                     </div>
                 </div>
                 <h2 style="margin-top:1.5rem;font-size:1rem;">{{ t .T "admin.enrich.queue" }}</h2>
-                <ul>
-                    {{ range .EnrichQueue }}
-                    <li>#{{ .ID }} — {{ .Title }} <small>({{ .ReadingType }})</small></li>
-                    {{ else }}
-                    <li>{{ t .T "admin.enrich.empty" }}</li>
-                    {{ end }}
-                </ul>
+                <p class="enrich-help" style="margin-bottom:0.5rem;font-size:0.88rem;color:var(--text-secondary);">{{ t .T "admin.enrich.queue_live" }}</p>
+                <ul id="enrich-queue-list"><li id="enrich-queue-placeholder">{{ t .T "admin.enrich.queue_loading" }}</li></ul>
                 <h2 style="margin-top:1.75rem;font-size:1.05rem;">{{ t .T "admin.enrich.works_all.title" }}</h2>
                 <p class="enrich-help" style="margin-bottom:0.65rem;line-height:1.5;color:var(--text-secondary);font-size:0.9rem;">{{ t .T "admin.enrich.works_all.hint" }}</p>
                 <div style="display:flex;flex-wrap:wrap;gap:0.5rem;align-items:center;margin-bottom:0.65rem;">
@@ -168,6 +166,37 @@
   }
 
   function anilistURL(id) { return "https://anilist.co/manga/" + encodeURIComponent(id); }
+
+  /** File « sans catalogue » : uniquement catalog_id NULL, alignée sur la base. */
+  function refreshEnrichQueue() {
+    var ul = document.getElementById("enrich-queue-list");
+    if (!ul) return Promise.resolve();
+    return fetch("/api/admin/enrich/queue", { method: "GET", credentials: "same-origin", headers: { Accept: "application/json" } })
+      .then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+      .then(function (x) {
+        if (!x.ok) return;
+        ul.innerHTML = "";
+        var works = x.j.works || [];
+        var total = typeof x.j.total === "number" ? x.j.total : works.length;
+        if (!works.length) {
+          var li0 = document.createElement("li");
+          li0.textContent = L("queue-empty", "(none)");
+          ul.appendChild(li0);
+          return;
+        }
+        works.forEach(function (w) {
+          var li = document.createElement("li");
+          li.textContent = "#" + w.id + " — " + (w.title || "") + (w.reading_type ? " (" + w.reading_type + ")" : "");
+          ul.appendChild(li);
+        });
+        if (total > works.length) {
+          var liM = document.createElement("li");
+          liM.style.cssText = "color:var(--text-muted);font-size:0.88rem;margin-top:0.25rem;";
+          liM.textContent = L("queue-more", "").replace(/\{total\}/g, String(total)).replace(/\{shown\}/g, String(works.length));
+          ul.appendChild(liM);
+        }
+      });
+  }
 
   function statusBadge(status, labels) {
     var span = document.createElement("span");
@@ -271,6 +300,7 @@
                   }
                   div.classList.remove("open");
                 }
+                refreshEnrichQueue().catch(function () {});
               }).catch(function () { b.disabled = false; alert("link failed"); });
             });
             li.appendChild(b);
@@ -328,7 +358,10 @@
     });
 
     tbody.innerHTML = "";
-    (d.items || []).forEach(function (it) {
+    var rowItems = (d.items || []).filter(function (it) {
+      return !(it.status === "skipped" && it.reason === "already_linked");
+    });
+    rowItems.forEach(function (it) {
       var tr = document.createElement("tr");
       var tdWork = document.createElement("td");
       tdWork.textContent = "#" + it.work_id + " — " + (it.title || "");
@@ -406,6 +439,7 @@
               var actTd = tr.querySelectorAll("td")[3];
               actTd.innerHTML = "";
               actTd.appendChild(makeActionsRow(it.work_id, true, labels, tr));
+              refreshEnrichQueue().catch(function () {});
             }).catch(function () { btn.disabled = false; });
           });
           li.appendChild(btn);
@@ -462,6 +496,7 @@
       .then(function (x) {
         if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
         if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+        refreshEnrichQueue().catch(function () {});
       }).catch(function () { u.disabled = false; });
     });
     frag.appendChild(u);
@@ -592,6 +627,7 @@
         .then(function (x) {
           if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
           if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+          refreshEnrichQueue().catch(function () {});
         }).catch(function () { u.disabled = false; });
       });
       frag.appendChild(u);
@@ -612,39 +648,58 @@
     return frag;
   }
 
-  document.getElementById("enrich-run").addEventListener("click", async function () {
-    var outPanel = document.getElementById("enrich-panel");
+  var enrichRunBtn = document.getElementById("enrich-run");
+  enrichRunBtn.addEventListener("click", async function () {
     var errHttp = L("err-http", "HTTP error");
     var errRead = L("err-read", "Invalid JSON");
     var working = L("working", "…");
     var idle = document.getElementById("enrich-idle");
-    if (idle) { idle.style.display = "block"; idle.textContent = working; }
     var results = document.getElementById("enrich-results");
+    enrichRunBtn.disabled = true;
+    if (idle) { idle.style.display = "block"; idle.textContent = working; }
     if (results) results.style.display = "none";
+    var agg = { processed: 0, linked: 0, skipped: 0, errors: 0, items: [] };
     try {
-      var res = await fetch("/api/admin/enrich/run", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ limit: 10 }),
-      });
-      var raw = await res.text();
-      if (looksLikeApiGotHTMLMaintenance(raw)) {
-        if (idle) idle.textContent = L("err-maintenance", "Maintenance page received instead of API JSON. Retry when the app is up, or allow /api/ through your reverse proxy.");
-        return;
+      for (var step = 0; step < 10; step++) {
+        var res = await fetch("/api/admin/enrich/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ limit: 1 }),
+        });
+        var raw = await res.text();
+        if (looksLikeApiGotHTMLMaintenance(raw)) {
+          if (idle) idle.textContent = L("err-maintenance", "Maintenance page received instead of API JSON. Retry when the app is up, or allow /api/ through your reverse proxy.");
+          break;
+        }
+        if (!res.ok) {
+          if (idle) idle.textContent = errHttp + " " + res.status + "\n" + raw.slice(0, 800);
+          break;
+        }
+        var d;
+        try { d = JSON.parse(raw); } catch (e) {
+          if (idle) idle.textContent = errRead + "\n" + raw.slice(0, 800);
+          break;
+        }
+        if (!d.processed) {
+          if (agg.processed === 0 && idle) {
+            idle.style.display = "block";
+            idle.textContent = L("batch-no-pending", "No works without catalog to process.");
+          }
+          break;
+        }
+        agg.processed += d.processed;
+        agg.linked += d.linked || 0;
+        agg.skipped += d.skipped || 0;
+        agg.errors += d.errors || 0;
+        (d.items || []).forEach(function (it) { agg.items.push(it); });
+        renderResults(agg);
+        await refreshEnrichQueue();
       }
-      if (!res.ok) {
-        if (idle) idle.textContent = errHttp + " " + res.status + "\n" + raw.slice(0, 800);
-        return;
-      }
-      var d;
-      try { d = JSON.parse(raw); } catch (e) {
-        if (idle) idle.textContent = errRead + "\n" + raw.slice(0, 800);
-        return;
-      }
-      renderResults(d);
     } catch (e) {
       if (idle) idle.textContent = String(e);
+    } finally {
+      enrichRunBtn.disabled = false;
     }
   });
 
@@ -663,6 +718,8 @@
       if (meta) meta.textContent = String(e);
     });
   });
+
+  refreshEnrichQueue().catch(function () {});
 })();
     </script>
 </body>

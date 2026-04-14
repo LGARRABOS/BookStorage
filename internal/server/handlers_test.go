@@ -758,6 +758,35 @@ func TestHandleAPIAdminEnrichLink_invalidRequest(t *testing.T) {
 	}
 }
 
+func TestHandleAPIAdminEnrichQueue(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	if _, err := db.Exec(
+		`INSERT INTO works (title, chapter, user_id, status, reading_type) VALUES ('QueueOnly', 1, 1, 'En cours', 'Manga')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/admin/enrich/queue", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAPIAdminEnrichQueue(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Works []struct {
+			ID int `json:"id"`
+		} `json:"works"`
+		Total int `json:"total"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Total < 1 || len(payload.Works) < 1 {
+		t.Fatalf("expected unlinked works, total=%d n=%d", payload.Total, len(payload.Works))
+	}
+}
+
 func TestHandleAPIAdminEnrichWorks(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
