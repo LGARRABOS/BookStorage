@@ -111,7 +111,7 @@
                     <aside class="profile-sidebar">
                         <div class="avatar-section">
                             {{ if and .User.AvatarPath.Valid (ne .User.AvatarPath.String "") }}
-                            <img src="/static/avatars/{{ .User.AvatarPath.String }}" alt="Avatar" class="current-avatar">
+                            <img src="{{ work_image_url .User.AvatarPath.String }}" alt="Avatar" class="current-avatar">
                             {{ else }}
                             <div class="avatar-placeholder">👤</div>
                             {{ end }}

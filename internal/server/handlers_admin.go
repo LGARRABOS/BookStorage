@@ -3,9 +3,176 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
+	"log"
 	"net/http"
 	"strconv"
+	"strings"
+	"unicode/utf8"
 )
+
+const adminDatabaseMaxRows = 400
+const adminDatabaseMaxCellRunes = 160
+
+// adminDatabaseSection is one table block for the admin DB overview (no secrets).
+type adminDatabaseSection struct {
+	Table     string
+	HintKey   string
+	Columns   []string
+	Rows      [][]string
+	Total     int
+	Truncated bool
+}
+
+var adminDatabaseTableSpecs = []struct {
+	Name  string
+	Order string
+	Hint  string
+}{
+	{Name: "users", Order: "id DESC", Hint: "admin.database.hint.users"},
+	{Name: "works", Order: "id DESC", Hint: "admin.database.hint.works"},
+	{Name: "catalog", Order: "id DESC", Hint: "admin.database.hint.catalog"},
+	{Name: "dismissed_recommendations", Order: "id DESC", Hint: "admin.database.hint.dismissed"},
+	{Name: "sessions", Order: "id DESC", Hint: "admin.database.hint.sessions"},
+	{Name: "translation_cache", Order: "created_at DESC", Hint: "admin.database.hint.translation_cache"},
+	{Name: "csv_import_sessions", Order: "created_at DESC", Hint: "admin.database.hint.csv_import"},
+	{Name: "schema_migrations", Order: "version DESC", Hint: "admin.database.hint.schema_migrations"},
+}
+
+func adminDatabaseOmitColumn(table, col string) bool {
+	c := strings.ToLower(strings.TrimSpace(col))
+	switch c {
+	case "password", "token_hash":
+		return true
+	}
+	if strings.EqualFold(table, "users") && c == "username" {
+		return true
+	}
+	return false
+}
+
+func adminDatabaseCellString(col string, v any) string {
+	if v == nil {
+		return ""
+	}
+	var s string
+	switch x := v.(type) {
+	case []byte:
+		s = string(x)
+	case string:
+		s = x
+	case int64:
+		return strconv.FormatInt(x, 10)
+	case int:
+		return strconv.Itoa(x)
+	case float64:
+		return strconv.FormatFloat(x, 'f', -1, 64)
+	case bool:
+		if x {
+			return "true"
+		}
+		return "false"
+	default:
+		s = fmt.Sprint(x)
+	}
+	if strings.EqualFold(col, "raw_csv") {
+		n := utf8.RuneCountInString(s)
+		const preview = 72
+		runes := []rune(s)
+		if len(runes) > preview {
+			return fmt.Sprintf("(%d runes) %s…", n, string(runes[:preview]))
+		}
+		return s
+	}
+	runes := []rune(s)
+	if len(runes) > adminDatabaseMaxCellRunes {
+		return string(runes[:adminDatabaseMaxCellRunes]) + "…"
+	}
+	return s
+}
+
+func buildAdminDatabaseSections(db *sql.DB) ([]adminDatabaseSection, error) {
+	out := make([]adminDatabaseSection, 0, len(adminDatabaseTableSpecs))
+	for _, spec := range adminDatabaseTableSpecs {
+		sec, err := scanAdminDatabaseTable(db, spec.Name, spec.Order, spec.Hint)
+		if err != nil {
+			return nil, fmt.Errorf("table %s: %w", spec.Name, err)
+		}
+		out = append(out, sec)
+	}
+	return out, nil
+}
+
+func scanAdminDatabaseTable(db *sql.DB, table, orderSQL, hintKey string) (adminDatabaseSection, error) {
+	sec := adminDatabaseSection{Table: table, HintKey: hintKey}
+	var exists int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&exists); err != nil {
+		return sec, err
+	}
+	if exists == 0 {
+		return sec, nil
+	}
+
+	var total int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM ` + quoteSQLiteIdent(table)).Scan(&total); err != nil {
+		return sec, err
+	}
+	sec.Total = total
+
+	q := `SELECT * FROM ` + quoteSQLiteIdent(table)
+	if strings.TrimSpace(orderSQL) != "" {
+		q += ` ORDER BY ` + orderSQL
+	}
+	q += ` LIMIT ?`
+	rows, err := db.Query(q, adminDatabaseMaxRows)
+	if err != nil {
+		return sec, err
+	}
+	defer func() { _ = rows.Close() }()
+
+	cols, err := rows.Columns()
+	if err != nil {
+		return sec, err
+	}
+	keepIdx := make([]int, 0, len(cols))
+	for i, c := range cols {
+		if !adminDatabaseOmitColumn(table, c) {
+			keepIdx = append(keepIdx, i)
+			sec.Columns = append(sec.Columns, c)
+		}
+	}
+
+	n := 0
+	for rows.Next() {
+		raw := make([]any, len(cols))
+		ptrs := make([]any, len(cols))
+		for i := range raw {
+			ptrs[i] = &raw[i]
+		}
+		if err := rows.Scan(ptrs...); err != nil {
+			return sec, err
+		}
+		row := make([]string, len(keepIdx))
+		for j, i := range keepIdx {
+			row[j] = adminDatabaseCellString(cols[i], raw[i])
+		}
+		sec.Rows = append(sec.Rows, row)
+		n++
+	}
+	if err := rows.Err(); err != nil {
+		return sec, err
+	}
+	sec.Truncated = total > n
+	return sec, nil
+}
+
+// quoteSQLiteIdent wraps a known-safe table name for SQLite.
+func quoteSQLiteIdent(name string) string {
+	if name == "" || strings.ContainsAny(name, `"';\x00`) {
+		return `""`
+	}
+	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
+}
 
 func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.DB.Query(
@@ -129,6 +296,22 @@ func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
 	summary := FetchPrometheusAdminSummary(a.Settings)
 	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{
 		"PrometheusSummary": summary,
+	}))
+}
+
+func (a *App) HandleAdminDatabase(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	sections, err := buildAdminDatabaseSections(a.DB)
+	if err != nil {
+		log.Printf("admin database overview: %v", err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	a.renderTemplate(w, r, "admin_database", a.mergeData(r, map[string]any{
+		"DBSections": sections,
 	}))
 }
 
