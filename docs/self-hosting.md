@@ -9,6 +9,7 @@ Run BookStorage on your own Linux machine. For local development and CI, see [De
 - [Production installation (Linux)](#production-installation-linux)
 - [bsctl — service and updates](#bsctl--service-and-updates)
 - [Configuration](#configuration)
+- [Prometheus metrics (optional)](#prometheus-metrics-optional)
 - [Using the app](#using-the-app)
 - [Troubleshooting](#troubleshooting)
 
@@ -29,8 +30,10 @@ The script installs:
 
 - Compiled application
 - `bsctl` CLI to manage the service
-- systemd service
+- systemd service (loads optional `EnvironmentFile=-/opt/bookstorage/.env`)
 - Firewall configuration
+
+**Prometheus (optional):** set `INSTALL_WITH_PROMETHEUS=1` when running the installer to install the distribution `prometheus` package, generate `BOOKSTORAGE_METRICS_TOKEN` if missing, and enable the `bookstorage-prometheus` systemd unit (Prometheus UI on `http://127.0.0.1:9091`, scrape via bearer token file). After a token is added to `.env`, run `systemctl restart bookstorage`. `bsctl update` does **not** re-run this step; use `INSTALL_APP_DIR=/opt/bookstorage sudo -E ./deploy/setup-bookstorage-prometheus.sh` on the server if you need it later.
 
 ### Start the service
 
@@ -85,7 +88,7 @@ Copy the example file and edit it (never commit secrets):
 cp .env.example .env
 ```
 
-Use the same path on a server (e.g. `/opt/bookstorage/.env`). With **systemd**, load it with `EnvironmentFile=/opt/bookstorage/.env` in your unit file so variables are applied to the process.
+Use the same path on a server (e.g. `/opt/bookstorage/.env`). The stock `deploy/bookstorage.service` includes `EnvironmentFile=-/opt/bookstorage/.env` so variables from `.env` are applied (optional file: the leading `-` ignores a missing path).
 
 Example `.env` contents:
 
@@ -111,12 +114,13 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_PORT`         | Port                   | `5000`                  |
 | `BOOKSTORAGE_DATABASE`     | SQLite database path   | `database.db`           |
 | `BOOKSTORAGE_SECRET_KEY`   | Session secret key (min. 32 bytes if `BOOKSTORAGE_ENV=production`) | `dev-secret-change-me`  |
+| `BOOKSTORAGE_ENV`          | `development` or `production` (production forbids default secret) | `development` |
+| `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
+| `BOOKSTORAGE_METRICS_TOKEN` | If set, secures `GET /metrics` with `Authorization: Bearer …` or `?token=…` for Prometheus. If empty, only loopback clients may scrape `/metrics`. | (empty) |
 
 ### Session lifetime
 
 Sessions use a **sliding TTL of 2 hours** and an **absolute TTL of 24 hours**. If a user is inactive for more than 2 hours, they must log in again. Regardless of activity, every session expires 24 hours after creation.
-| `BOOKSTORAGE_ENV`          | `development` or `production` (production forbids default secret) | `development` |
-| `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
 
 ### Legal notice
 
@@ -144,6 +148,42 @@ Then edit `config/site.json` with your information:
   }
 }
 ```
+
+---
+
+## Prometheus metrics (optional)
+
+BookStorage exposes **`GET /metrics`** in Prometheus text format (counters and histograms prefixed with `bookstorage_http_*`).
+
+- **No `BOOKSTORAGE_METRICS_TOKEN`:** scrapers must connect from **loopback** (`127.0.0.1` / `::1`) to read `/metrics`. This suits a Prometheus instance on the same host.
+- **With `BOOKSTORAGE_METRICS_TOKEN`:** send `Authorization: Bearer <token>` or `GET /metrics?token=<token>` (documented for operators; prefer Bearer in Prometheus `bearer_token` / `bearer_token_file`).
+
+**Automatic install (Linux installer):** `INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh` runs `deploy/setup-bookstorage-prometheus.sh`, which installs the distro `prometheus` package, writes `/etc/bookstorage/prometheus-bs.yml` and `/etc/bookstorage/bookstorage-metrics.token`, and enables **`bookstorage-prometheus`** (listens on `127.0.0.1:9091`, separate TSDB under `/var/lib/prometheus-bookstorage`). Then:
+
+```bash
+sudo systemctl restart bookstorage   # pick up BOOKSTORAGE_METRICS_TOKEN from .env if it was just added
+sudo systemctl status bookstorage-prometheus
+```
+
+**Manual setup** (if your distribution has no `prometheus` package, the script failed, or you use containers):
+
+1. Set the same secret in BookStorage and Prometheus, e.g. add `BOOKSTORAGE_METRICS_TOKEN=<long-random>` to `/opt/bookstorage/.env` and `systemctl restart bookstorage`.
+2. Create `/etc/bookstorage/bookstorage-metrics.token` containing **only** that token (one line), `chmod 640`, owned by `root:prometheus` so the `prometheus` user can read it.
+3. Minimal `scrape_configs` entry:
+
+```yaml
+scrape_configs:
+  - job_name: bookstorage
+    metrics_path: /metrics
+    scheme: http
+    bearer_token_file: /etc/bookstorage/bookstorage-metrics.token
+    static_configs:
+      - targets: ['127.0.0.1:5000']   # match BOOKSTORAGE_PORT
+```
+
+4. Point Grafana at your Prometheus server as usual.
+
+The **Admin → Monitoring** page documents the local scrape URL and whether a token is configured.
 
 ---
 

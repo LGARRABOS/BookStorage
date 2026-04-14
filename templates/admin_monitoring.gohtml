@@ -14,6 +14,8 @@
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .lang-toggle:hover { background: var(--primary); color: white; }
+        .prom-block { margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; background: var(--surface-alt, #f4f4f5); border: 1px solid var(--border, #e4e4e7); }
+        .prom-block pre { margin: 0.5rem 0 0; white-space: pre-wrap; word-break: break-all; font-size: 0.85rem; }
     </style>
 </head>
 <body>
@@ -44,51 +46,24 @@
                     </nav>
                 </header>
 
-                <div class="admin-metrics-grid">
-                    <article class="admin-kpi">
-                        <h2>{{ t .T "monitoring.uptime" }}</h2>
-                        <div class="kpi-value" id="mon-uptime">—</div>
-                        <div class="kpi-meta">{{ t .T "monitoring.uptime.desc" }}</div>
-                    </article>
-                    <article class="admin-kpi">
-                        <h2>{{ t .T "monitoring.requests" }}</h2>
-                        <div class="kpi-value"><span id="mon-req-total">—</span></div>
-                        <div class="kpi-meta">
-                            <div style="margin-top:0.25rem; display:flex; gap:0.45rem; flex-wrap:wrap;">
-                                <span class="badge success">2xx: <span id="mon-req-2xx">—</span></span>
-                                <span class="badge info">3xx: <span id="mon-req-3xx">—</span></span>
-                                <span class="badge warning">4xx: <span id="mon-req-4xx">—</span></span>
-                                <span class="badge danger">5xx: <span id="mon-req-5xx">—</span></span>
-                            </div>
-                        </div>
-                    </article>
-                    <article class="admin-kpi">
-                        <h2>{{ t .T "monitoring.latency" }}</h2>
-                        <div class="kpi-meta">
-                            <div>{{ t .T "monitoring.latency.p95" }}: <strong id="mon-lat-p95">—</strong> ms</div>
-                            <div>{{ t .T "monitoring.latency.avg" }}: <strong id="mon-lat-avg">—</strong> ms</div>
-                            <div>{{ t .T "monitoring.latency.max" }}: <strong id="mon-lat-max">—</strong> ms</div>
-                        </div>
-                    </article>
-                    <article class="admin-kpi">
-                        <h2>{{ t .T "monitoring.runtime" }}</h2>
-                        <div class="kpi-meta">
-                            <div>{{ t .T "monitoring.goroutines" }}: <strong id="mon-go">—</strong></div>
-                            <div>{{ t .T "monitoring.heap" }}: <strong id="mon-heap">—</strong></div>
-                            <div>{{ t .T "monitoring.gc" }}: <strong id="mon-gc">—</strong></div>
-                        </div>
-                    </article>
-                </div>
-
-                <p id="mon-error" style="display:none; margin-top:1rem; color:#dc2626;"></p>
+                <article class="prom-block">
+                    <h2 class="page-title" style="font-size:1.1rem;margin:0 0 0.5rem;">{{ t .T "monitoring.prometheus.title" }}</h2>
+                    <p>{{ t .T "monitoring.prometheus.intro" }}</p>
+                    <p><strong>{{ t .T "monitoring.prometheus.url_label" }}</strong></p>
+                    <pre>{{ .MetricsURL }}</pre>
+                    {{ if .MetricsTokenConfigured }}
+                    <p>{{ t .T "monitoring.prometheus.token_on" }}</p>
+                    {{ else }}
+                    <p>{{ t .T "monitoring.prometheus.token_off" }}</p>
+                    {{ end }}
+                    <p>{{ t .T "monitoring.prometheus.charts" }} <a href="{{ .PrometheusUIURL }}" target="_blank" rel="noopener">{{ .PrometheusUIURL }}</a></p>
+                </article>
             </section>
         </div>
     </main>
 
     <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
     <script src="/static/js/appearance.js"></script>
-    <script src="/static/js/admin-monitoring.js"></script>
 </body>
 </html>
 {{ end }}
-

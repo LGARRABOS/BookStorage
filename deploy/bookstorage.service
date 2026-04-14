@@ -7,6 +7,8 @@ Type=simple
 User=nobody
 Group=nobody
 WorkingDirectory=/opt/bookstorage
+# Optional: load BOOKSTORAGE_* from this file (the leading "-" ignores a missing file).
+EnvironmentFile=-/opt/bookstorage/.env
 ExecStart=/usr/local/bin/bookstorage
 Restart=always
 RestartSec=5

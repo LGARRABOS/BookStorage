@@ -87,7 +87,7 @@ func (r *accessLogRecorder) Write(p []byte) (int, error) {
 func (a *App) WithAccessLog(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// Keep noise low.
-		if strings.HasPrefix(r.URL.Path, "/static/") {
+		if strings.HasPrefix(r.URL.Path, "/static/") || r.URL.Path == "/metrics" {
 			next.ServeHTTP(w, r)
 			return
 		}
@@ -96,10 +96,7 @@ func (a *App) WithAccessLog(next http.Handler) http.Handler {
 		next.ServeHTTP(rec, r)
 		dur := time.Since(start)
 
-		// Best-effort: update in-process monitoring.
-		if a.Monitor != nil {
-			a.Monitor.Observe(rec.status, dur)
-		}
+		RecordHTTPMetrics(r.Method, rec.status, dur)
 
 		rid := requestIDFromContext(r.Context())
 		uid, _ := a.currentUserID(r)

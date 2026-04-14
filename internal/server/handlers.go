@@ -40,7 +40,6 @@ type App struct {
 	TemplatesWeb    *template.Template
 	TemplatesMobile *template.Template
 	Version         string
-	Monitor         *Monitoring
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB, version string) *App {
@@ -125,7 +124,6 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB
 		TemplatesWeb:    webTpl,
 		TemplatesMobile: mobileTpl,
 		Version:         strings.TrimSpace(version),
-		Monitor:         NewMonitoring(strings.TrimSpace(version), strings.TrimSpace(settings.Environment)),
 	}
 }
 

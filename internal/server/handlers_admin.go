@@ -3,8 +3,10 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 )
 
 func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
@@ -126,20 +128,12 @@ func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{}))
-}
-
-func (a *App) HandleAPIMonitoring(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	snap := MonitoringSnapshot{}
-	if a.Monitor != nil {
-		snap = a.Monitor.Snapshot()
-	}
-	_ = json.NewEncoder(w).Encode(snap)
+	tokenSet := strings.TrimSpace(a.Settings.MetricsToken) != ""
+	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{
+		"MetricsTokenConfigured": tokenSet,
+		"MetricsURL":             fmt.Sprintf("http://127.0.0.1:%d/metrics", a.Settings.Port),
+		"PrometheusUIURL":        "http://127.0.0.1:9091",
+	}))
 }
 
 func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {

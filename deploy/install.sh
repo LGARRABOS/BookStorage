@@ -19,6 +19,7 @@ REPO_URL="${1:-https://github.com/LGARRABOS/BookStorage.git}"
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
+YELLOW='\033[0;33m'
 BOLD='\033[1m'
 NC='\033[0m'
 
@@ -39,8 +40,12 @@ print_success() {
 }
 
 print_error() {
-    printf "${RED}✗ $1${NC}\n"
-    exit 1
+	printf "${RED}✗ $1${NC}\n"
+	exit 1
+}
+
+print_warn() {
+	printf "${YELLOW}⚠ $1${NC}\n"
 }
 
 # ============================================================================
@@ -189,6 +194,21 @@ if systemctl is-active --quiet firewalld; then
 fi
 
 # ============================================================================
+# Prometheus (opt-in : INSTALL_WITH_PROMETHEUS=1)
+# ============================================================================
+
+if [ "${INSTALL_WITH_PROMETHEUS:-}" = "1" ]; then
+    print_step "Prometheus" "Installation optionnelle (INSTALL_WITH_PROMETHEUS=1)..."
+    export INSTALL_APP_DIR="$APP_DIR"
+    chmod +x "$APP_DIR/deploy/setup-bookstorage-prometheus.sh" 2>/dev/null || true
+    if bash "$APP_DIR/deploy/setup-bookstorage-prometheus.sh"; then
+        print_success "Service bookstorage-prometheus installé (http://127.0.0.1:9091)"
+    else
+        print_warn "Prometheus automatique échoué — voir docs/self-hosting.md (Prometheus metrics)"
+    fi
+fi
+
+# ============================================================================
 # Terminé
 # ============================================================================
 
@@ -216,4 +236,7 @@ printf "  ${BLUE}bsctl start${NC}\n"
 printf "\n"
 
 printf "L'application sera accessible sur: ${BOLD}http://$(hostname -I | awk '{print $1}'):5000${NC}\n"
+printf "\n"
+printf "Prometheus (optionnel) : ${BLUE}INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh${NC}\n"
+printf "  ou après coup : ${BLUE}INSTALL_APP_DIR=$APP_DIR sudo -E $APP_DIR/deploy/setup-bookstorage-prometheus.sh${NC}\n"
 printf "\n"
