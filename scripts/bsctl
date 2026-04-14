@@ -104,6 +104,9 @@ case "${1:-help}" in
     logs)
         cmd_logs
         ;;
+    backup)
+        cmd_backup
+        ;;
     *)
         printf "${YELLOW}Unknown command: ${1}${NC}\n\n"
         cmd_help

@@ -15,12 +15,11 @@
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .lang-toggle:hover { background: var(--primary); color: white; }
         .prom-block { margin-top: 1rem; padding: 1rem; border-radius: 0.5rem; background: var(--surface-alt, #f4f4f5); border: 1px solid var(--border, #e4e4e7); }
-        .prom-block pre { margin: 0.5rem 0 0; white-space: pre-wrap; word-break: break-all; font-size: 0.85rem; }
         #prom-live-err { color: #b91c1c; margin-top: 0.75rem; font-size: 0.9rem; }
-        .prom-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr)); gap: 0.75rem; margin-top: 0.75rem; }
+        .prom-live-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(10.5rem, 1fr)); gap: 0.75rem; margin-top: 0.5rem; }
         .prom-kpi { padding: 0.65rem 0.75rem; border-radius: 0.5rem; border: 1px solid var(--border, #e4e4e7); background: rgba(255,255,255,0.5); }
-        .prom-kpi h3 { margin: 0 0 0.35rem; font-size: 0.75rem; font-weight: 600; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
-        .prom-kpi .val { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+        .prom-kpi h3 { margin: 0 0 0.35rem; font-size: 0.72rem; font-weight: 600; color: var(--muted, #64748b); text-transform: uppercase; letter-spacing: 0.04em; }
+        .prom-kpi .val { font-size: 1.15rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     </style>
 </head>
 <body>
@@ -44,17 +43,16 @@
             <section class="page-section">
                 <header class="section-header">
                     <h1 class="page-title">📈 {{ t .T "admin.monitoring.title" }}</h1>
-                    <p class="page-subtitle">{{ t .T "monitoring.subtitle" }}</p>
                     <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
                         <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
                         <a class="admin-tab active" href="/admin/monitoring">{{ t .T "admin.monitoring" }}</a>
+                        <a class="admin-tab" href="/admin/enrich">{{ t .T "admin.enrich" }}</a>
                         <a class="admin-tab" href="/admin/update">{{ t .T "admin.update" }}</a>
                     </nav>
                 </header>
 
                 <article class="prom-block">
-                    <h2 class="page-title" style="font-size:1.1rem;margin:0 0 0.5rem;">{{ t .T "monitoring.prometheus.live_title" }}</h2>
-                    <p>{{ t .T "monitoring.prometheus.live_intro" }}</p>
+                    <h2 class="page-title" style="font-size:1.1rem;margin:0;">{{ t .T "monitoring.prometheus.live_title" }}</h2>
                     {{ with .PrometheusSummary }}
                     {{ if eq .Error "invalid_prometheus_url" }}
                     <p id="prom-live-err" style="display:block">{{ t $p.T "monitoring.prometheus.url_invalid" }}</p>
@@ -77,23 +75,46 @@
                                 <h3>{{ t $p.T "monitoring.prometheus.rate_5m" }}</h3>
                                 <div class="val" id="prom-rate-val">{{ .RequestRate5m }}</div>
                             </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.error_rate_5m" }}</h3>
+                                <div class="val" id="prom-err-rate-val">{{ .ErrorRate5m }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.count_2xx" }}</h3>
+                                <div class="val" id="prom-2xx-val">{{ .Requests2xx }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.count_3xx" }}</h3>
+                                <div class="val" id="prom-3xx-val">{{ .Requests3xx }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.count_4xx" }}</h3>
+                                <div class="val" id="prom-4xx-val">{{ .Requests4xx }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.count_5xx" }}</h3>
+                                <div class="val" id="prom-5xx-val">{{ .Requests5xx }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.requests_get" }}</h3>
+                                <div class="val" id="prom-get-val">{{ .RequestsGet }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.requests_post" }}</h3>
+                                <div class="val" id="prom-post-val">{{ .RequestsPost }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.latency_p50" }}</h3>
+                                <div class="val" id="prom-p50-val">{{ .LatencyP50 }}</div>
+                            </div>
+                            <div class="prom-kpi">
+                                <h3>{{ t $p.T "monitoring.prometheus.latency_p95" }}</h3>
+                                <div class="val" id="prom-p95-val">{{ .LatencyP95 }}</div>
+                            </div>
                         </div>
                     </div>
                     {{ end }}
                     {{ end }}
-                </article>
-
-                <article class="prom-block" style="margin-top:1rem;">
-                    <h2 class="page-title" style="font-size:1.1rem;margin:0 0 0.5rem;">{{ t .T "monitoring.prometheus.title" }}</h2>
-                    <p>{{ t .T "monitoring.prometheus.intro" }}</p>
-                    <p><strong>{{ t .T "monitoring.prometheus.url_label" }}</strong></p>
-                    <pre>{{ .MetricsURL }}</pre>
-                    {{ if .MetricsTokenConfigured }}
-                    <p>{{ t .T "monitoring.prometheus.token_on" }}</p>
-                    {{ else }}
-                    <p>{{ t .T "monitoring.prometheus.token_off" }}</p>
-                    {{ end }}
-                    <p>{{ t .T "monitoring.prometheus.charts" }} <a href="{{ .PrometheusUIURL }}/graph" target="_blank" rel="noopener">{{ .PrometheusUIURL }}</a> ({{ t .T "monitoring.prometheus.open_ui" }})</p>
                 </article>
             </section>
         </div>

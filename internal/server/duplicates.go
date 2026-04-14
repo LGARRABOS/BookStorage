@@ -60,7 +60,7 @@ func (a *App) HandleDuplicates(w http.ResponseWriter, r *http.Request) {
 	for i := range groups {
 		g := &groups[i]
 		wr, err := a.DB.Query(
-			`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
+			`SELECT `+sqlWorkRowFull+`
 			 FROM works
 			 WHERE user_id = ? AND LOWER(TRIM(title)) = ? AND COALESCE(reading_type, '') = ?
 			 ORDER BY id ASC`,
@@ -71,10 +71,7 @@ func (a *App) HandleDuplicates(w http.ResponseWriter, r *http.Request) {
 		}
 		for wr.Next() {
 			var wRow workRow
-			if err := wr.Scan(
-				&wRow.ID, &wRow.Title, &wRow.Chapter, &wRow.Link, &wRow.Status, &wRow.ImagePath, &wRow.ReadingType,
-				&wRow.Rating, &wRow.Notes, &wRow.UserID, &wRow.UpdatedAt, &wRow.IsAdult,
-			); err == nil {
+			if err := scanFullWorkRow(&wRow, wr); err == nil {
 				g.Works = append(g.Works, wRow)
 			}
 		}
@@ -113,14 +110,11 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 
 	load := func(id int) (*workRow, error) {
 		var wRow workRow
-		err := tx.QueryRow(
-			`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
+		err := scanFullWorkRow(&wRow, tx.QueryRow(
+			`SELECT `+sqlWorkRowFull+`
 			 FROM works WHERE id = ? AND user_id = ?`,
 			id, userID,
-		).Scan(
-			&wRow.ID, &wRow.Title, &wRow.Chapter, &wRow.Link, &wRow.Status, &wRow.ImagePath, &wRow.ReadingType,
-			&wRow.Rating, &wRow.Notes, &wRow.UserID, &wRow.UpdatedAt, &wRow.IsAdult,
-		)
+		))
 		if err != nil {
 			return nil, err
 		}

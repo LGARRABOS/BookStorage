@@ -47,6 +47,12 @@
 
                 {{ template "import_notice" . }}
 
+                {{ if .CSVImportCount }}
+                <p style="background:var(--primary-muted);padding:0.75rem 1rem;border-radius:0.75rem;margin-bottom:1rem;">
+                    {{ t .T "tools.csv_import.flash" }} <strong>{{ .CSVImportCount }}</strong>
+                </p>
+                {{ end }}
+
                 <div class="tools-grid">
                     <article class="tool-card">
                         <h2>{{ t .T "tools.export.title" }}</h2>
@@ -62,6 +68,14 @@
                         <p>{{ t .T "tools.data_quality.desc" }}</p>
                         <div class="tool-actions">
                             <a href="/tools/duplicates" class="btn btn-secondary">{{ t .T "tools.data_quality.action" }}</a>
+                        </div>
+                    </article>
+
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.csv_import.title" }}</h2>
+                        <p>{{ t .T "tools.csv_import.subtitle" }}</p>
+                        <div class="tool-actions">
+                            <a href="/tools/csv-import" class="btn btn-secondary">{{ t .T "tools.csv_import.link" }}</a>
                         </div>
                     </article>
 

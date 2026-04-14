@@ -6,6 +6,11 @@
     el.style.display = on ? "block" : "none";
   }
 
+  function setText(id, v) {
+    const el = $(id);
+    if (el) el.textContent = v ?? "—";
+  }
+
   async function refresh() {
     const errEl = $("prom-live-err");
     const panel = $("prom-live-panel");
@@ -35,14 +40,18 @@
       setVisible(panel, true);
       if (errEl) errEl.style.display = "none";
 
-      const scrape = $("prom-scrape-val");
-      if (scrape) scrape.textContent = d.scrape_ok ? "OK" : "—";
-
-      const tot = $("prom-total-val");
-      if (tot) tot.textContent = d.requests_total ?? "—";
-
-      const rate = $("prom-rate-val");
-      if (rate) rate.textContent = d.request_rate_5m ?? "—";
+      setText("prom-scrape-val", d.scrape_ok ? "OK" : "—");
+      setText("prom-total-val", d.requests_total);
+      setText("prom-rate-val", d.request_rate_5m);
+      setText("prom-err-rate-val", d.error_rate_5m);
+      setText("prom-2xx-val", d.requests_2xx);
+      setText("prom-3xx-val", d.requests_3xx);
+      setText("prom-4xx-val", d.requests_4xx);
+      setText("prom-5xx-val", d.requests_5xx);
+      setText("prom-get-val", d.requests_get);
+      setText("prom-post-val", d.requests_post);
+      setText("prom-p50-val", d.latency_p50);
+      setText("prom-p95-val", d.latency_p95);
     } catch {
       /* ignore transient errors */
     }

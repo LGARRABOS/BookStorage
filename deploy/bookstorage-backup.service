@@ -1,0 +1,9 @@
+[Unit]
+Description=BookStorage SQLite backup (oneshot)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/bsctl backup
+User=root

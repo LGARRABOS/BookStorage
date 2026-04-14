@@ -6,18 +6,52 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+
+	"bookstorage/internal/database"
 )
 
 type apiWork struct {
-	ID          int    `json:"id"`
-	Title       string `json:"title"`
-	Chapter     int    `json:"chapter"`
-	Link        string `json:"link,omitempty"`
-	Status      string `json:"status,omitempty"`
-	ReadingType string `json:"reading_type,omitempty"`
-	Rating      int    `json:"rating"`
-	Notes       string `json:"notes,omitempty"`
-	UpdatedAt   string `json:"updated_at,omitempty"`
+	ID           int    `json:"id"`
+	Title        string `json:"title"`
+	Chapter      int    `json:"chapter"`
+	Link         string `json:"link,omitempty"`
+	Status       string `json:"status,omitempty"`
+	ReadingType  string `json:"reading_type,omitempty"`
+	Rating       int    `json:"rating"`
+	Notes        string `json:"notes,omitempty"`
+	UpdatedAt    string `json:"updated_at,omitempty"`
+	ParentWorkID *int   `json:"parent_work_id,omitempty"`
+	SeriesSort   int    `json:"series_sort,omitempty"`
+}
+
+func workRowToAPIWork(w workRow) apiWork {
+	out := apiWork{
+		ID:         w.ID,
+		Title:      w.Title,
+		Chapter:    w.Chapter,
+		Rating:     w.Rating,
+		SeriesSort: w.SeriesSort,
+	}
+	if w.Link.Valid {
+		out.Link = w.Link.String
+	}
+	if w.Status.Valid {
+		out.Status = w.Status.String
+	}
+	if w.ReadingType.Valid {
+		out.ReadingType = w.ReadingType.String
+	}
+	if w.Notes.Valid {
+		out.Notes = w.Notes.String
+	}
+	if w.UpdatedAt.Valid {
+		out.UpdatedAt = w.UpdatedAt.String
+	}
+	if w.ParentWorkID.Valid && w.ParentWorkID.Int64 > 0 {
+		v := int(w.ParentWorkID.Int64)
+		out.ParentWorkID = &v
+	}
+	return out
 }
 
 func (a *App) apiWriteJSON(w http.ResponseWriter, status int, data any) {
@@ -94,9 +128,20 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		args = append(args, typeFilter)
 	}
 	if search != "" {
-		whereParts = append(whereParts, "(LOWER(title) LIKE ? OR LOWER(COALESCE(notes, '')) LIKE ? OR LOWER(COALESCE(link, '')) LIKE ?)")
-		like := "%" + strings.ToLower(search) + "%"
-		args = append(args, like, like, like)
+		useFTS := database.WorksFTSEnabled(a.DB)
+		if useFTS {
+			if matchExpr, ok := fts5MatchExpression(search); ok {
+				whereParts = append(whereParts, "works.id IN (SELECT rowid FROM works_fts WHERE works_fts MATCH ?)")
+				args = append(args, matchExpr)
+			} else {
+				useFTS = false
+			}
+		}
+		if !useFTS {
+			whereParts = append(whereParts, "(LOWER(title) LIKE ? OR LOWER(COALESCE(notes, '')) LIKE ? OR LOWER(COALESCE(link, '')) LIKE ?)")
+			like := "%" + strings.ToLower(search) + "%"
+			args = append(args, like, like, like)
+		}
 	}
 	whereSQL := strings.Join(whereParts, " AND ")
 
@@ -107,7 +152,7 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	queryArgs := append(append([]any{}, args...), limit, offset)
-	stmt := `SELECT id, title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
+	stmt := `SELECT ` + sqlWorkRowFull + `
          FROM works WHERE ` + whereSQL + ` ORDER BY ` + orderBy + ` LIMIT ? OFFSET ?`
 	rows, err := a.DB.Query(stmt, queryArgs...)
 	if err != nil {
@@ -118,24 +163,11 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 
 	var works []apiWork
 	for rows.Next() {
-		var w apiWork
-		var link, status, readingType, notes sql.NullString
-		if err := rows.Scan(&w.ID, &w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt); err != nil {
+		var wr workRow
+		if err := scanFullWorkRow(&wr, rows); err != nil {
 			continue
 		}
-		if link.Valid {
-			w.Link = link.String
-		}
-		if status.Valid {
-			w.Status = status.String
-		}
-		if readingType.Valid {
-			w.ReadingType = readingType.String
-		}
-		if notes.Valid {
-			w.Notes = notes.String
-		}
-		works = append(works, w)
+		works = append(works, workRowToAPIWork(wr))
 	}
 
 	totalPages := 0
@@ -165,13 +197,12 @@ func (a *App) HandleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
-	var work apiWork
-	var link, status, readingType, notes sql.NullString
-	err := a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, '')
+	var wr workRow
+	err := scanFullWorkRow(&wr, a.DB.QueryRow(
+		`SELECT `+sqlWorkRowFull+`
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, userID,
-	).Scan(&work.ID, &work.Title, &work.Chapter, &link, &status, &readingType, &work.Rating, &notes, &work.UpdatedAt)
+	))
 	if err == sql.ErrNoRows {
 		a.apiWriteError(w, http.StatusNotFound, "not_found")
 		return
@@ -180,20 +211,8 @@ func (a *App) HandleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
-	if link.Valid {
-		work.Link = link.String
-	}
-	if status.Valid {
-		work.Status = status.String
-	}
-	if readingType.Valid {
-		work.ReadingType = readingType.String
-	}
-	if notes.Valid {
-		work.Notes = notes.String
-	}
 
-	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": work})
+	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": workRowToAPIWork(wr)})
 }
 
 func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
@@ -204,13 +223,15 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	var req struct {
-		Title       string `json:"title"`
-		Chapter     int    `json:"chapter"`
-		Link        string `json:"link"`
-		Status      string `json:"status"`
-		ReadingType string `json:"reading_type"`
-		Rating      int    `json:"rating"`
-		Notes       string `json:"notes"`
+		Title        string `json:"title"`
+		Chapter      int    `json:"chapter"`
+		Link         string `json:"link"`
+		Status       string `json:"status"`
+		ReadingType  string `json:"reading_type"`
+		Rating       int    `json:"rating"`
+		Notes        string `json:"notes"`
+		ParentWorkID *int   `json:"parent_work_id"`
+		SeriesSort   int    `json:"series_sort"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
@@ -226,10 +247,23 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	readingType := normalizeReadingTypeForWrite(req.ReadingType)
 	status := normalizeStatusForWrite(req.Status)
 
+	if req.ParentWorkID != nil && *req.ParentWorkID > 0 {
+		if err := a.validateWorkParent(userID, 0, *req.ParentWorkID); err != nil {
+			a.apiWriteError(w, http.StatusBadRequest, "invalid_parent")
+			return
+		}
+	}
+	var parentArg any
+	if req.ParentWorkID != nil && *req.ParentWorkID > 0 {
+		parentArg = *req.ParentWorkID
+	} else {
+		parentArg = nil
+	}
+
 	res, err := a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID,
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, parent_work_id, series_sort, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID, parentArg, req.SeriesSort,
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
@@ -238,14 +272,16 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	id, _ := res.LastInsertId()
 
 	work := apiWork{
-		ID:          int(id),
-		Title:       req.Title,
-		Chapter:     req.Chapter,
-		Link:        strings.TrimSpace(req.Link),
-		Status:      status,
-		ReadingType: readingType,
-		Rating:      req.Rating,
-		Notes:       strings.TrimSpace(req.Notes),
+		ID:           int(id),
+		Title:        req.Title,
+		Chapter:      req.Chapter,
+		Link:         strings.TrimSpace(req.Link),
+		Status:       status,
+		ReadingType:  readingType,
+		Rating:       req.Rating,
+		Notes:        strings.TrimSpace(req.Notes),
+		SeriesSort:   req.SeriesSort,
+		ParentWorkID: req.ParentWorkID,
 	}
 
 	a.apiWriteJSON(w, http.StatusCreated, map[string]any{"data": work})
@@ -303,6 +339,27 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if v, ok := req["notes"].(string); ok {
 		setParts = append(setParts, "notes = ?")
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
+	}
+	if raw, ok := req["parent_work_id"]; ok {
+		if raw == nil {
+			setParts = append(setParts, "parent_work_id = NULL")
+		} else if v, ok := raw.(float64); ok {
+			pid := int(v)
+			if pid <= 0 {
+				setParts = append(setParts, "parent_work_id = NULL")
+			} else {
+				if err := a.validateWorkParent(userID, workID, pid); err != nil {
+					a.apiWriteError(w, http.StatusBadRequest, "invalid_parent")
+					return
+				}
+				setParts = append(setParts, "parent_work_id = ?")
+				args = append(args, pid)
+			}
+		}
+	}
+	if v, ok := req["series_sort"].(float64); ok {
+		setParts = append(setParts, "series_sort = ?")
+		args = append(args, int(v))
 	}
 
 	if len(setParts) == 0 {

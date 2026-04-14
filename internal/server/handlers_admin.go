@@ -3,10 +3,8 @@ package server
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strconv"
-	"strings"
 )
 
 func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
@@ -128,13 +126,9 @@ func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	tokenSet := strings.TrimSpace(a.Settings.MetricsToken) != ""
 	summary := FetchPrometheusAdminSummary(a.Settings)
 	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{
-		"MetricsTokenConfigured": tokenSet,
-		"MetricsURL":             fmt.Sprintf("http://127.0.0.1:%d/metrics", a.Settings.Port),
-		"PrometheusUIURL":        strings.TrimRight(prometheusQueryBaseForSettings(a.Settings), "/"),
-		"PrometheusSummary":      summary,
+		"PrometheusSummary": summary,
 	}))
 }
 
@@ -152,6 +146,15 @@ func (a *App) HandleAPIAdminPrometheusSummary(w http.ResponseWriter, r *http.Req
 		"scrape_ok":       s.ScrapeJobHealthy,
 		"requests_total":  s.RequestsTotal,
 		"request_rate_5m": s.RequestRate5m,
+		"requests_2xx":    s.Requests2xx,
+		"requests_3xx":    s.Requests3xx,
+		"requests_4xx":    s.Requests4xx,
+		"requests_5xx":    s.Requests5xx,
+		"requests_get":    s.RequestsGet,
+		"requests_post":   s.RequestsPost,
+		"error_rate_5m":   s.ErrorRate5m,
+		"latency_p50":     s.LatencyP50,
+		"latency_p95":     s.LatencyP95,
 		"error":           s.Error,
 		"invalid_url":     s.Error == "invalid_prometheus_url",
 	})

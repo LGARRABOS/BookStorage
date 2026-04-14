@@ -968,18 +968,30 @@ func (a *App) HandleLogoutAll(w http.ResponseWriter, r *http.Request) {
 }
 
 type workRow struct {
-	ID          int
-	Title       string
-	Chapter     int
-	Link        sql.NullString
-	Status      sql.NullString
-	ImagePath   sql.NullString
-	ReadingType sql.NullString
-	Rating      int
-	Notes       sql.NullString
-	UserID      int
-	UpdatedAt   sql.NullString
-	IsAdult     sql.NullInt64
+	ID           int
+	Title        string
+	Chapter      int
+	Link         sql.NullString
+	Status       sql.NullString
+	ImagePath    sql.NullString
+	ReadingType  sql.NullString
+	Rating       int
+	Notes        sql.NullString
+	UserID       int
+	UpdatedAt    sql.NullString
+	IsAdult      sql.NullInt64
+	ParentWorkID sql.NullInt64
+	SeriesSort   int
+}
+
+// sqlWorkRowFull must match scanFullWorkRow field order.
+const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0)`
+
+func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
+	return s.Scan(
+		&w.ID, &w.Title, &w.Chapter, &w.Link, &w.Status, &w.ImagePath, &w.ReadingType,
+		&w.Rating, &w.Notes, &w.UserID, &w.UpdatedAt, &w.IsAdult, &w.ParentWorkID, &w.SeriesSort,
+	)
 }
 
 func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
@@ -989,28 +1001,29 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	var isAdmin int
 	_ = a.DB.QueryRow(`SELECT is_admin FROM users WHERE id = ?`, userID).Scan(&isAdmin)
 
-	// Option de tri
+	// Option de tri (regroupement série en premier : parent puis enfants)
 	sortBy := r.URL.Query().Get("sort")
-	orderClause := "ORDER BY LOWER(title)"
+	seriesOrder := "COALESCE(parent_work_id, id), CASE WHEN parent_work_id IS NULL THEN 0 ELSE 1 END, COALESCE(series_sort, 0) ASC, "
+	orderClause := "ORDER BY " + seriesOrder + "LOWER(title)"
 	switch sortBy {
 	case "title_desc":
-		orderClause = "ORDER BY LOWER(title) DESC"
+		orderClause = "ORDER BY " + seriesOrder + "LOWER(title) DESC"
 	case "chapter":
-		orderClause = "ORDER BY chapter DESC"
+		orderClause = "ORDER BY " + seriesOrder + "chapter DESC"
 	case "status":
-		orderClause = "ORDER BY status, LOWER(title)"
+		orderClause = "ORDER BY " + seriesOrder + "status, LOWER(title)"
 	case "type":
-		orderClause = "ORDER BY reading_type, LOWER(title)"
+		orderClause = "ORDER BY " + seriesOrder + "reading_type, LOWER(title)"
 	case "recent":
-		orderClause = "ORDER BY id DESC"
+		orderClause = "ORDER BY " + seriesOrder + "id DESC"
 	case "oldest":
-		orderClause = "ORDER BY id ASC"
+		orderClause = "ORDER BY " + seriesOrder + "id ASC"
 	case "modified", "modified_desc":
 		// Alias "modified" kept for backward compatibility
 		sortBy = "modified_desc"
-		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') DESC"
+		orderClause = "ORDER BY " + seriesOrder + "COALESCE(updated_at, '1970-01-01') DESC"
 	case "modified_asc":
-		orderClause = "ORDER BY COALESCE(updated_at, '1970-01-01') ASC"
+		orderClause = "ORDER BY " + seriesOrder + "COALESCE(updated_at, '1970-01-01') ASC"
 	default:
 		sortBy = "title"
 	}
@@ -1027,8 +1040,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		whereClause += " AND COALESCE(is_adult, 0) = 0"
 	}
 
-	query := `
-        SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0)
+	query := `SELECT ` + sqlWorkRowFull + `
         FROM works ` + whereClause + " " + orderClause
 
 	rows, err := a.DB.Query(query, args...)
@@ -1041,20 +1053,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	var works []workRow
 	for rows.Next() {
 		var wRow workRow
-		if err := rows.Scan(
-			&wRow.ID,
-			&wRow.Title,
-			&wRow.Chapter,
-			&wRow.Link,
-			&wRow.Status,
-			&wRow.ImagePath,
-			&wRow.ReadingType,
-			&wRow.Rating,
-			&wRow.Notes,
-			&wRow.UserID,
-			&wRow.UpdatedAt,
-			&wRow.IsAdult,
-		); err != nil {
+		if err := scanFullWorkRow(&wRow, rows); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -1427,23 +1426,11 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
 	var work workRow
-	err := a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, COALESCE(is_adult, 0)
+	err := scanFullWorkRow(&work, a.DB.QueryRow(
+		`SELECT `+sqlWorkRowFull+`
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, userID,
-	).Scan(
-		&work.ID,
-		&work.Title,
-		&work.Chapter,
-		&work.Link,
-		&work.Status,
-		&work.ImagePath,
-		&work.ReadingType,
-		&work.Rating,
-		&work.Notes,
-		&work.UserID,
-		&work.IsAdult,
-	)
+	))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNotFound)
@@ -1504,6 +1491,45 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			isAdult = 1
 		}
 
+		parentStr := strings.TrimSpace(r.FormValue("parent_work_id"))
+		var parentArg any
+		if parentStr != "" {
+			pid, err := strconv.Atoi(parentStr)
+			if err != nil || pid <= 0 {
+				if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "invalid_parent"})
+					return
+				}
+				http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
+				return
+			}
+			if err := a.validateWorkParent(userID, workID, pid); err != nil {
+				if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
+					w.Header().Set("Content-Type", "application/json")
+					w.WriteHeader(http.StatusBadRequest)
+					_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "invalid_parent"})
+					return
+				}
+				http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
+				return
+			}
+			parentArg = pid
+		} else {
+			parentArg = nil
+		}
+
+		seriesSort := work.SeriesSort
+		if sortStr := strings.TrimSpace(r.FormValue("series_sort")); sortStr != "" {
+			if s, err := strconv.Atoi(sortStr); err == nil {
+				if s < 0 {
+					s = 0
+				}
+				seriesSort = s
+			}
+		}
+
 		// Gestion de l'image (optionnel)
 		newImagePath := work.ImagePath
 
@@ -1533,15 +1559,15 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, workID, userID,
+				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, workID, userID,
 			)
 		}
 		if err != nil {
@@ -2137,6 +2163,9 @@ func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("error") == "import" {
 		data["ImportError"] = true
 	}
+	if v := strings.TrimSpace(r.URL.Query().Get("csv_imported")); v != "" {
+		data["CSVImportCount"] = v
+	}
 	a.renderTemplate(w, r, "tools", a.mergeData(r, data))
 }
 
@@ -2258,7 +2287,7 @@ func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rows, err := a.DB.Query(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
+		`SELECT `+sqlWorkRowFull+`
          FROM works WHERE user_id = ? ORDER BY LOWER(title)`,
 		targetID,
 	)
@@ -2271,18 +2300,7 @@ func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 	var works []workRow
 	for rows.Next() {
 		var wRow workRow
-		if err := rows.Scan(
-			&wRow.ID,
-			&wRow.Title,
-			&wRow.Chapter,
-			&wRow.Link,
-			&wRow.Status,
-			&wRow.ImagePath,
-			&wRow.ReadingType,
-			&wRow.Rating,
-			&wRow.Notes,
-			&wRow.UserID,
-		); err != nil {
+		if err := scanFullWorkRow(&wRow, rows); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
@@ -2343,22 +2361,11 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	var src workRow
-	err = a.DB.QueryRow(
-		`SELECT id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id
+	err = scanFullWorkRow(&src, a.DB.QueryRow(
+		`SELECT `+sqlWorkRowFull+`
          FROM works WHERE id = ? AND user_id = ?`,
 		workID, targetID,
-	).Scan(
-		&src.ID,
-		&src.Title,
-		&src.Chapter,
-		&src.Link,
-		&src.Status,
-		&src.ImagePath,
-		&src.ReadingType,
-		&src.Rating,
-		&src.Notes,
-		&src.UserID,
-	)
+	))
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			w.WriteHeader(http.StatusNotFound)

@@ -71,6 +71,9 @@ bsctl help     # Show help
 | `bsctl update main` | Update from `origin/main` (fast-forward) + build + restart |
 | `bsctl update <branch>` | Advanced: update from `origin/<branch>` (fast-forward) + build + restart |
 | `bsctl fix-perms`  | Fix file permissions                 |
+| `bsctl backup`     | Snapshot the SQLite file from `BOOKSTORAGE_DATABASE` in `.env` (uses `sqlite3 .backup` when available, else `cp`), optional retention via `BOOKSTORAGE_BACKUP_RETENTION_DAYS` (default 14), output under `BOOKSTORAGE_BACKUP_DIR` (default `/var/lib/bookstorage/backups`) |
+
+**Scheduled backups:** set `INSTALL_WITH_BACKUP_TIMER=1` when running [`deploy/install.sh`](../deploy/install.sh) to install and enable `bookstorage-backup.timer` (daily snapshot; adjust the timer unit if needed). Logs: `journalctl -u bookstorage-backup.service`.
 
 **Non-interactive release:** set `BSCTL_UPDATE_TAG=v5.5.0` and run `sudo -E bsctl update` to skip the menu. The clone is forced to match the chosen tag or `origin/<branch>` (local changes to tracked files are discarded).
 

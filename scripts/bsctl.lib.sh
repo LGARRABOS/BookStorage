@@ -366,6 +366,7 @@ cmd_help() {
     printf "    ${GREEN}restart${NC}      Restart the service\n"
     printf "    ${GREEN}status${NC}       Show service status\n"
     printf "    ${GREEN}logs${NC}         Show logs in real-time\n"
+    printf "    ${GREEN}backup${NC}       Snapshot SQLite (reads ${BLUE}BOOKSTORAGE_DATABASE${NC} from ${BOOKSTORAGE_ENV_FILE:-/opt/bookstorage/.env})\n"
     printf "\n"
     printf "${BOLD}EXAMPLES${NC}\n"
     printf "    ${BLUE}bsctl run${NC}              Local development\n"
@@ -482,6 +483,10 @@ cmd_install() {
     cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
     chmod +x ${BIN_DIR}/bsctl
     cp "${repo}/deploy/bookstorage.service" /etc/systemd/system/
+    if [[ -f "${repo}/deploy/bookstorage-backup.service" ]]; then
+        cp "${repo}/deploy/bookstorage-backup.service" /etc/systemd/system/
+        cp "${repo}/deploy/bookstorage-backup.timer" /etc/systemd/system/
+    fi
     if [[ -d /etc/bash_completion.d ]]; then
         cp "${repo}/scripts/bsctl.completion.bash" /etc/bash_completion.d/bsctl
         chmod 644 /etc/bash_completion.d/bsctl
@@ -581,5 +586,41 @@ cmd_status() {
 cmd_logs() {
     print_info "Real-time logs (Ctrl+C to quit)..."
     journalctl -u ${APP_NAME} -f
+}
+
+cmd_backup() {
+    print_info "SQLite backup..."
+    local env_file="${BOOKSTORAGE_ENV_FILE:-/opt/bookstorage/.env}"
+    local backup_root="${BOOKSTORAGE_BACKUP_DIR:-/var/lib/bookstorage/backups}"
+    local retention_days="${BOOKSTORAGE_BACKUP_RETENTION_DAYS:-14}"
+    if [[ ! -f "$env_file" ]]; then
+        print_error "Missing env file: $env_file (set BOOKSTORAGE_ENV_FILE)"
+        exit 1
+    fi
+    local db_line db_path
+    db_line="$(grep -E '^[[:space:]]*BOOKSTORAGE_DATABASE=' "$env_file" | tail -n1 || true)"
+    db_path="${db_line#*=}"
+    db_path="${db_path%\"}"
+    db_path="${db_path#\"}"
+    db_path="${db_path%\'}"
+    db_path="${db_path#\'}"
+    db_path="$(echo -n "$db_path" | tr -d '\r')"
+    if [[ -z "$db_path" || ! -f "$db_path" ]]; then
+        print_error "BOOKSTORAGE_DATABASE not set or file missing: '${db_path}'"
+        exit 1
+    fi
+    mkdir -p "$backup_root"
+    local stamp dest
+    stamp="$(date -u +%Y%m%dT%H%M%SZ)"
+    dest="${backup_root}/bookstorage-${stamp}.sqlite"
+    if command -v sqlite3 >/dev/null 2>&1; then
+        sqlite3 "$db_path" ".backup '$dest'"
+    else
+        cp -a -- "$db_path" "$dest"
+    fi
+    chmod 600 "$dest" 2>/dev/null || true
+    print_success "Backup: $dest"
+    find "$backup_root" -maxdepth 1 -type f -name 'bookstorage-*.sqlite' -mtime "+${retention_days}" -delete 2>/dev/null || true
+    print_success "Pruned backups older than ${retention_days} days (if find supports -mtime)."
 }
 

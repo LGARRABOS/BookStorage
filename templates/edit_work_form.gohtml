@@ -38,6 +38,22 @@
     </div>
 
     <div class="form-card">
+        <div class="form-card-header"><div class="icon blue">📚</div><div><h2>{{ t .T "work.section.series" }}</h2></div></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="parent_work_id">{{ t .T "work.form.series.parent" }}</label>
+                <input id="parent_work_id" type="number" name="parent_work_id" min="1" step="1" placeholder="" value="{{ if .Work.ParentWorkID.Valid }}{{ .Work.ParentWorkID.Int64 }}{{ end }}">
+                <p class="form-hint">{{ t .T "work.form.series.parent.hint" }}</p>
+            </div>
+            <div class="form-group">
+                <label for="series_sort">{{ t .T "work.form.series.sort" }}</label>
+                <input id="series_sort" type="number" name="series_sort" min="0" step="1" value="{{ .Work.SeriesSort }}">
+                <p class="form-hint">{{ t .T "work.form.series.sort.hint" }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-card">
         <div class="form-card-header"><div class="icon purple">🔗</div><div><h2>{{ t .T "work.section.media" }}</h2></div></div>
         <div class="form-group">
             <label for="link">{{ t .T "work.form.link" }}</label>

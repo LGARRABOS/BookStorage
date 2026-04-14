@@ -101,8 +101,10 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 		strings.HasPrefix(path, "/api/delete/"),
 		path == "/profile/delete",
 		path == "/import",
+		strings.HasPrefix(path, "/tools/csv-import"),
 		strings.HasPrefix(path, "/users/"),
-		strings.HasPrefix(path, "/admin/"):
+		strings.HasPrefix(path, "/admin/"),
+		strings.HasPrefix(path, "/api/admin/"):
 		return "write", 30, 2.0, true
 	default:
 		return "", 0, 0, false
