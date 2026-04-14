@@ -165,6 +165,8 @@ sudo systemctl restart bookstorage   # recharge .env si le jeton vient d’être
 sudo systemctl status bookstorage-prometheus
 ```
 
+Le script tente ensuite le **binaire officiel** (archive GitHub) si aucun paquet n’est disponible (variable `PROMETHEUS_VERSION` pour choisir la release, ex. `2.55.2`). Nécessite `curl` ou `wget` et HTTPS sortant.
+
 **Installation manuelle** (paquet absent, script en échec, conteneurs) :
 
 1. Définissez le même secret dans BookStorage et Prometheus, ex. `BOOKSTORAGE_METRICS_TOKEN=<long-aléatoire>` dans `/opt/bookstorage/.env`, puis `systemctl restart bookstorage`.

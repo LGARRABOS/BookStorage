@@ -165,6 +165,8 @@ sudo systemctl restart bookstorage   # pick up BOOKSTORAGE_METRICS_TOKEN from .e
 sudo systemctl status bookstorage-prometheus
 ```
 
+The setup script falls back to the **official Prometheus tarball** from GitHub when no distro package exists (set `PROMETHEUS_VERSION`, e.g. `2.55.2`, to override the default bundled in the script). Requires `curl` or `wget` and outbound HTTPS.
+
 **Manual setup** (if your distribution has no `prometheus` package, the script failed, or you use containers):
 
 1. Set the same secret in BookStorage and Prometheus, e.g. add `BOOKSTORAGE_METRICS_TOKEN=<long-random>` to `/opt/bookstorage/.env` and `systemctl restart bookstorage`.
