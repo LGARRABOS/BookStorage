@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode/utf8"
@@ -16,12 +17,13 @@ const adminDatabaseMaxCellRunes = 160
 
 // adminDatabaseSection is one table block for the admin DB overview (no secrets).
 type adminDatabaseSection struct {
-	Table     string
-	HintKey   string
-	Columns   []string
-	Rows      [][]string
-	Total     int
-	Truncated bool
+	Table          string
+	HintKey        string
+	Columns        []string
+	Rows           [][]string
+	Total          int
+	Truncated      bool
+	AllowRowDelete bool // single-column PK "id" shown first; dangerous tables excluded
 }
 
 var adminDatabaseTableSpecs = []struct {
@@ -98,9 +100,87 @@ func buildAdminDatabaseSections(db *sql.DB) ([]adminDatabaseSection, error) {
 		if err != nil {
 			return nil, fmt.Errorf("table %s: %w", spec.Name, err)
 		}
+		sec.AllowRowDelete = adminDatabaseTableAllowsRowDelete(spec.Name, sec.Columns)
 		out = append(out, sec)
 	}
 	return out, nil
+}
+
+var adminDatabaseIDNumeric = regexp.MustCompile(`^[0-9]+$`)
+var adminDatabaseIDSessionCSV = regexp.MustCompile(`^[a-zA-Z0-9_-]{1,128}$`)
+
+func adminDatabaseTableAllowsRowDelete(table string, columns []string) bool {
+	if len(columns) == 0 || !strings.EqualFold(columns[0], "id") {
+		return false
+	}
+	switch strings.ToLower(table) {
+	case "works", "catalog", "dismissed_recommendations", "sessions", "csv_import_sessions":
+		return true
+	default:
+		return false
+	}
+}
+
+func adminDatabaseDeleteTableOK(table string) bool {
+	switch strings.ToLower(strings.TrimSpace(table)) {
+	case "works", "catalog", "dismissed_recommendations", "sessions", "csv_import_sessions":
+		return true
+	default:
+		return false
+	}
+}
+
+// HandleAPIAdminDatabaseDelete removes one row by primary key "id" (allowed tables only).
+func (a *App) HandleAPIAdminDatabaseDelete(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		Table string `json:"table"`
+		ID    string `json:"id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	req.Table = strings.TrimSpace(req.Table)
+	req.ID = strings.TrimSpace(req.ID)
+	if req.Table == "" || req.ID == "" {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	if !adminDatabaseDeleteTableOK(req.Table) {
+		a.apiWriteError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	switch req.Table {
+	case "csv_import_sessions":
+		if !adminDatabaseIDSessionCSV.MatchString(req.ID) {
+			a.apiWriteError(w, http.StatusBadRequest, "invalid_id")
+			return
+		}
+	default:
+		if !adminDatabaseIDNumeric.MatchString(req.ID) {
+			a.apiWriteError(w, http.StatusBadRequest, "invalid_id")
+			return
+		}
+	}
+
+	q := `DELETE FROM ` + quoteSQLiteIdent(req.Table) + ` WHERE id = ?`
+	res, err := a.DB.Exec(q, req.ID)
+	if err != nil {
+		log.Printf("admin database delete %s id=%s: %v", req.Table, req.ID, err)
+		a.apiWriteError(w, http.StatusBadRequest, "delete_failed")
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		a.apiWriteError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "deleted": n})
 }
 
 func scanAdminDatabaseTable(db *sql.DB, table, orderSQL, hintKey string) (adminDatabaseSection, error) {

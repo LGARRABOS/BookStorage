@@ -198,12 +198,14 @@ func GetMediaByID(id int) (*MediaDetail, error) {
 			rm := e.Node.MediaRecommendation
 			title := pickTitleFromAnilistTitle(anilistTitle{Romaji: rm.Title.Romaji, English: rm.Title.English})
 			detail.Recommendations = append(detail.Recommendations, AnilistResult{
-				ID:          rm.ID,
-				Title:       title,
-				Type:        rm.Type,
-				ImageURL:    rm.CoverImage.Large,
-				ReadingType: mapAnilistReadingType(rm),
-				IsAdult:     rm.IsAdult,
+				ID:           rm.ID,
+				Title:        title,
+				TitleRomaji:  strings.TrimSpace(rm.Title.Romaji),
+				TitleEnglish: strings.TrimSpace(rm.Title.English),
+				Type:         rm.Type,
+				ImageURL:     rm.CoverImage.Large,
+				ReadingType:  mapAnilistReadingType(rm),
+				IsAdult:      rm.IsAdult,
 			})
 		}
 	}
@@ -307,14 +309,16 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 			tagNames = append(tagNames, tg.Name)
 		}
 		results = append(results, AnilistResult{
-			ID:          m.ID,
-			Title:       title,
-			Type:        m.Type,
-			ImageURL:    m.CoverImage.Large,
-			ReadingType: mapAnilistReadingType(m),
-			IsAdult:     m.IsAdult,
-			Genres:      append([]string(nil), m.Genres...),
-			Tags:        tagNames,
+			ID:           m.ID,
+			Title:        title,
+			TitleRomaji:  strings.TrimSpace(m.Title.Romaji),
+			TitleEnglish: strings.TrimSpace(m.Title.English),
+			Type:         m.Type,
+			ImageURL:     m.CoverImage.Large,
+			ReadingType:  mapAnilistReadingType(m),
+			IsAdult:      m.IsAdult,
+			Genres:       append([]string(nil), m.Genres...),
+			Tags:         tagNames,
 		})
 		if len(results) >= max {
 			break
@@ -330,12 +334,14 @@ func AnilistMediaToResult(m anilistMedia) AnilistResult {
 		title = m.Title.Romaji
 	}
 	return AnilistResult{
-		ID:          m.ID,
-		Title:       title,
-		Type:        m.Type,
-		ImageURL:    m.CoverImage.Large,
-		ReadingType: mapAnilistReadingType(m),
-		IsAdult:     m.IsAdult,
+		ID:           m.ID,
+		Title:        title,
+		TitleRomaji:  strings.TrimSpace(m.Title.Romaji),
+		TitleEnglish: strings.TrimSpace(m.Title.English),
+		Type:         m.Type,
+		ImageURL:     m.CoverImage.Large,
+		ReadingType:  mapAnilistReadingType(m),
+		IsAdult:      m.IsAdult,
 	}
 }
 

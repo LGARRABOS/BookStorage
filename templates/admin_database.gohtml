@@ -47,6 +47,12 @@
         }
         .db-section .data-table tbody tr:hover td { background: rgba(79, 70, 229, 0.04); }
         .db-empty { padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
+        .db-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; padding: 0.5rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(15, 23, 42, 0.02); }
+        .db-toolbar .db-search-input { flex: 1 1 12rem; min-width: 10rem; max-width: 28rem; padding: 0.45rem 0.65rem; border-radius: 0.5rem; border: 1px solid var(--border-subtle); font-size: 0.88rem; background: var(--surface); color: var(--text-primary); }
+        .db-section .data-table th.db-actions-col, .db-section .data-table td.db-actions-col { white-space: nowrap; width: 1%; text-align: right; }
+        .db-row-delete { font-size: 0.78rem; padding: 0.28rem 0.55rem; border-radius: 0.45rem; border: 1px solid rgba(185, 28, 28, 0.35); background: rgba(185, 28, 28, 0.06); color: #b91c1c; font-weight: 600; cursor: pointer; }
+        .db-row-delete:hover { background: rgba(185, 28, 28, 0.12); }
+        .db-row-delete:disabled { opacity: 0.55; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -65,6 +71,9 @@
     {{ end }}
 
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div id="admin-db-i18n" hidden
+            data-confirm-delete="{{ t .T "admin.database.confirm_delete" }}"
+            data-delete-error="{{ t .T "admin.database.delete_error" }}"></div>
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
@@ -81,6 +90,8 @@
                 <p class="db-intro">{{ t .T "admin.database.intro" }}</p>
 
                 {{ range .DBSections }}
+                {{ $table := .Table }}
+                {{ $allowDel := .AllowRowDelete }}
                 <details class="db-section" open>
                     <summary>
                         <span>{{ .Table }}</span>
@@ -90,17 +101,27 @@
                     {{ if eq .Total 0 }}
                     <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
                     {{ else if .Rows }}
+                    <div class="db-toolbar">
+                        <input type="search" class="db-search-input" id="db-search-{{ $table }}" autocomplete="off" placeholder="{{ t $.T "admin.database.search_placeholder" }}" aria-label="{{ t $.T "admin.database.search_placeholder" }}">
+                    </div>
                     <div class="table-wrapper">
-                        <table class="data-table">
+                        <table class="data-table" data-db-table="{{ $table }}">
                             <thead>
                                 <tr>
                                     {{ range .Columns }}<th>{{ . }}</th>{{ end }}
+                                    {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
                                 </tr>
                             </thead>
                             <tbody>
                                 {{ range .Rows }}
+                                {{ $row := . }}
                                 <tr>
-                                    {{ range . }}<td>{{ . }}</td>{{ end }}
+                                    {{ range $row }}<td>{{ . }}</td>{{ end }}
+                                    {{ if $allowDel }}
+                                    <td class="db-actions-col">
+                                        <button type="button" class="db-row-delete" data-table="{{ $table }}" data-id="{{ index $row 0 }}">{{ t $.T "admin.database.delete" }}</button>
+                                    </td>
+                                    {{ end }}
                                 </tr>
                                 {{ end }}
                             </tbody>
@@ -118,6 +139,63 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
+    <script>
+(function () {
+  var i18n = document.getElementById("admin-db-i18n");
+  var confirmMsg = i18n && i18n.getAttribute("data-confirm-delete") || "Delete this row?";
+  var errGeneric = i18n && i18n.getAttribute("data-delete-error") || "Delete failed.";
+
+  document.querySelectorAll(".db-search-input").forEach(function (input) {
+    var id = input.id || "";
+    var suffix = id.indexOf("db-search-") === 0 ? id.slice("db-search-".length) : "";
+    var wrap = input.closest(".db-section");
+    if (!wrap || !suffix) return;
+    var table = wrap.querySelector('table[data-db-table="' + suffix + '"]');
+    if (!table) return;
+    input.addEventListener("input", function () {
+      var q = (input.value || "").trim().toLowerCase();
+      table.querySelectorAll("tbody tr").forEach(function (tr) {
+        var text = (tr.textContent || "").toLowerCase();
+        tr.style.display = !q || text.indexOf(q) !== -1 ? "" : "none";
+      });
+    });
+  });
+
+  document.querySelectorAll(".db-row-delete").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      var table = btn.getAttribute("data-table");
+      var id = btn.getAttribute("data-id");
+      if (!table || !id) return;
+      if (!window.confirm(confirmMsg)) return;
+      btn.disabled = true;
+      fetch("/api/admin/database/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Accept: "application/json" },
+        credentials: "same-origin",
+        body: JSON.stringify({ table: table, id: id }),
+      }).then(function (res) {
+        return res.text().then(function (text) {
+          if (!res.ok) {
+            try {
+              var j = JSON.parse(text);
+              if (j && j.error) throw new Error(String(j.error));
+            } catch (e) {
+              if (e instanceof SyntaxError) throw new Error(errGeneric);
+              throw e;
+            }
+            throw new Error(errGeneric);
+          }
+          var row = btn.closest("tr");
+          if (row) row.parentNode.removeChild(row);
+        });
+      }).catch(function (e) {
+        window.alert(e && e.message ? e.message : errGeneric);
+        btn.disabled = false;
+      });
+    });
+  });
+})();
+    </script>
 </body>
 </html>
 {{ end }}

@@ -644,6 +644,120 @@ func TestSafePostLoginRedirect(t *testing.T) {
 	}
 }
 
+func TestHandleAPIAdminDatabaseDelete(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	cookie := &http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)}
+
+	t.Run("forbidden_table", func(t *testing.T) {
+		body := strings.NewReader(`{"table":"users","id":"1"}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/database/delete", body)
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		app.HandleAPIAdminDatabaseDelete(rec, req)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("invalid_id", func(t *testing.T) {
+		body := strings.NewReader(`{"table":"works","id":"abc"}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/database/delete", body)
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		app.HandleAPIAdminDatabaseDelete(rec, req)
+		if rec.Code != http.StatusBadRequest {
+			t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("ok_dismissed_row", func(t *testing.T) {
+		_, err := db.Exec(
+			`INSERT INTO dismissed_recommendations (user_id, source, external_id) VALUES (1, 'anilist', 'test_del_ext_1')`,
+		)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var idStr string
+		if err := db.QueryRow(
+			`SELECT id FROM dismissed_recommendations WHERE user_id = 1 AND source = 'anilist' AND external_id = 'test_del_ext_1'`,
+		).Scan(&idStr); err != nil {
+			t.Fatal(err)
+		}
+		body := strings.NewReader(`{"table":"dismissed_recommendations","id":"` + idStr + `"}`)
+		req := httptest.NewRequest(http.MethodPost, "/api/admin/database/delete", body)
+		req.Header.Set("Content-Type", "application/json")
+		req.AddCookie(cookie)
+		rec := httptest.NewRecorder()
+		app.HandleAPIAdminDatabaseDelete(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+		}
+		var n int
+		_ = db.QueryRow(
+			`SELECT COUNT(*) FROM dismissed_recommendations WHERE user_id = 1 AND source = 'anilist' AND external_id = 'test_del_ext_1'`,
+		).Scan(&n)
+		if n != 0 {
+			t.Fatalf("expected row deleted, count=%d", n)
+		}
+	})
+}
+
+func TestHandleAPIAdminEnrichUnlink(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	res, err := db.Exec(`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES ('CatT', 'Manga', '', 'anilist', 'enrich_unlink_test')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	cid, err := res.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(
+		`INSERT INTO works (title, chapter, user_id, status, reading_type, catalog_id) VALUES ('EnrichUnlink', 1, 1, 'En cours', 'Manga', ?)`,
+		cid,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var wid int
+	if err := db.QueryRow(`SELECT id FROM works WHERE title = 'EnrichUnlink' LIMIT 1`).Scan(&wid); err != nil {
+		t.Fatal(err)
+	}
+	body := `{"work_id":` + strconv.Itoa(wid) + `}`
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/enrich/unlink", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAPIAdminEnrichUnlink(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	var cat sql.NullInt64
+	if err := db.QueryRow(`SELECT catalog_id FROM works WHERE id = ?`, wid).Scan(&cat); err != nil {
+		t.Fatal(err)
+	}
+	if cat.Valid {
+		t.Fatalf("expected catalog_id NULL, got %v", cat.Int64)
+	}
+}
+
+func TestHandleAPIAdminEnrichLink_invalidRequest(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/enrich/link", strings.NewReader(`{"work_id":0,"anilist_id":1}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAPIAdminEnrichLink(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
+
 func TestBuildAdminDatabaseSections_omitsSensitiveColumns(t *testing.T) {
 	db, _ := openTestDB(t)
 	sections, err := buildAdminDatabaseSections(db)
