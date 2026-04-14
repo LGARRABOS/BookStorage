@@ -44,6 +44,7 @@
         .tabs-btn.active { background: var(--primary-muted); color: var(--primary); border-color: var(--primary); font-weight: 600; }
         .tab-panel { display: none; padding: 1.1rem; }
         .tab-panel.active { display: block; }
+        .tab-panel-security-extra { padding: 0 1.1rem 1.1rem; border-top: 1px solid var(--border-subtle); }
         .panel-title { font-size: 1.05rem; margin: 0 0 0.2rem 0; color: var(--text-primary); }
         .panel-subtitle { margin: 0 0 1rem 0; color: var(--text-muted); font-size: 0.85rem; }
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.9rem; }
@@ -135,7 +136,7 @@
                             <button type="button" class="tabs-btn" data-target="accessibility">{{ t .T "profile.tab.accessibility" }}</button>
                         </div>
 
-                        <form method="POST" enctype="multipart/form-data">
+                        <form id="profile-edit-form" method="POST" action="/profile" enctype="multipart/form-data">
                             <section class="tab-panel active" id="panel-identity">
                                 <h2 class="panel-title">{{ t .T "profile.section.general" }}</h2>
                                 <p class="panel-subtitle">{{ t .T "profile.tab.identity.subtitle" }}</p>
@@ -195,59 +196,6 @@
                                         <input id="confirm_password" type="password" name="confirm_password">
                                     </div>
                                 </div>
-
-                                <div class="sessions-box">
-                                    <h3>{{ t .T "profile.sessions.title" }}</h3>
-                                    <p>{{ t .T "profile.sessions.desc" }}</p>
-                                    <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
-                                        <form method="POST" action="/profile/logout_all" onsubmit="return confirm(PROFILE_I18N.logoutAllConfirm);">
-                                            <button type="submit" class="btn btn-secondary">{{ t .T "profile.sessions.logout_all" }}</button>
-                                        </form>
-                                    </div>
-                                    <table class="sessions-table">
-                                        <thead>
-                                            <tr>
-                                                <th>{{ t .T "profile.sessions.device" }}</th>
-                                                <th>IP</th>
-                                                <th>{{ t .T "profile.sessions.last_seen" }}</th>
-                                                <th>{{ t .T "profile.sessions.expires" }}</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {{ range .Sessions }}
-                                            <tr>
-                                                <td>
-                                                    {{ if .UserAgent.Valid }}<code>{{ .UserAgent.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}
-                                                </td>
-                                                <td>{{ if .IP.Valid }}<code>{{ .IP.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}</td>
-                                                <td><code>{{ .LastSeenAt }}</code></td>
-                                                <td><code>{{ .ExpiresAt }}</code></td>
-                                            </tr>
-                                            {{ else }}
-                                            <tr><td colspan="4" style="color:var(--text-muted)">{{ t .T "profile.sessions.empty" }}</td></tr>
-                                            {{ end }}
-                                        </tbody>
-                                    </table>
-                                </div>
-
-                                <div class="danger-zone">
-                                    <h3>{{ t .T "profile.delete.title" }}</h3>
-                                    <p>{{ t .T "profile.delete.desc" }}</p>
-                                    <form method="POST" action="/profile/delete" onsubmit="return confirmDeleteProfile();">
-                                        <div class="form-row">
-                                            <div class="form-group">
-                                                <label for="delete_current_password">{{ t .T "profile.password.current" }}</label>
-                                                <input id="delete_current_password" name="current_password" type="password" required>
-                                            </div>
-                                            <div class="form-group">
-                                                <label for="confirm_delete">{{ t .T "profile.delete.confirm_label" }}</label>
-                                                <input id="confirm_delete" name="confirm_delete" type="text" placeholder="SUPPRIMER" required>
-                                                <div class="confirm-inline">{{ t .T "profile.delete.confirm_hint" }}</div>
-                                            </div>
-                                        </div>
-                                        <button type="submit" class="btn btn-danger">{{ t .T "profile.delete.action" }}</button>
-                                    </form>
-                                </div>
                             </section>
 
                             <section class="tab-panel" id="panel-accessibility">
@@ -278,12 +226,68 @@
                                     <label for="a11y-scrollbars"><input type="checkbox" id="a11y-scrollbars" autocomplete="off"><span>{{ t .T "profile.accessibility.scrollbars" }}</span></label>
                                 </div>
                             </section>
-
-                            <div class="form-actions">
-                                <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
-                                <button type="submit" class="btn btn-primary">{{ t .T "profile.save" }}</button>
-                            </div>
                         </form>
+
+                        <section class="tab-panel tab-panel-security-extra" id="panel-security-extra" aria-labelledby="profile-security-extra-heading">
+                            <h2 class="panel-title sr-only" id="profile-security-extra-heading">{{ t .T "profile.section.security" }}</h2>
+                            <div class="sessions-box">
+                                <h3>{{ t .T "profile.sessions.title" }}</h3>
+                                <p>{{ t .T "profile.sessions.desc" }}</p>
+                                <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
+                                    <form method="POST" action="/profile/logout_all" onsubmit="return confirm(PROFILE_I18N.logoutAllConfirm);">
+                                        <button type="submit" class="btn btn-secondary">{{ t .T "profile.sessions.logout_all" }}</button>
+                                    </form>
+                                </div>
+                                <table class="sessions-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ t .T "profile.sessions.device" }}</th>
+                                            <th>IP</th>
+                                            <th>{{ t .T "profile.sessions.last_seen" }}</th>
+                                            <th>{{ t .T "profile.sessions.expires" }}</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{ range .Sessions }}
+                                        <tr>
+                                            <td>
+                                                {{ if .UserAgent.Valid }}<code>{{ .UserAgent.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}
+                                            </td>
+                                            <td>{{ if .IP.Valid }}<code>{{ .IP.String }}</code>{{ else }}<span style="color:var(--text-muted)">-</span>{{ end }}</td>
+                                            <td><code>{{ .LastSeenAt }}</code></td>
+                                            <td><code>{{ .ExpiresAt }}</code></td>
+                                        </tr>
+                                        {{ else }}
+                                        <tr><td colspan="4" style="color:var(--text-muted)">{{ t .T "profile.sessions.empty" }}</td></tr>
+                                        {{ end }}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="danger-zone">
+                                <h3>{{ t .T "profile.delete.title" }}</h3>
+                                <p>{{ t .T "profile.delete.desc" }}</p>
+                                <form method="POST" action="/profile/delete" onsubmit="return confirmDeleteProfile();">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="delete_current_password">{{ t .T "profile.password.current" }}</label>
+                                            <input id="delete_current_password" name="current_password" type="password" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label for="confirm_delete">{{ t .T "profile.delete.confirm_label" }}</label>
+                                            <input id="confirm_delete" name="confirm_delete" type="text" placeholder="SUPPRIMER" required>
+                                            <div class="confirm-inline">{{ t .T "profile.delete.confirm_hint" }}</div>
+                                        </div>
+                                    </div>
+                                    <button type="submit" class="btn btn-danger">{{ t .T "profile.delete.action" }}</button>
+                                </form>
+                            </div>
+                        </section>
+
+                        <div class="form-actions">
+                            <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                            <button type="submit" class="btn btn-primary" form="profile-edit-form">{{ t .T "profile.save" }}</button>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -307,12 +311,25 @@
         };
 
         const buttons = document.querySelectorAll('#profile-tabs .tabs-btn');
+        const panelSecurityExtra = document.getElementById('panel-security-extra');
         const panels = {
             identity: document.getElementById('panel-identity'),
             privacy: document.getElementById('panel-privacy'),
-            security: document.getElementById('panel-security'),
-            accessibility: document.getElementById('panel-accessibility')
+            security: [
+                document.getElementById('panel-security'),
+                panelSecurityExtra,
+            ],
+            accessibility: document.getElementById('panel-accessibility'),
         };
+        function setActiveProfileTab(target) {
+            Object.entries(panels).forEach(([key, p]) => {
+                const els = Array.isArray(p) ? p : [p];
+                els.forEach(el => {
+                    if (!el) return;
+                    el.classList.toggle('active', key === target);
+                });
+            });
+        }
         const params = new URLSearchParams(window.location.search);
         if (params.get('delete_error') === '1') {
             const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
@@ -323,8 +340,7 @@
                 const target = this.dataset.target;
                 buttons.forEach(b => b.classList.remove('active'));
                 this.classList.add('active');
-                Object.values(panels).forEach(p => p && p.classList.remove('active'));
-                if (panels[target]) panels[target].classList.add('active');
+                setActiveProfileTab(target);
             });
         });
     });
