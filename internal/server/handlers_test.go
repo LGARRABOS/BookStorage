@@ -10,6 +10,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -616,5 +617,89 @@ func TestMergeDuplicate_MergesAndDeletesFrom(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM works WHERE id = 11 AND user_id = 1`).Scan(&count)
 	if count != 0 {
 		t.Fatalf("expected from work deleted, count=%d", count)
+	}
+}
+
+func TestSafePostLoginRedirect(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"/admin/accounts", "/admin/accounts"},
+		{"/admin/accounts?x=1", "/admin/accounts?x=1"},
+		{"", ""},
+		{"http://evil.com", ""},
+		{"//evil.com/x", ""},
+		{"/login", ""},
+		{"/login?next=/x", ""},
+		{"/register", ""},
+		{"/dashboard", "/dashboard"},
+		{"/path/with:colon", "/path/with:colon"},
+	}
+	for _, tc := range cases {
+		if got := safePostLoginRedirect(tc.in); got != tc.want {
+			t.Fatalf("safePostLoginRedirect(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestRequireAdmin_RedirectToLoginIncludesNext(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	req := httptest.NewRequest(http.MethodGet, "/admin/accounts", nil)
+	rec := httptest.NewRecorder()
+	app.RequireAdmin(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusOK)
+	}))(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	u, err := url.Parse(loc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Path != "/login" {
+		t.Fatalf("path %q", u.Path)
+	}
+	if u.Query().Get("next") != "/admin/accounts" {
+		t.Fatalf("next param: %q", u.Query().Get("next"))
+	}
+}
+
+func TestHandleLogin_PostRedirectsToNext(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	form := url.Values{}
+	form.Set("username", "admin")
+	form.Set("password", "TestAdmin!99")
+	form.Set("next", "/admin/accounts")
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	app.HandleLogin(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	if g := rec.Header().Get("Location"); g != "/admin/accounts" {
+		t.Fatalf("Location %q", g)
+	}
+}
+
+func TestHandleLogin_PostIgnoresUnsafeNext(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	form := url.Values{}
+	form.Set("username", "admin")
+	form.Set("password", "TestAdmin!99")
+	form.Set("next", "//evil.example/phish")
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	app.HandleLogin(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if g := rec.Header().Get("Location"); g != "/dashboard" {
+		t.Fatalf("Location %q", g)
 	}
 }
