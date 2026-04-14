@@ -192,6 +192,7 @@ func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, use
 // enrichWorkCandidate is one AniList search row for admin UI (manual pick).
 type enrichWorkCandidate struct {
 	AnilistID   int    `json:"anilist_id"`
+	AnilistURL  string `json:"anilist_url,omitempty"`
 	Title       string `json:"title"`
 	ReadingType string `json:"reading_type,omitempty"`
 }
@@ -206,9 +207,14 @@ type enrichWorkItem struct {
 	ReasonLabel  string                `json:"reason_label,omitempty"`
 	Error        string                `json:"error,omitempty"`
 	AnilistID    int                   `json:"anilist_id,omitempty"`
+	AnilistURL   string                `json:"anilist_url,omitempty"`
 	MatchedTitle string                `json:"matched_title,omitempty"`
 	CatalogID    int64                 `json:"catalog_id,omitempty"`
 	Candidates   []enrichWorkCandidate `json:"candidates,omitempty"`
+}
+
+func anilistMangaPublicURL(id int) string {
+	return "https://anilist.co/manga/" + strconv.Itoa(id)
 }
 
 func enrichCandidatesFromResults(rs []catalog.AnilistResult, max int) []enrichWorkCandidate {
@@ -219,6 +225,7 @@ func enrichCandidatesFromResults(rs []catalog.AnilistResult, max int) []enrichWo
 		}
 		out = append(out, enrichWorkCandidate{
 			AnilistID:   rs[i].ID,
+			AnilistURL:  anilistMangaPublicURL(rs[i].ID),
 			Title:       rs[i].Title,
 			ReadingType: rs[i].ReadingType,
 		})
@@ -523,8 +530,14 @@ func (a *App) enrichTryWorkAnilist(workID int, title, readingType string) enrich
 		out.Candidates = nil
 		return out
 	}
+	if err := a.clearWorkUploadedImage(workID); err != nil {
+		out.Status = "error"
+		out.Error = err.Error()
+		return out
+	}
 	out.Status = "linked"
 	out.AnilistID = pick.ID
+	out.AnilistURL = anilistMangaPublicURL(pick.ID)
 	out.MatchedTitle = pick.Title
 	out.CatalogID = catalogID
 	return out
@@ -608,6 +621,10 @@ func (a *App) HandleAPIAdminEnrichLink(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
 		return
 	}
+	if err := a.clearWorkUploadedImage(req.WorkID); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "clear_image_failed")
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"ok":            true,
@@ -647,4 +664,97 @@ func (a *App) HandleAPIAdminEnrichUnlink(w http.ResponseWriter, r *http.Request)
 	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+}
+
+const enrichAdminWorksMaxLimit = 500
+const enrichAdminWorksDefaultLimit = 100
+
+// adminEnrichWorkListRow is one row for GET /api/admin/enrich/works.
+type adminEnrichWorkListRow struct {
+	ID                int    `json:"id"`
+	Title             string `json:"title"`
+	ReadingType       string `json:"reading_type"`
+	UserID            int    `json:"user_id"`
+	CatalogID         *int64 `json:"catalog_id,omitempty"`
+	CatalogTitle      string `json:"catalog_title,omitempty"`
+	CatalogSource     string `json:"catalog_source,omitempty"`
+	CatalogExternalID string `json:"catalog_external_id,omitempty"`
+}
+
+// HandleAPIAdminEnrichWorks GET ?q=&limit=&offset= — paginated list of all works (admin).
+func (a *App) HandleAPIAdminEnrichWorks(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	titleQ := strings.TrimSpace(r.URL.Query().Get("q"))
+	limit := enrichAdminWorksDefaultLimit
+	if v := strings.TrimSpace(r.URL.Query().Get("limit")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			limit = n
+			if limit > enrichAdminWorksMaxLimit {
+				limit = enrichAdminWorksMaxLimit
+			}
+		}
+	}
+	offset := 0
+	if v := strings.TrimSpace(r.URL.Query().Get("offset")); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n >= 0 {
+			offset = n
+		}
+	}
+
+	where := "1=1"
+	args := []any{}
+	if titleQ != "" {
+		where = "LOWER(w.title) LIKE ?"
+		args = append(args, "%"+strings.ToLower(titleQ)+"%")
+	}
+
+	countSQL := "SELECT COUNT(*) FROM works w WHERE " + where
+	var total int
+	if err := a.DB.QueryRow(countSQL, args...).Scan(&total); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+		return
+	}
+
+	listSQL := `SELECT w.id, w.title, COALESCE(w.reading_type, ''), w.user_id, w.catalog_id,
+		COALESCE(c.title, ''), COALESCE(c.source, ''), COALESCE(c.external_id, '')
+		FROM works w
+		LEFT JOIN catalog c ON c.id = w.catalog_id
+		WHERE ` + where + ` ORDER BY w.id LIMIT ? OFFSET ?`
+	argsList := append(append([]any{}, args...), limit, offset)
+	rows, err := a.DB.Query(listSQL, argsList...)
+	if err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	var works []adminEnrichWorkListRow
+	for rows.Next() {
+		var row adminEnrichWorkListRow
+		var catalogID sql.NullInt64
+		if err := rows.Scan(&row.ID, &row.Title, &row.ReadingType, &row.UserID, &catalogID, &row.CatalogTitle, &row.CatalogSource, &row.CatalogExternalID); err != nil {
+			a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+			return
+		}
+		if catalogID.Valid {
+			v := catalogID.Int64
+			row.CatalogID = &v
+		}
+		works = append(works, row)
+	}
+	if err := rows.Err(); err != nil {
+		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"works":  works,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
+	})
 }

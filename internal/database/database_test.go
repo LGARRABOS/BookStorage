@@ -2,6 +2,7 @@ package database
 
 import (
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"bookstorage/internal/config"
@@ -27,6 +28,13 @@ func TestEnsureSchemaAndMigrations(t *testing.T) {
 		t.Fatal(err)
 	}
 	defer func() { _ = db.Close() }()
+	var journalMode string
+	if err := db.QueryRow(`PRAGMA journal_mode`).Scan(&journalMode); err != nil {
+		t.Fatal(err)
+	}
+	if strings.ToLower(journalMode) != "wal" {
+		t.Fatalf("expected WAL journal_mode, got %q", journalMode)
+	}
 	if err := EnsureSchema(db, s); err != nil {
 		t.Fatal(err)
 	}

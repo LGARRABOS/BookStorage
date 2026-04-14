@@ -758,6 +758,66 @@ func TestHandleAPIAdminEnrichLink_invalidRequest(t *testing.T) {
 	}
 }
 
+func TestHandleAPIAdminEnrichWorks(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	if _, err := db.Exec(
+		`INSERT INTO works (title, chapter, user_id, status, reading_type) VALUES ('ZetaListAdminWorks', 1, 1, 'En cours', 'Manga')`,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	t.Run("redirect_without_session", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/admin/enrich/works", nil)
+		rec := httptest.NewRecorder()
+		app.RequireAdmin(app.HandleAPIAdminEnrichWorks)(rec, req)
+		if rec.Code != http.StatusFound {
+			t.Fatalf("expected redirect to login, got %d", rec.Code)
+		}
+	})
+
+	t.Run("forbidden_non_admin", func(t *testing.T) {
+		if _, err := db.Exec(`INSERT INTO users (id, username, password, validated) VALUES (2, 'norm_enrich_works', 'x', 1)`); err != nil {
+			t.Fatal(err)
+		}
+		req := httptest.NewRequest(http.MethodGet, "/api/admin/enrich/works", nil)
+		req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 2)})
+		rec := httptest.NewRecorder()
+		app.RequireAdmin(app.HandleAPIAdminEnrichWorks)(rec, req)
+		if rec.Code != http.StatusForbidden {
+			t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+		}
+	})
+
+	t.Run("ok_json", func(t *testing.T) {
+		req := httptest.NewRequest(http.MethodGet, "/api/admin/enrich/works?q=ZetaListAdmin&limit=50&offset=0", nil)
+		req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+		rec := httptest.NewRecorder()
+		app.HandleAPIAdminEnrichWorks(rec, req)
+		if rec.Code != http.StatusOK {
+			t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+		}
+		var payload struct {
+			Works  []map[string]any `json:"works"`
+			Total  int              `json:"total"`
+			Limit  int              `json:"limit"`
+			Offset int              `json:"offset"`
+		}
+		if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload.Total < 1 || len(payload.Works) < 1 {
+			t.Fatalf("expected at least one work, total=%d len=%d", payload.Total, len(payload.Works))
+		}
+		if payload.Limit != 50 {
+			t.Fatalf("limit %d", payload.Limit)
+		}
+		if payload.Offset != 0 {
+			t.Fatalf("offset %d", payload.Offset)
+		}
+	})
+}
+
 func TestBuildAdminDatabaseSections_omitsSensitiveColumns(t *testing.T) {
 	db, _ := openTestDB(t)
 	sections, err := buildAdminDatabaseSections(db)

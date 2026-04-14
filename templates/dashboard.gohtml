@@ -300,7 +300,13 @@
                                 <span class="no-image">📖</span>
                             {{ end }}
                         {{ else }}
-                            <span class="no-image">📖</span>
+                            {{ $extCover := index $.CatalogCoverByWorkID .ID }}
+                            {{ if $extCover }}
+                                <img src="{{ $extCover }}" alt="{{ .Title }}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.parentElement.querySelector('.no-image').style.display='flex';">
+                                <span class="no-image" style="display:none;">📖</span>
+                            {{ else }}
+                                <span class="no-image">📖</span>
+                            {{ end }}
                         {{ end }}
                         <div class="work-badges">
                             {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.T }}</span>{{ end }}

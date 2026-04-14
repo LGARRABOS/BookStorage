@@ -49,6 +49,8 @@ config/site.json
 # Database
 database.db
 *.db-journal
+# Local HTTP smoke test (CI-style)
+_smoke_ci_http.db*
 
 # Uploaded files (keep directories, ignore contents)
 static/avatars/*
