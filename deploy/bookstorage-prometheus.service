@@ -1,0 +1,15 @@
+[Unit]
+Description=Prometheus (BookStorage metrics only)
+After=network-online.target bookstorage.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=prometheus
+Group=prometheus
+ExecStart=/usr/bin/prometheus --config.file=/etc/bookstorage/prometheus-bs.yml --storage.tsdb.path=/var/lib/prometheus-bookstorage --web.listen-address=127.0.0.1:9091
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

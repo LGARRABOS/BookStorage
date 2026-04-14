@@ -133,6 +133,7 @@ func main() {
 	mux.Handle("/static/", http.StripPrefix("/static/", fs))
 
 	// Routes
+	mux.HandleFunc("/metrics", app.HandleMetrics)
 	mux.HandleFunc("/healthz", func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != http.MethodGet {
 			w.WriteHeader(http.StatusMethodNotAllowed)
@@ -188,7 +189,6 @@ func main() {
 	mux.HandleFunc("POST /import", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleImport)))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminMonitoring)))
-	mux.HandleFunc("GET /api/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIMonitoring)))
 	mux.HandleFunc("/admin/update", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminUpdate)))
 	mux.HandleFunc("POST /api/admin/update/latest", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatest)))
 	mux.HandleFunc("POST /api/admin/update/latest-major", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatestMajor)))

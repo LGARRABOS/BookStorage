@@ -28,6 +28,8 @@ type Settings struct {
 	// TranslateURL is a LibreTranslate-compatible API base URL (no trailing slash), e.g. https://libretranslate.com — empty disables auto-translation.
 	TranslateURL    string
 	TranslateAPIKey string
+	// MetricsToken, if non-empty, protects GET /metrics (Bearer or ?token=). If empty, /metrics is only reachable from loopback clients.
+	MetricsToken string
 }
 
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
@@ -182,6 +184,7 @@ func Load(rootPath string) (*Settings, error) {
 		RequireAccountValidation: envBoolOr("BOOKSTORAGE_REQUIRE_ACCOUNT_VALIDATION", true),
 		TranslateURL:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
 		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
+		MetricsToken:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_METRICS_TOKEN")),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err

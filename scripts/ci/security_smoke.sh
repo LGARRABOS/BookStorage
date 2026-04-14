@@ -57,7 +57,21 @@ for page in "/" "/login" "/register"; do
 done
 
 # ---------------------------------------------------------------------------
-# 2) API access control without session (expect 401)
+# 2) Prometheus /metrics (loopback scrape, no token in dev)
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== /metrics (Prometheus) ==="
+
+status=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}/metrics")
+if [ "$status" = "200" ]; then
+  log_pass "GET /metrics => 200"
+else
+  log_fail "GET /metrics => ${status} (expected 200 on loopback dev)"
+fi
+
+# ---------------------------------------------------------------------------
+# 3) API access control without session (expect 401)
 # ---------------------------------------------------------------------------
 
 echo ""
@@ -73,7 +87,7 @@ for endpoint in "/api/works" "/api/stats" "/api/recommendations"; do
 done
 
 # ---------------------------------------------------------------------------
-# 3) Wrong HTTP method (expect 405)
+# 4) Wrong HTTP method (expect 405)
 # ---------------------------------------------------------------------------
 
 echo ""
@@ -96,7 +110,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 4) CSRF protection (mutating request with foreign origin)
+# 5) CSRF protection (mutating request with foreign origin)
 # ---------------------------------------------------------------------------
 
 echo ""
@@ -129,7 +143,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 5) Rate limiting on auth endpoints
+# 6) Rate limiting on auth endpoints
 # ---------------------------------------------------------------------------
 
 echo ""
@@ -156,7 +170,7 @@ else
 fi
 
 # ---------------------------------------------------------------------------
-# 6) Admin routes without auth (expect redirect to login)
+# 7) Admin routes without auth (expect redirect to login)
 # ---------------------------------------------------------------------------
 
 echo ""

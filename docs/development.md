@@ -99,6 +99,7 @@ CI also runs `gofmt` in strict mode (fails if any non-formatted file is listed) 
 
 ### API and import notes
 
+- `GET /metrics` exposes Prometheus text metrics (`bookstorage_http_*`). If `BOOKSTORAGE_METRICS_TOKEN` is unset, only loopback clients may scrape it; otherwise use `Authorization: Bearer …` or `?token=…`. See [Self-hosting — Prometheus metrics](self-hosting.md#prometheus-metrics-optional).
 - `GET /api/works` supports pagination (`page`, `limit`), filters (`status`, `reading_type`, `search`), and sorting (`sort`).
 - The response now includes both `data` and `meta` (`total`, `total_pages`, `has_next`, `has_prev`).
 - Import accepts standard BookStorage exports plus common external formats: **MyAnimeList** (CSV) and **AniList** (JSON/CSV).
