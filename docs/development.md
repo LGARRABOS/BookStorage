@@ -194,7 +194,7 @@ From a **development clone**:
 source scripts/bsctl.completion.bash
 ```
 
-After `sudo bsctl install` or `./deploy/install.sh`, completion may live in `/etc/bash_completion.d/bsctl` — `source` that file in a new shell. Then type `bsctl` and press Tab; after `bsctl update`, Tab can suggest `main`, tags, and branch names when the cwd is a repo clone.
+After `sudo bsctl install` or `./deploy/install.sh`, completion is copied to `/etc/bash_completion.d/bsctl` when that directory exists, and to `/usr/share/bash-completion/completions/bsctl` when the `bash-completion` package layout is present (typical on Debian/Ubuntu). Open a new login shell, or run `source /etc/bash_completion.d/bsctl`, or `hash -r` so bash picks up the registration. Then type `bsctl` and press Tab; after `bsctl update`, Tab can suggest `main`, tags, and branch names when Git can see the BookStorage repo (cwd or `/opt/bookstorage`).
 
 ---
 

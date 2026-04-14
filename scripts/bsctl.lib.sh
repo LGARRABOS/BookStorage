@@ -32,6 +32,28 @@ print_step() {
 }
 
 # Validates a git branch name (alphanumeric, . _ / - only; no ..)
+# Copy bash completion: /etc/bash_completion.d (legacy) and
+# /usr/share/bash-completion/completions (Debian/Ubuntu bash-completion package).
+install_bsctl_bash_completion() {
+    local repo="$1"
+    [[ -n "$repo" && -f "${repo}/scripts/bsctl.completion.bash" ]] || return 0
+    local src="${repo}/scripts/bsctl.completion.bash"
+    local did=0
+    if [[ -d /etc/bash_completion.d ]]; then
+        cp "$src" /etc/bash_completion.d/bsctl
+        chmod 644 /etc/bash_completion.d/bsctl
+        did=1
+    fi
+    if [[ -d /usr/share/bash-completion/completions ]]; then
+        cp "$src" /usr/share/bash-completion/completions/bsctl
+        chmod 644 /usr/share/bash-completion/completions/bsctl
+        did=1
+    fi
+    if [[ "$did" -eq 1 ]]; then
+        print_success "Bash completion refreshed (new login shell, or: hash -r)"
+    fi
+}
+
 validate_git_branch_name() {
     local b="$1"
     if [[ -z "$b" ]]; then
@@ -172,6 +194,7 @@ cmd_update_finish() {
     cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
     chmod +x ${BIN_DIR}/bsctl
     print_success "bsctl updated"
+    install_bsctl_bash_completion "$repo"
     printf "\n"
 
     print_step "7/8" "Fixing permissions..."
@@ -390,7 +413,8 @@ cmd_help() {
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
     printf "    ${BLUE}source scripts/bsctl.completion.bash${NC}   (from the repo root)\n"
-    printf "    or after install: ${BLUE}source /etc/bash_completion.d/bsctl${NC}\n"
+    printf "    After ${GREEN}install${NC}/${GREEN}update${NC}: new login shell, or ${BLUE}source /etc/bash_completion.d/bsctl${NC}, or ${BLUE}hash -r${NC}\n"
+    printf "    (Debian/Ubuntu: file also under ${BLUE}/usr/share/bash-completion/completions/bsctl${NC} when that dir exists.)\n"
     printf "\n"
 }
 
@@ -487,11 +511,7 @@ cmd_install() {
         cp "${repo}/deploy/bookstorage-backup.service" /etc/systemd/system/
         cp "${repo}/deploy/bookstorage-backup.timer" /etc/systemd/system/
     fi
-    if [[ -d /etc/bash_completion.d ]]; then
-        cp "${repo}/scripts/bsctl.completion.bash" /etc/bash_completion.d/bsctl
-        chmod 644 /etc/bash_completion.d/bsctl
-        print_success "Bash completion installed: /etc/bash_completion.d/bsctl (open a new shell or: source it)"
-    fi
+    install_bsctl_bash_completion "$repo"
     systemctl daemon-reload
     systemctl enable ${APP_NAME}
     printf "\n"
@@ -512,6 +532,7 @@ cmd_uninstall() {
     rm -f ${BIN_DIR}/bsctl
     rm -f ${BIN_DIR}/bsctl.lib.sh
     rm -f /etc/bash_completion.d/bsctl 2>/dev/null || true
+    rm -f /usr/share/bash-completion/completions/bsctl 2>/dev/null || true
     systemctl daemon-reload
     print_success "Service uninstalled"
 }

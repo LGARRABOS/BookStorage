@@ -193,7 +193,7 @@ Depuis un **clone de développement** :
 source scripts/bsctl.completion.bash
 ```
 
-Après `sudo bsctl install` ou `./deploy/install.sh`, la complétion peut être dans `/etc/bash_completion.d/bsctl` — `source` ce fichier dans un nouveau shell. Puis `bsctl` + Tab ; après `bsctl update`, Tab peut proposer `main`, des tags et des branches si le répertoire courant est le dépôt.
+Après `sudo bsctl install` ou `./deploy/install.sh`, la complétion est copiée dans `/etc/bash_completion.d/bsctl` si ce répertoire existe, et dans `/usr/share/bash-completion/completions/bsctl` si l’arborescence du paquet **bash-completion** est présente (souvent sous Debian/Ubuntu). Ouvrez une nouvelle session de connexion, ou exécutez `source /etc/bash_completion.d/bsctl`, ou `hash -r`. Puis `bsctl` + Tab ; après `bsctl update`, Tab peut proposer `main`, des tags et des branches si Git voit le dépôt BookStorage (répertoire courant ou `/opt/bookstorage`).
 
 ---
 

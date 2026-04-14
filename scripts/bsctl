@@ -54,11 +54,24 @@ else
     exit 1
 fi
 
+# Strip CR from argv (CRLF scripts or copy-paste); avoids case mismatch and stray "help".
+_bsctl_argv=()
+for _bsctl_a in "$@"; do
+    _bsctl_argv+=( "${_bsctl_a//$'\r'/}" )
+done
+set -- "${_bsctl_argv[@]}"
+unset _bsctl_a _bsctl_argv
+
 # ============================================================================
 # Main
 # ============================================================================
 
-case "${1:-help}" in
+if [[ $# -eq 0 ]]; then
+    cmd_help
+    exit 0
+fi
+
+case "$1" in
     help|-h|--help)
         cmd_help
         ;;
@@ -108,8 +121,10 @@ case "${1:-help}" in
         cmd_backup
         ;;
     *)
-        printf "${YELLOW}Unknown command: ${1}${NC}\n\n"
+        printf "${YELLOW}Unknown command: %s${NC}\n\n" "$1"
         cmd_help
         exit 1
         ;;
 esac
+
+exit 0
