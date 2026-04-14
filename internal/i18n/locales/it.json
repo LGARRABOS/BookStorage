@@ -376,6 +376,7 @@
   "admin.enrich.note": "Limitato (~400 ms tra chiamate AniList). Confronto su più varianti del titolo (anche senza parentesi), poi sovrapposizione di parole se ci sono più risultati; un solo risultato resta il fallback.",
   "admin.enrich.error_http": "Errore HTTP",
   "admin.enrich.error_read": "Risposta non JSON:",
+  "admin.enrich.error_maintenance": "Il server ha restituito una pagina HTML di manutenzione al posto del JSON — spesso il reverse proxy serve una pagina statica durante il riavvio o l’aggiornamento. Riprovare quando il sito è di nuovo operativo o configurare il proxy affinché /api/ raggiunga ancora l’applicazione Go.",
   "admin.enrich.run": "Esegui batch (10 opere)",
   "admin.enrich.queue": "Coda di esempio (senza link catalogo)",
   "admin.enrich.empty": "(nessuna in questo campione)",

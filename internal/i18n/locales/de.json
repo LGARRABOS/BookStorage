@@ -376,6 +376,7 @@
   "admin.enrich.note": "Gedrosselt (~400 ms zwischen AniList-Aufrufen). Abgleich mit mehreren Titelformen (ohne Klammerzusätze), bei mehreren Treffern Wortüberlappung; ein einzelnes Suchergebnis bleibt Fallback.",
   "admin.enrich.error_http": "HTTP-Fehler",
   "admin.enrich.error_read": "Keine JSON-Antwort:",
+  "admin.enrich.error_maintenance": "Der Server liefert eine HTML-Wartungsseite statt JSON — oft liefert der Reverse Proxy eine statische Seite während Neustart oder Update. Später erneut versuchen oder den Proxy so einrichten, dass /api/ weiterhin die Go-Anwendung erreicht.",
   "admin.enrich.run": "Stapel starten (10 Werke)",
   "admin.enrich.queue": "Beispiel-Warteschlange (ohne Kataloglink)",
   "admin.enrich.empty": "(keine in dieser Stichprobe)",
