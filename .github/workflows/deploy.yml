@@ -38,7 +38,8 @@ jobs:
         run: |
           mkdir -p dist
           cp bookstorage dist/
-          cp scripts/bsctl dist/
+          tr -d '\r' < scripts/bsctl > dist/bsctl
+          chmod +x dist/bsctl
           cp deploy/bookstorage.service dist/
           tar -czf bookstorage-linux-amd64.tar.gz -C dist .
 

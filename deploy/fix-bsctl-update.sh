@@ -20,9 +20,10 @@ echo ""
 cd /opt/bookstorage
 
 # 1. Mettre à jour bsctl en premier (avec le nouveau chemin de build)
-cp scripts/bsctl ${BIN_DIR}/
-cp scripts/bsctl.lib.sh ${BIN_DIR}/bsctl.lib.sh
-chmod +x ${BIN_DIR}/bsctl
+tr -d '\r' < scripts/bsctl >${BIN_DIR}/bsctl
+chmod 755 ${BIN_DIR}/bsctl
+tr -d '\r' < scripts/bsctl.lib.sh >${BIN_DIR}/bsctl.lib.sh
+chmod 644 ${BIN_DIR}/bsctl.lib.sh
 echo "✓ bsctl mis à jour"
 
 # 2. Compiler avec le nouveau chemin
