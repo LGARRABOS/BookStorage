@@ -127,10 +127,8 @@ func main() {
 
 	mux := http.NewServeMux()
 
-	// Static files
-	staticDir := filepath.Join("static")
-	fs := http.FileServer(http.Dir(staticDir))
-	mux.Handle("/static/", http.StripPrefix("/static/", fs))
+	// Static files (bundled assets + uploads from configured dirs, not only process cwd)
+	mux.Handle("/static/", server.StaticFilesHandler(settings))
 
 	// Routes
 	mux.HandleFunc("/metrics", app.HandleMetrics)

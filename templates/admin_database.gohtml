@@ -22,9 +22,30 @@
         .db-section[open] > summary::before { transform: rotate(90deg); }
         .db-section .db-meta { font-weight: 500; font-size: 0.82rem; color: var(--text-muted); }
         .db-section .db-hint { margin: 0; padding: 0 1rem 0.65rem; font-size: 0.82rem; color: var(--text-muted); }
-        .db-section .table-wrapper { border-top: 1px solid var(--border-subtle); max-height: min(70vh, 28rem); overflow: auto; }
-        .db-section .data-table { font-size: 0.8rem; }
-        .db-section .data-table th, .db-section .data-table td { max-width: 14rem; overflow-wrap: anywhere; vertical-align: top; }
+        .db-section .table-wrapper { border-top: 1px solid var(--border-subtle); max-height: min(70vh, 28rem); overflow: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+        /* wide table: horizontal scroll; avoid overflow-wrap:anywhere on headers (causes one letter per line) */
+        .db-section .data-table { font-size: 0.8rem; width: max-content; min-width: 100%; border-collapse: collapse; table-layout: auto; }
+        .db-section .data-table th {
+            white-space: nowrap;
+            position: sticky;
+            top: 0;
+            z-index: 1;
+            background: var(--surface);
+            padding: 0.5rem 0.65rem;
+            text-align: left;
+            border-bottom: 1px solid var(--border-subtle);
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+        .db-section .data-table td {
+            padding: 0.45rem 0.65rem;
+            vertical-align: top;
+            max-width: 24rem;
+            word-break: break-word;
+            overflow-wrap: break-word;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+        .db-section .data-table tbody tr:hover td { background: rgba(79, 70, 229, 0.04); }
         .db-empty { padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
     </style>
 </head>

@@ -207,7 +207,9 @@
     </style>
 </head>
 <body>
-    {{ if not .IsMobileView }}
+    {{ if .IsMobileView }}
+    {{ template "mobile_topbar" . }}
+    {{ else }}
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>

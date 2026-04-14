@@ -42,6 +42,7 @@
       var t = e.target;
       if (!t.closest) return;
       if (t.closest('[data-nav-dropdown]')) return;
+      if (t.closest('[data-lang-burger]')) return;
       closeAllNavDropdowns();
     });
     document.addEventListener('keydown', function (e) {

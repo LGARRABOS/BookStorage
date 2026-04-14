@@ -59,6 +59,7 @@
   /* --- Language burger menu --- */
   .lang-burger {
     position: relative;
+    flex-shrink: 0;
   }
 
   .lang-burger-toggle {
@@ -74,6 +75,8 @@
     border-radius: 0.4rem;
     transition: background 0.15s ease;
     -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+    flex-shrink: 0;
   }
 
   .lang-burger-toggle:hover,
@@ -99,6 +102,15 @@
     border-radius: 0.65rem;
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
     overflow: hidden;
+    isolation: isolate;
+  }
+
+  .lang-burger-panel[hidden] {
+    display: none !important;
+  }
+
+  .lang-burger-panel:not([hidden]) {
+    display: block;
   }
 
   .lang-burger-item {
