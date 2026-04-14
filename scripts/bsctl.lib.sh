@@ -31,6 +31,15 @@ print_step() {
     printf "${BLUE}[$1]${NC} $2\n"
 }
 
+# Copy shell text stripping CR bytes (CRLF checkout); does not alter the five ASCII chars of $'\r' in source.
+bsctl_install_script_strip_cr() {
+    local src="$1" dst="$2" chmod_mode="$3"
+    [[ -f "$src" ]] || return 1
+    tr -d '\r' <"$src" >"${dst}.bsctl~$$" || return 1
+    chmod "$chmod_mode" "${dst}.bsctl~$$" || return 1
+    mv -f "${dst}.bsctl~$$" "$dst"
+}
+
 # Validates a git branch name (alphanumeric, . _ / - only; no ..)
 # Copy bash completion: /etc/bash_completion.d (legacy) and
 # /usr/share/bash-completion/completions (Debian/Ubuntu bash-completion package).
@@ -40,13 +49,11 @@ install_bsctl_bash_completion() {
     local src="${repo}/scripts/bsctl.completion.bash"
     local did=0
     if [[ -d /etc/bash_completion.d ]]; then
-        cp "$src" /etc/bash_completion.d/bsctl
-        chmod 644 /etc/bash_completion.d/bsctl
+        bsctl_install_script_strip_cr "$src" /etc/bash_completion.d/bsctl 644
         did=1
     fi
     if [[ -d /usr/share/bash-completion/completions ]]; then
-        cp "$src" /usr/share/bash-completion/completions/bsctl
-        chmod 644 /usr/share/bash-completion/completions/bsctl
+        bsctl_install_script_strip_cr "$src" /usr/share/bash-completion/completions/bsctl 644
         did=1
     fi
     if [[ "$did" -eq 1 ]]; then
@@ -190,9 +197,8 @@ cmd_update_finish() {
     printf "\n"
 
     print_step "6/8" "Updating bsctl script..."
-    cp "${repo}/scripts/bsctl" ${BIN_DIR}/
-    cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
-    chmod +x ${BIN_DIR}/bsctl
+    bsctl_install_script_strip_cr "${repo}/scripts/bsctl" "${BIN_DIR}/bsctl" 755
+    bsctl_install_script_strip_cr "${repo}/scripts/bsctl.lib.sh" "${BIN_DIR}/bsctl.lib.sh" 644
     print_success "bsctl updated"
     install_bsctl_bash_completion "$repo"
     printf "\n"
@@ -503,9 +509,8 @@ cmd_install() {
     print_info "Installing ${APP_NAME} service..."
     cmd_build_prod
     cp "${repo}/${APP_NAME}" ${BIN_DIR}/
-    cp "${repo}/scripts/bsctl" ${BIN_DIR}/
-    cp "${repo}/scripts/bsctl.lib.sh" ${BIN_DIR}/bsctl.lib.sh
-    chmod +x ${BIN_DIR}/bsctl
+    bsctl_install_script_strip_cr "${repo}/scripts/bsctl" "${BIN_DIR}/bsctl" 755
+    bsctl_install_script_strip_cr "${repo}/scripts/bsctl.lib.sh" "${BIN_DIR}/bsctl.lib.sh" 644
     cp "${repo}/deploy/bookstorage.service" /etc/systemd/system/
     if [[ -f "${repo}/deploy/bookstorage-backup.service" ]]; then
         cp "${repo}/deploy/bookstorage-backup.service" /etc/systemd/system/

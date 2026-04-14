@@ -52,10 +52,9 @@ ci-local: lint test test-race
 # Production
 install: build-prod
 	@cp $(APP_NAME) $(BIN_DIR)/
-	@cp scripts/bsctl $(BIN_DIR)/
-	@cp scripts/bsctl.lib.sh $(BIN_DIR)/bsctl.lib.sh
-	@chmod +x $(BIN_DIR)/bsctl
-	@test -d /etc/bash_completion.d && cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl && chmod 644 /etc/bash_completion.d/bsctl || true
+	@tr -d '\r' < scripts/bsctl > $(BIN_DIR)/bsctl && chmod 755 $(BIN_DIR)/bsctl
+	@tr -d '\r' < scripts/bsctl.lib.sh > $(BIN_DIR)/bsctl.lib.sh && chmod 644 $(BIN_DIR)/bsctl.lib.sh
+	@test -d /etc/bash_completion.d && tr -d '\r' < scripts/bsctl.completion.bash > /etc/bash_completion.d/bsctl && chmod 644 /etc/bash_completion.d/bsctl || true
 	@cp deploy/bookstorage.service /etc/systemd/system/
 	@systemctl daemon-reload
 	@systemctl enable $(APP_NAME)

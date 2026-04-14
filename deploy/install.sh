@@ -119,15 +119,17 @@ print_success "Application compilée"
 print_step "4/7" "Installation des binaires..."
 
 cp $APP_NAME /usr/local/bin/
-cp scripts/bsctl /usr/local/bin/
-cp scripts/bsctl.lib.sh /usr/local/bin/bsctl.lib.sh
-chmod +x /usr/local/bin/bsctl
+# Strip CR (CRLF) so lines like "cmd_backup" are never split on the server.
+tr -d '\r' < scripts/bsctl >/usr/local/bin/bsctl
+chmod 755 /usr/local/bin/bsctl
+tr -d '\r' < scripts/bsctl.lib.sh >/usr/local/bin/bsctl.lib.sh
+chmod 644 /usr/local/bin/bsctl.lib.sh
 if [ -d /etc/bash_completion.d ]; then
-    cp scripts/bsctl.completion.bash /etc/bash_completion.d/bsctl
+    tr -d '\r' < scripts/bsctl.completion.bash >/etc/bash_completion.d/bsctl
     chmod 644 /etc/bash_completion.d/bsctl
 fi
 if [ -d /usr/share/bash-completion/completions ]; then
-    cp scripts/bsctl.completion.bash /usr/share/bash-completion/completions/bsctl
+    tr -d '\r' < scripts/bsctl.completion.bash >/usr/share/bash-completion/completions/bsctl
     chmod 644 /usr/share/bash-completion/completions/bsctl
 fi
 print_success "Binaires installés dans /usr/local/bin/"
