@@ -1,14 +1,75 @@
 package server
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	"bookstorage/internal/config"
 )
+
+func testRepoRoot(t *testing.T) string {
+	t.Helper()
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	dir := wd
+	for i := 0; i < 6; i++ {
+		if _, err := os.Stat(filepath.Join(dir, "go.mod")); err == nil {
+			return dir
+		}
+		dir = filepath.Join(dir, "..")
+	}
+	t.Fatal("go.mod not found from test working directory")
+	return ""
+}
+
+func TestBundledPWAManifestIconPathsExist(t *testing.T) {
+	root := testRepoRoot(t)
+	manifestPath := filepath.Join(root, "static", "pwa", "manifest.json")
+	b, err := os.ReadFile(manifestPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var m struct {
+		Icons []struct {
+			Src string `json:"src"`
+		} `json:"icons"`
+		Shortcuts []struct {
+			Icons []struct {
+				Src string `json:"src"`
+			} `json:"icons"`
+		} `json:"shortcuts"`
+	}
+	if err := json.Unmarshal(b, &m); err != nil {
+		t.Fatal(err)
+	}
+	var paths []string
+	for _, ic := range m.Icons {
+		paths = append(paths, ic.Src)
+	}
+	for _, sc := range m.Shortcuts {
+		for _, ic := range sc.Icons {
+			paths = append(paths, ic.Src)
+		}
+	}
+	for _, p := range paths {
+		p = strings.TrimSpace(p)
+		if !strings.HasPrefix(p, "/static/") {
+			t.Fatalf("unexpected icon path %q", p)
+		}
+		rel := strings.TrimPrefix(p, "/static/")
+		full := filepath.Join(root, "static", filepath.FromSlash(rel))
+		if _, err := os.Stat(full); err != nil {
+			t.Fatalf("missing bundled file for manifest icon %q: %v", p, err)
+		}
+	}
+}
 
 func TestStaticFilesHandler_ServesAvatarFromProfileFolder(t *testing.T) {
 	dir := t.TempDir()

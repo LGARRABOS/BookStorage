@@ -688,24 +688,24 @@ func (a *App) HandleAPIAdminEnrichLink(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// HandleAPIAdminEnrichUnlink POST JSON { "work_id": 1 } — clear catalog_id (admin).
-func (a *App) HandleAPIAdminEnrichUnlink(w http.ResponseWriter, r *http.Request) {
+// handleAdminEnrichWorkMutation handles POST JSON { "work_id": n } with a single-placeholder UPDATE (? = work id).
+func (a *App) handleAdminEnrichWorkMutation(w http.ResponseWriter, r *http.Request, query string) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	var req struct {
+	var body struct {
 		WorkID int `json:"work_id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
-	if req.WorkID <= 0 {
+	if body.WorkID <= 0 {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	res, err := a.DB.Exec(`UPDATE works SET catalog_id = NULL, anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, req.WorkID)
+	res, err := a.DB.Exec(query, body.WorkID)
 	if err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
 		return
@@ -716,75 +716,22 @@ func (a *App) HandleAPIAdminEnrichUnlink(w http.ResponseWriter, r *http.Request)
 		return
 	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": body.WorkID})
+}
+
+// HandleAPIAdminEnrichUnlink POST JSON { "work_id": 1 } — clear catalog_id (admin).
+func (a *App) HandleAPIAdminEnrichUnlink(w http.ResponseWriter, r *http.Request) {
+	a.handleAdminEnrichWorkMutation(w, r, `UPDATE works SET catalog_id = NULL, anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`)
 }
 
 // HandleAPIAdminEnrichOptOut POST JSON { "work_id": 1 } — exclure l’œuvre du lot AniList (sans catalogue).
 func (a *App) HandleAPIAdminEnrichOptOut(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		WorkID int `json:"work_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
-		return
-	}
-	if req.WorkID <= 0 {
-		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
-		return
-	}
-	res, err := a.DB.Exec(
-		`UPDATE works SET anilist_enrich_opt_out = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`,
-		req.WorkID,
-	)
-	if err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
-		return
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		a.apiWriteError(w, http.StatusNotFound, "not_found")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+	a.handleAdminEnrichWorkMutation(w, r, `UPDATE works SET anilist_enrich_opt_out = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`)
 }
 
 // HandleAPIAdminEnrichOptIn POST JSON { "work_id": 1 } — réinclure l’œuvre dans l’enrichissement AniList.
 func (a *App) HandleAPIAdminEnrichOptIn(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	var req struct {
-		WorkID int `json:"work_id"`
-	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
-		return
-	}
-	if req.WorkID <= 0 {
-		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
-		return
-	}
-	res, err := a.DB.Exec(
-		`UPDATE works SET anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`,
-		req.WorkID,
-	)
-	if err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
-		return
-	}
-	n, _ := res.RowsAffected()
-	if n == 0 {
-		a.apiWriteError(w, http.StatusNotFound, "not_found")
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+	a.handleAdminEnrichWorkMutation(w, r, `UPDATE works SET anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`)
 }
 
 const enrichAdminWorksMaxLimit = 500

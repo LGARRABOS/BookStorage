@@ -17,6 +17,58 @@ const ExportFormatVersion = 1
 const maxNotesRunes = 20000
 const maxImportReportURLLen = 1800
 
+// aniImport* types parse AniList "Export as JSON" payloads (lists or flat entry arrays).
+type aniImportTitle struct {
+	Romaji  string `json:"romaji"`
+	English string `json:"english"`
+	Native  string `json:"native"`
+}
+type aniImportCover struct {
+	Large string `json:"large"`
+}
+type aniImportMedia struct {
+	ID         int            `json:"id"`
+	Title      aniImportTitle `json:"title"`
+	Format     string         `json:"format"`
+	IsAdult    bool           `json:"isAdult"`
+	CoverImage aniImportCover `json:"coverImage"`
+}
+type aniImportEntry struct {
+	Status   string         `json:"status"`
+	Progress int            `json:"progress"`
+	Score    float64        `json:"score"`
+	Notes    string         `json:"notes"`
+	Media    aniImportMedia `json:"media"`
+}
+
+func exportWorkFromAniImportEntry(e aniImportEntry) (exportWork, bool) {
+	title := strings.TrimSpace(e.Media.Title.Romaji)
+	if title == "" {
+		title = strings.TrimSpace(e.Media.Title.English)
+	}
+	if title == "" {
+		title = strings.TrimSpace(e.Media.Title.Native)
+	}
+	if title == "" {
+		return exportWork{}, false
+	}
+	link := ""
+	if e.Media.ID > 0 {
+		link = "https://anilist.co/manga/" + strconv.Itoa(e.Media.ID)
+	}
+	return exportWork{
+		Title:       title,
+		Chapter:     clampChapter(e.Progress),
+		Link:        link,
+		Status:      normalizeStatusForWrite(mapAniListStatus(e.Status)),
+		ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(e.Media.Format)),
+		Rating:      clampRating(int(e.Score)),
+		Notes:       strings.TrimSpace(e.Notes),
+		IsAdult:     e.Media.IsAdult,
+		ImagePath:   strings.TrimSpace(e.Media.CoverImage.Large),
+	}, true
+}
+
 // exportWork is the portable shape for JSON export/import and CSV extended columns.
 // JSON export always emits every key (empty strings / null catalog_id when absent) for a stable object shape.
 type exportWork struct {
@@ -551,30 +603,8 @@ func (a *App) ImportFromJSONBytes(w http.ResponseWriter, r *http.Request, userID
 }
 
 func parseAniListExportJSON(data []byte) ([]exportWork, bool) {
-	type aniTitle struct {
-		Romaji  string `json:"romaji"`
-		English string `json:"english"`
-		Native  string `json:"native"`
-	}
-	type aniCover struct {
-		Large string `json:"large"`
-	}
-	type aniMedia struct {
-		ID         int      `json:"id"`
-		Title      aniTitle `json:"title"`
-		Format     string   `json:"format"`
-		IsAdult    bool     `json:"isAdult"`
-		CoverImage aniCover `json:"coverImage"`
-	}
-	type aniEntry struct {
-		Status   string   `json:"status"`
-		Progress int      `json:"progress"`
-		Score    float64  `json:"score"`
-		Notes    string   `json:"notes"`
-		Media    aniMedia `json:"media"`
-	}
 	type aniList struct {
-		Entries []aniEntry `json:"entries"`
+		Entries []aniImportEntry `json:"entries"`
 	}
 	type aniRoot struct {
 		Lists []aniList `json:"lists"`
@@ -584,67 +614,23 @@ func parseAniListExportJSON(data []byte) ([]exportWork, bool) {
 		var out []exportWork
 		for _, l := range root.Lists {
 			for _, e := range l.Entries {
-				title := strings.TrimSpace(e.Media.Title.Romaji)
-				if title == "" {
-					title = strings.TrimSpace(e.Media.Title.English)
+				if w, ok := exportWorkFromAniImportEntry(e); ok {
+					out = append(out, w)
 				}
-				if title == "" {
-					title = strings.TrimSpace(e.Media.Title.Native)
-				}
-				if title == "" {
-					continue
-				}
-				link := ""
-				if e.Media.ID > 0 {
-					link = "https://anilist.co/manga/" + strconv.Itoa(e.Media.ID)
-				}
-				out = append(out, exportWork{
-					Title:       title,
-					Chapter:     clampChapter(e.Progress),
-					Link:        link,
-					Status:      normalizeStatusForWrite(mapAniListStatus(e.Status)),
-					ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(e.Media.Format)),
-					Rating:      clampRating(int(e.Score)),
-					Notes:       strings.TrimSpace(e.Notes),
-					IsAdult:     e.Media.IsAdult,
-					ImagePath:   strings.TrimSpace(e.Media.CoverImage.Large),
-				})
 			}
 		}
 		return out, len(out) > 0
 	}
 
-	var entries []aniEntry
+	var entries []aniImportEntry
 	if err := json.Unmarshal(data, &entries); err != nil {
 		return nil, false
 	}
 	var out []exportWork
 	for _, e := range entries {
-		title := strings.TrimSpace(e.Media.Title.Romaji)
-		if title == "" {
-			title = strings.TrimSpace(e.Media.Title.English)
+		if w, ok := exportWorkFromAniImportEntry(e); ok {
+			out = append(out, w)
 		}
-		if title == "" {
-			title = strings.TrimSpace(e.Media.Title.Native)
-		}
-		if title == "" {
-			continue
-		}
-		link := ""
-		if e.Media.ID > 0 {
-			link = "https://anilist.co/manga/" + strconv.Itoa(e.Media.ID)
-		}
-		out = append(out, exportWork{
-			Title:       title,
-			Chapter:     clampChapter(e.Progress),
-			Link:        link,
-			Status:      normalizeStatusForWrite(mapAniListStatus(e.Status)),
-			ReadingType: normalizeReadingTypeForWrite(mapAniListFormat(e.Media.Format)),
-			Rating:      clampRating(int(e.Score)),
-			Notes:       strings.TrimSpace(e.Notes),
-			IsAdult:     e.Media.IsAdult,
-			ImagePath:   strings.TrimSpace(e.Media.CoverImage.Large),
-		})
 	}
 	return out, len(out) > 0
 }

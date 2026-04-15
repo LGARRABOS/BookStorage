@@ -101,7 +101,7 @@ func writeJSONAtomic(path string, v any) error {
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(tmp, b, 0o644); err != nil {
+	if err := os.WriteFile(tmp, b, 0o600); err != nil {
 		return err
 	}
 	return os.Rename(tmp, path)
@@ -264,7 +264,8 @@ func (a *App) runUpdateInBackground(mode updateMode, tag string) {
 	var lastOut string
 	var notFoundCount int
 	for _, argv := range candidates {
-		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+		// argv is always one of the fixed candidate slices above (admin-only update runner).
+		cmd := exec.CommandContext(ctx, argv[0], argv[1:]...) // #nosec G204
 		cmd.Env = append(cmd.Environ(), "BSCTL_UPDATE_TAG="+tag)
 		if workDir != "" {
 			cmd.Dir = workDir
