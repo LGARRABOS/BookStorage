@@ -31,7 +31,8 @@
         .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
         .works-grid.view-list { display: flex; flex-direction: column; gap: 0.5rem; }
         .works-grid.view-list .work-card { flex-direction: row; height: auto; min-height: 80px; }
-        .works-grid.view-list .work-cover { width: 60px; min-width: 60px; height: 80px; flex-shrink: 0; }
+        .works-grid.view-list .work-cover { width: 60px; min-width: 60px; height: 80px; aspect-ratio: auto; flex-shrink: 0; }
+        .works-grid.view-list .work-cover img { object-fit: cover; object-position: center; }
         .works-grid.view-list .work-body { flex: 1; padding: 0.75rem 1rem; flex-direction: row; align-items: center; gap: 1rem; flex-wrap: wrap; }
         .works-grid.view-list .work-title-row { margin-bottom: 0; flex: 1; min-width: 120px; }
         .works-grid.view-list .work-chapter { margin-bottom: 0; }
@@ -45,8 +46,8 @@
         .work-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
         .work-series-child { margin-left: 0.75rem; border-left: 3px solid var(--primary); padding-left: 0.35rem; }
         .work-cover-link { display: block; text-decoration: none; cursor: pointer; }
-        .work-cover { position: relative; height: 180px; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
-        .work-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .work-cover { position: relative; width: 100%; aspect-ratio: 2 / 3; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
+        .work-cover img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
         .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
         .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
         .work-status-badge { padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px); }
