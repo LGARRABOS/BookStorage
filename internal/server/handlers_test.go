@@ -787,6 +787,38 @@ func TestHandleAPIAdminEnrichQueue(t *testing.T) {
 	}
 }
 
+func TestHandleAPIAdminEnrichOptOut(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	res, err := db.Exec(
+		`INSERT INTO works (title, chapter, user_id, status, reading_type) VALUES ('OptOutEnrich', 1, 1, 'En cours', 'Manga')`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	wid64, err := res.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	wid := int(wid64)
+	body := `{"work_id":` + strconv.Itoa(wid) + `}`
+	req := httptest.NewRequest(http.MethodPost, "/api/admin/enrich/opt-out", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAPIAdminEnrichOptOut(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	var flag int
+	if err := db.QueryRow(`SELECT COALESCE(anilist_enrich_opt_out,0) FROM works WHERE id = ?`, wid).Scan(&flag); err != nil {
+		t.Fatal(err)
+	}
+	if flag != 1 {
+		t.Fatalf("expected anilist_enrich_opt_out=1, got %d", flag)
+	}
+}
+
 func TestHandleAPIAdminEnrichWorks(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

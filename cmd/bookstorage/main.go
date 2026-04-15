@@ -213,6 +213,8 @@ func main() {
 	mux.HandleFunc("GET /api/admin/enrich/works", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichWorks)))
 	mux.HandleFunc("POST /api/admin/enrich/link", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichLink)))
 	mux.HandleFunc("POST /api/admin/enrich/unlink", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichUnlink)))
+	mux.HandleFunc("POST /api/admin/enrich/opt-out", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichOptOut)))
+	mux.HandleFunc("POST /api/admin/enrich/opt-in", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichOptIn)))
 	mux.HandleFunc("GET /api/admin/prometheus/summary", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminPrometheusSummary)))
 	mux.HandleFunc("/admin/update", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminUpdate)))
 	mux.HandleFunc("POST /api/admin/update/latest", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIUpdateLatest)))

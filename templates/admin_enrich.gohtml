@@ -94,6 +94,11 @@
                     data-queue-empty="{{ t .T "admin.enrich.queue_empty" }}"
                     data-queue-more="{{ t .T "admin.enrich.queue_more" }}"
                     data-batch-no-pending="{{ t .T "admin.enrich.batch_no_pending" }}"
+                    data-btn-no-anilist="{{ t .T "admin.enrich.btn.no_anilist" }}"
+                    data-confirm-no-anilist="{{ t .T "admin.enrich.confirm.no_anilist" }}"
+                    data-badge-anilist-excluded="{{ t .T "admin.enrich.badge.anilist_excluded" }}"
+                    data-btn-opt-in-anilist="{{ t .T "admin.enrich.btn.opt_in_anilist" }}"
+                    data-confirm-opt-in-anilist="{{ t .T "admin.enrich.confirm.opt_in_anilist" }}"
                     data-col-id="{{ t .T "admin.enrich.col.id" }}"
                     data-col-user="{{ t .T "admin.enrich.col.user" }}"
                     data-catalog-linked="{{ t .T "admin.enrich.catalog.linked" }}"
@@ -340,6 +345,8 @@
       openAni: L("open-anilist", "AniList"),
       catalogId: L("catalog-id", "catalog_id"),
       noResults: L("no-results", "(no results)"),
+      noAnilist: L("btn-no-anilist", "No AniList match"),
+      confirmNoAnilist: L("confirm-no-anilist", "Exclude this work from AniList batch enrichment?"),
     };
 
     if (idle) idle.style.display = "none";
@@ -454,6 +461,27 @@
       var tdAct = document.createElement("td");
       tdAct.className = "enrich-actions";
       tdAct.appendChild(makeActionsRow(it.work_id, it.status === "linked", labels, tr));
+      if (it.status !== "linked") {
+        var optB = document.createElement("button");
+        optB.type = "button";
+        optB.textContent = labels.noAnilist;
+        optB.addEventListener("click", function () {
+          if (!confirm(labels.confirmNoAnilist)) return;
+          optB.disabled = true;
+          fetch("/api/admin/enrich/opt-out", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ work_id: it.work_id }),
+          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.ok) throw new Error((x.j && x.j.error) || "opt-out failed");
+            if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+            refreshEnrichQueue().catch(function () {});
+          }).catch(function () { optB.disabled = false; });
+        });
+        tdAct.appendChild(optB);
+      }
       tr.appendChild(tdAct);
 
       tbody.appendChild(tr);
@@ -535,12 +563,16 @@
       catLinked: L("catalog-linked", "Linked"),
       catNone: L("catalog-none", "Not linked"),
       colAni: L("col-anilist", "AniList"),
+      anilistExcluded: L("badge-anilist-excluded", "Excluded from AniList batch"),
+      optInAnilist: L("btn-opt-in-anilist", "Include again"),
+      confirmOptInAnilist: L("confirm-opt-in-anilist", "Include again in AniList batch?"),
     };
     tbody.innerHTML = "";
     var works = payload.works || [];
     works.forEach(function (w) {
       var tr = document.createElement("tr");
       var linked = w.catalog_id != null && w.catalog_id !== undefined;
+      var optOut = !!w.anilist_enrich_opt_out;
       var td0 = document.createElement("td");
       td0.textContent = String(w.id);
       tr.appendChild(td0);
@@ -552,8 +584,12 @@
       tr.appendChild(td2);
       var td3 = document.createElement("td");
       var badge = document.createElement("span");
-      badge.className = "enrich-badge " + (linked ? "ok" : "skip");
-      badge.textContent = linked ? labels.catLinked : labels.catNone;
+      badge.className = "enrich-badge " + (linked ? "ok" : (optOut ? "err" : "skip"));
+      if (optOut && !linked) {
+        badge.textContent = labels.anilistExcluded;
+      } else {
+        badge.textContent = linked ? labels.catLinked : labels.catNone;
+      }
       td3.appendChild(badge);
       if (linked && (w.catalog_title || w.catalog_source)) {
         td3.appendChild(document.createElement("br"));
@@ -578,7 +614,31 @@
       tr.appendChild(td4);
       var td5 = document.createElement("td");
       td5.className = "enrich-actions";
-      td5.appendChild(makeAllWorksActionsRow(w.id, linked, labels, tr));
+      if (optOut && !linked) {
+        var inB = document.createElement("button");
+        inB.type = "button";
+        inB.textContent = labels.optInAnilist;
+        inB.addEventListener("click", function () {
+          if (!confirm(labels.confirmOptInAnilist)) return;
+          inB.disabled = true;
+          fetch("/api/admin/enrich/opt-in", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ work_id: w.id }),
+          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.ok) throw new Error((x.j && x.j.error) || "opt-in failed");
+            var iq = document.getElementById("enrich-all-q");
+            var qv = (iq && (iq.value || "").trim()) || "";
+            fetchAllWorks(qv).catch(function () {});
+            refreshEnrichQueue().catch(function () {});
+          }).catch(function () { inB.disabled = false; });
+        });
+        td5.appendChild(inB);
+      } else {
+        td5.appendChild(makeAllWorksActionsRow(w.id, linked, labels, tr));
+      }
       tr.appendChild(td5);
       tbody.appendChild(tr);
     });
@@ -659,13 +719,16 @@
     if (idle) { idle.style.display = "block"; idle.textContent = working; }
     if (results) results.style.display = "none";
     var agg = { processed: 0, linked: 0, skipped: 0, errors: 0, items: [] };
+    var afterId = 0;
     try {
       for (var step = 0; step < 10; step++) {
+        var body = { limit: 1 };
+        if (afterId > 0) body.after_id = afterId;
         var res = await fetch("/api/admin/enrich/run", {
           method: "POST",
           headers: { "Content-Type": "application/json", Accept: "application/json" },
           credentials: "same-origin",
-          body: JSON.stringify({ limit: 1 }),
+          body: JSON.stringify(body),
         });
         var raw = await res.text();
         if (looksLikeApiGotHTMLMaintenance(raw)) {
@@ -693,6 +756,11 @@
         agg.skipped += d.skipped || 0;
         agg.errors += d.errors || 0;
         (d.items || []).forEach(function (it) { agg.items.push(it); });
+        var firstIt = (d.items && d.items[0]);
+        if (firstIt) {
+          if (firstIt.status === "linked") afterId = 0;
+          else afterId = firstIt.work_id;
+        }
         renderResults(agg);
         await refreshEnrichQueue();
       }
