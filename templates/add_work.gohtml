@@ -67,6 +67,7 @@
         [data-theme="dark"] .star-rating-picker .star { color: #475569; }
         [data-theme="dark"] .star-rating-picker .star.active { color: #fbbf24; }
         [data-theme="dark"] .image-upload-area { border-color: rgba(100, 116, 139, 0.4); }
+        {{ if not .IsMobileView }}
         {{ template "recommendations_css" }}
         #reco-detail-modal.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         #reco-detail-modal[aria-hidden="true"] { display: none; }
@@ -75,9 +76,86 @@
         #reco-detail-modal .modal-close { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border: none; border-radius: 0.5rem; background: var(--input-bg); color: var(--text-muted); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1; }
         #reco-detail-modal .modal-close:hover { background: var(--primary-muted); color: var(--primary); }
         #reco-detail-modal .modal-content { padding: 1.5rem 2rem 2rem; }
+        {{ end }}
+        /* Ajouter une œuvre — mobile : une colonne, pas de débordement horizontal */
+        @media (max-width: 768px) {
+            .page-body.mobile-page .form-page.container {
+                width: 100%;
+                max-width: 100%;
+                box-sizing: border-box;
+                padding-left: max(0.75rem, env(safe-area-inset-left));
+                padding-right: max(0.75rem, env(safe-area-inset-right));
+            }
+            .page-body.mobile-page .form-row {
+                grid-template-columns: 1fr;
+                gap: 0.75rem;
+            }
+            .page-body.mobile-page .form-header {
+                flex-direction: column;
+                align-items: stretch;
+                margin-bottom: 1.25rem;
+                gap: 0.75rem;
+            }
+            .page-body.mobile-page .form-header .btn {
+                width: 100%;
+                justify-content: center;
+                box-sizing: border-box;
+            }
+            .page-body.mobile-page .form-card {
+                padding: 1rem 1rem;
+                margin-bottom: 1rem;
+                box-sizing: border-box;
+            }
+            .page-body.mobile-page .form-card-header {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .page-body.mobile-page .star-rating-picker {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .page-body.mobile-page .form-actions {
+                flex-direction: column-reverse;
+                align-items: stretch;
+                gap: 0.65rem;
+            }
+            .page-body.mobile-page .form-actions-right {
+                width: 100%;
+                flex-direction: column;
+            }
+            .page-body.mobile-page .form-actions .btn,
+            .page-body.mobile-page .form-actions-right .btn {
+                width: 100%;
+                justify-content: center;
+                box-sizing: border-box;
+            }
+            .page-body.mobile-page .catalog-results {
+                max-width: 100%;
+            }
+            .page-body.mobile-page .catalog-result-item {
+                flex-wrap: wrap;
+                gap: 0.5rem;
+            }
+            .page-body.mobile-page .catalog-result-item .info {
+                flex: 1 1 100%;
+                min-width: 0;
+            }
+            .page-body.mobile-page .image-upload-area {
+                padding: 1.25rem 1rem;
+                box-sizing: border-box;
+            }
+            .page-body.mobile-page input,
+            .page-body.mobile-page select,
+            .page-body.mobile-page textarea {
+                min-width: 0;
+                max-width: 100%;
+                box-sizing: border-box;
+            }
+        }
     </style>
 </head>
 <body>
+    {{ if .IsMobileView }}{{ template "mobile_topbar" . }}{{ end }}
     {{ if not .IsMobileView }}
     <header class="topbar">
         <div class="container nav-layout">
@@ -116,7 +194,7 @@
                 <div id="catalog-results" class="catalog-results"></div>
             </div>
 
-            {{ template "recommendations_section" . }}
+            {{ if not .IsMobileView }}{{ template "recommendations_section" . }}{{ end }}
 
             <form method="POST" enctype="multipart/form-data" id="add-work-form">
                 <input type="hidden" name="catalog_id" id="catalog_id" value="">
@@ -216,7 +294,7 @@
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
-    {{ template "recommendations_modal" . }}
+    {{ if not .IsMobileView }}{{ template "recommendations_modal" . }}{{ end }}
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
@@ -319,7 +397,7 @@
                 if (resultsEl && !resultsEl.contains(e.target) && e.target.id !== 'catalog-search') resultsEl.classList.remove('visible');
             });
         });
-    {{ template "recommendations_js_body" . }}
+    {{ if not .IsMobileView }}{{ template "recommendations_js_body" . }}{{ end }}
     </script>
 </body>
 </html>
