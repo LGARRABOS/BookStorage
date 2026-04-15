@@ -113,7 +113,8 @@
                 const reader = new FileReader();
                 reader.onload = function(e) { preview.querySelector('img').src = e.target.result; preview.style.display = 'block'; };
                 reader.readAsDataURL(input.files[0]);
-                document.getElementById('image_url').value = '';
+                const urlEl = document.getElementById('image_url');
+                if (urlEl && !urlEl.readOnly) urlEl.value = '';
             }
         }
         function previewImageUrl(input) {
