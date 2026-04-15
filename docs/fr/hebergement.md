@@ -75,7 +75,7 @@ bsctl help     # Afficher l'aide
 
 **Sauvegardes planifiées :** définir `INSTALL_WITH_BACKUP_TIMER=1` lors de l’exécution de [`deploy/install.sh`](../../deploy/install.sh) pour installer et activer `bookstorage-backup.timer` (snapshot quotidien ; adaptez l’unité timer si besoin). Journaux : `journalctl -u bookstorage-backup.service`.
 
-**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v5.6.1` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
+**Mise à jour sans menu :** définir `BSCTL_UPDATE_TAG=v5.6.2` puis `sudo -E bsctl update`. Le dépôt local est aligné sur la release ou sur `origin/<branche>` (les modifs locales sur fichiers suivis sont écrasées).
 
 Si vous déployez depuis un artefact GitHub Actions plutôt qu’un clone, extrayez l’archive, copiez `bookstorage`, `bsctl` et `deploy/bookstorage.service` aux bons emplacements, puis utilisez `bsctl install` / `bsctl update` comme d’habitude. Voir [Développement — Workflow de déploiement](developpement.md#workflow-de-déploiement).
 
