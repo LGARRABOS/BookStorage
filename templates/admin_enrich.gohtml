@@ -106,6 +106,11 @@
                     data-col-anilist="{{ t .T "admin.enrich.col.anilist" }}"
                     data-btn-manual="{{ t .T "admin.enrich.btn.manual" }}"
                     data-works-all-meta="{{ t .T "admin.enrich.works_all.meta" }}"
+                    data-modal-confirm-title="{{ t .T "common.confirm" }}"
+                    data-modal-cancel="{{ t .T "common.cancel" }}"
+                    data-modal-error-title="{{ t .T "common.error" }}"
+                    data-modal-ok="{{ t .T "common.ok" }}"
+                    data-error-link-failed="{{ t .T "admin.enrich.error.link_failed" }}"
                 ></div>
                 <button type="button" class="btn btn-primary" id="enrich-run">{{ t .T "admin.enrich.run" }}</button>
                 <div id="enrich-panel">
@@ -155,10 +160,32 @@
     </main>
     <footer class="page-footer"><div class="container"><p>BookStorage · v{{ .AppVersion }}</p></div></footer>
     <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/modals.js"></script>
     <script>
 (function () {
   var box = document.getElementById("enrich-i18n");
   function L(k, fb) { return (box && box.getAttribute("data-" + k)) || fb; }
+
+  function enrichConfirm(msg, okLabel, okClass) {
+    var opts = {
+      title: L("modal-confirm-title", "Confirm"),
+      okLabel: okLabel,
+      cancelLabel: L("modal-cancel", "Cancel"),
+      okClass: okClass || "btn-primary"
+    };
+    if (typeof window.showConfirm !== "function") return Promise.resolve(window.confirm(msg));
+    return window.showConfirm(msg, opts);
+  }
+  function enrichAlert(msg) {
+    if (typeof window.showAlert !== "function") {
+      window.alert(msg);
+      return Promise.resolve();
+    }
+    return window.showAlert(msg, {
+      title: L("modal-error-title", "Error"),
+      okLabel: L("modal-ok", "OK")
+    });
+  }
 
   /** Reverse proxies sometimes return a static HTML maintenance page (HTTP 200) for every path including /api/. */
   function looksLikeApiGotHTMLMaintenance(s) {
@@ -306,7 +333,7 @@
                   div.classList.remove("open");
                 }
                 refreshEnrichQueue().catch(function () {});
-              }).catch(function () { b.disabled = false; alert("link failed"); });
+              }).catch(function () { b.disabled = false; enrichAlert(L("error-link-failed", "Link failed")); });
             });
             li.appendChild(b);
             ul.appendChild(li);
@@ -458,7 +485,7 @@
               actTd.innerHTML = "";
               actTd.appendChild(makeActionsRow(it.work_id, true, labels, tr));
               refreshEnrichQueue().catch(function () {});
-            }).catch(function () { btn.disabled = false; });
+            }).catch(function () { btn.disabled = false; enrichAlert(L("error-link-failed", "Link failed")); });
           });
           li.appendChild(btn);
           ulc.appendChild(li);
@@ -477,19 +504,21 @@
         optB.type = "button";
         optB.textContent = labels.noAnilist;
         optB.addEventListener("click", function () {
-          if (!confirm(labels.confirmNoAnilist)) return;
-          optB.disabled = true;
-          fetch("/api/admin/enrich/opt-out", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ work_id: it.work_id }),
-          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-          .then(function (x) {
-            if (!x.ok) throw new Error((x.j && x.j.error) || "opt-out failed");
-            if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
-            refreshEnrichQueue().catch(function () {});
-          }).catch(function () { optB.disabled = false; });
+          enrichConfirm(labels.confirmNoAnilist, labels.noAnilist, "btn-primary").then(function (ok) {
+            if (!ok) return;
+            optB.disabled = true;
+            fetch("/api/admin/enrich/opt-out", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ work_id: it.work_id }),
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (x) {
+              if (!x.ok) throw new Error((x.j && x.j.error) || "opt-out failed");
+              if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+              refreshEnrichQueue().catch(function () {});
+            }).catch(function () { optB.disabled = false; });
+          });
         });
         tdAct.appendChild(optB);
       }
@@ -524,19 +553,21 @@
     u.className = "danger";
     u.textContent = labels.unlink;
     u.addEventListener("click", function () {
-      if (!confirm(labels.confirmUnlink)) return;
-      u.disabled = true;
-      fetch("/api/admin/enrich/unlink", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ work_id: workId }),
-      }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-      .then(function (x) {
-        if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
-        if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
-        refreshEnrichQueue().catch(function () {});
-      }).catch(function () { u.disabled = false; });
+      enrichConfirm(labels.confirmUnlink, labels.unlink, "btn-danger").then(function (ok) {
+        if (!ok) return;
+        u.disabled = true;
+        fetch("/api/admin/enrich/unlink", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ work_id: workId }),
+        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+        .then(function (x) {
+          if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
+          if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+          refreshEnrichQueue().catch(function () {});
+        }).catch(function () { u.disabled = false; });
+      });
     });
     frag.appendChild(u);
     var w = document.createElement("button");
@@ -630,21 +661,23 @@
         inB.type = "button";
         inB.textContent = labels.optInAnilist;
         inB.addEventListener("click", function () {
-          if (!confirm(labels.confirmOptInAnilist)) return;
-          inB.disabled = true;
-          fetch("/api/admin/enrich/opt-in", {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Accept: "application/json" },
-            credentials: "same-origin",
-            body: JSON.stringify({ work_id: w.id }),
-          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-          .then(function (x) {
-            if (!x.ok) throw new Error((x.j && x.j.error) || "opt-in failed");
-            var iq = document.getElementById("enrich-all-q");
-            var qv = (iq && (iq.value || "").trim()) || "";
-            fetchAllWorks(qv).catch(function () {});
-            refreshEnrichQueue().catch(function () {});
-          }).catch(function () { inB.disabled = false; });
+          enrichConfirm(labels.confirmOptInAnilist, labels.optInAnilist, "btn-primary").then(function (ok) {
+            if (!ok) return;
+            inB.disabled = true;
+            fetch("/api/admin/enrich/opt-in", {
+              method: "POST",
+              headers: { "Content-Type": "application/json", Accept: "application/json" },
+              credentials: "same-origin",
+              body: JSON.stringify({ work_id: w.id }),
+            }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+            .then(function (x) {
+              if (!x.ok) throw new Error((x.j && x.j.error) || "opt-in failed");
+              var iq = document.getElementById("enrich-all-q");
+              var qv = (iq && (iq.value || "").trim()) || "";
+              fetchAllWorks(qv).catch(function () {});
+              refreshEnrichQueue().catch(function () {});
+            }).catch(function () { inB.disabled = false; });
+          });
         });
         td5.appendChild(inB);
       } else {
@@ -687,19 +720,21 @@
       u.className = "danger";
       u.textContent = labels.unlink;
       u.addEventListener("click", function () {
-        if (!confirm(labels.confirmUnlink)) return;
-        u.disabled = true;
-        fetch("/api/admin/enrich/unlink", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ work_id: workId }),
-        }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
-        .then(function (x) {
-          if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
-          if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
-          refreshEnrichQueue().catch(function () {});
-        }).catch(function () { u.disabled = false; });
+        enrichConfirm(labels.confirmUnlink, labels.unlink, "btn-danger").then(function (ok) {
+          if (!ok) return;
+          u.disabled = true;
+          fetch("/api/admin/enrich/unlink", {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Accept: "application/json" },
+            credentials: "same-origin",
+            body: JSON.stringify({ work_id: workId }),
+          }).then(function (r) { return r.json().then(function (j) { return { ok: r.ok, j: j }; }); })
+          .then(function (x) {
+            if (!x.ok) throw new Error((x.j && x.j.error) || "unlink failed");
+            if (tr && tr.parentNode) tr.parentNode.removeChild(tr);
+            refreshEnrichQueue().catch(function () {});
+          }).catch(function () { u.disabled = false; });
+        });
       });
       frag.appendChild(u);
 

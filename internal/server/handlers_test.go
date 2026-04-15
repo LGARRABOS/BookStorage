@@ -978,3 +978,23 @@ func TestHandleLogin_PostIgnoresUnsafeNext(t *testing.T) {
 		t.Fatalf("Location %q", g)
 	}
 }
+
+func TestCatalogSourcePageURL(t *testing.T) {
+	t.Parallel()
+	if got := catalogSourcePageURL("anilist", "42"); got != "https://anilist.co/manga/42" {
+		t.Fatalf("anilist: got %q", got)
+	}
+	if got := catalogSourcePageURL("AniList", " 99 "); got != "https://anilist.co/manga/99" {
+		t.Fatalf("anilist trim: got %q", got)
+	}
+	u := "550e8400-e29b-41d4-a716-446655440000"
+	if got := catalogSourcePageURL("mangadex", u); got != "https://mangadex.org/title/"+url.PathEscape(u) {
+		t.Fatalf("mangadex: got %q", got)
+	}
+	if got := catalogSourcePageURL("manual", "x"); got != "" {
+		t.Fatalf("manual: want empty, got %q", got)
+	}
+	if got := catalogSourcePageURL("anilist", ""); got != "" {
+		t.Fatalf("empty ext: got %q", got)
+	}
+}

@@ -994,6 +994,36 @@ func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
 	)
 }
 
+// catalogSourcePageURL builds a public web page URL for a catalog row (AniList, MangaDex), or "".
+func catalogSourcePageURL(source, externalID string) string {
+	source = strings.ToLower(strings.TrimSpace(source))
+	ext := strings.TrimSpace(externalID)
+	if ext == "" {
+		return ""
+	}
+	switch source {
+	case "anilist":
+		return "https://anilist.co/manga/" + url.PathEscape(ext)
+	case "mangadex":
+		return "https://mangadex.org/title/" + url.PathEscape(ext)
+	default:
+		return ""
+	}
+}
+
+func (a *App) catalogPageURLForUserWork(userID, workID int) string {
+	var source sql.NullString
+	var extID string
+	err := a.DB.QueryRow(
+		`SELECT c.source, COALESCE(c.external_id, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id WHERE w.id = ? AND w.user_id = ?`,
+		workID, userID,
+	).Scan(&source, &extID)
+	if err != nil || !source.Valid {
+		return ""
+	}
+	return catalogSourcePageURL(source.String, extID)
+}
+
 func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
@@ -1466,21 +1496,25 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	catalogPageURL := a.catalogPageURLForUserWork(userID, workID)
+
 	switch r.Method {
 	case http.MethodGet:
 		if r.URL.Query().Get("format") == "partial" {
 			a.renderTemplate(w, r, "edit_work_modal", a.mergeData(r, map[string]any{
-				"Work":         work,
-				"ReadingTypes": readingTypes,
-				"Statuses":     readingStatuses,
-				"IsModal":      true,
+				"Work":             work,
+				"ReadingTypes":     readingTypes,
+				"Statuses":         readingStatuses,
+				"IsModal":          true,
+				"CatalogPageURL":   catalogPageURL,
 			}))
 			return
 		}
 		a.renderTemplate(w, r, "edit_work", a.mergeData(r, map[string]any{
-			"Work":         work,
-			"ReadingTypes": readingTypes,
-			"Statuses":     readingStatuses,
+			"Work":           work,
+			"ReadingTypes":   readingTypes,
+			"Statuses":       readingStatuses,
+			"CatalogPageURL": catalogPageURL,
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
