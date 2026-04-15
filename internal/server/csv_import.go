@@ -345,33 +345,34 @@ func (a *App) HandleAPIAdminEnrichRun(w http.ResponseWriter, r *http.Request) {
 	if req.Limit <= 0 || req.Limit > 30 {
 		req.Limit = 10
 	}
-	q := `SELECT id, title, COALESCE(reading_type, '') FROM works WHERE ` + enrichAnilistEligibleSQL
-	args := []any{}
-	if req.AfterID > 0 {
-		q += ` AND id > ?`
-		args = append(args, req.AfterID)
-	}
-	q += ` ORDER BY id ASC LIMIT ?`
-	args = append(args, req.Limit)
-	rows, err := a.DB.Query(q, args...)
-	if err != nil {
-		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
-		return
-	}
-	defer func() { _ = rows.Close() }()
-
+	// Une requête par itération (LIMIT 1) : évite de traiter des ids figés au début du handler
+	// alors qu’un autre onglet / une autre requête a déjà posé catalog_id entre-temps.
+	cursor := req.AfterID
 	processed := 0
 	linked := 0
 	skipped := 0
 	errorsN := 0
 	var items []enrichWorkItem
 
-	for rows.Next() {
+	for i := 0; i < req.Limit; i++ {
+		q := `SELECT id, title, COALESCE(reading_type, '') FROM works WHERE ` + enrichAnilistEligibleSQL
+		args := []any{}
+		if cursor > 0 {
+			q += ` AND id > ?`
+			args = append(args, cursor)
+		}
+		q += ` ORDER BY id ASC LIMIT 1`
 		var wid int
 		var title, readingType string
-		if err := rows.Scan(&wid, &title, &readingType); err != nil {
-			continue
+		err := a.DB.QueryRow(q, args...).Scan(&wid, &title, &readingType)
+		if errors.Is(err, sql.ErrNoRows) {
+			break
 		}
+		if err != nil {
+			a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		cursor = wid
 		processed++
 		item := a.enrichTryWorkAnilist(wid, title, readingType)
 		items = append(items, item)
@@ -522,6 +523,22 @@ func enrichPickAnilistResult(title string, results []catalog.AnilistResult) *cat
 
 func (a *App) enrichTryWorkAnilist(workID int, title, readingType string) enrichWorkItem {
 	out := enrichWorkItem{WorkID: workID, Title: title, ReadingType: readingType}
+	var catID sql.NullInt64
+	if err := a.DB.QueryRow(`SELECT catalog_id FROM works WHERE id = ?`, workID).Scan(&catID); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			out.Status = "error"
+			out.Error = "work not found"
+			return out
+		}
+		out.Status = "error"
+		out.Error = err.Error()
+		return out
+	}
+	if catID.Valid && catID.Int64 > 0 {
+		out.Status = "skipped"
+		out.Reason = "already_linked"
+		return out
+	}
 	searchT := strings.TrimSpace(stripCatalogParentheticals(title))
 	if searchT == "" {
 		searchT = strings.TrimSpace(title)
