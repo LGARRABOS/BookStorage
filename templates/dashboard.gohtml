@@ -163,6 +163,12 @@
         .edit-modal-content .form-group label { display: block; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.4rem; font-size: 0.85rem; }
         .edit-modal-content .form-group label .required { color: #ef4444; }
         .edit-modal-content .form-group input, .edit-modal-content .form-group select, .edit-modal-content .form-group textarea { width: 100%; padding: 0.6rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.6rem; font-size: 0.95rem; background: var(--surface); color: var(--text-primary); }
+        .edit-modal-content .catalog-page-url-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
+        .edit-modal-content .catalog-page-url-row .input-readonly-catalog { flex: 1 1 10rem; min-width: 0; }
+        .edit-modal-content .catalog-page-open-btn { flex: 0 0 auto; align-self: center; text-decoration: none; font-size: 0.85rem; padding: 0.5rem 0.75rem; }
+        .edit-modal-content .input-readonly-catalog { cursor: default; opacity: 0.92; background: rgba(148, 163, 184, 0.12) !important; color: var(--text-muted) !important; border-color: var(--border-subtle) !important; }
+        .edit-modal-content .input-readonly-catalog:focus { outline: none; border-color: var(--border-subtle) !important; box-shadow: none; }
+        [data-theme="dark"] .edit-modal-content .input-readonly-catalog { background: rgba(30, 41, 59, 0.65) !important; color: #94a3b8 !important; border-color: rgba(100, 116, 139, 0.45) !important; }
         .edit-modal-content .form-group input:focus, .edit-modal-content .form-group select:focus, .edit-modal-content .form-group textarea:focus { outline: none; border-color: var(--primary); }
         .edit-modal-content .form-group textarea { resize: vertical; min-height: 80px; }
         .edit-modal-content .form-hint { font-size: 0.75rem; color: var(--text-muted); margin: 0.3rem 0 0 0; line-height: 1.35; }

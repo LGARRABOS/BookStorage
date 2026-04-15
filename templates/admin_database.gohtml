@@ -73,7 +73,12 @@
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div id="admin-db-i18n" hidden
             data-confirm-delete="{{ t .T "admin.database.confirm_delete" }}"
-            data-delete-error="{{ t .T "admin.database.delete_error" }}"></div>
+            data-delete-error="{{ t .T "admin.database.delete_error" }}"
+            data-modal-confirm-title="{{ t .T "common.confirm" }}"
+            data-modal-cancel="{{ t .T "common.cancel" }}"
+            data-modal-delete-ok="{{ t .T "common.delete" }}"
+            data-modal-error-title="{{ t .T "common.error" }}"
+            data-modal-ok="{{ t .T "common.ok" }}"></div>
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
@@ -138,12 +143,33 @@
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     <script>
 (function () {
   var i18n = document.getElementById("admin-db-i18n");
   var confirmMsg = i18n && i18n.getAttribute("data-confirm-delete") || "Delete this row?";
   var errGeneric = i18n && i18n.getAttribute("data-delete-error") || "Delete failed.";
+  function dbAttr(k, fb) { return (i18n && i18n.getAttribute("data-" + k)) || fb; }
+  function dbConfirmDelete() {
+    if (typeof window.showConfirm !== "function") return Promise.resolve(window.confirm(confirmMsg));
+    return window.showConfirm(confirmMsg, {
+      title: dbAttr("modal-confirm-title", "Confirm"),
+      okLabel: dbAttr("modal-delete-ok", "Delete"),
+      cancelLabel: dbAttr("modal-cancel", "Cancel"),
+      okClass: "btn-danger"
+    });
+  }
+  function dbAlert(msg) {
+    if (typeof window.showAlert !== "function") {
+      window.alert(msg);
+      return Promise.resolve();
+    }
+    return window.showAlert(msg, {
+      title: dbAttr("modal-error-title", "Error"),
+      okLabel: dbAttr("modal-ok", "OK")
+    });
+  }
 
   document.querySelectorAll(".db-search-input").forEach(function (input) {
     var id = input.id || "";
@@ -166,31 +192,32 @@
       var table = btn.getAttribute("data-table");
       var id = btn.getAttribute("data-id");
       if (!table || !id) return;
-      if (!window.confirm(confirmMsg)) return;
-      btn.disabled = true;
-      fetch("/api/admin/database/delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json", Accept: "application/json" },
-        credentials: "same-origin",
-        body: JSON.stringify({ table: table, id: id }),
-      }).then(function (res) {
-        return res.text().then(function (text) {
-          if (!res.ok) {
-            try {
-              var j = JSON.parse(text);
-              if (j && j.error) throw new Error(String(j.error));
-            } catch (e) {
-              if (e instanceof SyntaxError) throw new Error(errGeneric);
-              throw e;
+      dbConfirmDelete().then(function (ok) {
+        if (!ok) return;
+        btn.disabled = true;
+        fetch("/api/admin/database/delete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json", Accept: "application/json" },
+          credentials: "same-origin",
+          body: JSON.stringify({ table: table, id: id }),
+        }).then(function (res) {
+          return res.text().then(function (text) {
+            if (!res.ok) {
+              try {
+                var j = JSON.parse(text);
+                if (j && j.error) throw new Error(String(j.error));
+              } catch (e) {
+                if (e instanceof SyntaxError) throw new Error(errGeneric);
+                throw e;
+              }
+              throw new Error(errGeneric);
             }
-            throw new Error(errGeneric);
-          }
-          var row = btn.closest("tr");
-          if (row) row.parentNode.removeChild(row);
+            var row = btn.closest("tr");
+            if (row) row.parentNode.removeChild(row);
+          });
+        }).catch(function (e) {
+          dbAlert(e && e.message ? e.message : errGeneric).then(function () { btn.disabled = false; });
         });
-      }).catch(function (e) {
-        window.alert(e && e.message ? e.message : errGeneric);
-        btn.disabled = false;
       });
     });
   });

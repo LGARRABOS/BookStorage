@@ -30,6 +30,12 @@
         .form-group label { display: block; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.5rem; font-size: 0.9rem; }
         .form-group label .required { color: #ef4444; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem 1rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 1rem; background: var(--background); color: var(--text-primary); }
+        .catalog-page-url-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: stretch; }
+        .catalog-page-url-row .input-readonly-catalog { flex: 1 1 12rem; min-width: 0; }
+        .catalog-page-open-btn { flex: 0 0 auto; align-self: center; text-decoration: none; font-size: 0.9rem; padding: 0.55rem 0.9rem; }
+        .input-readonly-catalog { cursor: default; opacity: 0.92; background: rgba(148, 163, 184, 0.12) !important; color: var(--text-muted) !important; border-color: var(--border-subtle) !important; }
+        .input-readonly-catalog:focus { outline: none; border-color: var(--border-subtle) !important; box-shadow: none; }
+        [data-theme="dark"] .input-readonly-catalog { background: rgba(30, 41, 59, 0.65) !important; color: #94a3b8 !important; border-color: rgba(100, 116, 139, 0.45) !important; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { outline: none; border-color: var(--primary); }
         .form-group textarea { resize: vertical; min-height: 100px; }
         .form-hint { font-size: 0.8rem; color: var(--text-muted); margin: 0.35rem 0 0 0; line-height: 1.35; }

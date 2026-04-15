@@ -236,7 +236,7 @@
                                 <h3>{{ t .T "profile.sessions.title" }}</h3>
                                 <p>{{ t .T "profile.sessions.desc" }}</p>
                                 <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
-                                    <form method="POST" action="/profile/logout_all" onsubmit="return confirm(PROFILE_I18N.logoutAllConfirm);">
+                                    <form method="POST" action="/profile/logout_all" id="profile-logout-all-form">
                                         <button type="submit" class="btn btn-secondary">{{ t .T "profile.sessions.logout_all" }}</button>
                                     </form>
                                 </div>
@@ -269,7 +269,7 @@
                             <div class="danger-zone">
                                 <h3>{{ t .T "profile.delete.title" }}</h3>
                                 <p>{{ t .T "profile.delete.desc" }}</p>
-                                <form method="POST" action="/profile/delete" onsubmit="return confirmDeleteProfile();">
+                                <form method="POST" action="/profile/delete" id="profile-delete-form">
                                     <div class="form-row">
                                         <div class="form-group">
                                             <label for="delete_current_password">{{ t .T "profile.password.current" }}</label>
@@ -300,17 +300,53 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
     <script>
     const PROFILE_I18N = {
         logoutAllConfirm: {{ jsstr (t .T "profile.sessions.logout_all.confirm") }},
-        deleteProfileConfirm: {{ jsstr (t .T "profile.delete.confirm_js") }}
+        deleteProfileConfirm: {{ jsstr (t .T "profile.delete.confirm_js") }},
+        modalConfirmTitle: {{ jsstr (t .T "common.confirm") }},
+        modalCancel: {{ jsstr (t .T "common.cancel") }},
+        modalOk: {{ jsstr (t .T "common.ok") }},
+        deleteModalOk: {{ jsstr (t .T "profile.delete.action") }}
     };
     document.addEventListener('DOMContentLoaded', function() {
-        window.confirmDeleteProfile = function() {
-            return confirm(PROFILE_I18N.deleteProfileConfirm);
-        };
+        var logoutForm = document.getElementById('profile-logout-all-form');
+        if (logoutForm) {
+            logoutForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var form = this;
+                if (typeof window.showConfirm !== 'function') {
+                    if (window.confirm(PROFILE_I18N.logoutAllConfirm)) form.submit();
+                    return;
+                }
+                window.showConfirm(PROFILE_I18N.logoutAllConfirm, {
+                    title: PROFILE_I18N.modalConfirmTitle,
+                    okLabel: PROFILE_I18N.modalOk,
+                    cancelLabel: PROFILE_I18N.modalCancel,
+                    okClass: 'btn-primary'
+                }).then(function (ok) { if (ok) form.submit(); });
+            });
+        }
+        var deleteForm = document.getElementById('profile-delete-form');
+        if (deleteForm) {
+            deleteForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var form = this;
+                if (typeof window.showConfirm !== 'function') {
+                    if (window.confirm(PROFILE_I18N.deleteProfileConfirm)) form.submit();
+                    return;
+                }
+                window.showConfirm(PROFILE_I18N.deleteProfileConfirm, {
+                    title: PROFILE_I18N.modalConfirmTitle,
+                    okLabel: PROFILE_I18N.deleteModalOk,
+                    cancelLabel: PROFILE_I18N.modalCancel,
+                    okClass: 'btn-danger'
+                }).then(function (ok) { if (ok) form.submit(); });
+            });
+        }
 
         const buttons = document.querySelectorAll('#profile-tabs .tabs-btn');
         const panelSecurityExtra = document.getElementById('panel-security-extra');

@@ -41,6 +41,11 @@
     {{ end }}
 
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div id="dup-modal-i18n" hidden
+            data-merge-msg="{{ t .T "duplicates.merge_confirm" }}"
+            data-modal-title="{{ t .T "common.confirm" }}"
+            data-modal-cancel="{{ t .T "common.cancel" }}"
+            data-modal-ok="{{ t .T "common.ok" }}"></div>
         <div class="container">
             <section class="page-section">
                 <header class="section-header">
@@ -77,7 +82,7 @@
                         </tbody>
                     </table>
                     {{ if ge (len .Works) 2 }}
-                    <form method="POST" action="/tools/duplicates/merge" class="merge-row" onsubmit="return confirm('{{ t $.T "duplicates.merge_confirm" }}');">
+                    <form method="POST" action="/tools/duplicates/merge" class="merge-row">
                         <div>
                             <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ t $.T "duplicates.delete_from" }}</label>
                             <select name="from_id">
@@ -109,7 +114,31 @@
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
+    <script>
+(function () {
+  var box = document.getElementById("dup-modal-i18n");
+  function attr(k, fb) { return (box && box.getAttribute("data-" + k)) || fb; }
+  document.querySelectorAll("form.merge-row").forEach(function (form) {
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var msg = attr("merge-msg", "");
+      function doSubmit() { form.submit(); }
+      if (typeof window.showConfirm !== "function") {
+        if (window.confirm(msg)) doSubmit();
+        return;
+      }
+      window.showConfirm(msg, {
+        title: attr("modal-title", "Confirm"),
+        okLabel: attr("modal-ok", "OK"),
+        cancelLabel: attr("modal-cancel", "Cancel"),
+        okClass: "btn-danger"
+      }).then(function (ok) { if (ok) doSubmit(); });
+    });
+  });
+})();
+    </script>
 </body>
 </html>
 {{ end }}
