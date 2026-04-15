@@ -11,7 +11,7 @@ APP_USER    := nobody
 APP_GROUP   := nobody
 BIN_DIR     := /usr/local/bin
 
-.PHONY: all build build-prod run clean test test-race lint ci-local install uninstall update fix-perms status logs help
+.PHONY: all build build-prod run clean test test-race lint ci-local vuln bench-api install uninstall update fix-perms status logs help
 
 .DEFAULT_GOAL := help
 
@@ -48,6 +48,14 @@ lint:
 
 ci-local: lint test test-race
 	@echo "Validation locale CI terminée"
+
+vuln:
+	@echo "Analyse des vulnérabilités (govulncheck)..."
+	@go run golang.org/x/vuln/cmd/govulncheck@v1.1.4 ./...
+
+bench-api:
+	@echo "Benchmarks API (internal/server)..."
+	@go test ./internal/server -bench=. -benchtime=200ms -run '^$$'
 
 # Production
 install: build-prod
@@ -101,6 +109,8 @@ help:
 	@echo "  make test-race  - Tests race"
 	@echo "  make lint       - gofmt (strict) + golangci-lint"
 	@echo "  make ci-local   - lint + test + test-race"
+	@echo "  make vuln       - govulncheck (dépendances vulnérables)"
+	@echo "  make bench-api  - benchmarks des handlers API"
 	@echo "  make install    - Installer le service"
 	@echo "  make update     - bsctl update (menu release ; sinon: bsctl update main)"
 	@echo ""

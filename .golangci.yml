@@ -1,3 +1,5 @@
+version: "2"
+
 run:
   timeout: 5m
 
@@ -7,7 +9,43 @@ linters:
     - govet
     - ineffassign
     - staticcheck
+    - bodyclose
+    - dupl
+    - gosec
+  settings:
+    gosec:
+      # Les handlers ignorent volontairement certaines erreurs bénignes ; errcheck couvre déjà une partie.
+      excludes:
+        - G104
+  exclusions:
+    generated: lax
+    presets:
+      - comments
+      - common-false-positives
+      - legacy
+      - std-error-handling
+    rules:
+      # SQL dynamique : identifiants allowlistés + paramètres liés (quoteSQLiteIdent, ordres contrôlés).
+      - linters: [gosec]
+        text: "G202"
+      # jsstr : json.Marshal pour littéral JS sûr dans les templates.
+      - linters: [gosec]
+        text: "G203"
+      - path: _test\.go
+        linters: [gosec]
+    paths:
+      - third_party$
+      - builtin$
+      - examples$
 
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+
+formatters:
+  exclusions:
+    generated: lax
+    paths:
+      - third_party$
+      - builtin$
+      - examples$

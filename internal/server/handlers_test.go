@@ -644,6 +644,50 @@ func TestSafePostLoginRedirect(t *testing.T) {
 	}
 }
 
+func TestSafeLanguageRedirect(t *testing.T) {
+	host := "example.com:5000"
+	mk := func(referer string) *http.Request {
+		r := httptest.NewRequest(http.MethodGet, "/lang/fr", nil)
+		r.Host = host
+		if referer != "" {
+			r.Header.Set("Referer", referer)
+		}
+		return r
+	}
+	if got := safeLanguageRedirect(mk("https://evil.test/phish"), "/dashboard"); got != "/dashboard" {
+		t.Fatalf("cross-host: got %q", got)
+	}
+	if got := safeLanguageRedirect(mk("https://example.com:5000/stats?q=1"), "/dashboard"); got != "/stats?q=1" {
+		t.Fatalf("same-host path+query: got %q", got)
+	}
+	if got := safeLanguageRedirect(mk("http://example.com:5000/tools"), "/dashboard"); got != "/tools" {
+		t.Fatalf("same-host http: got %q", got)
+	}
+	if got := safeLanguageRedirect(mk(""), "/custom"); got != "/custom" {
+		t.Fatalf("no Referer: got %q", got)
+	}
+	if got := safeLanguageRedirect(mk(""), ""); got != "/dashboard" {
+		t.Fatalf("empty fallback normalizes: got %q", got)
+	}
+}
+
+func TestHandleSetLanguage_RedirectUsesSafeReferer(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	req := httptest.NewRequest(http.MethodGet, "/lang/en", nil)
+	req.SetPathValue("lang", "en")
+	req.Host = "127.0.0.1:5000"
+	req.Header.Set("Referer", "https://evil.example/steal")
+	rec := httptest.NewRecorder()
+	app.HandleSetLanguage(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	if loc := rec.Header().Get("Location"); loc != "/dashboard" {
+		t.Fatalf("Location %q want /dashboard", loc)
+	}
+}
+
 func TestHandleAPIAdminDatabaseDelete(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

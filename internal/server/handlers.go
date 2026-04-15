@@ -265,6 +265,40 @@ func safePostLoginRedirect(s string) string {
 	return s
 }
 
+// safeLanguageRedirect returns a path+query from Referer only if same host as r; otherwise fallback.
+// Prevents open redirects via Referer after POST/GET /lang/{lang}.
+func safeLanguageRedirect(r *http.Request, fallback string) string {
+	fallback = strings.TrimSpace(fallback)
+	if fallback == "" || !strings.HasPrefix(fallback, "/") || strings.HasPrefix(fallback, "//") {
+		fallback = "/dashboard"
+	}
+	ref := strings.TrimSpace(r.Header.Get("Referer"))
+	if ref == "" {
+		return fallback
+	}
+	u, err := url.Parse(ref)
+	if err != nil || u.Host == "" {
+		return fallback
+	}
+	if !strings.EqualFold(u.Host, r.Host) {
+		return fallback
+	}
+	path := u.Path
+	if path == "" {
+		path = "/"
+	}
+	if !strings.HasPrefix(path, "/") || strings.HasPrefix(path, "//") {
+		return fallback
+	}
+	if strings.ContainsAny(path, "\r\n\x00") {
+		return fallback
+	}
+	if u.RawQuery != "" {
+		return path + "?" + u.RawQuery
+	}
+	return path
+}
+
 func loginRedirectURL(r *http.Request) string {
 	if r == nil || r.URL == nil {
 		return "/login"
@@ -311,12 +345,7 @@ func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 	}
 	a.setLang(w, lang)
 
-	// Redirect back to referrer or dashboard
-	referer := r.Header.Get("Referer")
-	if referer == "" {
-		referer = "/dashboard"
-	}
-	http.Redirect(w, r, referer, http.StatusFound)
+	http.Redirect(w, r, safeLanguageRedirect(r, "/dashboard"), http.StatusFound)
 }
 
 // baseData returns common template data including translations
@@ -746,15 +775,15 @@ func (a *App) HandleLegal(w http.ResponseWriter, r *http.Request) {
 func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
-	// Statistiques globales
-	var totalWorks int
-	if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-
-	var totalChapters int
-	if err := a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters); err != nil {
+	var totalWorks, totalChapters, ratedCount int
+	var avgRating float64
+	if err := a.DB.QueryRow(`
+		SELECT
+			(SELECT COUNT(*) FROM works WHERE user_id = ?),
+			(SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?),
+			(SELECT COALESCE(AVG(rating), 0) FROM works WHERE user_id = ? AND rating > 0),
+			(SELECT COUNT(*) FROM works WHERE user_id = ? AND rating > 0)
+	`, userID, userID, userID, userID).Scan(&totalWorks, &totalChapters, &avgRating, &ratedCount); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
@@ -793,14 +822,6 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 			}
 			byType = append(byType, tc)
 		}
-	}
-
-	// Average rating (only rated works)
-	var avgRating float64
-	var ratedCount int
-	if err := a.DB.QueryRow(`SELECT COALESCE(AVG(rating), 0), COUNT(*) FROM works WHERE user_id = ? AND rating > 0`, userID).Scan(&avgRating, &ratedCount); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
 	}
 
 	// Top 5 meilleures notes
