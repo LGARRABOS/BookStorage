@@ -1520,13 +1520,13 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		if r.URL.Query().Get("format") == "partial" {
 			a.renderTemplate(w, r, "edit_work_modal", a.mergeData(r, map[string]any{
-				"Work":                       work,
-				"ReadingTypes":               readingTypes,
-				"Statuses":                   readingStatuses,
-				"IsModal":                    true,
-				"CatalogPageURL":             catalogPageURL,
-				"CatalogAnilistImageURL":     catalogAnilistImageURL,
-				"CatalogAnilistImageLocked":  catalogAnilistImageLocked,
+				"Work":                      work,
+				"ReadingTypes":              readingTypes,
+				"Statuses":                  readingStatuses,
+				"IsModal":                   true,
+				"CatalogPageURL":            catalogPageURL,
+				"CatalogAnilistImageURL":    catalogAnilistImageURL,
+				"CatalogAnilistImageLocked": catalogAnilistImageLocked,
 			}))
 			return
 		}
