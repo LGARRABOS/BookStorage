@@ -12,23 +12,12 @@
     <link rel="stylesheet" href="/static/css/mobile.css?v=7">
     <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=7">
     <script src="/static/js/appearance-init.js"></script>
-    <style>
-{{ template "recommendations_css" }}
-        #reco-detail-modal.modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
-        #reco-detail-modal[aria-hidden="true"] { display: none; }
-        #reco-detail-modal .modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.4); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
-        #reco-detail-modal .modal-dialog { position: relative; background: var(--surface); border-radius: 1.25rem; box-shadow: var(--shadow-lg); max-width: 90%; max-height: 90vh; overflow-y: auto; border: 1px solid var(--border-subtle); }
-        #reco-detail-modal .modal-close { position: absolute; top: 1rem; right: 1rem; width: 36px; height: 36px; border: none; border-radius: 0.5rem; background: var(--input-bg); color: var(--text-muted); font-size: 1.5rem; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: background 0.2s; z-index: 1; }
-        #reco-detail-modal .modal-close:hover { background: var(--primary-muted); color: var(--primary); }
-        #reco-detail-modal .modal-content { padding: 1.5rem 2rem 2rem; }
-    </style>
 </head>
 <body>
     {{ template "mobile_topbar" . }}
 
     <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
-            {{ template "recommendations_section" . }}
             {{ template "import_notice" . }}
 
             <div class="mobile-filters">
@@ -100,8 +89,6 @@
         </div>
     </main>
 
-    {{ template "recommendations_modal" . }}
-
     {{ template "mobile_bottom_nav" . }}
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
@@ -153,8 +140,6 @@
       if (adult) adult.addEventListener("change", applyServerFilters);
       if (sortSel) sortSel.addEventListener("change", applyServerFilters);
     })();
-
-    {{ template "recommendations_js_body" . }}
 
     (function () {
       document.addEventListener("click", function (e) {
