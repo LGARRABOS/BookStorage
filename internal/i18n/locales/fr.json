@@ -189,6 +189,8 @@
   "work.form.image": "Image de couverture",
   "work.form.image.change": "Changer l'image",
   "work.form.image.current": "Image actuelle",
+  "work.form.image.cover": "Couverture",
+  "work.form.image.anilist_no_upload": "Les œuvres liées à AniList utilisent la couverture du catalogue ; l’envoi d’un fichier image n’est pas disponible ici.",
   "work.form.image_url": "URL de l'image",
   "work.form.image_url.anilist_hint": "Cette adresse correspond à la couverture AniList de la fiche catalogue liée. Elle n’est pas modifiable ici.",
   "work.form.link": "Lien de lecture",
