@@ -189,6 +189,8 @@
   "work.form.image": "Immagine di copertina",
   "work.form.image.change": "Cambia immagine",
   "work.form.image.current": "Immagine attuale",
+  "work.form.image.cover": "Copertina",
+  "work.form.image.anilist_no_upload": "Le opere collegate ad AniList usano la copertina del catalogo; non è possibile caricare un file immagine personalizzato qui.",
   "work.form.image_url": "URL dell'immagine",
   "work.form.image_url.anilist_hint": "Questo URL è la copertina della scheda catalogo AniList collegata. Non è modificabile qui.",
   "work.form.link": "Link di lettura",

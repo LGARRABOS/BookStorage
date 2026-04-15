@@ -137,6 +137,8 @@
         .edit-modal-content .star-rating-picker .star.active { color: #fbbf24; }
         .edit-modal-content .star-rating-picker .clear-btn { padding: 0.35rem 0.6rem; border: 1px solid var(--border-subtle); border-radius: 0.5rem; background: var(--surface); color: var(--text-muted); font-size: 0.75rem; cursor: pointer; }
         .edit-modal-content .image-section { display: grid; grid-template-columns: auto 1fr; gap: 1rem; align-items: start; }
+        .edit-modal-content .image-section--anilist-cover { grid-template-columns: 1fr; }
+        .edit-modal-content .image-section--anilist-cover .form-hint { margin-top: 0.5rem; max-width: 28rem; }
         .edit-modal-content .current-image img { width: 100px; height: 134px; object-fit: cover; border-radius: 0.6rem; }
         .edit-modal-content .current-image .no-image { width: 100px; height: 134px; border-radius: 0.6rem; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); display: flex; align-items: center; justify-content: center; font-size: 2rem; opacity: 0.5; }
         .edit-modal-content .image-upload-area { border: 2px dashed var(--border-subtle); border-radius: 0.75rem; padding: 1.25rem; text-align: center; cursor: pointer; }
@@ -242,7 +244,16 @@
                 <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
-                        {{ if .ImagePath.Valid }}
+                        {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
+                        {{ if $anilistCover }}
+                            {{ $imgUrl := work_image_url $anilistCover }}
+                            {{ if $imgUrl }}
+                                <img src="{{ $imgUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.parentElement.querySelector('.no-image').style.display='flex';">
+                                <span class="no-image" style="display:none;">📖</span>
+                            {{ else }}
+                                <span class="no-image">📖</span>
+                            {{ end }}
+                        {{ else if .ImagePath.Valid }}
                             {{ $imgUrl := work_image_url .ImagePath.String }}
                             {{ if $imgUrl }}
                                 <img src="{{ $imgUrl }}" alt="{{ .Title }}" loading="lazy" decoding="async" fetchpriority="low" onerror="this.style.display='none'; this.parentElement.querySelector('.no-image').style.display='flex';">
@@ -536,6 +547,7 @@
         
         // Edit modal
         function previewImage(input) {
+            if (!input || !input.files || !input.files[0]) return;
             const modal = document.getElementById('edit-modal');
             const preview = modal ? modal.querySelector('#image-preview') : null;
             if (preview && input.files && input.files[0]) {

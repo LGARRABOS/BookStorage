@@ -189,6 +189,8 @@
   "work.form.image": "Imagen de portada",
   "work.form.image.change": "Cambiar imagen",
   "work.form.image.current": "Imagen actual",
+  "work.form.image.cover": "Portada",
+  "work.form.image.anilist_no_upload": "Las obras vinculadas a AniList usan la portada del catálogo; no está disponible subir un archivo de imagen propio aquí.",
   "work.form.image_url": "URL de la imagen",
   "work.form.image_url.anilist_hint": "Esta URL es la portada del registro de catálogo AniList vinculado. No se puede editar aquí.",
   "work.form.link": "Enlace de lectura",

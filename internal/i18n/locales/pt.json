@@ -189,6 +189,8 @@
   "work.form.image": "Imagem de capa",
   "work.form.image.change": "Alterar imagem",
   "work.form.image.current": "Imagem atual",
+  "work.form.image.cover": "Capa",
+  "work.form.image.anilist_no_upload": "Obras ligadas ao AniList usam a capa do catálogo; o envio de um ficheiro de imagem personalizado não está disponível aqui.",
   "work.form.image_url": "URL da imagem",
   "work.form.image_url.anilist_hint": "Este URL é a capa da entrada de catálogo AniList vinculada. Não pode ser editado aqui.",
   "work.form.link": "Link de leitura",

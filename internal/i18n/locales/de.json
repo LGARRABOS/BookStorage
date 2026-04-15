@@ -189,6 +189,8 @@
   "work.form.image": "Coverbild",
   "work.form.image.change": "Bild ändern",
   "work.form.image.current": "Aktuelles Bild",
+  "work.form.image.cover": "Cover",
+  "work.form.image.anilist_no_upload": "Mit AniList verknüpfte Werke nutzen das Katalogcover; das Hochladen einer eigenen Bilddatei ist hier nicht möglich.",
   "work.form.image_url": "Bild-URL",
   "work.form.image_url.anilist_hint": "Diese URL ist das Titelbild des verknüpften AniList-Katalogeintrags und kann hier nicht geändert werden.",
   "work.form.link": "Leselink",

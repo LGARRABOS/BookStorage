@@ -1132,9 +1132,36 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	anilistCoverByWorkID := map[int]string{}
+	anilistRows, err := a.DB.Query(
+		`SELECT w.id, COALESCE(c.image_url, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id AND LOWER(TRIM(c.source)) = 'anilist' `+whereClause,
+		args...,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = anilistRows.Close() }()
+	for anilistRows.Next() {
+		var wid int
+		var imageURL string
+		if err := anilistRows.Scan(&wid, &imageURL); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		if strings.TrimSpace(imageURL) != "" {
+			anilistCoverByWorkID[wid] = strings.TrimSpace(imageURL)
+		}
+	}
+	if err := anilistRows.Err(); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
 	data := map[string]any{
 		"Works":                works,
 		"CatalogCoverByWorkID": catalogCoverByWorkID,
+		"AnilistCoverByWorkID": anilistCoverByWorkID,
 		"ReadingTypes":         readingTypes,
 		"ReadingStatus":        readingStatuses,
 		"IsAdmin":              isAdmin == 1,
@@ -1615,16 +1642,18 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 		// Gestion de l'image (optionnel)
 		newImagePath := work.ImagePath
 
+		catalogAnilistURL, aniListImageLock := a.catalogAnilistCoverForUserWork(userID, workID)
+
 		// Check for image URL first
 		imageURL := strings.TrimSpace(r.FormValue("image_url"))
-		if _, aniLock := a.catalogAnilistCoverForUserWork(userID, workID); aniLock {
+		if aniListImageLock {
 			imageURL = ""
 		}
 		if imageURL != "" && (strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://")) {
 			newImagePath.String = imageURL
 			newImagePath.Valid = true
-		} else {
-			// If no URL, check for file upload
+		} else if !aniListImageLock {
+			// If no URL, check for file upload (désactivé côté serveur si catalogue AniList)
 			file, header, err := r.FormFile("image")
 			if err == nil && header != nil && header.Filename != "" {
 				defer func() { _ = file.Close() }()
@@ -1640,6 +1669,11 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 					}
 				}
 			}
+		}
+		// Remplace en base une ancienne couverture custom par l’URL canonique AniList (affichage + export cohérents).
+		if aniListImageLock && catalogAnilistURL != "" {
+			newImagePath.String = catalogAnilistURL
+			newImagePath.Valid = true
 		}
 
 		if newImagePath.Valid {
