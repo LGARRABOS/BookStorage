@@ -365,8 +365,19 @@
     });
 
     tbody.innerHTML = "";
-    var rowItems = (d.items || []).filter(function (it) {
+    var raw = (d.items || []).filter(function (it) {
       return !(it.status === "skipped" && it.reason === "already_linked");
+    });
+    var rowItems = [];
+    var posByWork = {};
+    raw.forEach(function (it) {
+      var wid = it.work_id;
+      if (Object.prototype.hasOwnProperty.call(posByWork, wid)) {
+        rowItems[posByWork[wid]] = it;
+      } else {
+        posByWork[wid] = rowItems.length;
+        rowItems.push(it);
+      }
     });
     rowItems.forEach(function (it) {
       var tr = document.createElement("tr");
@@ -756,11 +767,10 @@
         agg.skipped += d.skipped || 0;
         agg.errors += d.errors || 0;
         (d.items || []).forEach(function (it) { agg.items.push(it); });
+        // Toujours avancer sur l’id traité : si on remet after_id à 0 après un lien, le SELECT reprend
+        // le plus petit id encore sans catalogue (souvent une œuvre déjà « Ignorée ») → doublons en boucle.
         var firstIt = (d.items && d.items[0]);
-        if (firstIt) {
-          if (firstIt.status === "linked") afterId = 0;
-          else afterId = firstIt.work_id;
-        }
+        if (firstIt) afterId = firstIt.work_id;
         renderResults(agg);
         await refreshEnrichQueue();
       }
