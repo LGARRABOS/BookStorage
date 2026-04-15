@@ -282,6 +282,9 @@ func (a *App) HandleAdminEnrich(w http.ResponseWriter, r *http.Request) {
 
 const enrichQueueListLimit = 200
 
+// enrichAnilistEligibleSQL filtre les œuvres encore éligibles au rattachement auto AniList.
+const enrichAnilistEligibleSQL = `catalog_id IS NULL AND COALESCE(anilist_enrich_opt_out, 0) = 0`
+
 type enrichQueueWork struct {
 	ID          int    `json:"id"`
 	Title       string `json:"title"`
@@ -295,12 +298,12 @@ func (a *App) HandleAPIAdminEnrichQueue(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	var total int
-	if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE catalog_id IS NULL`).Scan(&total); err != nil {
+	if err := a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE ` + enrichAnilistEligibleSQL).Scan(&total); err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "db_error")
 		return
 	}
 	rows, err := a.DB.Query(
-		`SELECT id, title, COALESCE(reading_type, '') FROM works WHERE catalog_id IS NULL ORDER BY id ASC LIMIT ?`,
+		`SELECT id, title, COALESCE(reading_type, '') FROM works WHERE `+enrichAnilistEligibleSQL+` ORDER BY id ASC LIMIT ?`,
 		enrichQueueListLimit,
 	)
 	if err != nil {
@@ -335,16 +338,22 @@ func (a *App) HandleAPIAdminEnrichRun(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Limit int `json:"limit"`
+		Limit   int `json:"limit"`
+		AfterID int `json:"after_id"` // si > 0 : ignorer les id <= after_id (lot 1 par 1 après une œuvre ignorée)
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 	if req.Limit <= 0 || req.Limit > 30 {
 		req.Limit = 10
 	}
-	rows, err := a.DB.Query(
-		`SELECT id, title, COALESCE(reading_type, '') FROM works WHERE catalog_id IS NULL ORDER BY id ASC LIMIT ?`,
-		req.Limit,
-	)
+	q := `SELECT id, title, COALESCE(reading_type, '') FROM works WHERE ` + enrichAnilistEligibleSQL
+	args := []any{}
+	if req.AfterID > 0 {
+		q += ` AND id > ?`
+		args = append(args, req.AfterID)
+	}
+	q += ` ORDER BY id ASC LIMIT ?`
+	args = append(args, req.Limit)
+	rows, err := a.DB.Query(q, args...)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
@@ -679,7 +688,75 @@ func (a *App) HandleAPIAdminEnrichUnlink(w http.ResponseWriter, r *http.Request)
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
 		return
 	}
-	res, err := a.DB.Exec(`UPDATE works SET catalog_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, req.WorkID)
+	res, err := a.DB.Exec(`UPDATE works SET catalog_id = NULL, anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, req.WorkID)
+	if err != nil {
+		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		a.apiWriteError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+}
+
+// HandleAPIAdminEnrichOptOut POST JSON { "work_id": 1 } — exclure l’œuvre du lot AniList (sans catalogue).
+func (a *App) HandleAPIAdminEnrichOptOut(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		WorkID int `json:"work_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	if req.WorkID <= 0 {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	res, err := a.DB.Exec(
+		`UPDATE works SET anilist_enrich_opt_out = 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`,
+		req.WorkID,
+	)
+	if err != nil {
+		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
+		return
+	}
+	n, _ := res.RowsAffected()
+	if n == 0 {
+		a.apiWriteError(w, http.StatusNotFound, "not_found")
+		return
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "work_id": req.WorkID})
+}
+
+// HandleAPIAdminEnrichOptIn POST JSON { "work_id": 1 } — réinclure l’œuvre dans l’enrichissement AniList.
+func (a *App) HandleAPIAdminEnrichOptIn(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	var req struct {
+		WorkID int `json:"work_id"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
+		return
+	}
+	if req.WorkID <= 0 {
+		a.apiWriteError(w, http.StatusBadRequest, "invalid_request")
+		return
+	}
+	res, err := a.DB.Exec(
+		`UPDATE works SET anilist_enrich_opt_out = 0, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND catalog_id IS NULL`,
+		req.WorkID,
+	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "update_failed")
 		return
@@ -698,14 +775,15 @@ const enrichAdminWorksDefaultLimit = 100
 
 // adminEnrichWorkListRow is one row for GET /api/admin/enrich/works.
 type adminEnrichWorkListRow struct {
-	ID                int    `json:"id"`
-	Title             string `json:"title"`
-	ReadingType       string `json:"reading_type"`
-	UserID            int    `json:"user_id"`
-	CatalogID         *int64 `json:"catalog_id,omitempty"`
-	CatalogTitle      string `json:"catalog_title,omitempty"`
-	CatalogSource     string `json:"catalog_source,omitempty"`
-	CatalogExternalID string `json:"catalog_external_id,omitempty"`
+	ID                  int    `json:"id"`
+	Title               string `json:"title"`
+	ReadingType         string `json:"reading_type"`
+	UserID              int    `json:"user_id"`
+	CatalogID           *int64 `json:"catalog_id,omitempty"`
+	CatalogTitle        string `json:"catalog_title,omitempty"`
+	CatalogSource       string `json:"catalog_source,omitempty"`
+	CatalogExternalID   string `json:"catalog_external_id,omitempty"`
+	AnilistEnrichOptOut bool   `json:"anilist_enrich_opt_out,omitempty"`
 }
 
 // HandleAPIAdminEnrichWorks GET ?q=&limit=&offset= — paginated list of all works (admin).
@@ -746,7 +824,8 @@ func (a *App) HandleAPIAdminEnrichWorks(w http.ResponseWriter, r *http.Request) 
 	}
 
 	listSQL := `SELECT w.id, w.title, COALESCE(w.reading_type, ''), w.user_id, w.catalog_id,
-		COALESCE(c.title, ''), COALESCE(c.source, ''), COALESCE(c.external_id, '')
+		COALESCE(c.title, ''), COALESCE(c.source, ''), COALESCE(c.external_id, ''),
+		COALESCE(w.anilist_enrich_opt_out, 0)
 		FROM works w
 		LEFT JOIN catalog c ON c.id = w.catalog_id
 		WHERE ` + where + ` ORDER BY w.id LIMIT ? OFFSET ?`
@@ -762,7 +841,8 @@ func (a *App) HandleAPIAdminEnrichWorks(w http.ResponseWriter, r *http.Request) 
 	for rows.Next() {
 		var row adminEnrichWorkListRow
 		var catalogID sql.NullInt64
-		if err := rows.Scan(&row.ID, &row.Title, &row.ReadingType, &row.UserID, &catalogID, &row.CatalogTitle, &row.CatalogSource, &row.CatalogExternalID); err != nil {
+		var optOut int
+		if err := rows.Scan(&row.ID, &row.Title, &row.ReadingType, &row.UserID, &catalogID, &row.CatalogTitle, &row.CatalogSource, &row.CatalogExternalID, &optOut); err != nil {
 			a.apiWriteError(w, http.StatusInternalServerError, "db_error")
 			return
 		}
@@ -770,6 +850,7 @@ func (a *App) HandleAPIAdminEnrichWorks(w http.ResponseWriter, r *http.Request) 
 			v := catalogID.Int64
 			row.CatalogID = &v
 		}
+		row.AnilistEnrichOptOut = optOut != 0
 		works = append(works, row)
 	}
 	if err := rows.Err(); err != nil {
