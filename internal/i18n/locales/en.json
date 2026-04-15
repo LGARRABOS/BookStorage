@@ -190,6 +190,7 @@
   "work.form.image.change": "Change image",
   "work.form.image.current": "Current image",
   "work.form.image_url": "Image URL",
+  "work.form.image_url.anilist_hint": "This URL is the cover image from the linked AniList catalog entry. It cannot be edited here.",
   "work.form.link": "Reading link",
   "work.form.catalog_page": "Catalog page",
   "work.form.catalog_page.hint": "This URL comes from the catalog entry linked to this work (e.g. AniList). It cannot be edited here.",

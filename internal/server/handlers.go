@@ -1024,6 +1024,23 @@ func (a *App) catalogPageURLForUserWork(userID, workID int) string {
 	return catalogSourcePageURL(source.String, extID)
 }
 
+// catalogAnilistCoverForUserWork returns the catalog cover URL when the work is linked to an AniList row (locked URL field in the edit form).
+func (a *App) catalogAnilistCoverForUserWork(userID, workID int) (imageURL string, locked bool) {
+	var source sql.NullString
+	var catImg string
+	err := a.DB.QueryRow(
+		`SELECT c.source, COALESCE(c.image_url, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id WHERE w.id = ? AND w.user_id = ?`,
+		workID, userID,
+	).Scan(&source, &catImg)
+	if err != nil || !source.Valid {
+		return "", false
+	}
+	if strings.ToLower(strings.TrimSpace(source.String)) != "anilist" {
+		return "", false
+	}
+	return strings.TrimSpace(catImg), true
+}
+
 func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
@@ -1497,24 +1514,29 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	catalogPageURL := a.catalogPageURLForUserWork(userID, workID)
+	catalogAnilistImageURL, catalogAnilistImageLocked := a.catalogAnilistCoverForUserWork(userID, workID)
 
 	switch r.Method {
 	case http.MethodGet:
 		if r.URL.Query().Get("format") == "partial" {
 			a.renderTemplate(w, r, "edit_work_modal", a.mergeData(r, map[string]any{
-				"Work":             work,
-				"ReadingTypes":     readingTypes,
-				"Statuses":         readingStatuses,
-				"IsModal":          true,
-				"CatalogPageURL":   catalogPageURL,
+				"Work":                       work,
+				"ReadingTypes":               readingTypes,
+				"Statuses":                   readingStatuses,
+				"IsModal":                    true,
+				"CatalogPageURL":             catalogPageURL,
+				"CatalogAnilistImageURL":     catalogAnilistImageURL,
+				"CatalogAnilistImageLocked":  catalogAnilistImageLocked,
 			}))
 			return
 		}
 		a.renderTemplate(w, r, "edit_work", a.mergeData(r, map[string]any{
-			"Work":           work,
-			"ReadingTypes":   readingTypes,
-			"Statuses":       readingStatuses,
-			"CatalogPageURL": catalogPageURL,
+			"Work":                      work,
+			"ReadingTypes":              readingTypes,
+			"Statuses":                  readingStatuses,
+			"CatalogPageURL":            catalogPageURL,
+			"CatalogAnilistImageURL":    catalogAnilistImageURL,
+			"CatalogAnilistImageLocked": catalogAnilistImageLocked,
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -1595,6 +1617,9 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		// Check for image URL first
 		imageURL := strings.TrimSpace(r.FormValue("image_url"))
+		if _, aniLock := a.catalogAnilistCoverForUserWork(userID, workID); aniLock {
+			imageURL = ""
+		}
 		if imageURL != "" && (strings.HasPrefix(imageURL, "http://") || strings.HasPrefix(imageURL, "https://")) {
 			newImagePath.String = imageURL
 			newImagePath.Valid = true

@@ -71,7 +71,12 @@
         </div>
         <div class="form-group">
             <label for="image_url">{{ t .T "work.form.image_url" }}</label>
+            {{ if .CatalogAnilistImageLocked }}
+            <input id="image_url" type="url" class="input-readonly-catalog" value="{{ .CatalogAnilistImageURL }}" readonly aria-readonly="true" autocomplete="off">
+            <p class="form-hint">{{ t .T "work.form.image_url.anilist_hint" }}</p>
+            {{ else }}
             <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" onchange="previewImageUrl(this)">
+            {{ end }}
         </div>
         <div class="form-group">
             <label>{{ t .T "work.form.upload" }}</label>

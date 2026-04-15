@@ -190,6 +190,7 @@
   "work.form.image.change": "Alterar imagem",
   "work.form.image.current": "Imagem atual",
   "work.form.image_url": "URL da imagem",
+  "work.form.image_url.anilist_hint": "Este URL é a capa da entrada de catálogo AniList vinculada. Não pode ser editado aqui.",
   "work.form.link": "Link de leitura",
   "work.form.catalog_page": "Página do catálogo",
   "work.form.catalog_page.hint": "Este URL vem da entrada de catálogo vinculada (ex.: AniList) e não pode ser editado aqui.",

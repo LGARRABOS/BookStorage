@@ -543,7 +543,7 @@
                 reader.onload = function(e) { preview.querySelector('img').src = e.target.result; preview.style.display = 'block'; };
                 reader.readAsDataURL(input.files[0]);
                 const urlInput = modal.querySelector('#image_url');
-                if (urlInput) urlInput.value = '';
+                if (urlInput && !urlInput.readOnly) urlInput.value = '';
             }
         }
         function previewImageUrl(input) {

@@ -190,6 +190,7 @@
   "work.form.image.change": "Changer l'image",
   "work.form.image.current": "Image actuelle",
   "work.form.image_url": "URL de l'image",
+  "work.form.image_url.anilist_hint": "Cette adresse correspond à la couverture AniList de la fiche catalogue liée. Elle n’est pas modifiable ici.",
   "work.form.link": "Lien de lecture",
   "work.form.catalog_page": "Page catalogue",
   "work.form.catalog_page.hint": "Cette adresse provient de la fiche catalogue liée (ex. AniList). Elle n’est pas modifiable ici.",
