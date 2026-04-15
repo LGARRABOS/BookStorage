@@ -28,7 +28,7 @@
         .filter-group { display: flex; gap: 0.5rem; align-items: center; }
         .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); cursor: pointer; transition: border-color 0.2s ease; }
         .filter-group select:focus { outline: none; border-color: var(--primary); }
-        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1.25rem; }
+        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; }
         .works-grid.view-list { display: flex; flex-direction: column; gap: 0.5rem; }
         .works-grid.view-list .work-card { flex-direction: row; height: auto; min-height: 80px; }
         .works-grid.view-list .work-cover { width: 60px; min-width: 60px; height: 80px; aspect-ratio: auto; flex-shrink: 0; }
@@ -47,6 +47,8 @@
         .work-series-child { margin-left: 0.75rem; border-left: 3px solid var(--primary); padding-left: 0.35rem; }
         .work-cover-link { display: block; text-decoration: none; cursor: pointer; }
         .work-cover { position: relative; width: 100%; aspect-ratio: 2 / 3; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
+        /* Grille : cartes un peu plus étroites = couverture moins haute tout en gardant object-fit: contain sur l’image. */
+        .works-grid:not(.view-list) .work-cover { aspect-ratio: 5 / 7; }
         .work-cover img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
         .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
         .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
@@ -97,7 +99,6 @@
         [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .chapter-value:hover { background: rgba(129, 140, 248, 0.2); }
         [data-theme="dark"] .chapter-value-input { background: rgba(15, 23, 42, 0.8); border-color: #818cf8; color: #f1f5f9; }
-        {{ template "recommendations_css" }}
         /* Edit modal */
         .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .modal-overlay[aria-hidden="true"] { display: none; }
@@ -166,7 +167,7 @@
             .search-box { width: 100%; }
             .filter-group { flex-wrap: wrap; }
             .filter-group select { flex: 1; }
-            .works-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); }
+            .works-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
         }
     </style>
 </head>
@@ -194,8 +195,6 @@
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
                 </div>
             </div>
-
-            {{ template "recommendations_section" . }}
 
             {{ template "import_notice" . }}
 
@@ -323,8 +322,6 @@
             <div class="modal-content"></div>
         </div>
     </div>
-
-    {{ template "recommendations_modal" . }}
 
     <div id="help-modal" class="modal-overlay" aria-hidden="true">
         <div class="modal-backdrop"></div>
@@ -816,8 +813,6 @@
             }
         });
     });
-    
-    {{ template "recommendations_js_body" . }}
 
     // Register service worker for PWA
     if ('serviceWorker' in navigator) {
