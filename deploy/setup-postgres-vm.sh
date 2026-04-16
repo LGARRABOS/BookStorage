@@ -5,7 +5,7 @@
 # Environment (optional):
 #   BS_PG_DB                 database name (default: bookstorage)
 #   BS_PG_USER               role name (default: bookstorage)
-#   BS_PG_HOST               hostname shown in the connection summary (default: hostname -f or hostname)
+#   BS_PG_HOST               host in printed URL if set; if unset, primary LAN IPv4 when detectable, else hostname -f
 #   BS_PG_PORT               port shown in summary (default: 5432)
 #   BS_PG_SSLMODE            sslmode query param in URL (default: prefer)
 #   BS_PG_APT_WATCHDOG_SECS  seconds between heartbeat lines while apt runs (default: 25)
@@ -125,13 +125,35 @@ if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
 	apt_with_watchdog "apt-get install" sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
 fi
 
+# Printed BOOKSTORAGE_POSTGRES_URL must use a host the *application* VM can resolve (public DNS does not know internal names).
+bs_pg_default_host_for_url() {
+	local src=""
+	if command -v ip >/dev/null 2>&1; then
+		src="$(ip -4 route get 1.1.1.1 2>/dev/null | awk '{for (i = 1; i < NF; i++) if ($i == "src") { print $(i + 1); exit } }' || true)"
+		src="$(echo "${src}" | tr -d '[:space:]')"
+	fi
+	if [[ -z "${src}" ]] && command -v ip >/dev/null 2>&1; then
+		src="$(ip -br -4 addr show scope global 2>/dev/null | awk '{ n = split($3, a, "/"); if (n) { print a[1]; exit } }' | head -1 || true)"
+		src="$(echo "${src}" | tr -d '[:space:]')"
+	fi
+	if [[ -z "${src}" ]] && command -v hostname >/dev/null 2>&1; then
+		src="$(hostname -I 2>/dev/null | awk '{ print $1; exit }' || true)"
+		src="$(echo "${src}" | tr -d '[:space:]')"
+	fi
+	if [[ -n "${src}" ]]; then
+		printf '%s' "${src}"
+		return 0
+	fi
+	printf '%s' "$(hostname -f 2>/dev/null || hostname)"
+}
+
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
 BS_PG_USER="${BS_PG_USER:-bookstorage}"
 BS_PG_PORT="${BS_PG_PORT:-5432}"
 BS_PG_SSLMODE="${BS_PG_SSLMODE:-prefer}"
 BS_PG_HOST="${BS_PG_HOST:-}"
 if [[ -z "${BS_PG_HOST}" ]]; then
-	BS_PG_HOST="$(hostname -f 2>/dev/null || hostname)"
+	BS_PG_HOST="$(bs_pg_default_host_for_url)"
 fi
 
 if ! command -v psql >/dev/null 2>&1; then
@@ -231,8 +253,9 @@ echo "      /etc/postgresql/*/main/postgresql.conf  → listen_addresses = '*' (
 echo "      /etc/postgresql/*/main/pg_hba.conf      → ex. host all all 192.168.1.0/24 scram-sha-256"
 echo "    puis : sudo systemctl restart postgresql"
 echo "  - Pare-feu : autoriser le port ${BS_PG_PORT}/tcp depuis l'IP de la VM applicative."
-echo "  - Dans l'URL, si « ${BS_PG_HOST} » n'est pas résolu par l'app, remplacez par l'IP (ex. 192.168.1.117)."
-echo "    Exemple : sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh"
+echo "  - L'hôte dans l'URL est une IPv4 LAN détectée quand c'est possible (sinon le hostname). Pour forcer un nom ou une IP :"
+echo "      sudo env BS_PG_HOST=BookStorageDB ./deploy/setup-postgres-vm.sh"
+echo "      sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh"
 echo ""
 echo "Sécurité: restreignez pg_hba.conf à l'IP ou au sous-réseau de la VM applicative ;"
 echo "          utilisez sslmode=require ou verify-full si le trafic traverse un réseau non dédié."
