@@ -44,6 +44,9 @@ ENVIRONMENT VARIABLES
     BOOKSTORAGE_SECRET_KEY           Secret key for sessions
     BOOKSTORAGE_SUPERADMIN_USERNAME  Super admin username (default: superadmin)
     BOOKSTORAGE_SUPERADMIN_PASSWORD  Super admin password
+    BOOKSTORAGE_PUBLIC_ORIGIN         Public site URL without trailing slash (required for Google OAuth), e.g. https://books.example.com
+    BOOKSTORAGE_GOOGLE_CLIENT_ID      Google OAuth 2.0 Web client ID (optional; with secret and public origin enables Sign in with Google)
+    BOOKSTORAGE_GOOGLE_CLIENT_SECRET  Google OAuth client secret
     BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC  Seconds to read the full request (default 15)
     BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC Seconds until response must be fully written (default 120; includes handler time — raise for slow admin batches)
 
@@ -170,11 +173,15 @@ func main() {
 	mux.HandleFunc("/lang/{lang}", app.HandleSetLanguage)
 	mux.HandleFunc("/register", app.HandleRegister)
 	mux.HandleFunc("/login", app.HandleLogin)
+	mux.HandleFunc("/auth/google", app.HandleGoogleOAuthStart)
+	mux.HandleFunc("/auth/google/callback", app.HandleGoogleOAuthCallback)
+	mux.HandleFunc("/auth/google/link", app.RequireLogin(app.HandleGoogleOAuthLink))
 	mux.HandleFunc("/logout", app.HandleLogout)
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleStats)))
 	mux.HandleFunc("/profile", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleProfile)))
 	mux.HandleFunc("POST /profile/logout_all", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleLogoutAll)))
+	mux.HandleFunc("POST /profile/google/unlink", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleGoogleUnlink)))
 	mux.HandleFunc("POST /profile/delete", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleDeleteProfile)))
 	mux.HandleFunc("/tools", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleTools)))
 	mux.HandleFunc("/tools/csv-import", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleToolsCSVImport)))

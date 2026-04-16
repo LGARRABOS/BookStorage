@@ -16,7 +16,7 @@ const createUsersTableSQL = `
 CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     username TEXT UNIQUE NOT NULL,
-    password TEXT NOT NULL,
+    password TEXT,
     validated INTEGER DEFAULT 0,
     is_admin INTEGER DEFAULT 0,
     is_superadmin INTEGER DEFAULT 0,
@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS users (
     email TEXT,
     bio TEXT,
     avatar_path TEXT,
-    is_public INTEGER DEFAULT 1
+    is_public INTEGER DEFAULT 1,
+    google_sub TEXT UNIQUE,
+    google_email TEXT
 );`
 
 const createWorksTableSQL = `

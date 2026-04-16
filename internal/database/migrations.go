@@ -56,6 +56,39 @@ CREATE TABLE IF NOT EXISTS csv_import_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_csv_import_sessions_user ON csv_import_sessions(user_id);
 `},
+	{Version: 9, Name: "google_oauth_users_oauth_states", Up: `
+PRAGMA foreign_keys = OFF;
+CREATE TABLE IF NOT EXISTS oauth_states (
+	state_hash TEXT PRIMARY KEY,
+	purpose TEXT NOT NULL,
+	user_id INTEGER,
+	next TEXT,
+	expires_at_unix INTEGER NOT NULL,
+	code_verifier TEXT NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at_unix);
+CREATE TABLE users_new (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	username TEXT UNIQUE NOT NULL,
+	password TEXT,
+	validated INTEGER DEFAULT 0,
+	is_admin INTEGER DEFAULT 0,
+	is_superadmin INTEGER DEFAULT 0,
+	display_name TEXT,
+	email TEXT,
+	bio TEXT,
+	avatar_path TEXT,
+	is_public INTEGER DEFAULT 1,
+	google_sub TEXT UNIQUE,
+	google_email TEXT
+);
+INSERT INTO users_new (id, username, password, validated, is_admin, is_superadmin, display_name, email, bio, avatar_path, is_public, google_sub, google_email)
+SELECT id, username, password, validated, is_admin, is_superadmin, display_name, email, bio, avatar_path, is_public, NULL, NULL FROM users;
+DROP TABLE users;
+ALTER TABLE users_new RENAME TO users;
+CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
+PRAGMA foreign_keys = ON;
+`},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.

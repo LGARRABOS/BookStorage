@@ -35,7 +35,7 @@
                     <h1>{{ t .T "login.title" }}</h1>
                     <p>{{ t .T "login.subtitle" }}</p>
                 </header>
-                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired }}
+                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired .GoogleOAuthError }}
                 <div class="flash-messages">
                     {{ if .SessionExpired }}
                         <p>{{ t .T "login.expired" }}</p>
@@ -49,7 +49,17 @@
                     {{ if .LoginError }}
                         <p>{{ t .T "login.error" }}</p>
                     {{ end }}
+                    {{ if eq .GoogleOAuthError "state" }}<p>{{ t .T "login.google_error.state" }}</p>{{ end }}
+                    {{ if eq .GoogleOAuthError "token" }}<p>{{ t .T "login.google_error.token" }}</p>{{ end }}
+                    {{ if eq .GoogleOAuthError "server" }}<p>{{ t .T "login.google_error.server" }}</p>{{ end }}
+                    {{ if eq .GoogleOAuthError "use_google" }}<p>{{ t .T "login.google_error.use_google" }}</p>{{ end }}
                 </div>
+                {{ end }}
+                {{ if .GoogleOAuthEnabled }}
+                <p style="margin-bottom:1rem;">
+                    <a class="btn btn-secondary" href="{{ .GoogleAuthURL }}" style="display:inline-flex;align-items:center;gap:0.5rem;">{{ t .T "login.google.continue" }}</a>
+                </p>
+                <p style="text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">{{ t .T "login.google.or" }}</p>
                 {{ end }}
                 <form method="POST" class="form-layout">
                     {{ if .LoginNext }}

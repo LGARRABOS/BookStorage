@@ -364,14 +364,16 @@ func (a *App) baseData(r *http.Request) map[string]any {
 	if r != nil && r.URL != nil {
 		currentPath = r.URL.Path
 	}
+	googleOAuth := a.Settings != nil && a.Settings.GoogleOAuthConfigured()
 	return map[string]any{
-		"Lang":         lang,
-		"T":            i18n.T(lang),
-		"Languages":    i18n.Languages(),
-		"ViewMode":     mode,
-		"IsMobileView": isMobile,
-		"CurrentPath":  currentPath,
-		"AppVersion":   a.Version,
+		"Lang":               lang,
+		"T":                  i18n.T(lang),
+		"Languages":          i18n.Languages(),
+		"ViewMode":           mode,
+		"IsMobileView":       isMobile,
+		"CurrentPath":        currentPath,
+		"AppVersion":         a.Version,
+		"GoogleOAuthEnabled": googleOAuth,
 	}
 }
 
@@ -905,7 +907,8 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 type userRow struct {
 	ID           int
 	Username     string
-	Password     string
+	Password     sql.NullString
+	GoogleSub    sql.NullString
 	Validated    int
 	IsAdmin      int
 	IsSuperadmin int
@@ -917,13 +920,19 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		// Messages de feedback via query string
 		q := r.URL.Query()
 		loginNext := safePostLoginRedirect(q.Get("next"))
+		googleAuthURL := "/auth/google"
+		if loginNext != "" {
+			googleAuthURL = "/auth/google?next=" + url.QueryEscape(loginNext)
+		}
 		data := a.mergeData(r, map[string]any{
-			"LoginError":      q.Get("error") != "",
-			"LoginPending":    q.Get("pending") != "",
-			"RegisterSuccess": q.Get("registered") != "",
-			"RegisterAuto":    q.Get("auto") == "1",
-			"SessionExpired":  q.Get("expired") != "",
-			"LoginNext":       loginNext,
+			"LoginError":       q.Get("error") != "",
+			"LoginPending":     q.Get("pending") != "",
+			"RegisterSuccess":  q.Get("registered") != "",
+			"RegisterAuto":     q.Get("auto") == "1",
+			"SessionExpired":   q.Get("expired") != "",
+			"LoginNext":        loginNext,
+			"GoogleAuthURL":    googleAuthURL,
+			"GoogleOAuthError": strings.TrimSpace(q.Get("google_error")),
 		})
 		a.renderTemplate(w, r, "login", data)
 	case http.MethodPost:
@@ -932,18 +941,23 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 		var u userRow
 		err := a.DB.QueryRow(
-			`SELECT id, username, password, validated, is_admin, is_superadmin
+			`SELECT id, username, password, google_sub, validated, is_admin, is_superadmin
              FROM users WHERE username = ?`,
 			username,
-		).Scan(&u.ID, &u.Username, &u.Password, &u.Validated, &u.IsAdmin, &u.IsSuperadmin)
+		).Scan(&u.ID, &u.Username, &u.Password, &u.GoogleSub, &u.Validated, &u.IsAdmin, &u.IsSuperadmin)
 		if err != nil {
 			// Utilisateur introuvable
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
 
+		if u.GoogleSub.Valid && strings.TrimSpace(u.GoogleSub.String) != "" && (!u.Password.Valid || strings.TrimSpace(u.Password.String) == "") {
+			http.Redirect(w, r, "/login?google_error=use_google", http.StatusFound)
+			return
+		}
+
 		// Verify password (supports Werkzeug and plaintext)
-		if !verifyPassword(u.Password, password) {
+		if !u.Password.Valid || !verifyPassword(u.Password.String, password) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
@@ -2002,7 +2016,9 @@ func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 type profileUser struct {
 	ID          int
 	Username    string
-	Password    string
+	Password    sql.NullString
+	GoogleSub   sql.NullString
+	GoogleEmail sql.NullString
 	DisplayName sql.NullString
 	Email       sql.NullString
 	Bio         sql.NullString
@@ -2044,13 +2060,15 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	var u profileUser
 	err := a.DB.QueryRow(
-		`SELECT id, username, password, display_name, email, bio, avatar_path, is_public
+		`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public
          FROM users WHERE id = ?`,
 		userID,
 	).Scan(
 		&u.ID,
 		&u.Username,
 		&u.Password,
+		&u.GoogleSub,
+		&u.GoogleEmail,
 		&u.DisplayName,
 		&u.Email,
 		&u.Bio,
@@ -2080,15 +2098,19 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		if tok != "" {
 			currentSessionHash = hashSessionToken(tok)
 		}
+		q := r.URL.Query()
 		a.renderTemplate(w, r, "profile", a.mergeData(r, map[string]any{
-			"User":           u,
-			"TotalWorks":     totalWorks,
-			"TotalChapters":  totalChapters,
-			"CompletedCount": completedCount,
-			"ReadingCount":   readingCount,
-			"Sessions":       sessions,
-			"CurrentSession": currentSessionHash,
-			"LogoutAllDone":  r.URL.Query().Get("logout_all") == "1",
+			"User":             u,
+			"TotalWorks":       totalWorks,
+			"TotalChapters":    totalChapters,
+			"CompletedCount":   completedCount,
+			"ReadingCount":     readingCount,
+			"Sessions":         sessions,
+			"CurrentSession":   currentSessionHash,
+			"LogoutAllDone":    q.Get("logout_all") == "1",
+			"GoogleLinked":     q.Get("google_linked") == "1",
+			"GoogleUnlinked":   q.Get("google_unlinked") == "1",
+			"GoogleOAuthError": strings.TrimSpace(q.Get("google_error")),
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
@@ -2118,8 +2140,12 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			updates["username"] = newUsername
 		}
 
+		hasLocalPassword := u.Password.Valid && strings.TrimSpace(u.Password.String) != ""
+
 		if newPassword != "" || confirmPassword != "" {
-			requirePasswordCheck = true
+			if hasLocalPassword {
+				requirePasswordCheck = true
+			}
 			if newPassword != confirmPassword {
 				http.Redirect(w, r, "/profile", http.StatusFound)
 				return
@@ -2128,7 +2154,6 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 				http.Redirect(w, r, "/profile", http.StatusFound)
 				return
 			}
-			// NOTE: storing in plaintext to stay consistent with the rest of the Go app.
 			hashedPassword, err := hashPassword(newPassword)
 			if err != nil {
 				http.Redirect(w, r, "/profile", http.StatusFound)
@@ -2138,10 +2163,13 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if requirePasswordCheck {
-			if currentPassword == "" || !verifyPassword(u.Password, currentPassword) {
-				http.Redirect(w, r, "/profile", http.StatusFound)
-				return
+			if hasLocalPassword {
+				if currentPassword == "" || !verifyPassword(u.Password.String, currentPassword) {
+					http.Redirect(w, r, "/profile", http.StatusFound)
+					return
+				}
 			}
+			// Compte sans mot de passe local : changement de pseudo ou premier mot de passe sans "mot de passe actuel".
 		}
 
 		if displayName != "" {
@@ -2236,20 +2264,35 @@ func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 	}
 	currentPassword := r.FormValue("current_password")
 	confirmText := strings.TrimSpace(r.FormValue("confirm_delete"))
-	if currentPassword == "" || strings.ToUpper(confirmText) != "SUPPRIMER" {
+	if strings.ToUpper(confirmText) != "SUPPRIMER" {
 		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
 		return
 	}
 
-	var storedPassword string
+	var storedPassword sql.NullString
 	var avatarPath sql.NullString
+	var googleSub sql.NullString
 	err := a.DB.QueryRow(
-		`SELECT password, avatar_path FROM users WHERE id = ?`,
+		`SELECT password, avatar_path, google_sub FROM users WHERE id = ?`,
 		userID,
-	).Scan(&storedPassword, &avatarPath)
-	if err != nil || !verifyPassword(storedPassword, currentPassword) {
+	).Scan(&storedPassword, &avatarPath, &googleSub)
+	if err != nil {
 		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
 		return
+	}
+	hasLocalPassword := storedPassword.Valid && strings.TrimSpace(storedPassword.String) != ""
+	googleLinked := googleSub.Valid && strings.TrimSpace(googleSub.String) != ""
+	isGoogleOnly := !hasLocalPassword && googleLinked
+	if isGoogleOnly {
+		if strings.TrimSpace(currentPassword) != "" {
+			http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+			return
+		}
+	} else {
+		if currentPassword == "" || !verifyPassword(storedPassword.String, currentPassword) {
+			http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
+			return
+		}
 	}
 
 	type imgPathRow struct {

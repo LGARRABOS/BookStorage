@@ -121,6 +121,11 @@ BOOKSTORAGE_SUPERADMIN_PASSWORD=SecurePassword123!
 | `BOOKSTORAGE_ENABLE_HSTS`  | Set to `true` or `1` to send `Strict-Transport-Security` (use only behind HTTPS) | (off) |
 | `BOOKSTORAGE_METRICS_TOKEN` | If set, secures `GET /metrics` with `Authorization: Bearer …` or `?token=…` for Prometheus. If empty, only loopback clients may scrape `/metrics`. | (empty) |
 | `BOOKSTORAGE_PROMETHEUS_QUERY_URL` | Base URL for Prometheus’s HTTP API (**Admin → Monitoring** embedded summary). Default `http://127.0.0.1:9091`. **Loopback hosts only** (`127.0.0.1`, `localhost`, `::1`). | (default) |
+| `BOOKSTORAGE_PUBLIC_ORIGIN` | Public site URL **without** trailing slash (e.g. `https://books.example.com`). Required together with the Google variables below to enable **Sign in with Google**. | (empty) |
+| `BOOKSTORAGE_GOOGLE_CLIENT_ID` | Google OAuth 2.0 **Web application** client ID. | (empty) |
+| `BOOKSTORAGE_GOOGLE_CLIENT_SECRET` | Google OAuth client secret. | (empty) |
+
+**Google OAuth:** in [Google Cloud Console](https://console.cloud.google.com/), create OAuth client credentials (type **Web application**), and add an authorized redirect URI exactly `{BOOKSTORAGE_PUBLIC_ORIGIN}/auth/google/callback`. Scopes used by the app are `openid`, `email`, and `profile`. In **production** (`BOOKSTORAGE_ENV=production`), `BOOKSTORAGE_PUBLIC_ORIGIN` must use **https**.
 
 ### Session lifetime
 
