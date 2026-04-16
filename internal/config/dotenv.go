@@ -1,19 +1,24 @@
 package config
 
 import (
+	"errors"
+	"io/fs"
 	"os"
 	"strings"
 )
 
-// LoadDotEnvFile reads KEY=value lines from path and sets os.Getenv.
-// Missing file is ignored. Lines starting with # and empty lines are skipped.
-func LoadDotEnvFile(path string) error {
+// LoadDotEnvFile reads KEY=value lines from path and sets os.Setenv for each pair.
+// It returns applied=true only if the file was read successfully.
+// Missing file, or unreadable file (e.g. permission denied for the service user), returns (false, nil) so that
+// processes started by systemd with EnvironmentFile= still work when the unit user cannot read the .env file on disk.
+// Lines starting with # and empty lines are skipped.
+func LoadDotEnvFile(path string) (applied bool, err error) {
 	data, err := os.ReadFile(path)
 	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
+		if os.IsNotExist(err) || errors.Is(err, fs.ErrPermission) {
+			return false, nil
 		}
-		return err
+		return false, err
 	}
 	for _, line := range strings.Split(string(data), "\n") {
 		line = strings.TrimSpace(line)
@@ -35,5 +40,5 @@ func LoadDotEnvFile(path string) error {
 		}
 		_ = os.Setenv(key, val)
 	}
-	return nil
+	return true, nil
 }
