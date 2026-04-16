@@ -42,7 +42,7 @@ Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL 
 - **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` avec les mêmes options réseau que votre politique (miroir, proxy, `-o Acquire::http::Pipeline-Depth=0`, etc.).
 - **Contournement** : installer PostgreSQL par les moyens habituels de la VM, puis **`./deploy/setup-postgres-vm.sh`** sans `--install-packages`.
 
-Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS` (intervalle des lignes `[watchdog …]` pendant `apt`, défaut 25), `BS_PG_PSQL_CWD` (répertoire utilisé avant `psql` en `sudo`, défaut `/tmp`).
+Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (hôte dans l’URL ; **si non défini**, le script tente d’utiliser l’**IPv4 LAN** détectée pour que la VM applicative n’ait pas besoin du DNS interne), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS`, `BS_PG_PSQL_CWD`.
 
 Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`[watchdog +…s]`** sur la sortie d’erreur : si elle continue d’apparaître, le processus **n’est pas figé** (souvent attente ou très faible débit). **`--apt-debug-http`** demande à apt de journaliser chaque requête HTTP (beaucoup de texte, mais on voit tout de suite si quelque chose bouge).
 
