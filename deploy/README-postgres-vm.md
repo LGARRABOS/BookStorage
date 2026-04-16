@@ -46,6 +46,18 @@ Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans 
 
 Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`[watchdog +…s]`** sur la sortie d’erreur : si elle continue d’apparaître, le processus **n’est pas figé** (souvent attente ou très faible débit). **`--apt-debug-http`** demande à apt de journaliser chaque requête HTTP (beaucoup de texte, mais on voit tout de suite si quelque chose bouge).
 
+## PostgreSQL ne répond pas (`No such file or directory` sur le socket)
+
+Le script utilise le socket local `/var/run/postgresql/.s.PGSQL.5432`. Si PostgreSQL **n’est pas démarré**, ce fichier n’existe pas.
+
+```bash
+sudo systemctl start postgresql
+sudo systemctl status postgresql
+sudo systemctl enable postgresql   # si vous voulez le service au boot
+```
+
+Puis relancez `./deploy/setup-postgres-vm.sh`.
+
 ## Après l’exécution
 
 1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** (ex. `sslmode=prefer`, pas tronquée).
