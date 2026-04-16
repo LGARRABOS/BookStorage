@@ -395,7 +395,7 @@
   "admin.database.delete_error": "No se pudo eliminar (respuesta del servidor o red).",
   "admin.migrate_pg.tab": "PostgreSQL",
   "admin.migrate_pg.title": "Migrate to PostgreSQL",
-  "admin.migrate_pg.intro": "Copy all data from this server's SQLite file to a PostgreSQL database, write BOOKSTORAGE_POSTGRES_URL to your .env file, remove the SQLite file, then stop this process (restart with systemd or Docker so the app reloads the new configuration).",
+  "admin.migrate_pg.intro": "Copy all data from this server's SQLite file to a PostgreSQL database, write BOOKSTORAGE_POSTGRES_URL to your .env file, remove the SQLite file, then stop this process (restart with systemd or Docker so the app reloads the new configuration). Network: PostgreSQL should be reachable from this server on a private LAN/VPN (typical self-host; do not rely on public DNS for internal-only hostnames). Use the database server's private IP in the URL, or map a name via /etc/hosts on this VM.",
   "admin.migrate_pg.url_label": "PostgreSQL URL",
   "admin.migrate_pg.test": "Test connection",
   "admin.migrate_pg.migrate": "Migrate",

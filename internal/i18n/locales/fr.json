@@ -395,7 +395,7 @@
   "admin.database.delete_error": "Suppression impossible (réponse serveur ou réseau).",
   "admin.migrate_pg.tab": "PostgreSQL",
   "admin.migrate_pg.title": "Migrer vers PostgreSQL",
-  "admin.migrate_pg.intro": "Copie toutes les données du fichier SQLite vers une base PostgreSQL, écrit BOOKSTORAGE_POSTGRES_URL dans le fichier .env, supprime le fichier SQLite local, puis arrête ce processus (redémarrer avec systemd ou Docker pour recharger la configuration).",
+  "admin.migrate_pg.intro": "Copie toutes les données du fichier SQLite vers une base PostgreSQL, écrit BOOKSTORAGE_POSTGRES_URL dans le fichier .env, supprime le fichier SQLite local, puis arrête ce processus (redémarrer avec systemd ou Docker pour recharger la configuration). Réseau : Postgres doit être sur un LAN/VPN joignable depuis cette VM (modèle habituel : pas d’exposition Internet du port 5432). Utilisez l’adresse IP privée dans l’URL ou un nom défini sur cette machine (/etc/hosts) ; un DNS public ne résout pas les noms internes.",
   "admin.migrate_pg.url_label": "URL PostgreSQL",
   "admin.migrate_pg.test": "Tester la connexion",
   "admin.migrate_pg.migrate": "Migrer",
