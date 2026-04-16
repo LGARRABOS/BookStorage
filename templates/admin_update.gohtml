@@ -44,6 +44,7 @@
                         <a class="admin-tab" href="/admin/database">{{ t .T "admin.database" }}</a>
                         <a class="admin-tab" href="/admin/enrich">{{ t .T "admin.enrich" }}</a>
                         <a class="admin-tab active" href="/admin/update">{{ t .T "admin.update" }}</a>
+                        {{ if .ShowPostgresMigrate }}<a class="admin-tab" href="/admin/migrate-postgres">{{ t .T "admin.migrate_pg.tab" }}</a>{{ end }}
                     </nav>
                 </header>
 
