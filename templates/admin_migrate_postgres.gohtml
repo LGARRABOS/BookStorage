@@ -66,7 +66,7 @@
             setMsg('…');
             const postgres_url = document.getElementById('pgurl').value.trim();
             const { ok, j } = await post('/api/admin/migrate-postgres/test', { postgres_url });
-            setMsg(ok ? ('OK: ' + (j.version || '')) : ('Erreur: ' + (j.error || 'unknown')));
+            setMsg(ok ? ('OK: ' + (j.version || '')) : ('Erreur: ' + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : '')));
         });
         document.getElementById('btn-migrate').addEventListener('click', async function(){
             if (!confirm({{ jsstr (t .T "admin.migrate_pg.confirm") }})) return;
@@ -76,7 +76,7 @@
             if (ok) {
                 setMsg({{ jsstr (t .T "admin.migrate_pg.success") }});
             } else {
-                setMsg('Erreur: ' + (j.error || 'unknown'));
+                setMsg('Erreur: ' + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : ''));
             }
         });
     })();
