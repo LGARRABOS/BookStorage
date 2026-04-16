@@ -127,7 +127,8 @@ func main() {
 	}
 
 	envFile := config.ResolveEnvFilePath(root, configPath)
-	if err := config.LoadDotEnvFile(envFile); err != nil {
+	dotenvOK, err := config.LoadDotEnvFile(envFile)
+	if err != nil {
 		log.Fatalf("load .env: %v", err)
 	}
 
@@ -135,7 +136,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
-	settings.EnvFilePath = envFile
+	if dotenvOK {
+		settings.EnvFilePath = envFile
+	}
 
 	siteConfig := config.LoadSiteConfig(root)
 
