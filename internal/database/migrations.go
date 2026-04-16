@@ -16,6 +16,9 @@ type migration struct {
 	Version int
 	Name    string
 	Up      string
+	// OutsideTx: run Up on db (not sql.Tx). Required when Up contains DDL that breaks FK
+	// while rebuilding a referenced table — SQLite ignores PRAGMA foreign_keys inside BEGIN.
+	OutsideTx bool
 }
 
 var migrations = []migration{
@@ -56,8 +59,7 @@ CREATE TABLE IF NOT EXISTS csv_import_sessions (
 );
 CREATE INDEX IF NOT EXISTS idx_csv_import_sessions_user ON csv_import_sessions(user_id);
 `},
-	{Version: 9, Name: "google_oauth_users_oauth_states", Up: `
-PRAGMA foreign_keys = OFF;
+	{Version: 9, Name: "google_oauth_users_oauth_states", OutsideTx: true, Up: `
 CREATE TABLE IF NOT EXISTS oauth_states (
 	state_hash TEXT PRIMARY KEY,
 	purpose TEXT NOT NULL,
@@ -87,11 +89,12 @@ SELECT id, username, password, validated, is_admin, is_superadmin, display_name,
 DROP TABLE users;
 ALTER TABLE users_new RENAME TO users;
 CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
-PRAGMA foreign_keys = ON;
 `},
 }
 
 // ApplyMigrations runs pending numbered migrations in a transaction each.
+// Migrations with OutsideTx run their Up script on the raw connection (PRAGMA foreign_keys
+// is ignored inside BEGIN, which would break migrations that DROP users while child tables exist).
 func ApplyMigrations(db *sql.DB) error {
 	if _, err := db.Exec(createSchemaMigrationsTableSQL); err != nil {
 		return fmt.Errorf("schema_migrations table: %w", err)
@@ -105,6 +108,36 @@ func ApplyMigrations(db *sql.DB) error {
 		}
 		if !errors.Is(err, sql.ErrNoRows) {
 			return fmt.Errorf("check migration %d: %w", m.Version, err)
+		}
+
+		if m.OutsideTx {
+			if _, err := db.Exec(`PRAGMA foreign_keys = OFF`); err != nil {
+				return fmt.Errorf("migration %d: pragma foreign_keys=OFF: %w", m.Version, err)
+			}
+			if m.Up != "" {
+				if _, err := db.Exec(m.Up); err != nil {
+					_, _ = db.Exec(`PRAGMA foreign_keys = ON`)
+					return fmt.Errorf("migration %d (%s): %w", m.Version, m.Name, err)
+				}
+			}
+			tx, err := db.Begin()
+			if err != nil {
+				_, _ = db.Exec(`PRAGMA foreign_keys = ON`)
+				return fmt.Errorf("begin migration %d (record): %w", m.Version, err)
+			}
+			if _, err := tx.Exec(`INSERT INTO schema_migrations (version) VALUES (?)`, m.Version); err != nil {
+				_ = tx.Rollback()
+				_, _ = db.Exec(`PRAGMA foreign_keys = ON`)
+				return fmt.Errorf("record migration %d: %w", m.Version, err)
+			}
+			if err := tx.Commit(); err != nil {
+				_, _ = db.Exec(`PRAGMA foreign_keys = ON`)
+				return fmt.Errorf("commit migration %d: %w", m.Version, err)
+			}
+			if _, err := db.Exec(`PRAGMA foreign_keys = ON`); err != nil {
+				return fmt.Errorf("migration %d: pragma foreign_keys=ON: %w", m.Version, err)
+			}
+			continue
 		}
 
 		tx, err := db.Begin()
