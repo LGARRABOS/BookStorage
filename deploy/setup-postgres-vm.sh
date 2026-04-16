@@ -138,9 +138,8 @@ if ! command -v psql >/dev/null 2>&1; then
 	exit 1
 fi
 
-if [[ "$(id -u)" -eq 0 ]]; then
-	run_psql() { psql -v ON_ERROR_STOP=1 "$@"; }
-elif sudo -n true 2>/dev/null; then
+# Peer auth maps the Unix user to a PG role: root has no "root" role by default, so never call bare psql as root.
+if [[ "$(id -u)" -eq 0 ]] || sudo -n true 2>/dev/null; then
 	run_psql() { sudo -u postgres psql -v ON_ERROR_STOP=1 "$@"; }
 else
 	run_psql() { psql -v ON_ERROR_STOP=1 "$@"; }

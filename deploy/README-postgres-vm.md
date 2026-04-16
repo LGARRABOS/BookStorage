@@ -20,6 +20,8 @@ sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4 --apt-debug-htt
 
 Évitez `sudo deploy/...` sans `./` : selon le répertoire courant, le shell peut ne pas résoudre le chemin comme prévu.
 
+Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`sudo -u postgres psql`** (l’auth « peer » ne donne pas de rôle PostgreSQL à l’utilisateur `root`).
+
 ## Dépannage : `apt-get` très lent ou bloqué
 
 - **Symptôme** : `0% [Waiting for headers]` sur `archive.ubuntu.com` ou `security.ubuntu.com` — parfois **`apt-get update` réussit** puis **`apt-get install` reste à 0 %** (téléchargement des paquets, pas les mêmes connexions que pour les index).
