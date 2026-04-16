@@ -73,6 +73,39 @@ jobs:
           name: coverage-report
           path: coverage.out
 
+  postgres-tests:
+    name: PostgreSQL integration
+    runs-on: ubuntu-latest
+    needs: lint
+    timeout-minutes: 15
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: book
+          POSTGRES_PASSWORD: book
+          POSTGRES_DB: bookstorage_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U book -d bookstorage_ci"
+          --health-interval 2s
+          --health-timeout 5s
+          --health-retries 15
+    env:
+      BOOKSTORAGE_POSTGRES_URL: postgres://book:book@127.0.0.1:5432/bookstorage_ci?sslmode=disable
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Prepare Go environment
+        uses: ./.github/actions/setup-go
+        with:
+          go-version: ${{ env.GO_VERSION }}
+
+      - name: Run PostgreSQL integration tests
+        run: go test ./internal/database -run TestPostgresEnsureSchema -count=1 -v
+
   race-tests:
     name: Race condition tests
     runs-on: ubuntu-latest
@@ -96,6 +129,7 @@ jobs:
     runs-on: ubuntu-latest
     needs:
       - tests
+      - postgres-tests
       - race-tests
     timeout-minutes: 10
 

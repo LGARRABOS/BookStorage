@@ -40,7 +40,8 @@ OPTIONS
 ENVIRONMENT VARIABLES
     BOOKSTORAGE_HOST                 Listen address (default: 127.0.0.1)
     BOOKSTORAGE_PORT                 Port (default: 5000)
-    BOOKSTORAGE_DATABASE             SQLite database path (default: database.db)
+    BOOKSTORAGE_DATABASE             SQLite database path (default: database.db) when BOOKSTORAGE_POSTGRES_URL is unset
+    BOOKSTORAGE_POSTGRES_URL         Optional PostgreSQL URL (postgres://user:pass@host:port/db?sslmode=...)
     BOOKSTORAGE_SECRET_KEY           Secret key for sessions
     BOOKSTORAGE_SUPERADMIN_USERNAME  Super admin username (default: superadmin)
     BOOKSTORAGE_SUPERADMIN_PASSWORD  Super admin password
@@ -125,10 +126,16 @@ func main() {
 		root = filepath.Dir(configPath)
 	}
 
+	envFile := config.ResolveEnvFilePath(root, configPath)
+	if err := config.LoadDotEnvFile(envFile); err != nil {
+		log.Fatalf("load .env: %v", err)
+	}
+
 	settings, err := config.Load(root)
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
+	settings.EnvFilePath = envFile
 
 	siteConfig := config.LoadSiteConfig(root)
 
@@ -212,6 +219,9 @@ func main() {
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/monitoring", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminMonitoring)))
 	mux.HandleFunc("/admin/database", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminDatabase)))
+	mux.HandleFunc("/admin/migrate-postgres", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAdminMigratePostgres))))
+	mux.HandleFunc("POST /api/admin/migrate-postgres/test", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAPIAdminMigratePostgresTest))))
+	mux.HandleFunc("POST /api/admin/migrate-postgres/run", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAPIAdminMigratePostgresRun))))
 	mux.HandleFunc("POST /api/admin/database/delete", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminDatabaseDelete)))
 	mux.HandleFunc("/admin/enrich", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminEnrich)))
 	mux.HandleFunc("POST /api/admin/enrich/run", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminEnrichRun)))

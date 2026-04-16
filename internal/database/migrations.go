@@ -92,10 +92,33 @@ CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_pub
 `},
 }
 
-// ApplyMigrations runs pending numbered migrations in a transaction each.
+// LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
+const LatestSchemaMigrationVersion = 9
+
+// ApplyMigrations runs dialect-specific migration bookkeeping.
+func ApplyMigrations(c *Conn) error {
+	if c == nil {
+		return fmt.Errorf("nil connection")
+	}
+	if c.B == BackendPostgres {
+		return applyPostgresMigrationMarkers(c)
+	}
+	return applySQLiteMigrations(c.Std())
+}
+
+func applyPostgresMigrationMarkers(c *Conn) error {
+	for v := 1; v <= LatestSchemaMigrationVersion; v++ {
+		if _, err := c.Exec(`INSERT INTO schema_migrations (version) VALUES (?) ON CONFLICT (version) DO NOTHING`, v); err != nil {
+			return fmt.Errorf("postgres migration marker %d: %w", v, err)
+		}
+	}
+	return nil
+}
+
+// applySQLiteMigrations runs pending numbered migrations in a transaction each.
 // Migrations with OutsideTx run their Up script on the raw connection (PRAGMA foreign_keys
 // is ignored inside BEGIN, which would break migrations that DROP users while child tables exist).
-func ApplyMigrations(db *sql.DB) error {
+func applySQLiteMigrations(db *sql.DB) error {
 	if _, err := db.Exec(createSchemaMigrationsTableSQL); err != nil {
 		return fmt.Errorf("schema_migrations table: %w", err)
 	}

@@ -3,6 +3,7 @@ module bookstorage
 go 1.22
 
 require (
+	github.com/lib/pq v1.10.9
 	github.com/mattn/go-sqlite3 v1.14.33
 	golang.org/x/crypto v0.31.0
 	golang.org/x/oauth2 v0.21.0

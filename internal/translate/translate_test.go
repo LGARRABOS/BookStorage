@@ -8,11 +8,12 @@ import (
 	"testing"
 
 	"bookstorage/internal/config"
+	"bookstorage/internal/database"
 
 	_ "github.com/mattn/go-sqlite3"
 )
 
-func testDB(t *testing.T) *sql.DB {
+func testDB(t *testing.T) *database.Conn {
 	t.Helper()
 	db, err := sql.Open("sqlite3", ":memory:")
 	if err != nil {
@@ -29,7 +30,7 @@ func testDB(t *testing.T) *sql.DB {
 		t.Fatal(err)
 	}
 	t.Cleanup(func() { _ = db.Close() })
-	return db
+	return database.NewSQLiteConn(db)
 }
 
 func TestCachedToFrench_Caches(t *testing.T) {

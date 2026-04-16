@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"bookstorage/internal/catalog"
+	"bookstorage/internal/database"
 	"bookstorage/internal/i18n"
 )
 
@@ -66,7 +67,11 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE user_id = ?`, userID)
-	_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE datetime(created_at) < datetime('now', '-24 hours')`)
+	if a.DB.B == database.BackendPostgres {
+		_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE created_at < NOW() - interval '24 hours'`)
+	} else {
+		_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE datetime(created_at) < datetime('now', '-24 hours')`)
+	}
 	sid := randomHexID()
 	if _, err := a.DB.Exec(
 		`INSERT INTO csv_import_sessions (id, user_id, raw_csv) VALUES (?, ?, ?)`,

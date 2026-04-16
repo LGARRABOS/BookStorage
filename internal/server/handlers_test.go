@@ -38,7 +38,7 @@ func testSettings(dir string) *config.Settings {
 	}
 }
 
-func openTestDB(t *testing.T) (*sql.DB, *config.Settings) {
+func openTestDB(t *testing.T) (*database.Conn, *config.Settings) {
 	t.Helper()
 	dir := t.TempDir()
 	s := testSettings(dir)

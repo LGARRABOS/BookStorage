@@ -11,8 +11,13 @@ import (
 
 // Settings holds application configuration
 type Settings struct {
-	SecretKey            string
-	Database             string
+	SecretKey string
+	// Database is the SQLite database file path when not using PostgreSQL.
+	Database string
+	// PostgresURL is a libpq-style URL (postgres:// or postgresql://). When non-empty, the app uses PostgreSQL instead of SQLite.
+	PostgresURL string
+	// EnvFilePath is the absolute path to the loaded .env file (for admin migration merge). May be empty.
+	EnvFilePath          string
 	DataDirectory        string
 	UploadFolder         string
 	UploadURLPath        string
@@ -40,6 +45,11 @@ type Settings struct {
 	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
 	GoogleClientID     string
 	GoogleClientSecret string
+}
+
+// UsePostgres reports whether BOOKSTORAGE_POSTGRES_URL is set and PostgreSQL should be used.
+func (s *Settings) UsePostgres() bool {
+	return s != nil && strings.TrimSpace(s.PostgresURL) != ""
 }
 
 // GoogleOAuthConfigured reports whether Google OAuth routes should be active.
@@ -135,14 +145,22 @@ func Load(rootPath string) (*Settings, error) {
 		return nil, fmt.Errorf("resolve data dir: %w", err)
 	}
 
-	dbPath, err := resolveFile(
-		root,
-		dataDir,
-		os.Getenv("BOOKSTORAGE_DATABASE"),
-		defaultDatabaseName,
-	)
-	if err != nil {
-		return nil, fmt.Errorf("resolve database: %w", err)
+	postgresURL := strings.TrimSpace(os.Getenv("BOOKSTORAGE_POSTGRES_URL"))
+
+	var dbPath string
+	if postgresURL == "" {
+		var err error
+		dbPath, err = resolveFile(
+			root,
+			dataDir,
+			os.Getenv("BOOKSTORAGE_DATABASE"),
+			defaultDatabaseName,
+		)
+		if err != nil {
+			return nil, fmt.Errorf("resolve database: %w", err)
+		}
+	} else {
+		dbPath = filepath.Join(dataDir, defaultDatabaseName)
 	}
 
 	uploadFolder, err := resolveDirectory(root, os.Getenv("BOOKSTORAGE_UPLOAD_DIR"), defaultUploadDir)
@@ -194,6 +212,7 @@ func Load(rootPath string) (*Settings, error) {
 	s := &Settings{
 		SecretKey:                secret,
 		Database:                 dbPath,
+		PostgresURL:              postgresURL,
 		DataDirectory:            dataDir,
 		UploadFolder:             uploadFolder,
 		UploadURLPath:            uploadURL,
@@ -234,6 +253,16 @@ func validateSettings(s *Settings) error {
 	}
 	if googleParts != 0 && googleParts != 3 {
 		return fmt.Errorf("google OAuth requires all of BOOKSTORAGE_PUBLIC_ORIGIN, BOOKSTORAGE_GOOGLE_CLIENT_ID, and BOOKSTORAGE_GOOGLE_CLIENT_SECRET")
+	}
+
+	if strings.TrimSpace(s.PostgresURL) != "" {
+		u, err := url.Parse(s.PostgresURL)
+		if err != nil || u.Scheme == "" {
+			return fmt.Errorf("BOOKSTORAGE_POSTGRES_URL must be a valid URL")
+		}
+		if strings.ToLower(u.Scheme) != "postgres" && strings.ToLower(u.Scheme) != "postgresql" {
+			return fmt.Errorf("BOOKSTORAGE_POSTGRES_URL scheme must be postgres or postgresql")
+		}
 	}
 
 	if strings.ToLower(s.Environment) != "production" {

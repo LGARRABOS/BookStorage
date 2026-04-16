@@ -26,6 +26,7 @@ import (
 
 	"bookstorage/internal/catalog"
 	"bookstorage/internal/config"
+	"bookstorage/internal/database"
 	"bookstorage/internal/i18n"
 	"bookstorage/internal/recommend"
 	"bookstorage/internal/translate"
@@ -37,13 +38,13 @@ import (
 type App struct {
 	Settings        *config.Settings
 	SiteConfig      *config.SiteConfig
-	DB              *sql.DB
+	DB              *database.Conn
 	TemplatesWeb    *template.Template
 	TemplatesMobile *template.Template
 	Version         string
 }
 
-func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *sql.DB, version string) *App {
+func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *database.Conn, version string) *App {
 	funcMap := template.FuncMap{
 		"work_image_url": func(stored string) string {
 			return workImageURL(settings, stored)
@@ -638,6 +639,39 @@ func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	}
 }
 
+// RequireSuperadmin allows only users with is_superadmin set (in addition to admin).
+func (a *App) RequireSuperadmin(next http.HandlerFunc) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		userID, ok := a.currentUserID(r)
+		if !ok {
+			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
+			return
+		}
+		var isAdmin, isSuper int
+		err := a.DB.QueryRow(
+			`SELECT is_admin, is_superadmin FROM users WHERE id = ?`,
+			userID,
+		).Scan(&isAdmin, &isSuper)
+		if err != nil || isAdmin == 0 || isSuper == 0 {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusForbidden)
+				_, _ = w.Write([]byte(`{"error":"forbidden"}`))
+				return
+			}
+			w.WriteHeader(http.StatusForbidden)
+			a.renderTemplate(w, r, "403", a.mergeData(r, map[string]any{
+				"RequestedPath": r.URL.Path,
+			}))
+			return
+		}
+		if strings.HasPrefix(r.URL.Path, "/admin") || strings.HasPrefix(r.URL.Path, "/api/admin") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
+		next(w, r)
+	}
+}
+
 type responseRecorder struct {
 	header http.Header
 	status int
@@ -1002,6 +1036,30 @@ func (a *App) HandleLogoutAll(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/profile?logout_all=1", http.StatusFound)
 }
 
+// nullFlexTime scans SQLite text timestamps and PostgreSQL timestamptz into a string form.
+type nullFlexTime struct {
+	sql.NullString
+}
+
+func (n *nullFlexTime) Scan(src any) error {
+	if src == nil {
+		n.Valid, n.String = false, ""
+		return nil
+	}
+	n.Valid = true
+	switch v := src.(type) {
+	case []byte:
+		n.String = string(v)
+	case string:
+		n.String = v
+	case time.Time:
+		n.String = v.UTC().Format("2006-01-02 15:04:05")
+	default:
+		n.String = fmt.Sprint(v)
+	}
+	return nil
+}
+
 type workRow struct {
 	ID           int
 	Title        string
@@ -1013,7 +1071,7 @@ type workRow struct {
 	Rating       int
 	Notes        sql.NullString
 	UserID       int
-	UpdatedAt    sql.NullString
+	UpdatedAt    nullFlexTime
 	IsAdult      sql.NullInt64
 	ParentWorkID sql.NullInt64
 	SeriesSort   int
@@ -1857,8 +1915,12 @@ func (a *App) HandleDeleteWork(w http.ResponseWriter, r *http.Request) {
 func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
+	updatedAtExpr := `COALESCE(updated_at, '')`
+	if a.Settings.UsePostgres() {
+		updatedAtExpr = `COALESCE(to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'), '')`
+	}
 	rows, err := a.DB.Query(
-		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, COALESCE(updated_at, ''),
+		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, `+updatedAtExpr+`,
                 catalog_id, COALESCE(is_adult, 0), COALESCE(image_path, '')
          FROM works WHERE user_id = ? ORDER BY title`,
 		userID,

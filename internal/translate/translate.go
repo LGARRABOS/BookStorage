@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"bookstorage/internal/config"
+	"bookstorage/internal/database"
 )
 
 const (
@@ -26,7 +27,7 @@ const (
 
 // CachedToFrench returns French text when TranslateURL is set: uses cache or calls the translation API.
 // On failure it returns the original text and translated=false (no error, so callers can still serve the page).
-func CachedToFrench(db *sql.DB, s *config.Settings, sourceText string) (out string, translated bool, err error) {
+func CachedToFrench(db *database.Conn, s *config.Settings, sourceText string) (out string, translated bool, err error) {
 	sourceText = strings.TrimSpace(sourceText)
 	if s == nil || s.TranslateURL == "" || sourceText == "" {
 		return sourceText, false, nil
@@ -53,11 +54,13 @@ func CachedToFrench(db *sql.DB, s *config.Settings, sourceText string) (out stri
 	}
 	translatedText = strings.TrimSpace(translatedText)
 
-	if _, err := db.Exec(
-		`INSERT INTO translation_cache (source_hash, target_lang, translated_text) VALUES (?, ?, ?)
-		 ON CONFLICT(source_hash, target_lang) DO UPDATE SET translated_text = excluded.translated_text`,
-		key, frTarget, translatedText,
-	); err != nil {
+	ins := `INSERT INTO translation_cache (source_hash, target_lang, translated_text) VALUES (?, ?, ?)
+		 ON CONFLICT(source_hash, target_lang) DO UPDATE SET translated_text = excluded.translated_text`
+	if db != nil && db.B == database.BackendPostgres {
+		ins = `INSERT INTO translation_cache (source_hash, target_lang, translated_text) VALUES (?, ?, ?)
+		 ON CONFLICT (source_hash, target_lang) DO UPDATE SET translated_text = EXCLUDED.translated_text`
+	}
+	if _, err := db.Exec(ins, key, frTarget, translatedText); err != nil {
 		return translatedText, true, err
 	}
 	return translatedText, true, nil

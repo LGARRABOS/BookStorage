@@ -1,0 +1,72 @@
+{{ define "admin_migrate_postgres" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.migrate_pg.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_account_links" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container" style="max-width: 42rem; padding: 1.5rem 1rem;">
+            <h1>{{ t .T "admin.migrate_pg.title" }}</h1>
+            <p class="db-intro">{{ t .T "admin.migrate_pg.intro" }}</p>
+            <label for="pgurl" style="display:block;font-weight:600;margin:1rem 0 0.35rem;">{{ t .T "admin.migrate_pg.url_label" }}</label>
+            <textarea id="pgurl" rows="4" style="width:100%;padding:0.6rem;border-radius:0.5rem;border:1px solid var(--border-subtle);font-family:monospace;font-size:0.85rem;" placeholder="postgresql://user:pass@host:5432/dbname?sslmode=require"></textarea>
+            <div style="display:flex;flex-wrap:wrap;gap:0.5rem;margin-top:1rem;">
+                <button type="button" class="btn" id="btn-test">{{ t .T "admin.migrate_pg.test" }}</button>
+                <button type="button" class="btn btn-primary" id="btn-migrate">{{ t .T "admin.migrate_pg.migrate" }}</button>
+            </div>
+            <pre id="out" style="margin-top:1rem;padding:0.75rem;border-radius:0.5rem;background:var(--surface);border:1px solid var(--border-subtle);white-space:pre-wrap;font-size:0.82rem;min-height:3rem;"></pre>
+        </div>
+    </main>
+    <script>
+    (function(){
+        const out = document.getElementById('out');
+        function setMsg(s){ out.textContent = s; }
+        async function post(path, body){
+            const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
+            const j = await r.json().catch(()=>({}));
+            return { ok: r.ok, status: r.status, j };
+        }
+        document.getElementById('btn-test').addEventListener('click', async function(){
+            setMsg('…');
+            const postgres_url = document.getElementById('pgurl').value.trim();
+            const { ok, j } = await post('/api/admin/migrate-postgres/test', { postgres_url });
+            setMsg(ok ? ('OK: ' + (j.version || '')) : ('Erreur: ' + (j.error || 'unknown')));
+        });
+        document.getElementById('btn-migrate').addEventListener('click', async function(){
+            if (!confirm({{ jsstr (t .T "admin.migrate_pg.confirm") }})) return;
+            setMsg('{{ t .T "admin.migrate_pg.running" }}');
+            const postgres_url = document.getElementById('pgurl').value.trim();
+            const { ok, j } = await post('/api/admin/migrate-postgres/run', { postgres_url });
+            if (ok) {
+                setMsg({{ jsstr (t .T "admin.migrate_pg.success") }});
+            } else {
+                setMsg('Erreur: ' + (j.error || 'unknown'));
+            }
+        });
+    })();
+    </script>
+</body>
+</html>
+{{ end }}

@@ -68,8 +68,7 @@ func ensureWorksFTS5(db *sql.DB) error {
 	return tx.Commit()
 }
 
-// WorksFTSEnabled reports whether the FTS5 virtual table for works exists.
-func WorksFTSEnabled(db *sql.DB) bool {
+func worksFTSEnabledSQLite(db *sql.DB) bool {
 	if db == nil {
 		return false
 	}
@@ -78,4 +77,29 @@ func WorksFTSEnabled(db *sql.DB) bool {
 		return false
 	}
 	return n > 0
+}
+
+func worksFTSEnabledPostgres(c *Conn) bool {
+	if c == nil {
+		return false
+	}
+	var n int
+	if err := c.QueryRow(
+		`SELECT COUNT(*) FROM information_schema.columns
+		 WHERE table_schema = 'public' AND table_name = 'works' AND column_name = 'works_fts_document'`,
+	).Scan(&n); err != nil {
+		return false
+	}
+	return n > 0
+}
+
+// WorksFTSEnabled reports whether full-text search is available for works (FTS5 on SQLite, tsvector on Postgres).
+func WorksFTSEnabled(c *Conn) bool {
+	if c == nil {
+		return false
+	}
+	if c.B == BackendPostgres {
+		return worksFTSEnabledPostgres(c)
+	}
+	return worksFTSEnabledSQLite(c.Std())
 }
