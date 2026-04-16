@@ -44,13 +44,19 @@ func (a *App) HandleAPIAdminMigratePostgresTest(w http.ResponseWriter, r *http.R
 	}
 	db, err := database.OpenPostgresURL(u)
 	if err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "connect_failed")
+		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error":  "connect_failed",
+			"detail": err.Error(),
+		})
 		return
 	}
 	defer func() { _ = db.Close() }()
 	var version string
 	if err := db.QueryRow(`SELECT version()`).Scan(&version); err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "query_failed")
+		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error":  "query_failed",
+			"detail": err.Error(),
+		})
 		return
 	}
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true, "version": version})

@@ -38,6 +38,14 @@ Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`
 
 ## Après l’exécution
 
-1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite).
-2. Sur la VM PostgreSQL, configurez `listen_addresses` et `pg_hba.conf` pour n’autoriser que l’hôte ou le réseau de l’application (évitez d’exposer 5432 sur Internet sans TLS et sans filtrage strict).
-3. Le schéma des tables est créée par BookStorage au premier démarrage (`EnsureSchema`) ; ce script ne duplique pas le schéma applicatif.
+1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** (ex. `sslmode=prefer`, pas tronquée).
+2. **Connexion depuis une autre machine** : sur Ubuntu/Debian, PostgreSQL écoute souvent **uniquement sur `127.0.0.1`**. Il faut alors :
+   - dans **`postgresql.conf`** (souvent `/etc/postgresql/14/main/postgresql.conf`) : `listen_addresses = '*'` ou l’IP LAN de la VM ;
+   - dans **`pg_hba.conf`** (même répertoire) : une ligne du type `host  all  all  192.168.1.0/24  scram-sha-256` (adaptez le sous-réseau à votre LAN) ;
+   - **`sudo systemctl restart postgresql`** ;
+   - ouvrir le **pare-feu** (port `5432/tcp`) depuis l’IP de la VM applicative.
+3. Si l’appli affiche **`connect_failed`** : utilisez l’**IP** dans l’URL si le **nom d’hôte** de la VM Postgres n’est pas dans le DNS de la VM app (sinon `dial tcp: lookup …`). Après mise à jour BookStorage, le test d’admin affiche aussi un **détail** (`detail`) avec le message d’erreur PostgreSQL/driver.
+4. Le schéma des tables est créée par BookStorage au premier démarrage (`EnsureSchema`) ; ce script ne duplique pas le schéma applicatif.
+
+Pour générer l’URL avec l’IP LAN dans le champ hôte (au lieu du hostname), sur la VM Postgres :  
+`sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh` (adaptez l’IP).
