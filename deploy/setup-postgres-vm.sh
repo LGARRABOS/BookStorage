@@ -11,6 +11,7 @@
 #
 # Flags:
 #   --install-packages   run apt-get update && apt-get install -y postgresql postgresql-contrib (requires sudo)
+#   --apt-ipv4           pass -o Acquire::ForceIPv4=true to apt (when IPv6 or some routes hang on "Waiting for headers")
 #
 # Does NOT open PostgreSQL to the world: adjust listen_addresses and pg_hba.conf yourself
 # to allow only your application VM / subnet.
@@ -18,20 +19,44 @@
 set -euo pipefail
 
 INSTALL_PKGS=0
+APT_IPV4=0
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--install-packages) INSTALL_PKGS=1; shift ;;
+		--apt-ipv4) APT_IPV4=1; shift ;;
 		-h|--help)
-			sed -n '1,35p' "$0"
+			sed -n '1,45p' "$0"
 			exit 0
 			;;
 		*) echo "unknown option: $1" >&2; exit 1 ;;
 	esac
 done
 
+# apt: avoid indefinite "Waiting for headers" on bad mirrors / IPv6; allow override via BS_PG_APT_EXTRA_OPTS.
+apt_base_args() {
+	local -a a=(
+		-y
+		-o Acquire::http::Timeout=120
+		-o Acquire::https::Timeout=120
+		-o Acquire::ftp::Timeout=120
+		-o Acquire::Retries=3
+	)
+	if [[ "${APT_IPV4}" -eq 1 ]]; then
+		a+=(-o Acquire::ForceIPv4=true)
+	fi
+	printf '%s\n' "${a[@]}"
+}
+
 if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
-	sudo apt-get update -y
-	sudo apt-get install -y postgresql postgresql-contrib
+	if ! command -v apt-get >/dev/null 2>&1; then
+		echo "apt-get not found; install PostgreSQL with your distro tools, then re-run without --install-packages." >&2
+		exit 1
+	fi
+	echo "==> apt-get update (timeouts 120s, retries 3; use --apt-ipv4 if this hangs)..." >&2
+	mapfile -t _APT_ARGS < <(apt_base_args)
+	sudo apt-get "${_APT_ARGS[@]}" update
+	echo "==> apt-get install postgresql ..." >&2
+	sudo apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
 fi
 
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
