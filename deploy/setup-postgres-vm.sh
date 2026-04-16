@@ -139,8 +139,9 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 # Peer auth maps the Unix user to a PG role: root has no "root" role by default, so never call bare psql as root.
+# -H sets HOME to postgres' datadir so libpq does not try to chdir to the invoker's cwd (often under /home/foo, not traversable by postgres).
 if [[ "$(id -u)" -eq 0 ]] || sudo -n true 2>/dev/null; then
-	run_psql() { sudo -u postgres psql -v ON_ERROR_STOP=1 "$@"; }
+	run_psql() { sudo -H -u postgres psql -v ON_ERROR_STOP=1 "$@"; }
 else
 	run_psql() { psql -v ON_ERROR_STOP=1 "$@"; }
 fi
