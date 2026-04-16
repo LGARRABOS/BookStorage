@@ -1,6 +1,7 @@
 package config
 
 import (
+	"net/url"
 	"strings"
 	"testing"
 )
@@ -82,5 +83,26 @@ func TestValidateSettingsProductionGoogleRequiresHTTPSOrigin(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+}
+
+func TestNormalizePostgresURLForLibPQPreferToDisable(t *testing.T) {
+	out, err := NormalizePostgresURLForLibPQ("postgresql://u:p@127.0.0.1:5432/dbname?sslmode=prefer")
+	if err != nil {
+		t.Fatal(err)
+	}
+	u, err := url.Parse(out)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u.Query().Get("sslmode") != "disable" {
+		t.Fatalf("got query %q", u.RawQuery)
+	}
+}
+
+func TestNormalizePostgresURLForLibPQUnsupportedMode(t *testing.T) {
+	_, err := NormalizePostgresURLForLibPQ("postgresql://u:p@127.0.0.1:5432/db?sslmode=notamode")
+	if err == nil {
+		t.Fatal("expected error")
 	}
 }

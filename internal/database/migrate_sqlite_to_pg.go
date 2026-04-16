@@ -18,7 +18,11 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string, s *config.Settings)
 	if pgDSN == "" {
 		return fmt.Errorf("empty postgres URL")
 	}
-	pg, err := sql.Open("postgres", pgDSN)
+	norm, err := config.NormalizePostgresURLForLibPQ(pgDSN)
+	if err != nil {
+		return err
+	}
+	pg, err := sql.Open("postgres", norm)
 	if err != nil {
 		return err
 	}
@@ -83,7 +87,7 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string, s *config.Settings)
 
 	if s != nil && strings.TrimSpace(s.EnvFilePath) != "" {
 		if err := config.MergeEnvKeys(s.EnvFilePath, map[string]string{
-			"BOOKSTORAGE_POSTGRES_URL": pgDSN,
+			"BOOKSTORAGE_POSTGRES_URL": norm,
 		}); err != nil {
 			return fmt.Errorf("update .env: %w", err)
 		}

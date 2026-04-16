@@ -96,7 +96,7 @@ Causes fréquentes :
 
 ## Après l’exécution
 
-1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** (ex. `sslmode=prefer`, pas tronquée).
+1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** ; pour `sslmode`, le driver Go (`lib/pq`) accepte **`disable`**, **`require`**, **`verify-ca`**, **`verify-full`** (pas `prefer` — le script et l’app normalisent ou utilisent `disable` par défaut sur LAN).
 2. **Connexion depuis une autre machine** : sur Ubuntu/Debian, PostgreSQL écoute souvent **uniquement sur `127.0.0.1`**. Il faut alors :
    - dans **`postgresql.conf`** (souvent `/etc/postgresql/14/main/postgresql.conf`) : `listen_addresses = '*'` ou l’IP LAN de la VM ;
    - dans **`pg_hba.conf`** (même répertoire) : une ligne du type `host  all  all  192.168.1.0/24  scram-sha-256` (adaptez le sous-réseau à votre LAN) ;
