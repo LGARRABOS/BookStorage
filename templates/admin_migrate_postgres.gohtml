@@ -53,30 +53,44 @@
             </section>
         </div>
     </main>
+    <script src="/static/js/modals.js"></script>
     <script>
     (function(){
         const out = document.getElementById('out');
+        const errPrefix = {{ jsstr (t .T "admin.migrate_pg.error_prefix") }};
         function setMsg(s){ out.textContent = s; }
         async function post(path, body){
             const r = await fetch(path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body || {}) });
             const j = await r.json().catch(()=>({}));
             return { ok: r.ok, status: r.status, j };
         }
+        function migrateConfirm() {
+            var msg = {{ jsstr (t .T "admin.migrate_pg.confirm") }};
+            if (typeof window.showConfirm !== 'function') {
+                return Promise.resolve(window.confirm(msg));
+            }
+            return window.showConfirm(msg, {
+                title: {{ jsstr (t .T "admin.migrate_pg.modal_title") }},
+                okLabel: {{ jsstr (t .T "admin.migrate_pg.modal_ok") }},
+                okClass: 'btn-primary'
+            });
+        }
         document.getElementById('btn-test').addEventListener('click', async function(){
             setMsg('…');
             const postgres_url = document.getElementById('pgurl').value.trim();
             const { ok, j } = await post('/api/admin/migrate-postgres/test', { postgres_url });
-            setMsg(ok ? ('OK: ' + (j.version || '')) : ('Erreur: ' + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : '')));
+            setMsg(ok ? ('OK: ' + (j.version || '')) : (errPrefix + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : '')));
         });
         document.getElementById('btn-migrate').addEventListener('click', async function(){
-            if (!confirm({{ jsstr (t .T "admin.migrate_pg.confirm") }})) return;
-            setMsg('{{ t .T "admin.migrate_pg.running" }}');
+            var okGo = await migrateConfirm();
+            if (!okGo) return;
+            setMsg({{ jsstr (t .T "admin.migrate_pg.running") }});
             const postgres_url = document.getElementById('pgurl').value.trim();
             const { ok, j } = await post('/api/admin/migrate-postgres/run', { postgres_url });
             if (ok) {
                 setMsg({{ jsstr (t .T "admin.migrate_pg.success") }});
             } else {
-                setMsg('Erreur: ' + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : ''));
+                setMsg(errPrefix + (j.error || 'unknown') + (j.detail ? ('\n' + j.detail) : ''));
             }
         });
     })();

@@ -76,7 +76,7 @@ apt_with_watchdog() {
 		local s=0
 		while sleep "${step}"; do
 			s=$((s + step))
-			echo "[watchdog +${s}s] «${label}» : apt est toujours actif (réseau lent ou attente du miroir ; ce message indique que le processus n'est pas figé)." >&2
+			echo "[watchdog +${s}s] \"${label}\": apt still running (slow network or mirror wait; this line means the process is not frozen)." >&2
 		done
 	) &
 	local wd=$!
@@ -101,14 +101,14 @@ probe_inrelease() {
 		curl_opts+=(-4)
 	fi
 	if ! command -v curl >/dev/null 2>&1; then
-		echo "==> (pas de curl) sonde réseau ignorée ; installez curl pour un test avant apt." >&2
+		echo "==> (no curl) skipping network probe; install curl for a quick pre-apt check." >&2
 		return 0
 	fi
-	echo "==> Sonde réseau (20s max) : InRelease (${codename}) sur archive.ubuntu.com …" >&2
-	if curl "${curl_opts[@]}" -w "    OK — durée %{time_total}s, %{size_download} octets, débit %{speed_download} o/s\n" "${url}" >&2; then
+	echo "==> Network probe (20s max): InRelease (${codename}) from archive.ubuntu.com …" >&2
+	if curl "${curl_opts[@]}" -w "    OK — %{time_total}s, %{size_download} bytes, %{speed_download} B/s\n" "${url}" >&2; then
 		return 0
 	fi
-	echo "    Échec ou timeout : apt risque de rester longtemps sur « Waiting for headers » ; vérifiez DNS / pare-feu / miroir." >&2
+	echo "    Failed or timed out: apt may sit on \"Waiting for headers\"; check DNS / firewall / mirror." >&2
 	return 0
 }
 
@@ -118,10 +118,10 @@ if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
 		exit 1
 	fi
 	probe_inrelease
-	echo "==> apt-get update (HTTP conservateur, timeouts 300s ; --apt-debug-http pour le détail)…" >&2
+	echo "==> apt-get update (conservative HTTP, 300s timeouts; use --apt-debug-http for detail)…" >&2
 	mapfile -t _APT_ARGS < <(apt_base_args)
 	apt_with_watchdog "apt-get update" sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" update
-	echo "==> apt-get install postgresql … (~45 Mo ; à ~50 kB/s compter ~15–25 min si le débit est stable)" >&2
+	echo "==> apt-get install postgresql … (~45 MB; at ~50 kB/s allow ~15–25 min if throughput is steady)" >&2
 	apt_with_watchdog "apt-get install" sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
 fi
 
@@ -172,14 +172,14 @@ else
 fi
 
 if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
-	echo "Connexion locale à PostgreSQL impossible (socket absent ou cluster arrêté)." >&2
+	echo "Cannot connect to local PostgreSQL (missing socket or cluster stopped)." >&2
 	if command -v pg_lsclusters >/dev/null 2>&1; then
 		echo "" >&2
-		echo "=== pg_lsclusters (état des clusters) ===" >&2
+		echo "=== pg_lsclusters (cluster status) ===" >&2
 		pg_lsclusters >&2 || true
 		echo "" >&2
-		echo "Sur Ubuntu/Debian, postgresql.service est souvent « active (exited) » : ce n'est pas le serveur." >&2
-		echo "Le service réel est postgresql@<version>-<cluster>, ex. postgresql@14-main." >&2
+		echo "On Ubuntu/Debian, postgresql.service is often \"active (exited)\": that is not the database engine." >&2
+		echo "The real unit is postgresql@<version>-<cluster>, e.g. postgresql@14-main." >&2
 		while read -r ver cluster port status _rest; do
 			[[ "${ver}" =~ ^[0-9]+$ ]] || continue
 			if [[ "${status}" != "online" ]]; then
@@ -187,7 +187,7 @@ if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
 			fi
 		done < <(pg_lsclusters 2>/dev/null | tail -n +2)
 		echo "" >&2
-		echo "Tentative de démarrage des clusters indiqués « down »…" >&2
+		echo "Trying to start clusters listed as down…" >&2
 		while read -r ver cluster port status _rest; do
 			[[ "${ver}" =~ ^[0-9]+$ ]] || continue
 			if [[ "${status}" != "online" ]]; then
@@ -196,14 +196,14 @@ if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
 		done < <(pg_lsclusters 2>/dev/null | tail -n +2)
 		sleep 2
 	else
-		echo "Installez le paquet postgresql-common pour pg_lsclusters, ou démarrez le cluster à la main, ex. :" >&2
+		echo "Install postgresql-common for pg_lsclusters, or start the cluster manually, e.g.:" >&2
 		echo "  sudo systemctl start postgresql@14-main" >&2
 	fi
 fi
 
 if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
 	echo "" >&2
-	echo "Toujours inaccessible. Vérifiez les logs :" >&2
+	echo "Still unreachable. Check logs:" >&2
 	echo "  sudo journalctl -u 'postgresql@*' -n 40 --no-pager" >&2
 	exit 1
 fi
@@ -239,23 +239,23 @@ echo ""
 echo "=== BookStorage PostgreSQL (copy to secrets / BookStorage admin migration) ==="
 echo "BOOKSTORAGE_POSTGRES_URL=${URL}"
 echo ""
-echo "Champs séparés :"
-echo "  Hôte:     ${BS_PG_HOST}"
+echo "Separate fields:"
+echo "  Host:     ${BS_PG_HOST}"
 echo "  Port:     ${BS_PG_PORT}"
-echo "  Utilisateur: ${BS_PG_USER}"
-echo "  Base:     ${BS_PG_DB}"
+echo "  User:     ${BS_PG_USER}"
+echo "  Database: ${BS_PG_DB}"
 echo "  sslmode:  ${BS_PG_SSLMODE}"
-echo "  Mot de passe (brut, à protéger): ${PASS}"
+echo "  Password (raw, keep secret): ${PASS}"
 echo ""
-echo "Connexion depuis une autre VM (ex. BookStorage sur le LAN) :"
-echo "  - Par défaut PostgreSQL n'écoute que sur localhost. Éditer :"
-echo "      /etc/postgresql/*/main/postgresql.conf  → listen_addresses = '*' (ou votre IP LAN)"
-echo "      /etc/postgresql/*/main/pg_hba.conf      → ex. host all all 192.168.1.0/24 scram-sha-256"
-echo "    puis : sudo systemctl restart postgresql"
-echo "  - Pare-feu : autoriser le port ${BS_PG_PORT}/tcp depuis l'IP de la VM applicative."
-echo "  - L'hôte dans l'URL est une IPv4 LAN détectée quand c'est possible (sinon le hostname). Pour forcer un nom ou une IP :"
+echo "Remote access (e.g. BookStorage on the LAN):"
+echo "  - By default PostgreSQL listens only on localhost. Edit:"
+echo "      /etc/postgresql/*/main/postgresql.conf  → listen_addresses = '*' (or your LAN IP)"
+echo "      /etc/postgresql/*/main/pg_hba.conf      → e.g. hostnossl all all 192.168.1.0/24 scram-sha-256 (if sslmode=disable)"
+echo "    then: sudo systemctl reload postgresql@*-main   # or restart"
+echo "  - Firewall: allow port ${BS_PG_PORT}/tcp from the app VM IP only."
+echo "  - The URL host is a detected LAN IPv4 when possible (else hostname). To force a name or IP:"
 echo "      sudo env BS_PG_HOST=BookStorageDB ./deploy/setup-postgres-vm.sh"
 echo "      sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh"
 echo ""
-echo "Sécurité: restreignez pg_hba.conf à l'IP ou au sous-réseau de la VM applicative ;"
-echo "          sur Internet utilisez sslmode=require ou verify-full (lib/pq n'accepte pas « prefer »)."
+echo "Security: restrict pg_hba.conf to the app VM IP or subnet;"
+echo "          on the public Internet use sslmode=require or verify-full (lib/pq does not support \"prefer\")."

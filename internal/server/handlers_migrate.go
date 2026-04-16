@@ -8,6 +8,7 @@ import (
 	"strings"
 	"time"
 
+	"bookstorage/internal/config"
 	"bookstorage/internal/database"
 )
 
@@ -84,9 +85,30 @@ func (a *App) HandleAPIAdminMigratePostgresRun(w http.ResponseWriter, r *http.Re
 		a.apiWriteError(w, http.StatusBadRequest, "missing_url")
 		return
 	}
-	if err := database.MigrateSQLiteToPostgres(a.DB, u, a.Settings); err != nil {
+	norm, err := database.MigrateSQLiteToPostgres(a.DB, u)
+	if err != nil {
 		log.Printf("migrate postgres: %v", err)
-		a.apiWriteError(w, http.StatusBadRequest, "migrate_failed")
+		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error":  "migrate_failed",
+			"detail": err.Error(),
+		})
+		return
+	}
+	envPath := strings.TrimSpace(a.Settings.EnvFilePath)
+	if envPath == "" {
+		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error": "migrate_failed",
+			"detail": "resolved .env path is empty; cannot persist BOOKSTORAGE_POSTGRES_URL " +
+				"(start the app with a readable .env path, e.g. -config /opt/bookstorage/.env)",
+		})
+		return
+	}
+	if err := config.MergeEnvKeys(envPath, map[string]string{"BOOKSTORAGE_POSTGRES_URL": norm}); err != nil {
+		log.Printf("migrate postgres env: %v", err)
+		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
+			"error":  "migrate_failed",
+			"detail": "update .env: " + err.Error(),
+		})
 		return
 	}
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true})
