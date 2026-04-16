@@ -48,15 +48,27 @@ Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`
 
 ## PostgreSQL ne répond pas (`No such file or directory` sur le socket)
 
-Le script utilise le socket local `/var/run/postgresql/.s.PGSQL.5432`. Si PostgreSQL **n’est pas démarré**, ce fichier n’existe pas.
+Le script utilise le socket local. Si le serveur **n’écoute pas**, le socket peut être absent.
+
+### Ubuntu / Debian : `postgresql.service` en « active (exited) »
+
+C’est **normal** : `postgresql.service` est un méta-service (`ExecStart=/bin/true`) ; il ne démarre **pas** le moteur PostgreSQL.
+
+Listez les clusters et leur état :
 
 ```bash
-sudo systemctl start postgresql
-sudo systemctl status postgresql
-sudo systemctl enable postgresql   # si vous voulez le service au boot
+pg_lsclusters
 ```
 
-Puis relancez `./deploy/setup-postgres-vm.sh`.
+Démarrez le **cluster** (adaptez `14` / `main` selon la sortie) :
+
+```bash
+sudo systemctl start postgresql@14-main
+sudo systemctl status postgresql@14-main
+sudo systemctl enable postgresql@14-main   # au boot
+```
+
+Puis relancez `./deploy/setup-postgres-vm.sh` (le script tente aussi de démarrer automatiquement les clusters marqués `down` dans `pg_lsclusters`).
 
 ## Après l’exécution
 

@@ -150,10 +150,39 @@ else
 fi
 
 if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
-	echo "Impossible de joindre PostgreSQL sur cette machine (socket absent ou service arrêté)." >&2
-	echo "  sudo systemctl start postgresql" >&2
-	echo "  sudo systemctl status postgresql" >&2
-	echo "  sudo systemctl enable postgresql   # optionnel : démarrage au boot" >&2
+	echo "Connexion locale à PostgreSQL impossible (socket absent ou cluster arrêté)." >&2
+	if command -v pg_lsclusters >/dev/null 2>&1; then
+		echo "" >&2
+		echo "=== pg_lsclusters (état des clusters) ===" >&2
+		pg_lsclusters >&2 || true
+		echo "" >&2
+		echo "Sur Ubuntu/Debian, postgresql.service est souvent « active (exited) » : ce n'est pas le serveur." >&2
+		echo "Le service réel est postgresql@<version>-<cluster>, ex. postgresql@14-main." >&2
+		while read -r ver cluster port status _rest; do
+			[[ "${ver}" =~ ^[0-9]+$ ]] || continue
+			if [[ "${status}" != "online" ]]; then
+				echo "  → sudo systemctl start postgresql@${ver}-${cluster}" >&2
+			fi
+		done < <(pg_lsclusters 2>/dev/null | tail -n +2)
+		echo "" >&2
+		echo "Tentative de démarrage des clusters indiqués « down »…" >&2
+		while read -r ver cluster port status _rest; do
+			[[ "${ver}" =~ ^[0-9]+$ ]] || continue
+			if [[ "${status}" != "online" ]]; then
+				sudo systemctl start "postgresql@${ver}-${cluster}" 2>/dev/null || true
+			fi
+		done < <(pg_lsclusters 2>/dev/null | tail -n +2)
+		sleep 2
+	else
+		echo "Installez le paquet postgresql-common pour pg_lsclusters, ou démarrez le cluster à la main, ex. :" >&2
+		echo "  sudo systemctl start postgresql@14-main" >&2
+	fi
+fi
+
+if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
+	echo "" >&2
+	echo "Toujours inaccessible. Vérifiez les logs :" >&2
+	echo "  sudo journalctl -u 'postgresql@*' -n 40 --no-pager" >&2
 	exit 1
 fi
 
