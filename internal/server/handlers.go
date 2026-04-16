@@ -418,6 +418,12 @@ func (a *App) mergeData(r *http.Request, extra map[string]any) map[string]any {
 	for k, v := range extra {
 		data[k] = v
 	}
+	// Admin nav: SQLite → PostgreSQL tab (superadmin, not already on Postgres).
+	if r != nil && r.URL != nil && strings.HasPrefix(r.URL.Path, "/admin/") {
+		if _, ok := data["ShowPostgresMigrate"]; !ok {
+			data["ShowPostgresMigrate"] = a.showPostgresMigrateTab(r)
+		}
+	}
 	return data
 }
 

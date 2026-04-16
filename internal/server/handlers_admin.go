@@ -401,16 +401,25 @@ func (a *App) HandleAdminDatabase(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	showMigrate := false
-	if uid, ok := a.currentUserID(r); ok {
-		var sup int
-		_ = a.DB.QueryRow(`SELECT is_superadmin FROM users WHERE id = ?`, uid).Scan(&sup)
-		showMigrate = sup != 0 && !a.Settings.UsePostgres()
-	}
 	a.renderTemplate(w, r, "admin_database", a.mergeData(r, map[string]any{
-		"DBSections":          sections,
-		"ShowPostgresMigrate": showMigrate,
+		"DBSections": sections,
 	}))
+}
+
+// showPostgresMigrateTab is true when the signed-in user may use the SQLite → PostgreSQL migration wizard.
+func (a *App) showPostgresMigrateTab(r *http.Request) bool {
+	if a.Settings == nil || a.Settings.UsePostgres() || a.DB == nil {
+		return false
+	}
+	uid, ok := a.currentUserID(r)
+	if !ok {
+		return false
+	}
+	var sup int
+	if err := a.DB.QueryRow(`SELECT is_superadmin FROM users WHERE id = ?`, uid).Scan(&sup); err != nil {
+		return false
+	}
+	return sup != 0
 }
 
 func (a *App) HandleAPIAdminPrometheusSummary(w http.ResponseWriter, r *http.Request) {
