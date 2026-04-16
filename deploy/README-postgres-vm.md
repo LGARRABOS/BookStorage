@@ -70,6 +70,30 @@ sudo systemctl enable postgresql@14-main   # au boot
 
 Puis relancez `./deploy/setup-postgres-vm.sh` (le script tente aussi de démarrer automatiquement les clusters marqués `down` dans `pg_lsclusters`).
 
+### Le cluster refuse de démarrer (`could not bind IPv4`, `could not create any listen sockets`)
+
+`systemctl` tronque les lignes : lisez le journal Postgres (là est la cause exacte) :
+
+```bash
+sudo tail -100 /var/log/postgresql/postgresql-14-main.log
+# ou
+sudo journalctl -u postgresql@14-main -n 80 --no-pager
+```
+
+Causes fréquentes :
+
+1. **Port 5432 déjà utilisé** (autre Postgres, Docker, autre outil) :
+   ```bash
+   sudo ss -lntp | grep 5432
+   ```
+   Arrêtez le processus concurrent ou changez `port` dans `/etc/postgresql/14/main/postgresql.conf`.
+
+2. **`listen_addresses` pointe vers une IP que cette VM n’a pas** (erreur du type *Cannot assign requested address*). Ouvrez `/etc/postgresql/14/main/postgresql.conf` et utilisez au minimum pour valider le démarrage :
+   - `listen_addresses = 'localhost'` ou `'*'`
+   Puis : `sudo systemctl restart postgresql@14-main`.
+
+3. **Espace disque** sur `/var` : `df -h /var/lib/postgresql`.
+
 ## Après l’exécution
 
 1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** (ex. `sslmode=prefer`, pas tronquée).
