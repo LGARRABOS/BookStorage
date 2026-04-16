@@ -52,6 +52,31 @@ func (s *Settings) UsePostgres() bool {
 	return s != nil && strings.TrimSpace(s.PostgresURL) != ""
 }
 
+// NormalizePostgresURLForLibPQ rewrites sslmode values that github.com/lib/pq rejects (e.g. "prefer", "allow").
+// Supported modes: disable, require, verify-ca, verify-full, or empty (driver default).
+func NormalizePostgresURLForLibPQ(dsn string) (string, error) {
+	dsn = strings.TrimSpace(dsn)
+	if dsn == "" {
+		return "", nil
+	}
+	u, err := url.Parse(dsn)
+	if err != nil {
+		return "", err
+	}
+	q := u.Query()
+	mode := strings.ToLower(strings.TrimSpace(q.Get("sslmode")))
+	switch mode {
+	case "", "disable", "require", "verify-ca", "verify-full":
+		return dsn, nil
+	case "prefer", "allow":
+		q.Set("sslmode", "disable")
+		u.RawQuery = q.Encode()
+		return u.String(), nil
+	default:
+		return "", fmt.Errorf("unsupported sslmode %q (lib/pq accepts disable, require, verify-ca, verify-full)", mode)
+	}
+}
+
 // GoogleOAuthConfigured reports whether Google OAuth routes should be active.
 func (s *Settings) GoogleOAuthConfigured() bool {
 	if s == nil {
@@ -146,6 +171,13 @@ func Load(rootPath string) (*Settings, error) {
 	}
 
 	postgresURL := strings.TrimSpace(os.Getenv("BOOKSTORAGE_POSTGRES_URL"))
+	if postgresURL != "" {
+		var nerr error
+		postgresURL, nerr = NormalizePostgresURLForLibPQ(postgresURL)
+		if nerr != nil {
+			return nil, fmt.Errorf("BOOKSTORAGE_POSTGRES_URL: %w", nerr)
+		}
+	}
 
 	var dbPath string
 	if postgresURL == "" {

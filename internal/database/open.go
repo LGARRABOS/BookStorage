@@ -46,6 +46,11 @@ func OpenPostgresURL(dsn string) (*sql.DB, error) {
 	if dsn == "" {
 		return nil, fmt.Errorf("empty postgres dsn")
 	}
+	var err error
+	dsn, err = config.NormalizePostgresURLForLibPQ(dsn)
+	if err != nil {
+		return nil, err
+	}
 	db, err := sql.Open("postgres", dsn)
 	if err != nil {
 		return nil, err

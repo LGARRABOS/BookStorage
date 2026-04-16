@@ -7,7 +7,7 @@
 #   BS_PG_USER               role name (default: bookstorage)
 #   BS_PG_HOST               host in printed URL if set; if unset, primary LAN IPv4 when detectable, else hostname -f
 #   BS_PG_PORT               port shown in summary (default: 5432)
-#   BS_PG_SSLMODE            sslmode query param in URL (default: prefer)
+#   BS_PG_SSLMODE            sslmode for lib/pq: disable, require, verify-ca, verify-full (default: disable for typical LAN)
 #   BS_PG_APT_WATCHDOG_SECS  seconds between heartbeat lines while apt runs (default: 25)
 #   BS_PG_PSQL_CWD           directory to cd into before sudo -u postgres psql (default: /tmp)
 #
@@ -150,7 +150,7 @@ bs_pg_default_host_for_url() {
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
 BS_PG_USER="${BS_PG_USER:-bookstorage}"
 BS_PG_PORT="${BS_PG_PORT:-5432}"
-BS_PG_SSLMODE="${BS_PG_SSLMODE:-prefer}"
+BS_PG_SSLMODE="${BS_PG_SSLMODE:-disable}"
 BS_PG_HOST="${BS_PG_HOST:-}"
 if [[ -z "${BS_PG_HOST}" ]]; then
 	BS_PG_HOST="$(bs_pg_default_host_for_url)"
@@ -258,4 +258,4 @@ echo "      sudo env BS_PG_HOST=BookStorageDB ./deploy/setup-postgres-vm.sh"
 echo "      sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh"
 echo ""
 echo "Sécurité: restreignez pg_hba.conf à l'IP ou au sous-réseau de la VM applicative ;"
-echo "          utilisez sslmode=require ou verify-full si le trafic traverse un réseau non dédié."
+echo "          sur Internet utilisez sslmode=require ou verify-full (lib/pq n'accepte pas « prefer »)."
