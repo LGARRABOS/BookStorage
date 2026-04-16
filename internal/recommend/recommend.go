@@ -2,13 +2,13 @@
 package recommend
 
 import (
-	"database/sql"
 	"fmt"
 	"sort"
 	"strconv"
 	"strings"
 
 	"bookstorage/internal/catalog"
+	"bookstorage/internal/database"
 )
 
 const (
@@ -84,7 +84,7 @@ func ratingMultiplier(r int, o Options) float64 {
 }
 
 // LoadUserAnilistWorks returns catalog-linked AniList external ids with rating and status.
-func LoadUserAnilistWorks(db *sql.DB, userID int64) ([]userWork, error) {
+func LoadUserAnilistWorks(db *database.Conn, userID int64) ([]userWork, error) {
 	rows, err := db.Query(`
 		SELECT c.external_id, COALESCE(w.rating, 0), COALESCE(w.status, '')
 		FROM works w
@@ -274,7 +274,7 @@ type Suggestion struct {
 }
 
 // ForUser returns merged browse + graph recommendations, excluding already-owned ids.
-func ForUser(db *sql.DB, userID int64, o Options) (*ForUserResult, error) {
+func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error) {
 	works, err := LoadUserAnilistWorks(db, userID)
 	if err != nil {
 		return nil, err

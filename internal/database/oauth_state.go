@@ -31,7 +31,6 @@ func NewOAuthStatePlain() (string, error) {
 	if _, err := rand.Read(b[:]); err != nil {
 		return "", err
 	}
-	// URL-safe without padding
 	const alphabet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_"
 	for i := range b {
 		b[i] = alphabet[int(b[i])%len(alphabet)]
@@ -40,12 +39,12 @@ func NewOAuthStatePlain() (string, error) {
 }
 
 // InsertOAuthState stores a one-time OAuth CSRF/PKCE row.
-func InsertOAuthState(db *sql.DB, statePlain string, purpose OAuthStatePurpose, userID sql.NullInt64, next string, codeVerifier string) error {
-	if statePlain == "" || codeVerifier == "" {
+func InsertOAuthState(c *Conn, statePlain string, purpose OAuthStatePurpose, userID sql.NullInt64, next string, codeVerifier string) error {
+	if c == nil || statePlain == "" || codeVerifier == "" {
 		return fmt.Errorf("oauth state: empty state or verifier")
 	}
 	exp := time.Now().UTC().Add(oauthStateTTL).Unix()
-	_, err := db.Exec(
+	_, err := c.Exec(
 		`INSERT INTO oauth_states (state_hash, purpose, user_id, next, expires_at_unix, code_verifier)
 		 VALUES (?, ?, ?, ?, ?, ?)`,
 		HashOAuthState(statePlain), string(purpose), userID, next, exp, codeVerifier,
@@ -62,21 +61,24 @@ type OAuthStateRow struct {
 }
 
 // DeleteExpiredOAuthStates removes stale rows (best-effort).
-func DeleteExpiredOAuthStates(db *sql.DB) {
+func DeleteExpiredOAuthStates(c *Conn) {
+	if c == nil {
+		return
+	}
 	now := time.Now().UTC().Unix()
-	_, _ = db.Exec(`DELETE FROM oauth_states WHERE expires_at_unix < ?`, now)
+	_, _ = c.Exec(`DELETE FROM oauth_states WHERE expires_at_unix < ?`, now)
 }
 
 // ConsumeOAuthState deletes the row identified by statePlain and returns it if still valid.
-func ConsumeOAuthState(db *sql.DB, statePlain string) (OAuthStateRow, error) {
+func ConsumeOAuthState(c *Conn, statePlain string) (OAuthStateRow, error) {
 	var out OAuthStateRow
-	if statePlain == "" {
+	if c == nil || statePlain == "" {
 		return out, sql.ErrNoRows
 	}
 	hash := HashOAuthState(statePlain)
 	now := time.Now().UTC().Unix()
 
-	tx, err := db.Begin()
+	tx, err := c.Begin()
 	if err != nil {
 		return out, err
 	}

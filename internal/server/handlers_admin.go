@@ -10,6 +10,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode/utf8"
+
+	"bookstorage/internal/database"
 )
 
 const adminDatabaseMaxRows = 400
@@ -93,7 +95,7 @@ func adminDatabaseCellString(col string, v any) string {
 	return s
 }
 
-func buildAdminDatabaseSections(db *sql.DB) ([]adminDatabaseSection, error) {
+func buildAdminDatabaseSections(db *database.Conn) ([]adminDatabaseSection, error) {
 	out := make([]adminDatabaseSection, 0, len(adminDatabaseTableSpecs))
 	for _, spec := range adminDatabaseTableSpecs {
 		sec, err := scanAdminDatabaseTable(db, spec.Name, spec.Order, spec.Hint)
@@ -183,10 +185,19 @@ func (a *App) HandleAPIAdminDatabaseDelete(w http.ResponseWriter, r *http.Reques
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "deleted": n})
 }
 
-func scanAdminDatabaseTable(db *sql.DB, table, orderSQL, hintKey string) (adminDatabaseSection, error) {
+func scanAdminDatabaseTable(db *database.Conn, table, orderSQL, hintKey string) (adminDatabaseSection, error) {
 	sec := adminDatabaseSection{Table: table, HintKey: hintKey}
 	var exists int
-	if err := db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&exists); err != nil {
+	var err error
+	if db.B == database.BackendPostgres {
+		err = db.QueryRow(
+			`SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = 'public' AND table_name = ?`,
+			strings.ToLower(strings.TrimSpace(table)),
+		).Scan(&exists)
+	} else {
+		err = db.QueryRow(`SELECT COUNT(*) FROM sqlite_master WHERE type='table' AND name=?`, table).Scan(&exists)
+	}
+	if err != nil {
 		return sec, err
 	}
 	if exists == 0 {
@@ -390,8 +401,15 @@ func (a *App) HandleAdminDatabase(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	showMigrate := false
+	if uid, ok := a.currentUserID(r); ok {
+		var sup int
+		_ = a.DB.QueryRow(`SELECT is_superadmin FROM users WHERE id = ?`, uid).Scan(&sup)
+		showMigrate = sup != 0 && !a.Settings.UsePostgres()
+	}
 	a.renderTemplate(w, r, "admin_database", a.mergeData(r, map[string]any{
-		"DBSections": sections,
+		"DBSections":          sections,
+		"ShowPostgresMigrate": showMigrate,
 	}))
 }
 

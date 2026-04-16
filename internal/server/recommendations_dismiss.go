@@ -1,16 +1,16 @@
 package server
 
 import (
-	"database/sql"
 	"encoding/json"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"bookstorage/internal/database"
 	"bookstorage/internal/recommend"
 )
 
-func loadDismissedRecommendations(db *sql.DB, userID int, source string) (map[string]struct{}, error) {
+func loadDismissedRecommendations(db *database.Conn, userID int, source string) (map[string]struct{}, error) {
 	rows, err := db.Query(
 		`SELECT external_id FROM dismissed_recommendations WHERE user_id = ? AND source = ?`,
 		userID, source,
@@ -91,10 +91,19 @@ func (a *App) HandleDismissRecommendation(w http.ResponseWriter, r *http.Request
 	}
 
 	ext := strconv.Itoa(req.AnilistID)
-	_, err := a.DB.Exec(
-		`INSERT OR IGNORE INTO dismissed_recommendations (user_id, source, external_id) VALUES (?, ?, ?)`,
-		userID, req.Source, ext,
-	)
+	var err error
+	if a.DB.B == database.BackendPostgres {
+		_, err = a.DB.Exec(
+			`INSERT INTO dismissed_recommendations (user_id, source, external_id) VALUES (?, ?, ?)
+			 ON CONFLICT (user_id, source, external_id) DO NOTHING`,
+			userID, req.Source, ext,
+		)
+	} else {
+		_, err = a.DB.Exec(
+			`INSERT OR IGNORE INTO dismissed_recommendations (user_id, source, external_id) VALUES (?, ?, ?)`,
+			userID, req.Source, ext,
+		)
+	}
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json; charset=utf-8")
 		w.WriteHeader(http.StatusInternalServerError)

@@ -8,7 +8,6 @@ import (
 
 	"bookstorage/internal/config"
 
-	_ "github.com/mattn/go-sqlite3"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -119,20 +118,7 @@ func sqliteDataSourceName(dbPath string) string {
 	return p + sep + opts
 }
 
-// Open opens a database connection
-func Open(settings *config.Settings) (*sql.DB, error) {
-	db, err := sql.Open("sqlite3", sqliteDataSourceName(settings.Database))
-	if err != nil {
-		return nil, err
-	}
-	if _, err := db.Exec("PRAGMA foreign_keys = ON;"); err != nil {
-		_ = db.Close()
-		return nil, err
-	}
-	return db, nil
-}
-
-func ensureColumns(db *sql.DB, table string, cols map[string]string) error {
+func ensureColumnsSQLite(db *sql.DB, table string, cols map[string]string) error {
 	rows, err := db.Query("PRAGMA table_info(" + table + ")")
 	if err != nil {
 		return err
@@ -162,9 +148,9 @@ func ensureColumns(db *sql.DB, table string, cols map[string]string) error {
 	return nil
 }
 
-func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
+func ensureSuperAdmin(c *Conn, s *config.Settings) error {
 	var exists int
-	if err := db.QueryRow("SELECT 1 FROM users WHERE is_superadmin = 1 LIMIT 1").Scan(&exists); err == nil {
+	if err := c.QueryRow("SELECT 1 FROM users WHERE is_superadmin = 1 LIMIT 1").Scan(&exists); err == nil {
 		return nil
 	}
 
@@ -172,7 +158,7 @@ func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
 	if err != nil {
 		return err
 	}
-	_, err = db.Exec(
+	_, err = c.Exec(
 		`INSERT INTO users (username, password, validated, is_admin, is_superadmin)
          VALUES (?, ?, 1, 1, 1)`,
 		s.SuperadminUsername,
@@ -181,8 +167,25 @@ func ensureSuperAdmin(db *sql.DB, s *config.Settings) error {
 	return err
 }
 
-// EnsureSchema creates tables and ensures all columns exist
-func EnsureSchema(db *sql.DB, s *config.Settings) error {
+// EnsureSchema creates tables and ensures all columns exist.
+func EnsureSchema(c *Conn, s *config.Settings) error {
+	if c == nil {
+		return fmt.Errorf("nil db connection")
+	}
+	if c.B == BackendPostgres {
+		if err := ensurePostgresSchema(c); err != nil {
+			return err
+		}
+		if err := ApplyMigrations(c); err != nil {
+			return err
+		}
+		if err := ensurePostgresFullText(c); err != nil {
+			return err
+		}
+		return ensureSuperAdmin(c, s)
+	}
+
+	db := c.Std()
 	if _, err := db.Exec(createUsersTableSQL); err != nil {
 		return err
 	}
@@ -198,20 +201,17 @@ func EnsureSchema(db *sql.DB, s *config.Settings) error {
 	if _, err := db.Exec(createWorksTableSQL); err != nil {
 		return err
 	}
-	if err := ensureColumns(db, "users", profileColumns); err != nil {
+	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {
 		return err
 	}
-	if err := ensureColumns(db, "works", workColumns); err != nil {
+	if err := ensureColumnsSQLite(db, "works", workColumns); err != nil {
 		return err
 	}
-	if err := ApplyMigrations(db); err != nil {
+	if err := ApplyMigrations(c); err != nil {
 		return err
 	}
 	if err := ensureWorksFTS5(db); err != nil {
 		return err
 	}
-	if err := ensureSuperAdmin(db, s); err != nil {
-		return err
-	}
-	return nil
+	return ensureSuperAdmin(c, s)
 }

@@ -55,8 +55,8 @@ INSERT INTO works (title, user_id) VALUES ('One work', 1);
 		}
 	}
 
-	if err := ApplyMigrations(db); err != nil {
-		t.Fatalf("ApplyMigrations: %v", err)
+	if err := applySQLiteMigrations(db); err != nil {
+		t.Fatalf("applySQLiteMigrations: %v", err)
 	}
 
 	var n int

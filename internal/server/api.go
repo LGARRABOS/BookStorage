@@ -128,16 +128,21 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		args = append(args, typeFilter)
 	}
 	if search != "" {
-		useFTS := database.WorksFTSEnabled(a.DB)
-		if useFTS {
-			if matchExpr, ok := fts5MatchExpression(search); ok {
+		usedFTS := false
+		if database.WorksFTSEnabled(a.DB) {
+			if a.DB.B == database.BackendPostgres {
+				if s := strings.TrimSpace(search); s != "" {
+					whereParts = append(whereParts, "(works.works_fts_document @@ plainto_tsquery('simple', ?))")
+					args = append(args, s)
+					usedFTS = true
+				}
+			} else if matchExpr, ok := fts5MatchExpression(search); ok {
 				whereParts = append(whereParts, "works.id IN (SELECT rowid FROM works_fts WHERE works_fts MATCH ?)")
 				args = append(args, matchExpr)
-			} else {
-				useFTS = false
+				usedFTS = true
 			}
 		}
-		if !useFTS {
+		if !usedFTS {
 			whereParts = append(whereParts, "(LOWER(title) LIKE ? OR LOWER(COALESCE(notes, '')) LIKE ? OR LOWER(COALESCE(link, '')) LIKE ?)")
 			like := "%" + strings.ToLower(search) + "%"
 			args = append(args, like, like, like)
