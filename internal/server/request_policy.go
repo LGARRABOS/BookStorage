@@ -100,6 +100,7 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 		strings.HasPrefix(path, "/api/set-chapter/"),
 		strings.HasPrefix(path, "/api/delete/"),
 		path == "/profile/delete",
+		path == "/profile/google/unlink",
 		path == "/import",
 		strings.HasPrefix(path, "/tools/csv-import"),
 		strings.HasPrefix(path, "/users/"),
@@ -111,9 +112,28 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 	}
 }
 
+func shouldRateLimitOAuthGET(path, method string) (key string, capacity, refillPerSec float64, ok bool) {
+	if method != http.MethodGet {
+		return "", 0, 0, false
+	}
+	switch path {
+	case "/auth/google", "/auth/google/link":
+		return "auth_oauth", 20, 0.4, true
+	default:
+		return "", 0, 0, false
+	}
+}
+
 // WithRequestPolicies applies lightweight CSRF and rate limiting checks.
 func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if key, cap, refill, ok := shouldRateLimitOAuthGET(r.URL.Path, r.Method); ok {
+			limiterKey := key + ":" + clientIP(r)
+			if !globalRateLimiter.allow(limiterKey, cap, refill) {
+				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
+				return
+			}
+		}
 		if key, cap, refill, ok := shouldRateLimit(r.URL.Path); ok && isMutatingMethod(r.Method) {
 			limiterKey := key + ":" + clientIP(r)
 			if !globalRateLimiter.allow(limiterKey, cap, refill) {

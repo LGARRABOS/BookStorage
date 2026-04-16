@@ -101,6 +101,12 @@
                     <h1 class="page-title">👤 {{ t .T "profile.title" }}</h1>
                 </header>
                 {{ if .LogoutAllDone }}<div class="notice">{{ t .T "profile.logout_all.done" }}</div>{{ end }}
+                {{ if .GoogleLinked }}<div class="notice">{{ t .T "profile.google.linked" }}</div>{{ end }}
+                {{ if .GoogleUnlinked }}<div class="notice">{{ t .T "profile.google.unlinked" }}</div>{{ end }}
+                {{ if eq .GoogleOAuthError "server" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.server" }}</p></div>{{ end }}
+                {{ if eq .GoogleOAuthError "link_taken" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.link_taken" }}</p></div>{{ end }}
+                {{ if eq .GoogleOAuthError "link_other" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.link_other" }}</p></div>{{ end }}
+                {{ if eq .GoogleOAuthError "unlink_need_password" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.unlink_need_password" }}</p></div>{{ end }}
 
                 <div class="quick-stats">
                     <div class="stat-card"><div class="stat-icon purple">📚</div><div><div class="stat-value">{{ .TotalWorks }}</div><div class="stat-label">{{ t .T "dashboard.stats.works" }}</div></div></div>
@@ -232,6 +238,24 @@
 
                         <section class="tab-panel tab-panel-security-extra" id="panel-security-extra" aria-labelledby="profile-security-extra-heading">
                             <h2 class="panel-title sr-only" id="profile-security-extra-heading">{{ t .T "profile.section.security" }}</h2>
+                            {{ if .GoogleOAuthEnabled }}
+                            <div class="sessions-box" style="margin-bottom:1rem;">
+                                <h3>{{ t .T "profile.google.title" }}</h3>
+                                <p>{{ t .T "profile.google.desc" }}</p>
+                                {{ if and .User.GoogleSub.Valid (ne .User.GoogleSub.String "") }}
+                                    <p style="font-size:0.9rem;color:var(--text-secondary);">{{ t .T "profile.google.linked_as" }} <strong>{{ if .User.GoogleEmail.Valid }}{{ .User.GoogleEmail.String }}{{ else }}{{ .User.GoogleSub.String }}{{ end }}</strong></p>
+                                    {{ if and .User.Password.Valid (ne .User.Password.String "") }}
+                                    <form method="POST" action="/profile/google/unlink" style="margin-top:0.6rem;">
+                                        <button type="submit" class="btn btn-secondary">{{ t .T "profile.google.unlink" }}</button>
+                                    </form>
+                                    {{ else }}
+                                    <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.google.unlink_need_password_hint" }}</p>
+                                    {{ end }}
+                                {{ else }}
+                                    <a class="btn btn-primary" href="/auth/google/link">{{ t .T "profile.google.link" }}</a>
+                                {{ end }}
+                            </div>
+                            {{ end }}
                             <div class="sessions-box">
                                 <h3>{{ t .T "profile.sessions.title" }}</h3>
                                 <p>{{ t .T "profile.sessions.desc" }}</p>

@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
@@ -34,6 +35,21 @@ type Settings struct {
 	MetricsToken string
 	// PrometheusQueryURL is the base URL for Prometheus HTTP API (instant queries) used by the admin monitoring page. Empty defaults to http://127.0.0.1:9091. Host must be loopback.
 	PrometheusQueryURL string
+	// PublicOrigin is the public base URL without trailing slash (e.g. https://books.example.com). Required for Google OAuth redirect_uri.
+	PublicOrigin string
+	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
+	GoogleClientID     string
+	GoogleClientSecret string
+}
+
+// GoogleOAuthConfigured reports whether Google OAuth routes should be active.
+func (s *Settings) GoogleOAuthConfigured() bool {
+	if s == nil {
+		return false
+	}
+	return strings.TrimSpace(s.PublicOrigin) != "" &&
+		strings.TrimSpace(s.GoogleClientID) != "" &&
+		strings.TrimSpace(s.GoogleClientSecret) != ""
 }
 
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
@@ -173,6 +189,8 @@ func Load(rootPath string) (*Settings, error) {
 
 	webStaticRoot := filepath.Join(root, "static")
 
+	publicOrigin := strings.TrimRight(strings.TrimSpace(os.Getenv("BOOKSTORAGE_PUBLIC_ORIGIN")), "/")
+
 	s := &Settings{
 		SecretKey:                secret,
 		Database:                 dbPath,
@@ -193,6 +211,9 @@ func Load(rootPath string) (*Settings, error) {
 		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 		MetricsToken:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_METRICS_TOKEN")),
 		PrometheusQueryURL:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_PROMETHEUS_QUERY_URL")),
+		PublicOrigin:             publicOrigin,
+		GoogleClientID:           strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_ID")),
+		GoogleClientSecret:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_SECRET")),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err
@@ -201,6 +222,20 @@ func Load(rootPath string) (*Settings, error) {
 }
 
 func validateSettings(s *Settings) error {
+	googleParts := 0
+	if strings.TrimSpace(s.PublicOrigin) != "" {
+		googleParts++
+	}
+	if strings.TrimSpace(s.GoogleClientID) != "" {
+		googleParts++
+	}
+	if strings.TrimSpace(s.GoogleClientSecret) != "" {
+		googleParts++
+	}
+	if googleParts != 0 && googleParts != 3 {
+		return fmt.Errorf("google OAuth requires all of BOOKSTORAGE_PUBLIC_ORIGIN, BOOKSTORAGE_GOOGLE_CLIENT_ID, and BOOKSTORAGE_GOOGLE_CLIENT_SECRET")
+	}
+
 	if strings.ToLower(s.Environment) != "production" {
 		return nil
 	}
@@ -209,6 +244,12 @@ func validateSettings(s *Settings) error {
 	}
 	if len(s.SecretKey) < MinProductionSecretKeyLen {
 		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be at least %d bytes when BOOKSTORAGE_ENV=production", MinProductionSecretKeyLen)
+	}
+	if s.GoogleOAuthConfigured() {
+		u, err := url.Parse(s.PublicOrigin)
+		if err != nil || u.Scheme != "https" || u.Host == "" {
+			return fmt.Errorf("BOOKSTORAGE_PUBLIC_ORIGIN must be an https URL with host when BOOKSTORAGE_ENV=production and Google OAuth is configured")
+		}
 	}
 	return nil
 }

@@ -5,7 +5,10 @@ go 1.22
 require (
 	github.com/mattn/go-sqlite3 v1.14.33
 	golang.org/x/crypto v0.31.0
+	golang.org/x/oauth2 v0.21.0
 )
+
+require cloud.google.com/go/compute/metadata v0.3.0 // indirect
 
 require (
 	github.com/beorn7/perks v1.0.1 // indirect
