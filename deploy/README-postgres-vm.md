@@ -2,6 +2,16 @@
 
 Le script [`setup-postgres-vm.sh`](setup-postgres-vm.sh) automatise la création d’un rôle et d’une base vides pour BookStorage.
 
+## Modèle réseau (auto-hébergement)
+
+BookStorage suppose ici que **PostgreSQL tourne sur une autre machine joignable depuis la VM applicative sur un réseau privé** (LAN, VLAN, VPN site-à-site, etc.) — **sans exposition du port 5432 sur Internet**, ce qui est la bonne pratique pour la sécurité.
+
+Conséquences pratiques :
+
+- L’URL `BOOKSTORAGE_POSTGRES_URL` doit cibler une **IP privée** (ex. `192.168.x.x`) ou un **nom résolu par la VM app** (fichier **`/etc/hosts`**, DNS interne d’entreprise, etc.).
+- Un **nom de machine connu seulement sur la VM Postgres** (ex. `BookStorageDB`) **ne sera pas** résolu par les DNS publics (8.8.8.8, etc.) : d’où l’erreur `lookup … no such host` si vous ne faites pas `/etc/hosts` ou IP dans l’URL.
+- Sur la VM **Postgres**, il faut quand même **`listen_addresses`** + **`pg_hba.conf`** adaptés au **sous-réseau de la VM app** (voir plus bas) ; le pare-feu n’autorise que ce trafic interne.
+
 ## Utilisation
 
 Depuis la racine du dépôt cloné (`BookStorage/`) :
