@@ -1,113 +1,151 @@
-# PostgreSQL sur une VM dédiée
+# PostgreSQL on a dedicated VM
 
-Le script [`setup-postgres-vm.sh`](setup-postgres-vm.sh) automatise la création d’un rôle et d’une base vides pour BookStorage.
+The script [`setup-postgres-vm.sh`](setup-postgres-vm.sh) provisions an empty database role and database for BookStorage on the PostgreSQL host.
 
-## Modèle réseau (auto-hébergement)
+For general production install (systemd, `bsctl`, firewall), see [Self-hosting](../docs/self-hosting.md). Project overview in French: [README.fr.md](../README.fr.md).
 
-BookStorage suppose ici que **PostgreSQL tourne sur une autre machine joignable depuis la VM applicative sur un réseau privé** (LAN, VLAN, VPN site-à-site, etc.) — **sans exposition du port 5432 sur Internet**, ce qui est la bonne pratique pour la sécurité.
+---
 
-Conséquences pratiques :
+## Table of contents
 
-- L’URL `BOOKSTORAGE_POSTGRES_URL` doit cibler une **IP privée** (ex. `192.168.x.x`) ou un **nom résolu par la VM app** (fichier **`/etc/hosts`**, DNS interne d’entreprise, etc.).
-- Un **nom de machine connu seulement sur la VM Postgres** (ex. `BookStorageDB`) **ne sera pas** résolu par les DNS publics (8.8.8.8, etc.) : d’où l’erreur `lookup … no such host` si vous ne faites pas `/etc/hosts` ou IP dans l’URL.
-- Sur la VM **Postgres**, il faut quand même **`listen_addresses`** + **`pg_hba.conf`** adaptés au **sous-réseau de la VM app** (voir plus bas) ; le pare-feu n’autorise que ce trafic interne.
+- [Network model](#network-model)
+- [Usage](#usage)
+- [Optional environment variables](#optional-environment-variables)
+- [Troubleshooting: slow or stuck apt](#troubleshooting-slow-or-stuck-apt)
+- [PostgreSQL not responding (socket)](#postgresql-not-responding-socket)
+- [After you run the script](#after-you-run-the-script)
 
-## Utilisation
+---
 
-Depuis la racine du dépôt cloné (`BookStorage/`) :
+## Network model
+
+BookStorage assumes **PostgreSQL runs on another machine reachable from the app VM over a private network** (LAN, VLAN, site-to-site VPN, …) and **port 5432 is not exposed to the public Internet** — the usual security posture.
+
+Practical implications:
+
+- `BOOKSTORAGE_POSTGRES_URL` should use a **private IP** (e.g. `192.168.x.x`) or a **hostname the app VM can resolve** (`/etc/hosts`, internal corporate DNS, …).
+- A hostname known only on the Postgres VM (e.g. `BookStorageDB`) **will not** resolve via public DNS (`lookup … no such host`). Fix with `/etc/hosts` or put the IP in the URL.
+- On the **Postgres** host you still need **`listen_addresses`** and **`pg_hba.conf`** that allow the **app VM subnet** (see below); the firewall should only permit that internal traffic.
+
+---
+
+## Usage
+
+From the cloned repo root (`BookStorage/`):
 
 ```bash
 chmod +x deploy/setup-postgres-vm.sh
-# Optionnel : installation des paquets Debian/Ubuntu (sudo requis)
+# Optional: install Debian/Ubuntu packages (sudo required)
 sudo ./deploy/setup-postgres-vm.sh --install-packages
-# Si apt reste bloqué sur « Waiting for headers » (souvent IPv6 ou réseau vers archive.ubuntu.com) :
+# If apt hangs on "Waiting for headers" (often IPv6 or routing to archive.ubuntu.com):
 sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4
-# Si « 0 % [Waiting for headers] » sans savoir si c’est lent ou bloqué : journal HTTP très verbeux
+# If you cannot tell slow vs stuck: very verbose apt HTTP log
 sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4 --apt-debug-http
-# Ou sur une instance où PostgreSQL est déjà installé (pas besoin d’apt) :
+# Or when PostgreSQL is already installed (no apt):
 ./deploy/setup-postgres-vm.sh
 ```
 
-Évitez `sudo deploy/...` sans `./` : selon le répertoire courant, le shell peut ne pas résoudre le chemin comme prévu.
+Avoid `sudo deploy/...` without `./`: depending on the current directory, the shell may not resolve the path as intended.
 
-Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`cd /tmp` puis `sudo -H -u postgres psql`** (libpq tente de se placer dans le répertoire courant du shell ; sous `postgres`, `/home/autreuser/...` est en général interdit — d’où l’ancien message « could not change directory » sans ce `cd`).
+Running with **`sudo ./deploy/...`** is supported: SQL runs via **`cd /tmp` then `sudo -H -u postgres psql`** (libpq changes to the process working directory; user `postgres` often cannot traverse another user’s home — this avoids the old *could not change directory* warning).
 
-## Dépannage : `apt-get` très lent ou bloqué
+---
 
-- **Symptôme** : `0% [Waiting for headers]` sur `archive.ubuntu.com` ou `security.ubuntu.com` — parfois **`apt-get update` réussit** puis **`apt-get install` reste à 0 %** (téléchargement des paquets, pas les mêmes connexions que pour les index).
-- **Script récent** : le dépôt force des options apt plus tolérantes (pas de pipelining HTTP, peu de connexions parallèles, timeouts plus longs). Mettez à jour avec `git pull` puis relancez la même commande.
-- **À essayer** : **`--apt-ipv4`** si vous suspectez un souci IPv6.
-- **Lent mais normal** : à ~50–60 kB/s, ~40–45 Mo de paquets peuvent prendre **10–20 minutes** sans être bloqués ; laissez tourner si le pourcentage avance par à-coups.
-- **`git pull` refuse de fusionner** : soit `git stash push -m wip` (ou supprimez les modifications locales sur `deploy/setup-postgres-vm.sh`), soit reclonez le dépôt.
-- **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` avec les mêmes options réseau que votre politique (miroir, proxy, `-o Acquire::http::Pipeline-Depth=0`, etc.).
-- **Contournement** : installer PostgreSQL par les moyens habituels de la VM, puis **`./deploy/setup-postgres-vm.sh`** sans `--install-packages`.
+## Optional environment variables
 
-Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (hôte dans l’URL ; **si non défini**, le script tente d’utiliser l’**IPv4 LAN** détectée pour que la VM applicative n’ait pas besoin du DNS interne), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS`, `BS_PG_PSQL_CWD`.
+| Variable | Purpose |
+|----------|---------|
+| `BS_PG_DB` | Database name (default: `bookstorage`) |
+| `BS_PG_USER` | Role name (default: `bookstorage`) |
+| `BS_PG_HOST` | Host in the printed URL; if unset, the script uses a detected **LAN IPv4** when possible so the app VM does not depend on internal DNS |
+| `BS_PG_PORT` | Port (default: `5432`) |
+| `BS_PG_SSLMODE` | `sslmode` for `lib/pq`: `disable`, `require`, `verify-ca`, `verify-full` (default: `disable` for typical LAN) |
+| `BS_PG_APT_WATCHDOG_SECS` | Seconds between `[watchdog …]` lines while apt runs (default: `25`) |
+| `BS_PG_PSQL_CWD` | Directory to `cd` into before `sudo -u postgres psql` (default: `/tmp`) |
 
-Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`[watchdog +…s]`** sur la sortie d’erreur : si elle continue d’apparaître, le processus **n’est pas figé** (souvent attente ou très faible débit). **`--apt-debug-http`** demande à apt de journaliser chaque requête HTTP (beaucoup de texte, mais on voit tout de suite si quelque chose bouge).
+While apt runs, the script prints a **`[watchdog +…s]`** line to stderr every N seconds: if it keeps appearing, the process **is not frozen** (slow network or mirror wait). **`--apt-debug-http`** logs each HTTP request (verbose but shows whether anything is moving).
 
-## PostgreSQL ne répond pas (`No such file or directory` sur le socket)
+---
 
-Le script utilise le socket local. Si le serveur **n’écoute pas**, le socket peut être absent.
+## Troubleshooting: slow or stuck apt
 
-### Ubuntu / Debian : `postgresql.service` en « active (exited) »
+- **Symptom**: `0% [Waiting for headers]` on `archive.ubuntu.com` or `security.ubuntu.com` — sometimes **`apt-get update` succeeds** then **`apt-get install` stays at 0%** (package downloads are not the same connections as the index fetch).
+- **Updated script**: the repo uses conservative apt options (no HTTP pipelining, few parallel connections, longer timeouts). Run `git pull` and retry.
+- **Try**: **`--apt-ipv4`** if you suspect IPv6 or routing issues.
+- **Slow but OK**: at ~50–60 kB/s, ~40–45 MB of packages can take **10–20 minutes** without being stuck; if the percentage advances in bursts, let it finish.
+- **`git pull` refuses to merge**: `git stash push -m wip` (or discard local changes to `deploy/setup-postgres-vm.sh`), or re-clone the repo.
+- **Manual**: `sudo apt-get update` then `sudo apt-get install -y postgresql postgresql-contrib` with the same network policy your environment uses (mirror, proxy, `-o Acquire::http::Pipeline-Depth=0`, …).
+- **Workaround**: install PostgreSQL with your usual method on the VM, then **`./deploy/setup-postgres-vm.sh`** without `--install-packages`.
 
-C’est **normal** : `postgresql.service` est un méta-service (`ExecStart=/bin/true`) ; il ne démarre **pas** le moteur PostgreSQL.
+---
 
-Listez les clusters et leur état :
+## PostgreSQL not responding (socket)
+
+The script uses the local Unix socket. If the server **is not running**, the socket may be missing.
+
+### Ubuntu / Debian: `postgresql.service` is `active (exited)`
+
+That is **expected**: `postgresql.service` is a meta-unit (`ExecStart=/bin/true`); it does **not** start the PostgreSQL engine.
+
+List clusters and their state:
 
 ```bash
 pg_lsclusters
 ```
 
-Démarrez le **cluster** (adaptez `14` / `main` selon la sortie) :
+Start the **cluster** (adjust `14` / `main` to match your output):
 
 ```bash
 sudo systemctl start postgresql@14-main
 sudo systemctl status postgresql@14-main
-sudo systemctl enable postgresql@14-main   # au boot
+sudo systemctl enable postgresql@14-main   # at boot
 ```
 
-Puis relancez `./deploy/setup-postgres-vm.sh` (le script tente aussi de démarrer automatiquement les clusters marqués `down` dans `pg_lsclusters`).
+Then re-run `./deploy/setup-postgres-vm.sh` (the script also tries to start clusters listed as `down` in `pg_lsclusters`).
 
-### Le cluster refuse de démarrer (`could not bind IPv4`, `could not create any listen sockets`)
+### Cluster fails to start (`could not bind IPv4`, `could not create any listen sockets`)
 
-`systemctl` tronque les lignes : lisez le journal Postgres (là est la cause exacte) :
+`systemctl` truncates log lines; read the PostgreSQL journal for the exact error:
 
 ```bash
 sudo tail -100 /var/log/postgresql/postgresql-14-main.log
-# ou
+# or
 sudo journalctl -u postgresql@14-main -n 80 --no-pager
 ```
 
-Causes fréquentes :
+Common causes:
 
-1. **Port 5432 déjà utilisé** (autre Postgres, Docker, autre outil) :
+1. **Port 5432 already in use** (another Postgres, Docker, another service):
    ```bash
    sudo ss -lntp | grep 5432
    ```
-   Arrêtez le processus concurrent ou changez `port` dans `/etc/postgresql/14/main/postgresql.conf`.
+   Stop the conflicting process or change `port` in `/etc/postgresql/14/main/postgresql.conf`.
 
-2. **`listen_addresses` pointe vers une IP que cette VM n’a pas** (erreur du type *Cannot assign requested address*). Ouvrez `/etc/postgresql/14/main/postgresql.conf` et utilisez au minimum pour valider le démarrage :
-   - `listen_addresses = 'localhost'` ou `'*'`
-   Puis : `sudo systemctl restart postgresql@14-main`.
+2. **`listen_addresses` binds an IP this VM does not have** (*Cannot assign requested address*). Edit `/etc/postgresql/14/main/postgresql.conf` and use at least for a quick validation:
+   - `listen_addresses = 'localhost'` or `'*'`
+   Then: `sudo systemctl restart postgresql@14-main`.
 
-3. **Espace disque** sur `/var` : `df -h /var/lib/postgresql`.
+3. **Disk space** on `/var`: `df -h /var/lib/postgresql`.
 
-## Après l’exécution
+---
 
-1. Copiez la ligne `BOOKSTORAGE_POSTGRES_URL=...` (ou les champs affichés) vers votre `.env` sur la **VM applicative**, ou saisissez-les dans l’assistant **Admin → PostgreSQL** (superadmin, migration depuis SQLite). Vérifiez que l’URL est **complète** ; pour `sslmode`, le driver Go (`lib/pq`) accepte **`disable`**, **`require`**, **`verify-ca`**, **`verify-full`** (pas `prefer` — le script et l’app normalisent ou utilisent `disable` par défaut sur LAN).
-2. **Connexion depuis une autre machine** : sur Ubuntu/Debian, PostgreSQL écoute souvent **uniquement sur `127.0.0.1`**. Il faut alors :
-   - dans **`postgresql.conf`** (souvent `/etc/postgresql/14/main/postgresql.conf`) : `listen_addresses = '*'` ou l’IP LAN de la VM ;
-   - dans **`pg_hba.conf`** (même répertoire) : une règle pour la VM applicative. Avec une URL **`sslmode=disable`** (cas LAN courant), PostgreSQL annonce *« no encryption »* : utilisez plutôt une ligne **`hostnossl`** (connexion TCP **sans** TLS), par exemple  
+## After you run the script
+
+1. Copy the line `BOOKSTORAGE_POSTGRES_URL=...` (or the printed fields) into `.env` on the **app VM**, or enter them in **Admin → PostgreSQL** (superadmin, SQLite → PostgreSQL migration). Ensure the URL is **complete**; for `sslmode`, the Go driver (`lib/pq`) accepts **`disable`**, **`require`**, **`verify-ca`**, **`verify-full`** (not `prefer` — the script and the app normalize or default to `disable` on LAN).
+
+2. **Connections from another host**: on Ubuntu/Debian PostgreSQL often listens **only on `127.0.0.1`**. Then:
+   - In **`postgresql.conf`** (often `/etc/postgresql/14/main/postgresql.conf`): `listen_addresses = '*'` or this VM’s LAN IP.
+   - In **`pg_hba.conf`** (same directory): a rule for the app VM. With **`sslmode=disable`** (common on LAN), PostgreSQL reports *no encryption*: prefer a **`hostnossl`** line (TCP **without** TLS), for example  
      `hostnossl  all  all  192.168.1.0/24  scram-sha-256`  
-     ou, plus restrictif, l’IP seule de l’app :  
+     or, more restrictive, only the app:  
      `hostnossl  bookstorage  bookstorage  192.168.1.116/32  scram-sha-256`  
-     (adaptez IP et sous-réseau). Les lignes **`host`** conviennent souvent aussi ; en cas de doute, placez la règle **au-dessus** des éventuelles lignes `reject` / `all all all reject`.
-   - **`sudo systemctl reload postgresql@14-main`** (ou `restart`) après édition ;
-   - ouvrir le **pare-feu** (port `5432/tcp`) depuis l’IP de la VM applicative.
-3. Si l’appli affiche **`connect_failed`** : utilisez l’**IP** dans l’URL si le **nom d’hôte** de la VM Postgres n’est pas dans le DNS de la VM app (sinon `dial tcp: lookup …`). Après mise à jour BookStorage, le test d’admin affiche aussi un **détail** (`detail`) avec le message d’erreur PostgreSQL/driver.
-4. Le schéma des tables est créée par BookStorage au premier démarrage (`EnsureSchema`) ; ce script ne duplique pas le schéma applicatif.
+     (adapt IP and subnet). **`host`** lines often work too; place your rule **above** any broad `reject` / `all all all reject` lines.
+   - **`sudo systemctl reload postgresql@14-main`** (or `restart`) after edits.
+   - Open the **firewall** for `5432/tcp` **only** from the app VM’s IP.
 
-Pour générer l’URL avec l’IP LAN dans le champ hôte (au lieu du hostname), sur la VM Postgres :  
-`sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh` (adaptez l’IP).
+3. If the app returns **`connect_failed`**: put the **IP** in the URL if the Postgres VM hostname is not resolvable on the app VM (`dial tcp: lookup …`). After updating BookStorage, the admin connectivity test also includes a **`detail`** field with the PostgreSQL/driver message.
+
+4. Application table schema is created on first BookStorage start (`EnsureSchema`); this script does not create the app schema separately.
+
+To print the URL with a specific host or IP (instead of the auto-detected value), on the Postgres VM run:  
+`sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh` (adjust the IP or hostname).

@@ -10,89 +10,84 @@ import (
 
 // MigrateSQLiteToPostgres copies all application data from the SQLite connection into an empty
 // PostgreSQL database reachable via pgDSN, then applies migration markers and full-text setup.
-func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string, s *config.Settings) error {
+// It does not modify .env: the caller must persist BOOKSTORAGE_POSTGRES_URL (returned normalized DSN)
+// as the last step before responding OK, so a failed .env write leaves SQLite intact and the app reachable.
+func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN string, err error) {
 	if sqliteConn == nil || sqliteConn.B != BackendSQLite {
-		return fmt.Errorf("migration requires an active SQLite connection")
+		return "", fmt.Errorf("migration requires an active SQLite connection")
 	}
 	pgDSN = strings.TrimSpace(pgDSN)
 	if pgDSN == "" {
-		return fmt.Errorf("empty postgres URL")
+		return "", fmt.Errorf("empty postgres URL")
 	}
 	norm, err := config.NormalizePostgresURLForLibPQ(pgDSN)
 	if err != nil {
-		return err
+		return "", err
 	}
 	pg, err := sql.Open("postgres", norm)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = pg.Close() }()
 	if err := pg.Ping(); err != nil {
-		return fmt.Errorf("postgres ping: %w", err)
+		return "", fmt.Errorf("postgres ping: %w", err)
 	}
 	pgConn := &Conn{sql: pg, B: BackendPostgres}
 
 	if err := ensurePostgresSchema(pgConn); err != nil {
-		return fmt.Errorf("target schema: %w", err)
+		return "", fmt.Errorf("target schema: %w", err)
 	}
 	clearPostgresUserData := []string{
 		`TRUNCATE oauth_states, csv_import_sessions, translation_cache, sessions, dismissed_recommendations, works, catalog, users, schema_migrations RESTART IDENTITY CASCADE`,
 	}
 	for _, q := range clearPostgresUserData {
 		if _, err := pgConn.Exec(q); err != nil {
-			return fmt.Errorf("truncate target: %w", err)
+			return "", fmt.Errorf("truncate target: %w", err)
 		}
 	}
 
 	sl := sqliteConn.Std()
 
 	if err := copyUsers(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyCatalog(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyWorks(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyDismissed(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copySessions(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyTranslationCache(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyCSVImportSessions(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := copyOAuthStates(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 
 	if err := applyPostgresMigrationMarkers(pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := ensurePostgresFullText(pgConn); err != nil {
-		return err
+		return "", err
 	}
 
 	if err := syncPostgresSequences(pgConn); err != nil {
-		return err
+		return "", err
 	}
 	if err := verifyMigrationCounts(sl, pgConn); err != nil {
-		return err
+		return "", err
 	}
 
-	if s != nil && strings.TrimSpace(s.EnvFilePath) != "" {
-		if err := config.MergeEnvKeys(s.EnvFilePath, map[string]string{
-			"BOOKSTORAGE_POSTGRES_URL": norm,
-		}); err != nil {
-			return fmt.Errorf("update .env: %w", err)
-		}
-	}
-	return nil
+	return norm, nil
 }
 
 func verifyMigrationCounts(sl *sql.DB, pg *Conn) error {

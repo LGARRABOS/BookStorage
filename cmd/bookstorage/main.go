@@ -127,7 +127,7 @@ func main() {
 	}
 
 	envFile := config.ResolveEnvFilePath(root, configPath)
-	dotenvOK, err := config.LoadDotEnvFile(envFile)
+	_, err := config.LoadDotEnvFile(envFile)
 	if err != nil {
 		log.Fatalf("load .env: %v", err)
 	}
@@ -136,9 +136,9 @@ func main() {
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
-	if dotenvOK {
-		settings.EnvFilePath = envFile
-	}
+	// Always record resolved .env path so admin SQLite → Postgres migration can merge BOOKSTORAGE_POSTGRES_URL
+	// even when the file was missing or unreadable at startup (LoadDotEnvFile skips without error).
+	settings.EnvFilePath = envFile
 
 	siteConfig := config.LoadSiteConfig(root)
 
