@@ -149,6 +149,14 @@ else
 	run_psql() { psql -v ON_ERROR_STOP=1 "$@"; }
 fi
 
+if ! run_psql -d postgres -tAc "select 1" >/dev/null 2>&1; then
+	echo "Impossible de joindre PostgreSQL sur cette machine (socket absent ou service arrêté)." >&2
+	echo "  sudo systemctl start postgresql" >&2
+	echo "  sudo systemctl status postgresql" >&2
+	echo "  sudo systemctl enable postgresql   # optionnel : démarrage au boot" >&2
+	exit 1
+fi
+
 PASS="$(openssl rand -base64 24 | tr -d '\n' | tr '/+' 'AB')"
 PASS_ESC="${PASS//\'/\'\'}"
 
