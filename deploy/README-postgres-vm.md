@@ -20,7 +20,7 @@ sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4 --apt-debug-htt
 
 Évitez `sudo deploy/...` sans `./` : selon le répertoire courant, le shell peut ne pas résoudre le chemin comme prévu.
 
-Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`sudo -H -u postgres psql`** (`-H` évite l’avertissement « could not change directory to /home/… » : sans lui, `postgres` ne peut pas traverser le répertoire home de l’utilisateur courant).
+Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`cd /tmp` puis `sudo -H -u postgres psql`** (libpq tente de se placer dans le répertoire courant du shell ; sous `postgres`, `/home/autreuser/...` est en général interdit — d’où l’ancien message « could not change directory » sans ce `cd`).
 
 ## Dépannage : `apt-get` très lent ou bloqué
 
@@ -32,7 +32,7 @@ Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL 
 - **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` avec les mêmes options réseau que votre politique (miroir, proxy, `-o Acquire::http::Pipeline-Depth=0`, etc.).
 - **Contournement** : installer PostgreSQL par les moyens habituels de la VM, puis **`./deploy/setup-postgres-vm.sh`** sans `--install-packages`.
 
-Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS` (intervalle des lignes `[watchdog …]` pendant `apt`, défaut 25).
+Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS` (intervalle des lignes `[watchdog …]` pendant `apt`, défaut 25), `BS_PG_PSQL_CWD` (répertoire utilisé avant `psql` en `sudo`, défaut `/tmp`).
 
 Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`[watchdog +…s]`** sur la sortie d’erreur : si elle continue d’apparaître, le processus **n’est pas figé** (souvent attente ou très faible débit). **`--apt-debug-http`** demande à apt de journaliser chaque requête HTTP (beaucoup de texte, mais on voit tout de suite si quelque chose bouge).
 

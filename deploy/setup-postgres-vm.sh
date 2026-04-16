@@ -9,6 +9,7 @@
 #   BS_PG_PORT               port shown in summary (default: 5432)
 #   BS_PG_SSLMODE            sslmode query param in URL (default: prefer)
 #   BS_PG_APT_WATCHDOG_SECS  seconds between heartbeat lines while apt runs (default: 25)
+#   BS_PG_PSQL_CWD           directory to cd into before sudo -u postgres psql (default: /tmp)
 #
 # Flags:
 #   --install-packages   run apt-get update && apt-get install -y postgresql postgresql-contrib (requires sudo)
@@ -139,9 +140,11 @@ if ! command -v psql >/dev/null 2>&1; then
 fi
 
 # Peer auth maps the Unix user to a PG role: root has no "root" role by default, so never call bare psql as root.
-# -H sets HOME to postgres' datadir so libpq does not try to chdir to the invoker's cwd (often under /home/foo, not traversable by postgres).
+# libpq still chdirs to the *process cwd* (often /home/foo/... after sudo); user postgres cannot traverse /home/foo.
+# Run psql from a world-accessible dir; -H sets HOME for postgres. Override with BS_PG_PSQL_CWD if needed.
+BS_PG_PSQL_CWD="${BS_PG_PSQL_CWD:-/tmp}"
 if [[ "$(id -u)" -eq 0 ]] || sudo -n true 2>/dev/null; then
-	run_psql() { sudo -H -u postgres psql -v ON_ERROR_STOP=1 "$@"; }
+	run_psql() { ( cd "${BS_PG_PSQL_CWD}" && sudo -H -u postgres psql -v ON_ERROR_STOP=1 "$@" ); }
 else
 	run_psql() { psql -v ON_ERROR_STOP=1 "$@"; }
 fi
