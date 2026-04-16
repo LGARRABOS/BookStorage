@@ -20,7 +20,7 @@ sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4 --apt-debug-htt
 
 Évitez `sudo deploy/...` sans `./` : selon le répertoire courant, le shell peut ne pas résoudre le chemin comme prévu.
 
-Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`sudo -u postgres psql`** (l’auth « peer » ne donne pas de rôle PostgreSQL à l’utilisateur `root`).
+Lancer le script avec **`sudo ./deploy/...`** est supporté : les commandes SQL passent par **`sudo -H -u postgres psql`** (`-H` évite l’avertissement « could not change directory to /home/… » : sans lui, `postgres` ne peut pas traverser le répertoire home de l’utilisateur courant).
 
 ## Dépannage : `apt-get` très lent ou bloqué
 
