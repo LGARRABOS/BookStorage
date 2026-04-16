@@ -12,6 +12,8 @@ chmod +x deploy/setup-postgres-vm.sh
 sudo ./deploy/setup-postgres-vm.sh --install-packages
 # Si apt reste bloqué sur « Waiting for headers » (souvent IPv6 ou réseau vers archive.ubuntu.com) :
 sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4
+# Si « 0 % [Waiting for headers] » sans savoir si c’est lent ou bloqué : journal HTTP très verbeux
+sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4 --apt-debug-http
 # Ou sur une instance où PostgreSQL est déjà installé (pas besoin d’apt) :
 ./deploy/setup-postgres-vm.sh
 ```
@@ -28,7 +30,9 @@ sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4
 - **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` avec les mêmes options réseau que votre politique (miroir, proxy, `-o Acquire::http::Pipeline-Depth=0`, etc.).
 - **Contournement** : installer PostgreSQL par les moyens habituels de la VM, puis **`./deploy/setup-postgres-vm.sh`** sans `--install-packages`.
 
-Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`.
+Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`, `BS_PG_APT_WATCHDOG_SECS` (intervalle des lignes `[watchdog …]` pendant `apt`, défaut 25).
+
+Pendant `apt`, le script affiche toutes les **25 s** (par défaut) une ligne **`[watchdog +…s]`** sur la sortie d’erreur : si elle continue d’apparaître, le processus **n’est pas figé** (souvent attente ou très faible débit). **`--apt-debug-http`** demande à apt de journaliser chaque requête HTTP (beaucoup de texte, mais on voit tout de suite si quelque chose bouge).
 
 ## Après l’exécution
 

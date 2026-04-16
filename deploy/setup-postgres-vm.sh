@@ -3,15 +3,18 @@
 # Run on the database VM (Debian/Ubuntu) as a user who can sudo to postgres, or as postgres.
 #
 # Environment (optional):
-#   BS_PG_DB       database name (default: bookstorage)
-#   BS_PG_USER     role name (default: bookstorage)
-#   BS_PG_HOST     hostname shown in the connection summary (default: hostname -f or hostname)
-#   BS_PG_PORT     port shown in summary (default: 5432)
-#   BS_PG_SSLMODE  sslmode query param in URL (default: prefer)
+#   BS_PG_DB                 database name (default: bookstorage)
+#   BS_PG_USER               role name (default: bookstorage)
+#   BS_PG_HOST               hostname shown in the connection summary (default: hostname -f or hostname)
+#   BS_PG_PORT               port shown in summary (default: 5432)
+#   BS_PG_SSLMODE            sslmode query param in URL (default: prefer)
+#   BS_PG_APT_WATCHDOG_SECS  seconds between heartbeat lines while apt runs (default: 25)
 #
 # Flags:
 #   --install-packages   run apt-get update && apt-get install -y postgresql postgresql-contrib (requires sudo)
 #   --apt-ipv4           pass -o Acquire::ForceIPv4=true to apt (when IPv6 or some routes hang on "Waiting for headers")
+#   --apt-debug-http     very verbose apt HTTP log (each request; use if "0%" looks stuck)
+#   --apt-no-watchdog    disable periodic "[watchdog] apt still running" lines (e.g. CI)
 #
 # By default apt is also run with conservative HTTP options (no pipelining, few parallel connections)
 # to reduce "0% [Waiting for headers]" during package downloads on slow or strict networks.
@@ -23,12 +26,16 @@ set -euo pipefail
 
 INSTALL_PKGS=0
 APT_IPV4=0
+APT_DEBUG_HTTP=0
+APT_NO_WATCHDOG=0
 while [[ $# -gt 0 ]]; do
 	case "$1" in
 		--install-packages) INSTALL_PKGS=1; shift ;;
 		--apt-ipv4) APT_IPV4=1; shift ;;
+		--apt-debug-http) APT_DEBUG_HTTP=1; shift ;;
+		--apt-no-watchdog) APT_NO_WATCHDOG=1; shift ;;
 		-h|--help)
-			sed -n '1,45p' "$0"
+			sed -n '2,/^set -euo pipefail$/p' "$0" | sed '$d' | sed 's/^# \{0,1\}//'
 			exit 0
 			;;
 		*) echo "unknown option: $1" >&2; exit 1 ;;
@@ -49,7 +56,59 @@ apt_base_args() {
 	if [[ "${APT_IPV4}" -eq 1 ]]; then
 		a+=(-o Acquire::ForceIPv4=true)
 	fi
+	if [[ "${APT_DEBUG_HTTP}" -eq 1 ]]; then
+		a+=(-o Debug::Acquire::http=true)
+	fi
 	printf '%s\n' "${a[@]}"
+}
+
+# Prints a line every N seconds while apt runs so "0% [Waiting for headers]" is not mistaken for a hang.
+apt_with_watchdog() {
+	local label="$1"
+	shift
+	if [[ "${APT_NO_WATCHDOG}" -eq 1 ]]; then
+		"$@"
+		return
+	fi
+	local step="${BS_PG_APT_WATCHDOG_SECS:-25}"
+	(
+		local s=0
+		while sleep "${step}"; do
+			s=$((s + step))
+			echo "[watchdog +${s}s] «${label}» : apt est toujours actif (réseau lent ou attente du miroir ; ce message indique que le processus n'est pas figé)." >&2
+		done
+	) &
+	local wd=$!
+	local ec=0
+	"$@" || ec=$?
+	kill "${wd}" 2>/dev/null || true
+	wait "${wd}" 2>/dev/null || true
+	return "${ec}"
+}
+
+probe_inrelease() {
+	local codename="jammy"
+	if command -v lsb_release >/dev/null 2>&1; then
+		codename="$(lsb_release -cs 2>/dev/null || true)"
+	fi
+	if [[ -z "${codename}" ]]; then
+		codename="jammy"
+	fi
+	local url="http://archive.ubuntu.com/ubuntu/dists/${codename}/InRelease"
+	local curl_opts=(-fSL --connect-timeout 10 --max-time 20 -o /dev/null)
+	if [[ "${APT_IPV4}" -eq 1 ]]; then
+		curl_opts+=(-4)
+	fi
+	if ! command -v curl >/dev/null 2>&1; then
+		echo "==> (pas de curl) sonde réseau ignorée ; installez curl pour un test avant apt." >&2
+		return 0
+	fi
+	echo "==> Sonde réseau (20s max) : InRelease (${codename}) sur archive.ubuntu.com …" >&2
+	if curl "${curl_opts[@]}" -w "    OK — durée %{time_total}s, %{size_download} octets, débit %{speed_download} o/s\n" "${url}" >&2; then
+		return 0
+	fi
+	echo "    Échec ou timeout : apt risque de rester longtemps sur « Waiting for headers » ; vérifiez DNS / pare-feu / miroir." >&2
+	return 0
 }
 
 if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
@@ -57,11 +116,12 @@ if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
 		echo "apt-get not found; install PostgreSQL with your distro tools, then re-run without --install-packages." >&2
 		exit 1
 	fi
-	echo "==> apt-get update (conservative HTTP, timeouts 300s; use --apt-ipv4 if needed)..." >&2
+	probe_inrelease
+	echo "==> apt-get update (HTTP conservateur, timeouts 300s ; --apt-debug-http pour le détail)…" >&2
 	mapfile -t _APT_ARGS < <(apt_base_args)
-	sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" update
-	echo "==> apt-get install postgresql ... (can be slow on ~50 kB/s links; ~45 MB)" >&2
-	sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
+	apt_with_watchdog "apt-get update" sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" update
+	echo "==> apt-get install postgresql … (~45 Mo ; à ~50 kB/s compter ~15–25 min si le débit est stable)" >&2
+	apt_with_watchdog "apt-get install" sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
 fi
 
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
