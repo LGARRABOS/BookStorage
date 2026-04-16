@@ -20,10 +20,13 @@ sudo ./deploy/setup-postgres-vm.sh --install-packages --apt-ipv4
 
 ## Dépannage : `apt-get` très lent ou bloqué
 
-- **Symptôme** : `0% [Waiting for headers]` pendant de longues minutes sur `archive.ubuntu.com` ou `security.ubuntu.com`.
-- **À essayer** : relancer avec **`--apt-ipv4`** (force IPv4 pour apt).
-- **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` ; si ça bloque encore, vérifier DNS, pare-feu sortant, proxy, ou remplacer temporairement les miroirs dans `/etc/apt/sources.list` par un miroir plus proche (documentation Ubuntu « Mirror »).
-- **Contournement** : installer PostgreSQL par les moyens habituels de la VM (image cloud avec Postgres, paquet déjà présent), puis exécuter **`./deploy/setup-postgres-vm.sh`** sans `--install-packages` : le script ne fait alors que créer l’utilisateur, la base et afficher l’URL.
+- **Symptôme** : `0% [Waiting for headers]` sur `archive.ubuntu.com` ou `security.ubuntu.com` — parfois **`apt-get update` réussit** puis **`apt-get install` reste à 0 %** (téléchargement des paquets, pas les mêmes connexions que pour les index).
+- **Script récent** : le dépôt force des options apt plus tolérantes (pas de pipelining HTTP, peu de connexions parallèles, timeouts plus longs). Mettez à jour avec `git pull` puis relancez la même commande.
+- **À essayer** : **`--apt-ipv4`** si vous suspectez un souci IPv6.
+- **Lent mais normal** : à ~50–60 kB/s, ~40–45 Mo de paquets peuvent prendre **10–20 minutes** sans être bloqués ; laissez tourner si le pourcentage avance par à-coups.
+- **`git pull` refuse de fusionner** : soit `git stash push -m wip` (ou supprimez les modifications locales sur `deploy/setup-postgres-vm.sh`), soit reclonez le dépôt.
+- **Manuel** : `sudo apt-get update` puis `sudo apt-get install -y postgresql postgresql-contrib` avec les mêmes options réseau que votre politique (miroir, proxy, `-o Acquire::http::Pipeline-Depth=0`, etc.).
+- **Contournement** : installer PostgreSQL par les moyens habituels de la VM, puis **`./deploy/setup-postgres-vm.sh`** sans `--install-packages`.
 
 Variables optionnelles : `BS_PG_DB`, `BS_PG_USER`, `BS_PG_HOST` (affichage dans l’URL), `BS_PG_PORT`, `BS_PG_SSLMODE`.
 

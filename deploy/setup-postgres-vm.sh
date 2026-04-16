@@ -13,6 +13,9 @@
 #   --install-packages   run apt-get update && apt-get install -y postgresql postgresql-contrib (requires sudo)
 #   --apt-ipv4           pass -o Acquire::ForceIPv4=true to apt (when IPv6 or some routes hang on "Waiting for headers")
 #
+# By default apt is also run with conservative HTTP options (no pipelining, few parallel connections)
+# to reduce "0% [Waiting for headers]" during package downloads on slow or strict networks.
+#
 # Does NOT open PostgreSQL to the world: adjust listen_addresses and pg_hba.conf yourself
 # to allow only your application VM / subnet.
 
@@ -32,14 +35,16 @@ while [[ $# -gt 0 ]]; do
 	esac
 done
 
-# apt: avoid indefinite "Waiting for headers" on bad mirrors / IPv6; allow override via BS_PG_APT_EXTRA_OPTS.
+# apt: reduce indefinite "Waiting for headers" (indexes + .deb downloads): timeouts, retries, no HTTP pipelining.
 apt_base_args() {
 	local -a a=(
 		-y
-		-o Acquire::http::Timeout=120
-		-o Acquire::https::Timeout=120
-		-o Acquire::ftp::Timeout=120
-		-o Acquire::Retries=3
+		-o Acquire::http::Timeout=300
+		-o Acquire::https::Timeout=300
+		-o Acquire::ftp::Timeout=300
+		-o Acquire::Retries=5
+		-o Acquire::http::Pipeline-Depth=0
+		-o Acquire::http::MaxConnections=2
 	)
 	if [[ "${APT_IPV4}" -eq 1 ]]; then
 		a+=(-o Acquire::ForceIPv4=true)
@@ -52,11 +57,11 @@ if [[ "${INSTALL_PKGS}" -eq 1 ]]; then
 		echo "apt-get not found; install PostgreSQL with your distro tools, then re-run without --install-packages." >&2
 		exit 1
 	fi
-	echo "==> apt-get update (timeouts 120s, retries 3; use --apt-ipv4 if this hangs)..." >&2
+	echo "==> apt-get update (conservative HTTP, timeouts 300s; use --apt-ipv4 if needed)..." >&2
 	mapfile -t _APT_ARGS < <(apt_base_args)
-	sudo apt-get "${_APT_ARGS[@]}" update
-	echo "==> apt-get install postgresql ..." >&2
-	sudo apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
+	sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" update
+	echo "==> apt-get install postgresql ... (can be slow on ~50 kB/s links; ~45 MB)" >&2
+	sudo DEBIAN_FRONTEND=noninteractive apt-get "${_APT_ARGS[@]}" install postgresql postgresql-contrib
 fi
 
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
