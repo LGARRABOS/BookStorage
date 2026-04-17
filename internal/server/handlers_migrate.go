@@ -105,9 +105,15 @@ func (a *App) HandleAPIAdminMigratePostgresRun(w http.ResponseWriter, r *http.Re
 	}
 	if err := config.MergeEnvKeys(envPath, map[string]string{"BOOKSTORAGE_POSTGRES_URL": norm}); err != nil {
 		log.Printf("migrate postgres env: %v", err)
+		detail := "update .env: " + err.Error()
+		if strings.Contains(strings.ToLower(detail), "permission denied") {
+			detail += " — fix: the systemd User= must own the .env file (stock unit: nobody). Example: " +
+				"sudo chown nobody " + envPath + " && sudo chmod 600 " + envPath +
+				" (use your service user if overridden), then retry migration."
+		}
 		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{
 			"error":  "migrate_failed",
-			"detail": "update .env: " + err.Error(),
+			"detail": detail,
 		})
 		return
 	}

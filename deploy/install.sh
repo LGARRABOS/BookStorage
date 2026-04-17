@@ -186,10 +186,17 @@ BOOKSTORAGE_HOST=0.0.0.0
 BOOKSTORAGE_PORT=5000
 BOOKSTORAGE_SECRET_KEY=$SECRET
 EOF
-    chmod 600 $APP_DIR/.env
     print_success "Fichier .env créé avec clé secrète générée"
 else
     print_success "Fichier .env existant conservé"
+fi
+# Service runs as APP_USER (see deploy/bookstorage.service): .env must be writable so Admin → PostgreSQL
+# migration can merge BOOKSTORAGE_POSTGRES_URL without permission denied.
+# chown USER only sets the login primary group (e.g. nobody → nogroup on Debian).
+if [ -f "$APP_DIR/.env" ]; then
+    chown "$APP_USER" "$APP_DIR/.env"
+    chmod 600 "$APP_DIR/.env"
+    print_success ".env → propriétaire $APP_USER (migration PostgreSQL / écriture admin)"
 fi
 
 # Ouvrir le port dans le firewall si firewalld est actif

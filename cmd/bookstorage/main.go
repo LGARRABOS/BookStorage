@@ -246,7 +246,7 @@ func main() {
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
-	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithRequestPolicies(mux)))))
+	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithDatabaseUnavailable(app.WithRequestPolicies(mux))))))
 	readTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC", 15)
 	writeTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC", 120)
 	srv := &http.Server{

@@ -295,6 +295,20 @@ BOOKSTORAGE_PORT=5001
 bsctl logs
 ```
 
+### SQLite → PostgreSQL (admin): `permission denied` when updating `.env`
+
+The migration wizard writes `BOOKSTORAGE_POSTGRES_URL` into the resolved `.env` file (e.g. `/opt/bookstorage/.env`). The **process user** from `deploy/bookstorage.service` (`User=` / `Group=`, stock: `nobody`) must be able to **write** that file. If `.env` was created as `root:root` with mode `600`, the merge step fails with `permission denied` and the app stays on SQLite until you fix ownership.
+
+**One-time fix** (use the same login as `User=` in your unit, stock: `nobody`; `chown user` sets that user’s primary group, e.g. `nogroup` on Debian):
+
+```bash
+sudo chown nobody /opt/bookstorage/.env
+sudo chmod 600 /opt/bookstorage/.env
+sudo systemctl restart bookstorage
+```
+
+Re-run **Admin → PostgreSQL → Migrer**. New installs from `deploy/install.sh` set `.env` ownership to the service user after step 7.
+
 ---
 
 [Documentation index](README.md) · [Development](development.md)
