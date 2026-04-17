@@ -33,3 +33,63 @@
   if (scrollbars !== 'visible') scrollbars = 'hidden';
   html.setAttribute('data-scrollbars', scrollbars);
 })();
+
+/**
+ * When the database drops, full-page navigations are blocked by the server (503),
+ * but in-page fetch() calls still need a reload to show the maintenance HTML.
+ * Also poll /healthz so idle tabs detect outage without user action.
+ */
+(function () {
+  if (window.__bookstorageDbWatch) return;
+  window.__bookstorageDbWatch = true;
+
+  var origFetch = window.fetch;
+  if (typeof origFetch === 'function') {
+    window.fetch = function () {
+      return origFetch.apply(this, arguments).then(function (res) {
+        if (res.status !== 503) return res;
+        var ct = (res.headers.get('content-type') || '').toLowerCase();
+        if (ct.indexOf('application/json') === -1) return res;
+        return res.clone().json().then(function (j) {
+          if (j && j.error === 'service_unavailable' && j.reason === 'database') {
+            window.location.reload();
+          }
+          return res;
+        }).catch(function () {
+          window.location.reload();
+          return res;
+        });
+      });
+    };
+  }
+
+  function startPoll() {
+    if (document.body && document.body.classList.contains('error-page')) return;
+    var pollMs = 5000;
+    setInterval(function () {
+      if (!origFetch) return;
+      origFetch('/healthz', {
+        credentials: 'same-origin',
+        headers: { Accept: 'application/json' }
+      })
+        .then(function (r) {
+          if (!r.ok) {
+            window.location.reload();
+            return null;
+          }
+          return r.json();
+        })
+        .then(function (j) {
+          if (j && j.ok === false) window.location.reload();
+        })
+        .catch(function () {
+          window.location.reload();
+        });
+    }, pollMs);
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startPoll);
+  } else {
+    startPoll();
+  }
+})();
