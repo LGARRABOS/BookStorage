@@ -5,39 +5,26 @@ import (
 	"log"
 	"net/http"
 	"strings"
-	"sync"
 	"time"
 
 	"bookstorage/internal/database"
 )
 
-const dbProbeTTL = 2 * time.Second
-
-// dbAvailabilityProbe caches PingContext results to avoid hammering the DB on every request.
-type dbAvailabilityProbe struct {
-	mu      sync.Mutex
-	checked time.Time
-	ok      bool
-}
+// dbAvailabilityProbe runs Ping before each HTTP request (no positive cache).
+// Caching "DB up" would let mutating requests through until the next full page load after an outage.
+type dbAvailabilityProbe struct{}
 
 func (p *dbAvailabilityProbe) check(db *database.Conn) bool {
 	if db == nil {
 		return false
 	}
-	p.mu.Lock()
-	defer p.mu.Unlock()
-	if !p.checked.IsZero() && time.Since(p.checked) < dbProbeTTL {
-		return p.ok
-	}
-	p.checked = time.Now()
 	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
 	defer cancel()
 	err := db.PingContext(ctx)
-	p.ok = err == nil
 	if err != nil {
 		log.Printf("database unavailable: %v", err)
 	}
-	return p.ok
+	return err == nil
 }
 
 // WithDatabaseUnavailable serves a maintenance-style page (503) when the database cannot be reached.
