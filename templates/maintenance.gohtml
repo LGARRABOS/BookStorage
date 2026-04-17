@@ -1,0 +1,34 @@
+{{ define "maintenance" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="robots" content="noindex">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "error.maintenance.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/error-pages.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body class="error-page">
+    <div class="error-bg" aria-hidden="true"></div>
+    <a class="error-brand" href="/">BookStorage</a>
+    <main class="page-body error-page-shell">
+        <div class="container error-wrap">
+            <section class="error-card" data-error-code="503">
+                <div class="error-card-inner">
+                    <div class="error-icon-wrap" aria-hidden="true">🔧</div>
+                    <h1 class="error-code">503</h1>
+                    <p class="error-sub">{{ t .T "error.maintenance.desc" }}</p>
+                    <div class="error-actions">
+                        <button type="button" class="btn btn-primary" onclick="location.reload()">{{ t .T "error.maintenance.retry" }}</button>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </main>
+</body>
+</html>
+{{ end }}

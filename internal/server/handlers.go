@@ -42,6 +42,7 @@ type App struct {
 	TemplatesWeb    *template.Template
 	TemplatesMobile *template.Template
 	Version         string
+	dbProbe         dbAvailabilityProbe
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *database.Conn, version string) *App {
