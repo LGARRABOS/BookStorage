@@ -48,7 +48,8 @@ var postgresSchemaStatements = []string{
 		catalog_id BIGINT REFERENCES catalog(id),
 		anilist_enrich_opt_out INTEGER NOT NULL DEFAULT 0,
 		parent_work_id BIGINT REFERENCES works(id),
-		series_sort INTEGER NOT NULL DEFAULT 0
+		series_sort INTEGER NOT NULL DEFAULT 0,
+		notify_new_chapters INTEGER NOT NULL DEFAULT 1
 	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
@@ -152,6 +153,7 @@ var postgresWorkColumns = map[string]string{
 	"anilist_enrich_opt_out": "INTEGER DEFAULT 0",
 	"parent_work_id":         "BIGINT REFERENCES works(id)",
 	"series_sort":            "INTEGER DEFAULT 0",
+	"notify_new_chapters":    "INTEGER DEFAULT 1",
 }
 
 func ensurePostgresExtraColumns(c *Conn) error {

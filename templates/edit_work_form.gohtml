@@ -35,6 +35,15 @@
                 </div>
             </div>
         </div>
+        <div class="form-group" id="notify-new-chapters-group" style="display:none;">
+            <label style="display:flex;align-items:flex-start;gap:0.5rem;cursor:pointer;">
+                <input type="checkbox" name="notify_new_chapters" id="notify_new_chapters" value="1" {{ if ne .Work.NotifyNewChapters 0 }}checked{{ end }} style="margin-top:0.2rem;">
+                <span>
+                    <span style="font-weight:500;">{{ t .T "work.form.notify_new_chapters" }}</span>
+                    <span class="form-hint" style="display:block;margin:0.25rem 0 0 0;">{{ t .T "work.form.notify_new_chapters.hint" }}</span>
+                </span>
+            </label>
+        </div>
     </div>
 
     <div class="form-card">

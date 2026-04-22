@@ -152,6 +152,19 @@
                 star.addEventListener('mouseenter', function() { updateStars(parseInt(this.dataset.value)); });
             });
             picker.addEventListener('mouseleave', function() { updateStars(parseInt(input.value) || 0); });
+
+            (function() {
+                var st = document.getElementById('status');
+                var g = document.getElementById('notify-new-chapters-group');
+                function syncNotifyRow() {
+                    if (!st || !g) return;
+                    g.style.display = (st.value === 'En cours') ? '' : 'none';
+                }
+                if (st) {
+                    st.addEventListener('change', syncNotifyRow);
+                    syncNotifyRow();
+                }
+            })();
         });
     </script>
 </body>

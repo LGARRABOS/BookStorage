@@ -181,23 +181,23 @@ func copyCatalog(sl *sql.DB, pg *Conn) error {
 }
 
 func copyWorks(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort FROM works`)
+	rows, err := sl.Query(`SELECT id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, COALESCE(notify_new_chapters, 1) FROM works`)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = rows.Close() }()
 	for rows.Next() {
-		var id, chapter, userID, rating, isAdult, anilistOpt, seriesSort int64
+		var id, chapter, userID, rating, isAdult, anilistOpt, seriesSort, notifyCh int64
 		var title string
 		var link, status, imagePath, readingType, notes, updatedAt sql.NullString
 		var catalogID, parentID sql.NullInt64
-		if err := rows.Scan(&id, &title, &chapter, &link, &status, &imagePath, &readingType, &userID, &rating, &notes, &updatedAt, &isAdult, &catalogID, &anilistOpt, &parentID, &seriesSort); err != nil {
+		if err := rows.Scan(&id, &title, &chapter, &link, &status, &imagePath, &readingType, &userID, &rating, &notes, &updatedAt, &isAdult, &catalogID, &anilistOpt, &parentID, &seriesSort, &notifyCh); err != nil {
 			return err
 		}
 		_, err := pg.Exec(
-			`INSERT INTO works (id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, title, chapter, nullStr(link), nullStr(status), nullStr(imagePath), nullStr(readingType), userID, rating, nullStr(notes), nullStr(updatedAt), isAdult, nullInt64(catalogID), anilistOpt, nullInt64(parentID), seriesSort,
+			`INSERT INTO works (id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, notify_new_chapters)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, title, chapter, nullStr(link), nullStr(status), nullStr(imagePath), nullStr(readingType), userID, rating, nullStr(notes), nullStr(updatedAt), isAdult, nullInt64(catalogID), anilistOpt, nullInt64(parentID), seriesSort, notifyCh,
 		)
 		if err != nil {
 			return fmt.Errorf("insert works id=%d: %w", id, err)

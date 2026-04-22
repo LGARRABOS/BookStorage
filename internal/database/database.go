@@ -99,6 +99,8 @@ var workColumns = map[string]string{
 	"catalog_id":   "INTEGER REFERENCES catalog(id)",
 	// 1 = exclue du lot / file enrichissement AniList (œuvre sans correspondance catalogue).
 	"anilist_enrich_opt_out": "INTEGER DEFAULT 0",
+	// 1 = notifier les nouveaux chapitres (œuvre suivie) ; 0 = non suivi (uniquement pertinent pour « En cours »).
+	"notify_new_chapters": "INTEGER DEFAULT 1",
 }
 
 // sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).

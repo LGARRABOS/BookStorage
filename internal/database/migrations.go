@@ -90,10 +90,11 @@ DROP TABLE users;
 ALTER TABLE users_new RENAME TO users;
 CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
 `},
+	{Version: 10, Name: "notify_new_chapters_placeholder", Up: ""},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 9
+const LatestSchemaMigrationVersion = 10
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

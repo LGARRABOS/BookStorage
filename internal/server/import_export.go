@@ -275,8 +275,8 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 	}
 
 	_, err = a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at, catalog_id, is_adult, image_path)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?)`,
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at, catalog_id, is_adult, image_path, notify_new_chapters)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 1)`,
 		title, chapter, link, status, rtype, rating, notes, userID,
 		catID, isAdult, imagePath,
 	)

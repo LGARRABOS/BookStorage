@@ -283,6 +283,33 @@ func TestHandleAPIWorksList_WithFiltersAndMeta(t *testing.T) {
 	}
 }
 
+func TestNotifyNewChaptersAPICreate(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+	createReq := httptest.NewRequest(http.MethodPost, "/api/works", strings.NewReader(`{
+		"title":"NoNotify",
+		"chapter":1,
+		"status":"En cours",
+		"reading_type":"Manga",
+		"notify_new_chapters":0
+	}`))
+	createReq.Header.Set("Content-Type", "application/json")
+	createReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	createRec := httptest.NewRecorder()
+	app.HandleAPIWorksCreate(createRec, createReq)
+	if createRec.Code != http.StatusCreated {
+		t.Fatalf("create status=%d body=%s", createRec.Code, createRec.Body.String())
+	}
+	var n int
+	if err := db.QueryRow(`SELECT notify_new_chapters FROM works WHERE title = 'NoNotify' AND user_id = 1`).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("notify_new_chapters=%d, want 0", n)
+	}
+}
+
 func TestAPIWorksCRUDFlow(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
@@ -313,6 +340,9 @@ func TestAPIWorksCRUDFlow(t *testing.T) {
 	}
 	if created.Data.ID == 0 {
 		t.Fatalf("expected created id, got %+v", created.Data)
+	}
+	if created.Data.NotifyNewChapters != 1 {
+		t.Fatalf("default notify_new_chapters: got %d", created.Data.NotifyNewChapters)
 	}
 
 	updateReq := httptest.NewRequest(http.MethodPatch, "/api/works/"+strconv.Itoa(created.Data.ID), strings.NewReader(`{

@@ -11,26 +11,28 @@ import (
 )
 
 type apiWork struct {
-	ID           int    `json:"id"`
-	Title        string `json:"title"`
-	Chapter      int    `json:"chapter"`
-	Link         string `json:"link,omitempty"`
-	Status       string `json:"status,omitempty"`
-	ReadingType  string `json:"reading_type,omitempty"`
-	Rating       int    `json:"rating"`
-	Notes        string `json:"notes,omitempty"`
-	UpdatedAt    string `json:"updated_at,omitempty"`
-	ParentWorkID *int   `json:"parent_work_id,omitempty"`
-	SeriesSort   int    `json:"series_sort,omitempty"`
+	ID                int    `json:"id"`
+	Title             string `json:"title"`
+	Chapter           int    `json:"chapter"`
+	Link              string `json:"link,omitempty"`
+	Status            string `json:"status,omitempty"`
+	ReadingType       string `json:"reading_type,omitempty"`
+	Rating            int    `json:"rating"`
+	Notes             string `json:"notes,omitempty"`
+	UpdatedAt         string `json:"updated_at,omitempty"`
+	ParentWorkID      *int   `json:"parent_work_id,omitempty"`
+	SeriesSort        int    `json:"series_sort,omitempty"`
+	NotifyNewChapters int    `json:"notify_new_chapters"`
 }
 
 func workRowToAPIWork(w workRow) apiWork {
 	out := apiWork{
-		ID:         w.ID,
-		Title:      w.Title,
-		Chapter:    w.Chapter,
-		Rating:     w.Rating,
-		SeriesSort: w.SeriesSort,
+		ID:                w.ID,
+		Title:             w.Title,
+		Chapter:           w.Chapter,
+		Rating:            w.Rating,
+		SeriesSort:        w.SeriesSort,
+		NotifyNewChapters: w.NotifyNewChapters,
 	}
 	if w.Link.Valid {
 		out.Link = w.Link.String
@@ -228,15 +230,16 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	var req struct {
-		Title        string `json:"title"`
-		Chapter      int    `json:"chapter"`
-		Link         string `json:"link"`
-		Status       string `json:"status"`
-		ReadingType  string `json:"reading_type"`
-		Rating       int    `json:"rating"`
-		Notes        string `json:"notes"`
-		ParentWorkID *int   `json:"parent_work_id"`
-		SeriesSort   int    `json:"series_sort"`
+		Title             string `json:"title"`
+		Chapter           int    `json:"chapter"`
+		Link              string `json:"link"`
+		Status            string `json:"status"`
+		ReadingType       string `json:"reading_type"`
+		Rating            int    `json:"rating"`
+		Notes             string `json:"notes"`
+		ParentWorkID      *int   `json:"parent_work_id"`
+		SeriesSort        int    `json:"series_sort"`
+		NotifyNewChapters *int   `json:"notify_new_chapters"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
@@ -251,6 +254,11 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	req.Rating = clampRating(req.Rating)
 	readingType := normalizeReadingTypeForWrite(req.ReadingType)
 	status := normalizeStatusForWrite(req.Status)
+	wantNotify := true
+	if req.NotifyNewChapters != nil {
+		wantNotify = *req.NotifyNewChapters != 0
+	}
+	notifyCh := notifyNewChaptersDB(status, wantNotify)
 
 	if req.ParentWorkID != nil && *req.ParentWorkID > 0 {
 		if err := a.validateWorkParent(userID, 0, *req.ParentWorkID); err != nil {
@@ -266,9 +274,9 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	}
 
 	res, err := a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, parent_work_id, series_sort, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID, parentArg, req.SeriesSort,
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, parent_work_id, series_sort, notify_new_chapters, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID, parentArg, req.SeriesSort, notifyCh,
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
@@ -277,16 +285,17 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	id, _ := res.LastInsertId()
 
 	work := apiWork{
-		ID:           int(id),
-		Title:        req.Title,
-		Chapter:      req.Chapter,
-		Link:         strings.TrimSpace(req.Link),
-		Status:       status,
-		ReadingType:  readingType,
-		Rating:       req.Rating,
-		Notes:        strings.TrimSpace(req.Notes),
-		SeriesSort:   req.SeriesSort,
-		ParentWorkID: req.ParentWorkID,
+		ID:                int(id),
+		Title:             req.Title,
+		Chapter:           req.Chapter,
+		Link:              strings.TrimSpace(req.Link),
+		Status:            status,
+		ReadingType:       readingType,
+		Rating:            req.Rating,
+		Notes:             strings.TrimSpace(req.Notes),
+		SeriesSort:        req.SeriesSort,
+		ParentWorkID:      req.ParentWorkID,
+		NotifyNewChapters: notifyCh,
 	}
 
 	a.apiWriteJSON(w, http.StatusCreated, map[string]any{"data": work})
@@ -365,6 +374,22 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if v, ok := req["series_sort"].(float64); ok {
 		setParts = append(setParts, "series_sort = ?")
 		args = append(args, int(v))
+	}
+	if raw, ok := req["notify_new_chapters"]; ok {
+		var st string
+		_ = a.DB.QueryRow(`SELECT COALESCE(status, '') FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&st)
+		effStatus := normalizeStatusForWrite(st)
+		if v, ok := req["status"].(string); ok && strings.TrimSpace(v) != "" {
+			effStatus = normalizeStatusForWrite(v)
+		}
+		switch v := raw.(type) {
+		case bool:
+			setParts = append(setParts, "notify_new_chapters = ?")
+			args = append(args, notifyNewChaptersDB(effStatus, v))
+		case float64:
+			setParts = append(setParts, "notify_new_chapters = ?")
+			args = append(args, notifyNewChaptersDB(effStatus, v != 0))
+		}
 	}
 
 	if len(setParts) == 0 {
