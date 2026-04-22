@@ -218,6 +218,10 @@
                         <option value="">{{ t .T "dashboard.filter.all" }}</option>
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
+                    <select id="follow-filter">
+                        <option value="">{{ t .T "dashboard.filter.follow_all" }}</option>
+                        <option value="unfollowed">{{ t .T "dashboard.filter.unfollowed_only" }}</option>
+                    </select>
                     <select id="adult-filter" onchange="applyDashboardFilters()">
                         <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ t .T "dashboard.filter.hide_adult" }}</option>
                         <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>{{ t .T "dashboard.filter.only_adult" }}</option>
@@ -229,7 +233,6 @@
                     <select id="sort-select" onchange="applyDashboardFilters()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
-                        <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
                         <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.modified_desc" }}</option>
                         <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ t .T "dashboard.sort.modified_asc" }}</option>
                         <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
@@ -241,7 +244,7 @@
             {{ if .Works }}
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
-                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
+                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
@@ -367,6 +370,7 @@
         const searchInput = document.getElementById('search-input');
         const statusFilter = document.getElementById('status-filter');
         const typeFilter = document.getElementById('type-filter');
+        const followFilter = document.getElementById('follow-filter');
 
         // Precompute searchable text once to avoid repeated DOM reads on each keystroke.
         cards.forEach(card => {
@@ -391,23 +395,27 @@
             const search = (searchInput?.value || '').toLowerCase().trim();
             const status = statusFilter.value;
             const type = typeFilter.value;
+            const follow = followFilter ? followFilter.value : '';
             
             cards.forEach(card => {
                 const cardStatus = card.dataset.status || '';
                 const cardType = card.dataset.type || '';
+                const notifyVal = card.dataset.notifyNewChapters || '1';
                 
                 const hay = card.dataset.search || '';
                 const matchSearch = !search || hay.includes(search);
                 const matchStatus = !status || cardStatus === status;
                 const matchType = !type || cardType === type;
+                const matchFollow = !follow || (follow === 'unfollowed' && cardStatus === 'En cours' && notifyVal === '0');
                 
-                card.style.display = (matchSearch && matchStatus && matchType) ? '' : 'none';
+                card.style.display = (matchSearch && matchStatus && matchType && matchFollow) ? '' : 'none';
             });
         }
         
         if (searchInput) searchInput.addEventListener('input', debounce(filterWorks, 120));
         if (statusFilter) statusFilter.addEventListener('change', filterWorks);
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
+        if (followFilter) followFilter.addEventListener('change', filterWorks);
         filterWorks();
 
         const gridEl = document.getElementById('works-grid');
@@ -590,6 +598,16 @@
                     star.addEventListener('mouseenter', function() { updateStars(parseInt(this.dataset.value)); });
                 });
                 picker.addEventListener('mouseleave', function() { updateStars(parseInt(input.value) || 0); });
+            }
+            const st = container.querySelector('#status');
+            const g = container.querySelector('#notify-new-chapters-group');
+            function syncNotifyRow() {
+                if (!st || !g) return;
+                g.style.display = (st.value === 'En cours') ? '' : 'none';
+            }
+            if (st) {
+                st.addEventListener('change', syncNotifyRow);
+                syncNotifyRow();
             }
         }
         const editModal = document.getElementById('edit-modal');

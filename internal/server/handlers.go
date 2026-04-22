@@ -1068,29 +1068,31 @@ func (n *nullFlexTime) Scan(src any) error {
 }
 
 type workRow struct {
-	ID           int
-	Title        string
-	Chapter      int
-	Link         sql.NullString
-	Status       sql.NullString
-	ImagePath    sql.NullString
-	ReadingType  sql.NullString
-	Rating       int
-	Notes        sql.NullString
-	UserID       int
-	UpdatedAt    nullFlexTime
-	IsAdult      sql.NullInt64
-	ParentWorkID sql.NullInt64
-	SeriesSort   int
+	ID                int
+	Title             string
+	Chapter           int
+	Link              sql.NullString
+	Status            sql.NullString
+	ImagePath         sql.NullString
+	ReadingType       sql.NullString
+	Rating            int
+	Notes             sql.NullString
+	UserID            int
+	UpdatedAt         nullFlexTime
+	IsAdult           sql.NullInt64
+	ParentWorkID      sql.NullInt64
+	SeriesSort        int
+	NotifyNewChapters int
 }
 
 // sqlWorkRowFull must match scanFullWorkRow field order.
-const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0)`
+const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1)`
 
 func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
 	return s.Scan(
 		&w.ID, &w.Title, &w.Chapter, &w.Link, &w.Status, &w.ImagePath, &w.ReadingType,
 		&w.Rating, &w.Notes, &w.UserID, &w.UpdatedAt, &w.IsAdult, &w.ParentWorkID, &w.SeriesSort,
+		&w.NotifyNewChapters,
 	)
 }
 
@@ -1156,8 +1158,6 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	switch sortBy {
 	case "title_desc":
 		orderClause = "ORDER BY LOWER(title) DESC, id DESC"
-	case "chapter":
-		orderClause = "ORDER BY chapter DESC, LOWER(title), id"
 	case "status":
 		orderClause = "ORDER BY status, LOWER(title), id"
 	case "type":
@@ -1506,6 +1506,7 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
 			isAdult = 1
 		}
+		notifyCh := notifyNewChaptersFromForm(status, r)
 
 		var catalogID sql.NullInt64
 		if cidStr := r.FormValue("catalog_id"); cidStr != "" {
@@ -1600,15 +1601,15 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 		var dbErr error
 		if imagePath.Valid {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID, notifyCh,
 			)
 		} else {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, updated_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID, notifyCh,
 			)
 		}
 		if dbErr != nil {
@@ -1699,6 +1700,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 		if r.FormValue("is_adult") == "1" || strings.ToLower(r.FormValue("is_adult")) == "on" {
 			isAdult = 1
 		}
+		notifyCh := notifyNewChaptersFromForm(status, r)
 
 		parentStr := strings.TrimSpace(r.FormValue("parent_work_id"))
 		var parentArg any
@@ -1778,15 +1780,15 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, workID, userID,
+				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, workID, userID,
 			)
 		}
 		if err != nil {
@@ -2655,10 +2657,15 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	if src.ReadingType.Valid && src.ReadingType.String != "" {
 		readingType = src.ReadingType.String
 	}
+	stCopy := "En cours"
+	if src.Status.Valid {
+		stCopy = normalizeStatusForWrite(src.Status.String)
+	}
+	notifyCh := notifyNewChaptersDB(stCopy, src.NotifyNewChapters != 0)
 
 	_, err = a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+		`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, notes, user_id, notify_new_chapters)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		src.Title,
 		src.Chapter,
 		nullableString(src.Link),
@@ -2668,6 +2675,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		src.Rating,
 		nullableString(src.Notes),
 		viewerID,
+		notifyCh,
 	)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)

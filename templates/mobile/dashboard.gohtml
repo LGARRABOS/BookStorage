@@ -31,7 +31,10 @@
                     <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>A→Z</option>
                     <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
                     <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.recent_short" }}</option>
-                    <option value="chapter" {{ if eq .SortBy "chapter" }}selected{{ end }}>{{ t .T "dashboard.chapter" }} ↓</option>
+                </select>
+                <select id="mobile-filter-follow" autocomplete="off">
+                    <option value="">{{ t .T "dashboard.filter.follow_all" }}</option>
+                    <option value="unfollowed">{{ t .T "dashboard.filter.unfollowed_only" }}</option>
                 </select>
                 <select id="mobile-filter-adult" autocomplete="off">
                     <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ t .T "dashboard.filter.adult_short" }}</option>
@@ -43,7 +46,7 @@
             <section class="works-mobile-list" id="works-mobile-list">
                 {{ range .Works }}
                 {{ $work := . }}
-                <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}">
+                <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}">
                     <div class="work-mobile-top">
                         <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
                         {{ if gt .Rating 0 }}
@@ -102,6 +105,7 @@
       var search = document.getElementById("mobile-search");
       var status = document.getElementById("mobile-filter-status");
       var adult = document.getElementById("mobile-filter-adult");
+      var follow = document.getElementById("mobile-filter-follow");
       var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
       if (!cards.length) return;
 
@@ -110,10 +114,14 @@
       function applyFilters() {
         var q = normalize(search ? search.value : "");
         var s = status ? normalize(status.value) : "";
+        var fl = follow ? follow.value : "";
         cards.forEach(function (card) {
           var title = normalize(card.getAttribute("data-title"));
           var cs = normalize(card.getAttribute("data-status"));
-          var visible = (!q || title.indexOf(q) !== -1) && (!s || cs === s);
+          var rawStatus = card.getAttribute("data-status") || "";
+          var notifyVal = card.getAttribute("data-notify-new-chapters") || "1";
+          var matchFollow = !fl || (fl === "unfollowed" && rawStatus === "En cours" && notifyVal === "0");
+          var visible = (!q || title.indexOf(q) !== -1) && (!s || cs === s) && matchFollow;
           card.style.display = visible ? "" : "none";
         });
       }
@@ -137,6 +145,7 @@
 
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
+      if (follow) follow.addEventListener("change", applyFilters);
       if (adult) adult.addEventListener("change", applyServerFilters);
       if (sortSel) sortSel.addEventListener("change", applyServerFilters);
     })();
