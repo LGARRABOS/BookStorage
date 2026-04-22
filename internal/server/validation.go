@@ -47,13 +47,13 @@ func normalizeReadingTypeForWrite(raw string) string {
 	return s
 }
 
-// notifyNewChaptersDB returns 1 if chapter notifications are enabled for this work, 0 otherwise.
-// For statuses other than "En cours", always 1 (non-suivi only applies to in-progress works).
-func notifyNewChaptersDB(status string, wantNotify bool) int {
+// notifyNewChaptersDB returns DB notify_new_chapters: 1 = suivi (hors filtre « Non suivis »), 0 = non-suivi.
+// Hors statut « En cours », la valeur est toujours 1 (le marquage non-suivi ne s’applique qu’aux œuvres en cours).
+func notifyNewChaptersDB(status string, suivi bool) int {
 	if status != "En cours" {
 		return 1
 	}
-	if wantNotify {
+	if suivi {
 		return 1
 	}
 	return 0
@@ -63,6 +63,6 @@ func notifyNewChaptersFromForm(status string, r *http.Request) int {
 	if r == nil {
 		return 1
 	}
-	want := r.FormValue("notify_new_chapters") == "1" || strings.EqualFold(r.FormValue("notify_new_chapters"), "on")
-	return notifyNewChaptersDB(status, want)
+	nonSuivi := r.FormValue("non_suivi") == "1" || strings.EqualFold(r.FormValue("non_suivi"), "on")
+	return notifyNewChaptersDB(status, !nonSuivi)
 }

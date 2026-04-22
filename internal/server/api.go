@@ -254,11 +254,11 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 	req.Rating = clampRating(req.Rating)
 	readingType := normalizeReadingTypeForWrite(req.ReadingType)
 	status := normalizeStatusForWrite(req.Status)
-	wantNotify := true
+	suivi := true
 	if req.NotifyNewChapters != nil {
-		wantNotify = *req.NotifyNewChapters != 0
+		suivi = *req.NotifyNewChapters != 0
 	}
-	notifyCh := notifyNewChaptersDB(status, wantNotify)
+	notifyCh := notifyNewChaptersDB(status, suivi)
 
 	if req.ParentWorkID != nil && *req.ParentWorkID > 0 {
 		if err := a.validateWorkParent(userID, 0, *req.ParentWorkID); err != nil {

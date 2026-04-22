@@ -99,7 +99,7 @@ var workColumns = map[string]string{
 	"catalog_id":   "INTEGER REFERENCES catalog(id)",
 	// 1 = exclue du lot / file enrichissement AniList (œuvre sans correspondance catalogue).
 	"anilist_enrich_opt_out": "INTEGER DEFAULT 0",
-	// 1 = notifier les nouveaux chapitres (œuvre suivie) ; 0 = non suivi (uniquement pertinent pour « En cours »).
+	// 1 = suivi ; 0 = non-suivi (filtre tableau de bord), pertinent surtout pour « En cours ».
 	"notify_new_chapters": "INTEGER DEFAULT 1",
 }
 
