@@ -30,9 +30,10 @@
         .sites-table .site-url a:hover { text-decoration: underline; }
         .site-status-cell { display: flex; align-items: center; gap: 0.5rem; }
         .site-probe-detail { font-size: 0.8rem; color: var(--text-muted); }
-        .site-actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: nowrap; }
-        .site-actions form { display: inline-flex; }
-        .btn-detail { cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-subtle); border-radius: 0.5rem; padding: 0.35rem 0.55rem; font-size: 0.85rem; color: var(--text-secondary); line-height: 1; display: inline-flex; align-items: center; justify-content: center; height: 32px; min-width: 32px; box-sizing: border-box; }
+        .site-actions { display: flex; gap: 0.4rem; align-items: center; flex-wrap: nowrap; }
+        .site-actions form { margin: 0; padding: 0; display: flex; }
+        .site-actions .btn-sm, .site-actions .btn-detail { width: 32px; height: 32px; padding: 0; display: inline-flex; align-items: center; justify-content: center; font-size: 0.9rem; border-radius: 0.5rem; box-sizing: border-box; }
+        .btn-detail { cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-subtle); color: var(--text-secondary); }
         .btn-detail:hover { background: var(--primary-muted); border-color: var(--primary); }
         .detail-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; }
         .detail-modal-overlay.open { display: flex; }
