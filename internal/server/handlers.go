@@ -109,6 +109,20 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 		},
 		"upper": strings.ToUpper,
 		"int": func(v int64) int { return int(v) },
+		"fmtProbeTime": func(s sql.NullString) string {
+			if !s.Valid || s.String == "" {
+				return "—"
+			}
+			t, err := time.Parse("2006-01-02 15:04:05", s.String)
+			if err != nil {
+				t2, err2 := time.Parse("2006-01-02T15:04:05Z", s.String)
+				if err2 != nil {
+					return s.String
+				}
+				t = t2
+			}
+			return t.Format("02/01/2006 15:04")
+		},
 	}
 	webTpl := mustLoadTemplates(funcMap, []string{
 		filepath.Join("templates", "shared"),

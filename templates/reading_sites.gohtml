@@ -30,8 +30,18 @@
         .sites-table .site-url a:hover { text-decoration: underline; }
         .site-status-cell { display: flex; align-items: center; gap: 0.5rem; }
         .site-probe-detail { font-size: 0.8rem; color: var(--text-muted); }
-        .site-actions { display: flex; gap: 0.5rem; }
+        .site-actions { display: flex; gap: 0.5rem; align-items: center; }
         .site-actions form { display: inline; }
+        .btn-detail { cursor: pointer; background: var(--input-bg); border: 1px solid var(--border-subtle); border-radius: 0.5rem; padding: 0.3rem 0.55rem; font-size: 0.85rem; color: var(--text-secondary); }
+        .btn-detail:hover { background: var(--primary-muted); border-color: var(--primary); }
+        .detail-modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 9999; justify-content: center; align-items: center; }
+        .detail-modal-overlay.open { display: flex; }
+        .detail-modal { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.5rem; max-width: 500px; width: 90%; box-shadow: 0 25px 50px rgba(0,0,0,0.25); }
+        .detail-modal h3 { margin: 0 0 1rem 0; font-size: 1.1rem; }
+        .detail-modal table { width: 100%; font-size: 0.9rem; }
+        .detail-modal table td { padding: 0.4rem 0.5rem; vertical-align: top; }
+        .detail-modal table td:first-child { font-weight: 600; white-space: nowrap; color: var(--text-secondary); width: 35%; }
+        .detail-modal .btn-close-modal { margin-top: 1rem; }
         .add-site-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; }
         .add-site-card h2 { font-size: 1.1rem; margin: 0 0 1rem 0; }
         .add-site-form { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
@@ -119,8 +129,9 @@
                             </td>
                             <td><strong>{{ .Name }}</strong></td>
                             <td class="site-url"><a href="{{ .BaseURL }}" target="_blank" rel="noopener noreferrer">{{ .BaseURL }}</a></td>
-                            <td>{{ if .LastProbeAt.Valid }}{{ .LastProbeAt.String }}{{ else }}—{{ end }}</td>
+                            <td>{{ fmtProbeTime .LastProbeAt }}</td>
                             <td class="site-actions">
+                                <button type="button" class="btn-detail" title="Détails" onclick="showSiteDetail('{{ .Name }}', '{{ .BaseURL }}', '{{ .ProbeStatus }}', '{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}', '{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}', '{{ fmtProbeTime .LastProbeAt }}')">ℹ️</button>
                                 <form method="POST" action="/reading-sites/probe">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
@@ -146,6 +157,38 @@
             </section>
         </div>
     </main>
+    <div class="detail-modal-overlay" id="siteDetailModal" onclick="closeSiteDetail(event)">
+        <div class="detail-modal">
+            <h3 id="detailTitle">Détails</h3>
+            <table>
+                <tr><td>Site</td><td id="detailName"></td></tr>
+                <tr><td>URL</td><td id="detailURL"></td></tr>
+                <tr><td>État</td><td id="detailStatus"></td></tr>
+                <tr><td>Code HTTP</td><td id="detailHTTP"></td></tr>
+                <tr><td>Détail</td><td id="detailInfo"></td></tr>
+                <tr><td>Dernière vérif.</td><td id="detailTime"></td></tr>
+            </table>
+            <button class="btn btn-secondary btn-close-modal" onclick="document.getElementById('siteDetailModal').classList.remove('open')">Fermer</button>
+        </div>
+    </div>
+    <script>
+    function showSiteDetail(name, url, status, httpCode, detail, lastCheck) {
+        document.getElementById('detailTitle').textContent = name + ' — Diagnostic';
+        document.getElementById('detailName').textContent = name;
+        document.getElementById('detailURL').textContent = url;
+        var statusLabels = {up: '✅ En ligne', down: '❌ Hors ligne', degraded: '⚠️ Dégradé', unknown: '❓ Inconnu'};
+        document.getElementById('detailStatus').textContent = statusLabels[status] || status;
+        document.getElementById('detailHTTP').textContent = httpCode;
+        document.getElementById('detailInfo').textContent = detail;
+        document.getElementById('detailTime').textContent = lastCheck;
+        document.getElementById('siteDetailModal').classList.add('open');
+    }
+    function closeSiteDetail(e) {
+        if (e.target === document.getElementById('siteDetailModal')) {
+            document.getElementById('siteDetailModal').classList.remove('open');
+        }
+    }
+    </script>
     <script src="/static/js/appearance.js"></script>
 </body>
 </html>
