@@ -155,6 +155,9 @@ func main() {
 
 	app := server.NewApp(settings, siteConfig, db, Version)
 
+	// Link existing works to their reading sites (one-time backfill at startup).
+	app.BackfillReadingSiteIDs()
+
 	mux := http.NewServeMux()
 
 	// Static files (bundled assets + uploads from configured dirs, not only process cwd)

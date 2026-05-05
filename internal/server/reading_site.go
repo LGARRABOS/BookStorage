@@ -296,6 +296,37 @@ func (a *App) loadReadingSiteStatusMap(userID int) map[int]readingSite {
 	return m
 }
 
+// BackfillReadingSiteIDs links existing works (that have a link but no reading_site_id)
+// to their matching reading site. Runs once at startup.
+func (a *App) BackfillReadingSiteIDs() {
+	rows, err := a.DB.Query(`SELECT id, user_id, link FROM works WHERE link IS NOT NULL AND link != '' AND (reading_site_id IS NULL OR reading_site_id = 0)`)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	type workLink struct {
+		ID     int
+		UserID int
+		Link   string
+	}
+	var pending []workLink
+	for rows.Next() {
+		var w workLink
+		if err := rows.Scan(&w.ID, &w.UserID, &w.Link); err != nil {
+			continue
+		}
+		pending = append(pending, w)
+	}
+
+	for _, w := range pending {
+		siteID, ok := a.MatchReadingSite(w.UserID, w.Link)
+		if ok {
+			_, _ = a.DB.Exec(`UPDATE works SET reading_site_id = ? WHERE id = ?`, siteID, w.ID)
+		}
+	}
+}
+
 // StartBackgroundProber launches a goroutine that probes all reading sites every interval.
 // It stops when ctx is cancelled.
 func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration) {
