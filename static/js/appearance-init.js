@@ -43,6 +43,13 @@
   if (window.__bookstorageDbWatch) return;
   window.__bookstorageDbWatch = true;
 
+  var reloadTriggered = false;
+  function safeReload() {
+    if (reloadTriggered) return;
+    reloadTriggered = true;
+    window.location.reload();
+  }
+
   var origFetch = window.fetch;
   if (typeof origFetch === 'function') {
     window.fetch = function () {
@@ -52,38 +59,42 @@
         if (ct.indexOf('application/json') === -1) return res;
         return res.clone().json().then(function (j) {
           if (j && j.error === 'service_unavailable' && j.reason === 'database') {
-            window.location.reload();
+            safeReload();
           }
           return res;
-        }).catch(function () {
-          window.location.reload();
-          return res;
-        });
+        }).catch(function () { return res; });
       });
     };
   }
 
   function startPoll() {
     if (document.body && document.body.classList.contains('error-page')) return;
-    var pollMs = 5000;
+    var pollMs = 10000;
+    var failures = 0;
     setInterval(function () {
-      if (!origFetch) return;
+      if (!origFetch || reloadTriggered) return;
       origFetch('/healthz', {
         credentials: 'same-origin',
         headers: { Accept: 'application/json' }
       })
         .then(function (r) {
           if (!r.ok) {
-            window.location.reload();
+            failures++;
+            if (failures >= 3) safeReload();
             return null;
           }
+          failures = 0;
           return r.json();
         })
         .then(function (j) {
-          if (j && j.ok === false) window.location.reload();
+          if (j && j.ok === false) {
+            failures++;
+            if (failures >= 3) safeReload();
+          }
         })
         .catch(function () {
-          window.location.reload();
+          failures++;
+          if (failures >= 3) safeReload();
         });
     }, pollMs);
   }
