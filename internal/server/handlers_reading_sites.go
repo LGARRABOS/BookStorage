@@ -58,6 +58,40 @@ func (a *App) handleReadingSiteCreate(w http.ResponseWriter, r *http.Request, us
 	http.Redirect(w, r, "/reading-sites?msg=site+added", http.StatusFound)
 }
 
+func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+	idStr := r.FormValue("id")
+	id, err := strconv.Atoi(idStr)
+	if err != nil {
+		http.Redirect(w, r, "/reading-sites?err=invalid+id", http.StatusFound)
+		return
+	}
+
+	name := strings.TrimSpace(r.FormValue("name"))
+	baseURL := strings.TrimSpace(r.FormValue("base_url"))
+
+	if name == "" || baseURL == "" {
+		http.Redirect(w, r, "/reading-sites?err=name+and+url+required", http.StatusFound)
+		return
+	}
+
+	parsed, err := url.Parse(baseURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		http.Redirect(w, r, "/reading-sites?err=invalid+URL", http.StatusFound)
+		return
+	}
+
+	_, err = a.DB.Exec(
+		`UPDATE reading_sites SET name = ?, base_url = ?, probe_status = 'unknown', last_probe_at = NULL WHERE id = ? AND user_id = ?`,
+		name, baseURL, id, userID,
+	)
+	if err != nil {
+		http.Redirect(w, r, "/reading-sites?err=update+failed", http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/reading-sites?msg=site+updated", http.StatusFound)
+}
+
 func (a *App) HandleReadingSiteDelete(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	idStr := r.FormValue("id")

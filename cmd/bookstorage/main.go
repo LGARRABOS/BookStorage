@@ -198,6 +198,7 @@ func main() {
 	mux.HandleFunc("POST /profile/google/unlink", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleGoogleUnlink)))
 	mux.HandleFunc("POST /profile/delete", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleDeleteProfile)))
 	mux.HandleFunc("/reading-sites", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSites)))
+	mux.HandleFunc("POST /reading-sites/edit", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteEdit)))
 	mux.HandleFunc("POST /reading-sites/delete", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteDelete)))
 	mux.HandleFunc("POST /reading-sites/probe", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteProbe)))
 	mux.HandleFunc("POST /reading-sites/probe-all", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteProbeAll)))

@@ -133,6 +133,7 @@
                             <td>{{ fmtProbeTime .LastProbeAt }}</td>
                             <td class="site-actions">
                                 <button type="button" class="btn-detail" title="Détails" onclick="showSiteDetail('{{ .Name }}', '{{ .BaseURL }}', '{{ .ProbeStatus }}', '{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}', '{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}', '{{ fmtProbeTime .LastProbeAt }}')">ℹ️</button>
+                                <button type="button" class="btn-detail" title="Modifier" onclick="showEditSite({{ .ID }}, '{{ .Name }}', '{{ .BaseURL }}')">✏️</button>
                                 <form method="POST" action="/reading-sites/probe">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
@@ -172,6 +173,26 @@
             <button class="btn btn-secondary btn-close-modal" onclick="document.getElementById('siteDetailModal').classList.remove('open')">Fermer</button>
         </div>
     </div>
+    <div class="detail-modal-overlay" id="siteEditModal" onclick="closeEditSite(event)">
+        <div class="detail-modal">
+            <h3>Modifier le site</h3>
+            <form method="POST" action="/reading-sites/edit" id="editSiteForm">
+                <input type="hidden" name="id" id="editSiteId">
+                <div class="form-group" style="margin-bottom:0.75rem;">
+                    <label for="editSiteName" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">Nom</label>
+                    <input id="editSiteName" type="text" name="name" required style="width:100%;padding:0.6rem 0.85rem;border:1px solid var(--border-subtle);border-radius:0.6rem;font-size:0.9rem;background:var(--background);">
+                </div>
+                <div class="form-group" style="margin-bottom:1rem;">
+                    <label for="editSiteURL" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">URL</label>
+                    <input id="editSiteURL" type="url" name="base_url" required style="width:100%;padding:0.6rem 0.85rem;border:1px solid var(--border-subtle);border-radius:0.6rem;font-size:0.9rem;background:var(--background);">
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <button type="submit" class="btn btn-primary">Enregistrer</button>
+                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('siteEditModal').classList.remove('open')">Annuler</button>
+                </div>
+            </form>
+        </div>
+    </div>
     <script>
     function showSiteDetail(name, url, status, httpCode, detail, lastCheck) {
         document.getElementById('detailTitle').textContent = name + ' — Diagnostic';
@@ -187,6 +208,17 @@
     function closeSiteDetail(e) {
         if (e.target === document.getElementById('siteDetailModal')) {
             document.getElementById('siteDetailModal').classList.remove('open');
+        }
+    }
+    function showEditSite(id, name, url) {
+        document.getElementById('editSiteId').value = id;
+        document.getElementById('editSiteName').value = name;
+        document.getElementById('editSiteURL').value = url;
+        document.getElementById('siteEditModal').classList.add('open');
+    }
+    function closeEditSite(e) {
+        if (e.target === document.getElementById('siteEditModal')) {
+            document.getElementById('siteEditModal').classList.remove('open');
         }
     }
     </script>
