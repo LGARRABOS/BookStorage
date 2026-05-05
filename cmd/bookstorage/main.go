@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -248,6 +249,11 @@ func main() {
 	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleApproveAccount)))
 	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleDeleteAccount)))
 	mux.HandleFunc("/admin/promote/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandlePromoteAccount)))
+
+	// Background prober: check all reading sites every 5 minutes.
+	proberCtx, proberCancel := context.WithCancel(context.Background())
+	defer proberCancel()
+	app.StartBackgroundProber(proberCtx, 5*time.Minute)
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)

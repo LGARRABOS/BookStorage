@@ -160,11 +160,14 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 		},
 	}
 
+	const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, baseURL, nil)
 	if err != nil {
 		return ProbeStatusDown, 0, "bad request"
 	}
-	req.Header.Set("User-Agent", "BookStorage-Probe/1.0")
+	req.Header.Set("User-Agent", browserUA)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -179,12 +182,16 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 	defer func() { _ = resp.Body.Close() }()
 
 	code := resp.StatusCode
-	// HEAD returned 405 — retry with GET
-	if code == http.StatusMethodNotAllowed {
+	// HEAD returned 4xx (blocked or not allowed) — retry with GET
+	if code == http.StatusMethodNotAllowed || (code >= 400 && code < 500) {
 		req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
-		req2.Header.Set("User-Agent", "BookStorage-Probe/1.0")
+		req2.Header.Set("User-Agent", browserUA)
+		req2.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		resp2, err2 := client.Do(req2)
 		if err2 != nil {
+			if isTimeoutError(err2) {
+				return ProbeStatusDegraded, code, "timeout on GET fallback"
+			}
 			return ProbeStatusDegraded, code, "GET fallback failed"
 		}
 		defer func() { _ = resp2.Body.Close() }()
@@ -283,4 +290,45 @@ func (a *App) loadReadingSiteStatusMap(userID int) map[int]readingSite {
 		m[s.ID] = s
 	}
 	return m
+}
+
+// StartBackgroundProber launches a goroutine that probes all reading sites every interval.
+// It stops when ctx is cancelled.
+func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration) {
+	go func() {
+		ticker := time.NewTicker(interval)
+		defer ticker.Stop()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-ticker.C:
+				a.probeAllSites(ctx)
+			}
+		}
+	}()
+}
+
+func (a *App) probeAllSites(ctx context.Context) {
+	rows, err := a.DB.Query(`SELECT id, user_id, name, base_url, last_probe_at, COALESCE(probe_status, 'unknown'), probe_http_status, probe_detail FROM reading_sites`)
+	if err != nil {
+		return
+	}
+	defer func() { _ = rows.Close() }()
+	var sites []readingSite
+	for rows.Next() {
+		var s readingSite
+		if err := rows.Scan(&s.ID, &s.UserID, &s.Name, &s.BaseURL, &s.LastProbeAt, &s.ProbeStatus, &s.ProbeHTTPStatus, &s.ProbeDetail); err != nil {
+			continue
+		}
+		sites = append(sites, s)
+	}
+	for _, s := range sites {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		a.ProbeAndUpdateSite(ctx, s)
+	}
 }
