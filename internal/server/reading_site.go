@@ -201,6 +201,10 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 	switch {
 	case code >= 200 && code < 400:
 		return ProbeStatusUp, code, ""
+	case code == 403:
+		// 403 after GET usually means anti-bot protection (Cloudflare, etc.)
+		// The server IS responding — site is up for real users with a browser.
+		return ProbeStatusUp, code, ""
 	case code >= 400 && code < 500:
 		return ProbeStatusDegraded, code, "client error"
 	default:
