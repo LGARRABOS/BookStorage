@@ -328,6 +328,7 @@ func (a *App) BackfillReadingSiteIDs() {
 }
 
 // StartBackgroundProber launches a goroutine that probes all reading sites every interval.
+// It also re-runs the backfill to link any works whose site URL was edited.
 // It stops when ctx is cancelled.
 func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration) {
 	go func() {
@@ -338,6 +339,7 @@ func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration)
 			case <-ctx.Done():
 				return
 			case <-ticker.C:
+				a.BackfillReadingSiteIDs()
 				a.probeAllSites(ctx)
 			}
 		}

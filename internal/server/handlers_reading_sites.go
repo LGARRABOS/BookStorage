@@ -55,6 +55,8 @@ func (a *App) handleReadingSiteCreate(w http.ResponseWriter, r *http.Request, us
 		http.Redirect(w, r, "/reading-sites?err=save+failed", http.StatusFound)
 		return
 	}
+	// Link existing works that match this new site.
+	a.BackfillReadingSiteIDs()
 	http.Redirect(w, r, "/reading-sites?msg=site+added", http.StatusFound)
 }
 
@@ -89,6 +91,8 @@ func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/reading-sites?err=update+failed", http.StatusFound)
 		return
 	}
+	// Re-link works that might now match the updated URL.
+	a.BackfillReadingSiteIDs()
 	http.Redirect(w, r, "/reading-sites?msg=site+updated", http.StatusFound)
 }
 
