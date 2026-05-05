@@ -91,10 +91,24 @@ ALTER TABLE users_new RENAME TO users;
 CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public);
 `},
 	{Version: 10, Name: "notify_new_chapters_placeholder", Up: ""},
+	{Version: 11, Name: "reading_sites", Up: `
+CREATE TABLE IF NOT EXISTS reading_sites (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	base_url TEXT NOT NULL,
+	last_probe_at DATETIME,
+	probe_status TEXT DEFAULT 'unknown',
+	probe_http_status INTEGER,
+	probe_detail TEXT,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_reading_sites_user_id ON reading_sites(user_id);
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 10
+const LatestSchemaMigrationVersion = 11
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

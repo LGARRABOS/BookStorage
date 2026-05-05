@@ -178,10 +178,20 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 		mergedNotes = sql.NullString{String: mergedNotes.String + "\n\n" + from.Notes.String, Valid: true}
 	}
 
+	// Preserve reading_site_id: prefer "into", fallback to "from".
+	mergedReadingSiteID := into.ReadingSiteID
+	if !mergedReadingSiteID.Valid && from.ReadingSiteID.Valid {
+		mergedReadingSiteID = from.ReadingSiteID
+	}
+	var readingSiteArg any
+	if mergedReadingSiteID.Valid {
+		readingSiteArg = mergedReadingSiteID.Int64
+	}
+
 	now := time.Now().UTC()
 	_, err = tx.Exec(
 		`UPDATE works
-		 SET chapter = ?, link = ?, status = ?, image_path = ?, rating = ?, notes = ?, updated_at = ?
+		 SET chapter = ?, link = ?, status = ?, image_path = ?, rating = ?, notes = ?, reading_site_id = ?, updated_at = ?
 		 WHERE id = ? AND user_id = ?`,
 		mergedChapter,
 		nullStringOrNil(mergedLink),
@@ -189,6 +199,7 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 		nullStringOrNil(mergedImage),
 		mergedRating,
 		nullStringOrNil(mergedNotes),
+		readingSiteArg,
 		now,
 		intoID,
 		userID,

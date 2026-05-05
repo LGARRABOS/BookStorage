@@ -108,6 +108,7 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			return i18n.TranslateStatus(status, t)
 		},
 		"upper": strings.ToUpper,
+		"int": func(v int64) int { return int(v) },
 	}
 	webTpl := mustLoadTemplates(funcMap, []string{
 		filepath.Join("templates", "shared"),
@@ -1083,16 +1084,17 @@ type workRow struct {
 	ParentWorkID      sql.NullInt64
 	SeriesSort        int
 	NotifyNewChapters int
+	ReadingSiteID     sql.NullInt64
 }
 
 // sqlWorkRowFull must match scanFullWorkRow field order.
-const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1)`
+const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1), reading_site_id`
 
 func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
 	return s.Scan(
 		&w.ID, &w.Title, &w.Chapter, &w.Link, &w.Status, &w.ImagePath, &w.ReadingType,
 		&w.Rating, &w.Notes, &w.UserID, &w.UpdatedAt, &w.IsAdult, &w.ParentWorkID, &w.SeriesSort,
-		&w.NotifyNewChapters,
+		&w.NotifyNewChapters, &w.ReadingSiteID,
 	)
 }
 
@@ -1258,6 +1260,8 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	readingSiteStatusMap := a.loadReadingSiteStatusMap(userID)
+
 	data := map[string]any{
 		"Works":                works,
 		"CatalogCoverByWorkID": catalogCoverByWorkID,
@@ -1268,6 +1272,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		"SortBy":               sortBy,
 		"AdultFilter":          adultFilter,
 		"SearchQuery":          r.URL.Query().Get("q"),
+		"ReadingSiteMap":       readingSiteStatusMap,
 	}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)
@@ -1598,18 +1603,24 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 
+		var readingSiteID sql.NullInt64
+		if siteID, ok := a.MatchReadingSite(userID, link); ok {
+			readingSiteID.Int64 = siteID
+			readingSiteID.Valid = true
+		}
+
 		var dbErr error
 		if imagePath.Valid {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID, notifyCh,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID,
 			)
 		} else {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID, notifyCh,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID,
 			)
 		}
 		if dbErr != nil {
@@ -1778,17 +1789,22 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			newImagePath.Valid = true
 		}
 
+		var readingSiteArg any
+		if siteID, ok := a.MatchReadingSite(userID, link); ok {
+			readingSiteArg = siteID
+		}
+
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, workID, userID,
+				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, workID, userID,
 			)
 		}
 		if err != nil {

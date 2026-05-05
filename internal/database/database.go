@@ -65,6 +65,20 @@ CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 CREATE INDEX IF NOT EXISTS idx_dismissed_recommendations_user_source
     ON dismissed_recommendations(user_id, source);`
 
+const createReadingSitesTableSQL = `
+CREATE TABLE IF NOT EXISTS reading_sites (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    base_url TEXT NOT NULL,
+    last_probe_at DATETIME,
+    probe_status TEXT DEFAULT 'unknown',
+    probe_http_status INTEGER,
+    probe_detail TEXT,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_reading_sites_user_id ON reading_sites(user_id);`
+
 const createSessionsTableSQL = `
 CREATE TABLE IF NOT EXISTS sessions (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -100,7 +114,8 @@ var workColumns = map[string]string{
 	// 1 = exclue du lot / file enrichissement AniList (œuvre sans correspondance catalogue).
 	"anilist_enrich_opt_out": "INTEGER DEFAULT 0",
 	// 1 = suivi ; 0 = non-suivi (filtre tableau de bord), pertinent surtout pour « En cours ».
-	"notify_new_chapters": "INTEGER DEFAULT 1",
+	"notify_new_chapters":    "INTEGER DEFAULT 1",
+	"reading_site_id":        "INTEGER REFERENCES reading_sites(id)",
 }
 
 // sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).
@@ -198,6 +213,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createDismissedRecommendationsTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createReadingSitesTableSQL); err != nil {
 		return err
 	}
 	if _, err := db.Exec(createWorksTableSQL); err != nil {

@@ -38,7 +38,7 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN stri
 		return "", fmt.Errorf("target schema: %w", err)
 	}
 	clearPostgresUserData := []string{
-		`TRUNCATE oauth_states, csv_import_sessions, translation_cache, sessions, dismissed_recommendations, works, catalog, users, schema_migrations RESTART IDENTITY CASCADE`,
+		`TRUNCATE oauth_states, csv_import_sessions, translation_cache, sessions, dismissed_recommendations, works, reading_sites, catalog, users, schema_migrations RESTART IDENTITY CASCADE`,
 	}
 	for _, q := range clearPostgresUserData {
 		if _, err := pgConn.Exec(q); err != nil {
@@ -52,6 +52,9 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN stri
 		return "", err
 	}
 	if err := copyCatalog(sl, pgConn); err != nil {
+		return "", err
+	}
+	if err := copyReadingSites(sl, pgConn); err != nil {
 		return "", err
 	}
 	if err := copyWorks(sl, pgConn); err != nil {
@@ -91,7 +94,7 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN stri
 }
 
 func verifyMigrationCounts(sl *sql.DB, pg *Conn) error {
-	tables := []string{"users", "catalog", "works", "dismissed_recommendations", "sessions", "translation_cache", "csv_import_sessions", "oauth_states"}
+	tables := []string{"users", "catalog", "reading_sites", "works", "dismissed_recommendations", "sessions", "translation_cache", "csv_import_sessions", "oauth_states"}
 	for _, t := range tables {
 		var a, b int
 		if err := sl.QueryRow(`SELECT COUNT(*) FROM ` + quoteSQLiteIdentRaw(t)).Scan(&a); err != nil {
@@ -108,7 +111,7 @@ func verifyMigrationCounts(sl *sql.DB, pg *Conn) error {
 }
 
 func syncPostgresSequences(pg *Conn) error {
-	for _, tbl := range []string{"users", "catalog", "works", "dismissed_recommendations", "sessions"} {
+	for _, tbl := range []string{"users", "catalog", "reading_sites", "works", "dismissed_recommendations", "sessions"} {
 		q := fmt.Sprintf(
 			`SELECT setval(pg_get_serial_sequence('%s', 'id'), COALESCE((SELECT MAX(id) FROM %s), 1), true)`,
 			tbl, quoteSQLiteIdentRaw(tbl),
@@ -180,8 +183,34 @@ func copyCatalog(sl *sql.DB, pg *Conn) error {
 	return rows.Err()
 }
 
+func copyReadingSites(sl *sql.DB, pg *Conn) error {
+	rows, err := sl.Query(`SELECT id, user_id, name, base_url, last_probe_at, probe_status, probe_http_status, probe_detail FROM reading_sites`)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = rows.Close() }()
+	for rows.Next() {
+		var id, userID int64
+		var name, baseURL string
+		var lastProbeAt, probeStatus, probeDetail sql.NullString
+		var probeHTTPStatus sql.NullInt64
+		if err := rows.Scan(&id, &userID, &name, &baseURL, &lastProbeAt, &probeStatus, &probeHTTPStatus, &probeDetail); err != nil {
+			return err
+		}
+		_, err := pg.Exec(
+			`INSERT INTO reading_sites (id, user_id, name, base_url, last_probe_at, probe_status, probe_http_status, probe_detail)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, userID, name, baseURL, nullStr(lastProbeAt), nullStr(probeStatus), nullInt64(probeHTTPStatus), nullStr(probeDetail),
+		)
+		if err != nil {
+			return fmt.Errorf("insert reading_sites id=%d: %w", id, err)
+		}
+	}
+	return rows.Err()
+}
+
 func copyWorks(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, COALESCE(notify_new_chapters, 1) FROM works`)
+	rows, err := sl.Query(`SELECT id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, COALESCE(notify_new_chapters, 1), reading_site_id FROM works`)
 	if err != nil {
 		return err
 	}
@@ -190,14 +219,14 @@ func copyWorks(sl *sql.DB, pg *Conn) error {
 		var id, chapter, userID, rating, isAdult, anilistOpt, seriesSort, notifyCh int64
 		var title string
 		var link, status, imagePath, readingType, notes, updatedAt sql.NullString
-		var catalogID, parentID sql.NullInt64
-		if err := rows.Scan(&id, &title, &chapter, &link, &status, &imagePath, &readingType, &userID, &rating, &notes, &updatedAt, &isAdult, &catalogID, &anilistOpt, &parentID, &seriesSort, &notifyCh); err != nil {
+		var catalogID, parentID, readingSiteID sql.NullInt64
+		if err := rows.Scan(&id, &title, &chapter, &link, &status, &imagePath, &readingType, &userID, &rating, &notes, &updatedAt, &isAdult, &catalogID, &anilistOpt, &parentID, &seriesSort, &notifyCh, &readingSiteID); err != nil {
 			return err
 		}
 		_, err := pg.Exec(
-			`INSERT INTO works (id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, notify_new_chapters)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, title, chapter, nullStr(link), nullStr(status), nullStr(imagePath), nullStr(readingType), userID, rating, nullStr(notes), nullStr(updatedAt), isAdult, nullInt64(catalogID), anilistOpt, nullInt64(parentID), seriesSort, notifyCh,
+			`INSERT INTO works (id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, notify_new_chapters, reading_site_id)
+			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+			id, title, chapter, nullStr(link), nullStr(status), nullStr(imagePath), nullStr(readingType), userID, rating, nullStr(notes), nullStr(updatedAt), isAdult, nullInt64(catalogID), anilistOpt, nullInt64(parentID), seriesSort, notifyCh, nullInt64(readingSiteID),
 		)
 		if err != nil {
 			return fmt.Errorf("insert works id=%d: %w", id, err)

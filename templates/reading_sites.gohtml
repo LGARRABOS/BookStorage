@@ -1,0 +1,152 @@
+{{ define "reading_sites" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "reading_sites.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .sites-header { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-bottom: 1.5rem; }
+        .sites-header h1 { font-size: 1.5rem; margin: 0; }
+        .sites-legend { display: flex; gap: 1rem; font-size: 0.85rem; color: var(--text-muted); align-items: center; flex-wrap: wrap; }
+        .legend-item { display: flex; align-items: center; gap: 0.35rem; }
+        .site-dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+        .site-dot--up { background: #22c55e; }
+        .site-dot--down { background: #ef4444; }
+        .site-dot--degraded { background: #f59e0b; }
+        .site-dot--unknown { background: #94a3b8; }
+        .sites-table { width: 100%; border-collapse: separate; border-spacing: 0; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; overflow: hidden; margin-bottom: 1.5rem; }
+        .sites-table th, .sites-table td { padding: 0.85rem 1rem; text-align: left; }
+        .sites-table th { background: var(--input-bg); font-size: 0.85rem; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border-subtle); }
+        .sites-table td { border-bottom: 1px solid var(--border-subtle); font-size: 0.9rem; }
+        .sites-table tr:last-child td { border-bottom: none; }
+        .sites-table .site-url { color: var(--text-muted); font-size: 0.85rem; word-break: break-all; }
+        .sites-table .site-url a { color: var(--primary); text-decoration: none; }
+        .sites-table .site-url a:hover { text-decoration: underline; }
+        .site-status-cell { display: flex; align-items: center; gap: 0.5rem; }
+        .site-probe-detail { font-size: 0.8rem; color: var(--text-muted); }
+        .site-actions { display: flex; gap: 0.5rem; }
+        .site-actions form { display: inline; }
+        .add-site-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.25rem; margin-bottom: 1.5rem; }
+        .add-site-card h2 { font-size: 1.1rem; margin: 0 0 1rem 0; }
+        .add-site-form { display: flex; gap: 0.75rem; flex-wrap: wrap; align-items: flex-end; }
+        .add-site-form .form-group { flex: 1; min-width: 180px; }
+        .add-site-form .form-group label { display: block; font-size: 0.85rem; font-weight: 500; margin-bottom: 0.35rem; color: var(--text-secondary); }
+        .add-site-form .form-group input { width: 100%; padding: 0.6rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.6rem; font-size: 0.9rem; background: var(--background); }
+        .add-site-form .form-group input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
+        .empty-sites { text-align: center; padding: 3rem 2rem; background: var(--surface); border-radius: 1rem; border: 2px dashed var(--border-subtle); }
+        .empty-sites p { color: var(--text-muted); margin: 0.5rem 0; }
+        .flash-msg { background: var(--primary-muted); padding: 0.75rem 1rem; border-radius: 0.75rem; margin-bottom: 1rem; font-size: 0.9rem; }
+        .flash-msg--error { background: rgba(239, 68, 68, 0.1); color: #dc2626; }
+        [data-theme="dark"] .sites-table { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .sites-table th { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .sites-table td { border-color: rgba(100, 116, 139, 0.2); }
+        [data-theme="dark"] .add-site-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .add-site-form .form-group input { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); color: #e2e8f0; }
+        [data-theme="dark"] .empty-sites { background: rgba(51, 65, 85, 0.4); border-color: rgba(100, 116, 139, 0.3); }
+    </style>
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_account_links" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <section class="page-section">
+                <div class="sites-header">
+                    <h1>🌐 {{ t .T "reading_sites.title" }}</h1>
+                    <div class="sites-legend">
+                        <span class="legend-item"><span class="site-dot site-dot--up"></span> {{ t .T "reading_sites.status.up" }}</span>
+                        <span class="legend-item"><span class="site-dot site-dot--down"></span> {{ t .T "reading_sites.status.down" }}</span>
+                        <span class="legend-item"><span class="site-dot site-dot--degraded"></span> {{ t .T "reading_sites.status.degraded" }}</span>
+                        <span class="legend-item"><span class="site-dot site-dot--unknown"></span> {{ t .T "reading_sites.status.unknown" }}</span>
+                    </div>
+                </div>
+
+                {{ if .Flash }}<p class="flash-msg">{{ .Flash }}</p>{{ end }}
+                {{ if .FlashError }}<p class="flash-msg flash-msg--error">{{ .FlashError }}</p>{{ end }}
+
+                <div class="add-site-card">
+                    <h2>{{ t .T "reading_sites.add" }}</h2>
+                    <form method="POST" action="/reading-sites" class="add-site-form">
+                        <div class="form-group">
+                            <label for="site-name">{{ t .T "reading_sites.form.name" }}</label>
+                            <input id="site-name" type="text" name="name" placeholder="MangaDex, Webtoon..." required>
+                        </div>
+                        <div class="form-group">
+                            <label for="site-url">{{ t .T "reading_sites.form.url" }}</label>
+                            <input id="site-url" type="url" name="base_url" placeholder="https://mangadex.org" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary">{{ t .T "reading_sites.form.submit" }}</button>
+                    </form>
+                </div>
+
+                {{ if .Sites }}
+                <table class="sites-table">
+                    <thead>
+                        <tr>
+                            <th>{{ t .T "reading_sites.col.status" }}</th>
+                            <th>{{ t .T "reading_sites.col.name" }}</th>
+                            <th>{{ t .T "reading_sites.col.url" }}</th>
+                            <th>{{ t .T "reading_sites.col.last_check" }}</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ range .Sites }}
+                        <tr>
+                            <td>
+                                <div class="site-status-cell">
+                                    <span class="site-dot site-dot--{{ .ProbeStatus }}" title="{{ .ProbeStatus }}"></span>
+                                    {{ if .ProbeDetail.Valid }}<span class="site-probe-detail">{{ .ProbeDetail.String }}</span>{{ end }}
+                                </div>
+                            </td>
+                            <td><strong>{{ .Name }}</strong></td>
+                            <td class="site-url"><a href="{{ .BaseURL }}" target="_blank" rel="noopener noreferrer">{{ .BaseURL }}</a></td>
+                            <td>{{ if .LastProbeAt.Valid }}{{ .LastProbeAt.String }}{{ else }}—{{ end }}</td>
+                            <td class="site-actions">
+                                <form method="POST" action="/reading-sites/probe">
+                                    <input type="hidden" name="id" value="{{ .ID }}">
+                                    <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
+                                </form>
+                                <form method="POST" action="/reading-sites/delete" onsubmit="return confirm('{{ t $.T "reading_sites.confirm_delete" }}')">
+                                    <input type="hidden" name="id" value="{{ .ID }}">
+                                    <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
+                                </form>
+                            </td>
+                        </tr>
+                        {{ end }}
+                    </tbody>
+                </table>
+                <form method="POST" action="/reading-sites/probe-all" style="margin-bottom:1.5rem;">
+                    <button type="submit" class="btn btn-secondary">🔄 {{ t .T "reading_sites.action.probe_all" }}</button>
+                </form>
+                {{ else }}
+                <div class="empty-sites">
+                    <p>🌐</p>
+                    <p>{{ t .T "reading_sites.empty" }}</p>
+                </div>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

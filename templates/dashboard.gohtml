@@ -99,6 +99,11 @@
         [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .chapter-value:hover { background: rgba(129, 140, 248, 0.2); }
         [data-theme="dark"] .chapter-value-input { background: rgba(15, 23, 42, 0.8); border-color: #818cf8; color: #f1f5f9; }
+        .site-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
+        .site-dot--up { background: #22c55e; }
+        .site-dot--down { background: #ef4444; }
+        .site-dot--degraded { background: #f59e0b; }
+        .site-dot--unknown { background: #94a3b8; }
         /* Edit modal */
         .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .modal-overlay[aria-hidden="true"] { display: none; }
@@ -317,6 +322,7 @@
                     <div class="work-body">
                         <div class="work-title-row">
                             <h3 class="work-card-title">{{ .Title }}</h3>
+                            {{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }}<span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}"></span>{{ end }}{{ end }}
                             {{ if .Notes.Valid }}{{ if .Notes.String }}<span class="notes-icon" title="{{ .Notes.String }}">📝</span>{{ end }}{{ end }}
                         </div>
                         <div class="work-chapter">

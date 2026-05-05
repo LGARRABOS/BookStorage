@@ -289,7 +289,8 @@
                     </div>
                     <div class="form-group">
                         <label for="link">{{ t .T "work.form.link" }}</label>
-                        <input id="link" type="url" name="link" placeholder="https://...">
+                        <input id="link" type="url" name="link" placeholder="https://..." oninput="detectReadingSite(this)">
+                        <p class="form-hint reading-site-hint" id="reading-site-hint" style="display:none;"></p>
                     </div>
                     <div class="form-group">
                         <label for="image_url">{{ t .T "work.form.image_url" }}</label>
@@ -459,6 +460,30 @@
             })();
         });
     {{ if not .IsMobileView }}{{ template "recommendations_js_body" . }}{{ end }}
+
+        (function(){
+            var timer;
+            window.detectReadingSite = function(input) {
+                clearTimeout(timer);
+                var hint = document.getElementById('reading-site-hint');
+                if (!hint) return;
+                var val = input.value.trim();
+                if (!val || val.length < 8) { hint.style.display = 'none'; return; }
+                timer = setTimeout(function(){
+                    fetch('/api/reading-sites/match?q=' + encodeURIComponent(val))
+                        .then(function(r){ return r.json(); })
+                        .then(function(d){
+                            if (d.matched) {
+                                hint.textContent = '\u{1F310} ' + d.name;
+                                hint.style.display = '';
+                            } else {
+                                hint.style.display = 'none';
+                            }
+                        })
+                        .catch(function(){ hint.style.display = 'none'; });
+                }, 400);
+            };
+        })();
     </script>
 </body>
 </html>

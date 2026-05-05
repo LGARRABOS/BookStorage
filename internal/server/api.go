@@ -23,6 +23,7 @@ type apiWork struct {
 	ParentWorkID      *int   `json:"parent_work_id,omitempty"`
 	SeriesSort        int    `json:"series_sort,omitempty"`
 	NotifyNewChapters int    `json:"notify_new_chapters"`
+	ReadingSiteID     *int   `json:"reading_site_id,omitempty"`
 }
 
 func workRowToAPIWork(w workRow) apiWork {
@@ -52,6 +53,10 @@ func workRowToAPIWork(w workRow) apiWork {
 	if w.ParentWorkID.Valid && w.ParentWorkID.Int64 > 0 {
 		v := int(w.ParentWorkID.Int64)
 		out.ParentWorkID = &v
+	}
+	if w.ReadingSiteID.Valid && w.ReadingSiteID.Int64 > 0 {
+		v := int(w.ReadingSiteID.Int64)
+		out.ReadingSiteID = &v
 	}
 	return out
 }
@@ -273,10 +278,15 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 		parentArg = nil
 	}
 
+	var readingSiteArg any
+	if siteID, ok := a.MatchReadingSite(userID, strings.TrimSpace(req.Link)); ok {
+		readingSiteArg = siteID
+	}
+
 	res, err := a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, parent_work_id, series_sort, notify_new_chapters, updated_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID, parentArg, req.SeriesSort, notifyCh,
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, parent_work_id, series_sort, notify_new_chapters, reading_site_id, updated_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
+		req.Title, req.Chapter, nullIfEmpty(strings.TrimSpace(req.Link)), status, readingType, req.Rating, nullIfEmpty(strings.TrimSpace(req.Notes)), userID, parentArg, req.SeriesSort, notifyCh, readingSiteArg,
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
@@ -336,6 +346,12 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if v, ok := req["link"].(string); ok {
 		setParts = append(setParts, "link = ?")
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
+		if siteID, matched := a.MatchReadingSite(userID, strings.TrimSpace(v)); matched {
+			setParts = append(setParts, "reading_site_id = ?")
+			args = append(args, siteID)
+		} else {
+			setParts = append(setParts, "reading_site_id = NULL")
+		}
 	}
 	if v, ok := req["status"].(string); ok && v != "" {
 		setParts = append(setParts, "status = ?")

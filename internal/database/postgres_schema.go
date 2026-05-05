@@ -32,6 +32,16 @@ var postgresSchemaStatements = []string{
 		external_id TEXT,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`,
+	`CREATE TABLE IF NOT EXISTS reading_sites (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		name TEXT NOT NULL,
+		base_url TEXT NOT NULL,
+		last_probe_at TIMESTAMPTZ,
+		probe_status TEXT DEFAULT 'unknown',
+		probe_http_status INTEGER,
+		probe_detail TEXT
+	)`,
 	`CREATE TABLE IF NOT EXISTS works (
 		id BIGSERIAL PRIMARY KEY,
 		title TEXT NOT NULL,
@@ -49,7 +59,8 @@ var postgresSchemaStatements = []string{
 		anilist_enrich_opt_out INTEGER NOT NULL DEFAULT 0,
 		parent_work_id BIGINT REFERENCES works(id),
 		series_sort INTEGER NOT NULL DEFAULT 0,
-		notify_new_chapters INTEGER NOT NULL DEFAULT 1
+		notify_new_chapters INTEGER NOT NULL DEFAULT 1,
+		reading_site_id BIGINT REFERENCES reading_sites(id)
 	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
@@ -106,6 +117,8 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_catalog_source_external_id ON catalog(source, external_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_parent_work_id ON works(parent_work_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_reading_sites_user_id ON reading_sites(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_works_reading_site_id ON works(reading_site_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_csv_import_sessions_user ON csv_import_sessions(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at_unix)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
@@ -154,6 +167,7 @@ var postgresWorkColumns = map[string]string{
 	"parent_work_id":         "BIGINT REFERENCES works(id)",
 	"series_sort":            "INTEGER DEFAULT 0",
 	"notify_new_chapters":    "INTEGER DEFAULT 1",
+	"reading_site_id":        "BIGINT REFERENCES reading_sites(id)",
 }
 
 func ensurePostgresExtraColumns(c *Conn) error {

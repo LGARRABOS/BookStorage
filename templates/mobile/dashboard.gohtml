@@ -48,7 +48,7 @@
                 {{ $work := . }}
                 <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}">
                     <div class="work-mobile-top">
-                        <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}</h2>
+                        <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}{{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }} <span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}" style="width:8px;height:8px;border-radius:50%;display:inline-block;vertical-align:middle;"></span>{{ end }}{{ end }}</h2>
                         {{ if gt .Rating 0 }}
                         <span class="work-mobile-rating">{{ range seq 5 }}{{ if le . $work.Rating }}★{{ else }}☆{{ end }}{{ end }}</span>
                         {{ end }}
