@@ -118,12 +118,17 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_users_validated_public ON users(validated, is_public)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_parent_work_id ON works(parent_work_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_reading_sites_user_id ON reading_sites(user_id)`,
-	`CREATE INDEX IF NOT EXISTS idx_works_reading_site_id ON works(reading_site_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_csv_import_sessions_user ON csv_import_sessions(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_oauth_states_expires ON oauth_states(expires_at_unix)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_user_revoked ON sessions(user_id, revoked_at)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
+}
+
+// postgresSchemaAfterExtraColumns runs after ALTER TABLE ... ADD COLUMN for works, so indexes
+// on columns that may not exist on upgraded DBs must live here (not in postgresSchemaStatements).
+var postgresSchemaAfterExtraColumns = []string{
+	`CREATE INDEX IF NOT EXISTS idx_works_reading_site_id ON works(reading_site_id)`,
 }
 
 var postgresFTSStatements = []string{
@@ -145,7 +150,15 @@ func ensurePostgresSchema(c *Conn) error {
 			return fmt.Errorf("postgres schema: %w", err)
 		}
 	}
-	return ensurePostgresExtraColumns(c)
+	if err := ensurePostgresExtraColumns(c); err != nil {
+		return err
+	}
+	for _, stmt := range postgresSchemaAfterExtraColumns {
+		if _, err := c.Exec(stmt); err != nil {
+			return fmt.Errorf("postgres schema: %w", err)
+		}
+	}
+	return nil
 }
 
 var postgresProfileColumns = map[string]string{
