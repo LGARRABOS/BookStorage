@@ -108,7 +108,7 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			return i18n.TranslateStatus(status, t)
 		},
 		"upper": strings.ToUpper,
-		"int": func(v int64) int { return int(v) },
+		"int":   func(v int64) int { return int(v) },
 		"fmtProbeTime": func(s sql.NullString) string {
 			if !s.Valid || s.String == "" {
 				return "—"
@@ -125,20 +125,6 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 				t = t.In(loc)
 			}
 			return t.Format("02/01/2006 15:04")
-		},
-		"probeTimeISO": func(s sql.NullString) string {
-			if !s.Valid || s.String == "" {
-				return ""
-			}
-			t, err := time.Parse("2006-01-02 15:04:05", s.String)
-			if err != nil {
-				t2, err2 := time.Parse("2006-01-02T15:04:05Z", s.String)
-				if err2 != nil {
-					return ""
-				}
-				t = t2
-			}
-			return t.UTC().Format(time.RFC3339)
 		},
 	}
 	webTpl := mustLoadTemplates(funcMap, []string{
