@@ -9,8 +9,6 @@ import (
 	"time"
 )
 
-const probeMinInterval = 15 * time.Minute
-
 func (a *App) HandleReadingSites(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 

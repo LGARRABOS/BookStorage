@@ -156,7 +156,7 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 			return nil
 		},
 		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: false},
+			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
 			DialContext: (&net.Dialer{
 				Timeout: 5 * time.Second,
 			}).DialContext,
