@@ -342,7 +342,7 @@
   "profile.charts.date_to": "Bis",
   "profile.charts.apply": "Anwenden",
   "profile.charts.granularity_hint": "Die Auflösung (Tag, Woche oder Monat) passt sich automatisch der gewählten Spanne an.",
-  "profile.charts.reading_series": "Leseaktivität",
+  "profile.charts.reading_series": "Gelesene Kapitel",
   "profile.bio.empty": "Keine Biografie",
   "profile.display_name": "Anzeigename",
   "users.empty": "Keine Leser gefunden",

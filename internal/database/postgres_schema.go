@@ -105,6 +105,12 @@ var postgresSchemaStatements = []string{
 		expires_at_unix BIGINT NOT NULL,
 		code_verifier TEXT NOT NULL
 	)`,
+	`CREATE TABLE IF NOT EXISTS reading_activity_daily (
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		day TEXT NOT NULL,
+		chapter_increments INTEGER NOT NULL DEFAULT 0,
+		PRIMARY KEY (user_id, day)
+	)`,
 	`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version INTEGER PRIMARY KEY,
 		applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP

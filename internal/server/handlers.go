@@ -1932,6 +1932,9 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
+		if chapter > work.Chapter {
+			a.recordReadingChapterIncrements(userID, chapter-work.Chapter)
+		}
 		if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
@@ -1970,13 +1973,16 @@ func (a *App) HandleIncrement(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
-	_, err := a.DB.Exec(
+	res, err := a.DB.Exec(
 		`UPDATE works SET chapter = chapter + 1, last_chapter_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		a.recordReadingChapterIncrements(userID, 1)
 	}
 	_, _ = w.Write([]byte("ok"))
 }
@@ -2037,6 +2043,9 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if chapter > oldChapter {
+		a.recordReadingChapterIncrements(userID, chapter-oldChapter)
 	}
 	_, _ = w.Write([]byte("ok"))
 }
@@ -2294,7 +2303,21 @@ func (a *App) readingTimelineForCharts(userID int) []readingTimelineDay {
 	}
 	addQuery("started_at", func(dc *dayCounts, n int) { dc.Started = n })
 	addQuery("finished_at", func(dc *dayCounts, n int) { dc.Finished = n })
-	addQuery("last_chapter_at", func(dc *dayCounts, n int) { dc.Reading = n })
+	radRows, rerr := a.DB.Query(`SELECT day, chapter_increments FROM reading_activity_daily WHERE user_id = ? ORDER BY day`, userID)
+	if rerr == nil {
+		defer func() { _ = radRows.Close() }()
+		for radRows.Next() {
+			var d string
+			var n int
+			if radRows.Scan(&d, &n) != nil {
+				continue
+			}
+			if byDay[d] == nil {
+				byDay[d] = &dayCounts{}
+			}
+			byDay[d].Reading = n
+		}
+	}
 
 	sortedDays := make([]string, 0, len(byDay))
 	for d := range byDay {
@@ -2307,6 +2330,29 @@ func (a *App) readingTimelineForCharts(userID int) []readingTimelineDay {
 		out = append(out, readingTimelineDay{Day: d, Started: dc.Started, Finished: dc.Finished, Reading: dc.Reading})
 	}
 	return out
+}
+
+// recordReadingChapterIncrements adds delta to the user's UTC calendar-day rollup (chapter reads).
+func (a *App) recordReadingChapterIncrements(userID int, delta int) {
+	if a.DB == nil || userID <= 0 || delta <= 0 {
+		return
+	}
+	day := time.Now().UTC().Format("2006-01-02")
+	var q string
+	if a.Settings != nil && a.Settings.UsePostgres() {
+		q = `
+INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)
+ON CONFLICT (user_id, day) DO UPDATE SET
+	chapter_increments = reading_activity_daily.chapter_increments + EXCLUDED.chapter_increments`
+	} else {
+		q = `
+INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)
+ON CONFLICT(user_id, day) DO UPDATE SET chapter_increments = chapter_increments + excluded.chapter_increments`
+	}
+	_, err := a.DB.Exec(q, userID, day, delta)
+	if err != nil {
+		log.Printf("reading_activity_daily upsert: %v", err)
+	}
 }
 
 func (a *App) statusDistribForCharts(userID int, tr i18n.Translations) []statusChartRow {

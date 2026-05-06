@@ -44,10 +44,7 @@
         [data-theme="dark"] .stat-bar-track { background: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .top-list li { border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .top-list .title { color: #f1f5f9; }
-        .stats-charts-layout { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
-        @media (min-width: 960px) {
-            .stats-charts-layout { grid-template-columns: 1fr minmax(280px, 360px); align-items: start; }
-        }
+        .stats-charts-layout { display: flex; flex-direction: column; gap: 1.5rem; }
         .stats-chart-heading { font-size: 1rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); }
         .stats-chart-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.85rem; }
         .stats-chart-toolbar .toolbar-field { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; }
@@ -64,8 +61,7 @@
         .stats-chart-granularity-hint { font-size: 0.78rem; color: var(--text-muted); margin: -0.35rem 0 0.65rem 0; line-height: 1.4; }
         .stats-chart-canvas-wrap { position: relative; width: 100%; min-height: 260px; height: 280px; }
         .stats-chart-canvas-wrap.timeline { height: 300px; min-height: 280px; }
-        .stats-chart-canvas-wrap.donut { height: 280px; max-width: 100%; margin: 0 auto; }
-        .stats-chart-panel-donut .stats-chart-canvas-wrap.donut { max-width: 340px; }
+        .stats-chart-canvas-wrap.donut { height: 300px; min-height: 260px; width: 100%; max-width: none; margin: 0; }
     </style>
 </head>
 <body>

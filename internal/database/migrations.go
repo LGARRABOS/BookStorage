@@ -106,10 +106,19 @@ CREATE TABLE IF NOT EXISTS reading_sites (
 CREATE INDEX IF NOT EXISTS idx_reading_sites_user_id ON reading_sites(user_id);
 `},
 	{Version: 12, Name: "reading_dates_placeholder", Up: ""},
+	{Version: 13, Name: "reading_activity_daily", Up: `
+CREATE TABLE IF NOT EXISTS reading_activity_daily (
+	user_id INTEGER NOT NULL,
+	day TEXT NOT NULL,
+	chapter_increments INTEGER NOT NULL DEFAULT 0,
+	PRIMARY KEY (user_id, day),
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 12
+const LatestSchemaMigrationVersion = 13
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

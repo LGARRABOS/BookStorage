@@ -342,7 +342,7 @@
   "profile.charts.date_to": "Hasta",
   "profile.charts.apply": "Aplicar",
   "profile.charts.granularity_hint": "El detalle (día, semana o mes) se ajusta automáticamente según el intervalo.",
-  "profile.charts.reading_series": "Actividad de lectura",
+  "profile.charts.reading_series": "Capítulos leídos",
   "profile.bio.empty": "Sin biografía",
   "profile.display_name": "Nombre mostrado",
   "users.empty": "No se encontraron lectores",
