@@ -710,7 +710,20 @@
                     responsive: true,
                     maintainAspectRatio: false,
                     cutout: '55%',
-                    plugins: { legend: { position: 'bottom', labels: { color: textColor, font: { size: 12, family: 'Inter, sans-serif' }, padding: 16, usePointStyle: true, pointStyleWidth: 10 } } }
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor,
+                                font: { size: 12, family: 'Inter, sans-serif' },
+                                padding: 18,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 12,
+                                boxHeight: 12
+                            }
+                        }
+                    }
                 }
             });
         }
