@@ -2307,67 +2307,57 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		var readingCount int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
 
-		// --- Charts data ---
-		monthExpr := func(col string) string {
+		// --- Charts: sparse daily timeline (started_at / finished_at / last_chapter_at) for interactive chart ---
+		dayExpr := func(col string) string {
 			if a.Settings.UsePostgres() {
-				return `TO_CHAR(` + col + `, 'YYYY-MM')`
+				return `TO_CHAR(` + col + ` AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
 			}
-			return `strftime('%Y-%m', ` + col + `)`
+			return `strftime('%Y-%m-%d', ` + col + `)`
 		}
-		cutoff := time.Now().AddDate(-1, 0, 0).Format("2006-01")
-
-		type monthCount struct {
-			Month string `json:"month"`
-			Count int    `json:"count"`
+		type dayCounts struct {
+			Started  int
+			Finished int
+			Reading  int
 		}
-		queryMonths := func(col string) []monthCount {
-			q := `SELECT ` + monthExpr(col) + ` AS m, COUNT(*) FROM works WHERE user_id = ? AND ` + col + ` IS NOT NULL AND ` + monthExpr(col) + ` >= ? GROUP BY m ORDER BY m`
-			rows, err := a.DB.Query(q, userID, cutoff)
-			if err != nil {
-				return nil
+		byDay := map[string]*dayCounts{}
+		addQuery := func(col string, field func(*dayCounts, int)) {
+			q := `SELECT ` + dayExpr(col) + ` AS d, COUNT(*) FROM works WHERE user_id = ? AND ` + col + ` IS NOT NULL GROUP BY d ORDER BY d`
+			rows, qerr := a.DB.Query(q, userID)
+			if qerr != nil {
+				return
 			}
 			defer func() { _ = rows.Close() }()
-			var out []monthCount
 			for rows.Next() {
-				var mc monthCount
-				if err := rows.Scan(&mc.Month, &mc.Count); err == nil {
-					out = append(out, mc)
+				var d string
+				var n int
+				if rows.Scan(&d, &n) != nil {
+					continue
 				}
+				if byDay[d] == nil {
+					byDay[d] = &dayCounts{}
+				}
+				field(byDay[d], n)
 			}
-			return out
 		}
-		startedByMonth := queryMonths("started_at")
-		finishedByMonth := queryMonths("finished_at")
-		readingByMonth := queryMonths("last_chapter_at")
+		addQuery("started_at", func(dc *dayCounts, n int) { dc.Started = n })
+		addQuery("finished_at", func(dc *dayCounts, n int) { dc.Finished = n })
+		addQuery("last_chapter_at", func(dc *dayCounts, n int) { dc.Reading = n })
 
-		type monthActivity struct {
-			Month    string `json:"month"`
+		type timelineDay struct {
+			Day      string `json:"day"`
 			Started  int    `json:"started"`
 			Finished int    `json:"finished"`
+			Reading  int    `json:"reading"`
 		}
-		allMonths := map[string]bool{}
-		for _, m := range startedByMonth {
-			allMonths[m.Month] = true
+		sortedDays := make([]string, 0, len(byDay))
+		for d := range byDay {
+			sortedDays = append(sortedDays, d)
 		}
-		for _, m := range finishedByMonth {
-			allMonths[m.Month] = true
-		}
-		startedMap := map[string]int{}
-		for _, m := range startedByMonth {
-			startedMap[m.Month] = m.Count
-		}
-		finishedMap := map[string]int{}
-		for _, m := range finishedByMonth {
-			finishedMap[m.Month] = m.Count
-		}
-		sortedMonths := make([]string, 0, len(allMonths))
-		for m := range allMonths {
-			sortedMonths = append(sortedMonths, m)
-		}
-		sort.Strings(sortedMonths)
-		var monthlyActivity []monthActivity
-		for _, m := range sortedMonths {
-			monthlyActivity = append(monthlyActivity, monthActivity{Month: m, Started: startedMap[m], Finished: finishedMap[m]})
+		sort.Strings(sortedDays)
+		readingTimeline := make([]timelineDay, 0, len(sortedDays))
+		for _, d := range sortedDays {
+			dc := byDay[d]
+			readingTimeline = append(readingTimeline, timelineDay{Day: d, Started: dc.Started, Finished: dc.Finished, Reading: dc.Reading})
 		}
 
 		type statusCount struct {
@@ -2399,9 +2389,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			"TotalChapters":    totalChapters,
 			"CompletedCount":   completedCount,
 			"ReadingCount":     readingCount,
-			"MonthlyActivity":  monthlyActivity,
-			"StatusDistrib":    statusDistrib,
-			"MonthlyReading":   readingByMonth,
+			"ReadingTimeline":  readingTimeline,
 			"Sessions":         sessions,
 			"CurrentSession":   currentSessionHash,
 			"LogoutAllDone":    q.Get("logout_all") == "1",
