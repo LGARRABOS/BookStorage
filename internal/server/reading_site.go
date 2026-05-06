@@ -4,6 +4,7 @@ import (
 	"context"
 	"crypto/tls"
 	"database/sql"
+	"log"
 	"net"
 	"net/http"
 	"net/url"
@@ -128,8 +129,10 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 		return ProbeStatusDown, 0, "private/loopback address"
 	}
 
-	// Resolve DNS to check for private IPs
-	ips, err := net.DefaultResolver.LookupHost(ctx, host)
+	// Resolve DNS to check for private IPs (capped at 5s to avoid hanging the prober).
+	dnsCtx, dnsCancel := context.WithTimeout(ctx, 5*time.Second)
+	defer dnsCancel()
+	ips, err := net.DefaultResolver.LookupHost(dnsCtx, host)
 	if err != nil {
 		return ProbeStatusDown, 0, "DNS resolution failed"
 	}
@@ -332,23 +335,49 @@ func (a *App) BackfillReadingSiteIDs() {
 // It stops when ctx is cancelled.
 func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration) {
 	go func() {
+		defer func() {
+			if r := recover(); r != nil {
+				log.Printf("[prober] recovered from panic: %v — restarting in 30s", r)
+				time.Sleep(30 * time.Second)
+				a.StartBackgroundProber(ctx, interval)
+			}
+		}()
+
+		log.Printf("[prober] started — interval %v", interval)
+
+		// Run immediately on startup instead of waiting for the first tick.
+		a.runProberCycle(ctx)
+
 		ticker := time.NewTicker(interval)
 		defer ticker.Stop()
 		for {
 			select {
 			case <-ctx.Done():
+				log.Printf("[prober] stopped (context cancelled)")
 				return
 			case <-ticker.C:
-				a.BackfillReadingSiteIDs()
-				a.probeAllSites(ctx)
+				a.runProberCycle(ctx)
 			}
 		}
 	}()
 }
 
+const probePerSiteTimeout = 15 * time.Second
+
+func (a *App) runProberCycle(ctx context.Context) {
+	start := time.Now()
+	log.Printf("[prober] cycle starting")
+
+	a.BackfillReadingSiteIDs()
+	a.probeAllSites(ctx)
+
+	log.Printf("[prober] cycle finished in %v", time.Since(start).Round(time.Millisecond))
+}
+
 func (a *App) probeAllSites(ctx context.Context) {
 	rows, err := a.DB.Query(`SELECT id, user_id, name, base_url, last_probe_at, COALESCE(probe_status, 'unknown'), probe_http_status, probe_detail FROM reading_sites`)
 	if err != nil {
+		log.Printf("[prober] failed to list sites: %v", err)
 		return
 	}
 	defer func() { _ = rows.Close() }()
@@ -360,12 +389,15 @@ func (a *App) probeAllSites(ctx context.Context) {
 		}
 		sites = append(sites, s)
 	}
+	log.Printf("[prober] probing %d sites", len(sites))
 	for _, s := range sites {
 		select {
 		case <-ctx.Done():
 			return
 		default:
 		}
-		a.ProbeAndUpdateSite(ctx, s)
+		probeCtx, cancel := context.WithTimeout(ctx, probePerSiteTimeout)
+		a.ProbeAndUpdateSite(probeCtx, s)
+		cancel()
 	}
 }

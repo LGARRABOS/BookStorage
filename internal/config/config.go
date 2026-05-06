@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"time"
 )
 
 // Settings holds application configuration
@@ -45,6 +46,8 @@ type Settings struct {
 	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
 	GoogleClientID     string
 	GoogleClientSecret string
+	// Timezone is the IANA timezone name used to display times in the web UI (e.g. "Europe/Paris"). Defaults to UTC.
+	Timezone string
 }
 
 // UsePostgres reports whether BOOKSTORAGE_POSTGRES_URL is set and PostgreSQL should be used.
@@ -265,11 +268,31 @@ func Load(rootPath string) (*Settings, error) {
 		PublicOrigin:             publicOrigin,
 		GoogleClientID:           strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_ID")),
 		GoogleClientSecret:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_SECRET")),
+		Timezone:                 detectTimezone(),
 	}
 	if err := validateSettings(s); err != nil {
 		return nil, err
 	}
 	return s, nil
+}
+
+// detectTimezone returns the IANA timezone to use for display.
+// Priority: BOOKSTORAGE_TIMEZONE env > TZ env > system local timezone > "UTC".
+func detectTimezone() string {
+	if tz := strings.TrimSpace(os.Getenv("BOOKSTORAGE_TIMEZONE")); tz != "" {
+		if _, err := time.LoadLocation(tz); err == nil {
+			return tz
+		}
+	}
+	if tz := strings.TrimSpace(os.Getenv("TZ")); tz != "" {
+		if _, err := time.LoadLocation(tz); err == nil {
+			return tz
+		}
+	}
+	if name := time.Now().Location().String(); name != "" && name != "Local" {
+		return name
+	}
+	return "UTC"
 }
 
 func validateSettings(s *Settings) error {

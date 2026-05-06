@@ -121,6 +121,9 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 				}
 				t = t2
 			}
+			if loc, err := time.LoadLocation(settings.Timezone); err == nil {
+				t = t.In(loc)
+			}
 			return t.Format("02/01/2006 15:04")
 		},
 	}
