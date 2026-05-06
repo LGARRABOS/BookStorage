@@ -2390,6 +2390,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			"CompletedCount":   completedCount,
 			"ReadingCount":     readingCount,
 			"ReadingTimeline":  readingTimeline,
+			"StatusDistrib":    statusDistrib,
 			"Sessions":         sessions,
 			"CurrentSession":   currentSessionHash,
 			"LogoutAllDone":    q.Get("logout_all") == "1",
