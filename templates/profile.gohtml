@@ -605,6 +605,16 @@
         var inputTo = document.getElementById('chart-date-to');
         var btnApply = document.getElementById('chart-apply-custom');
 
+        function clampBoundsToFirstStat(b) {
+            if (!b || !b.from || !b.to || !dataMin) return b;
+            var from = b.from < dataMin ? dataMin : b.from;
+            var to = b.to;
+            if (from > to) {
+                return dataMax ? { from: dataMin, to: dataMax } : { from: dataMin, to: from };
+            }
+            return { from: from, to: to };
+        }
+
         function boundsForPreset() {
             var v = presetSel.value;
             var today = todayStr();
@@ -623,7 +633,7 @@
 
         function renderTimeline() {
             if (!canvas || typeof Chart === 'undefined') return;
-            var b = boundsForPreset();
+            var b = clampBoundsToFirstStat(boundsForPreset());
             if (!b || !b.from || !b.to) return;
             var agg = aggregateTimeline(lookup, b.from, b.to);
             if (timelineChart) timelineChart.destroy();
