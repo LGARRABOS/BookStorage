@@ -350,10 +350,13 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		setParts = append(setParts, "title = ?")
 		args = append(args, strings.TrimSpace(v))
 	}
+	var newChapter int
+	var chapterChanged bool
 	if v, ok := req["chapter"].(float64); ok {
-		ch := clampChapter(int(v))
+		newChapter = clampChapter(int(v))
+		chapterChanged = true
 		setParts = append(setParts, "chapter = ?")
-		args = append(args, ch)
+		args = append(args, newChapter)
 	}
 	if v, ok := req["link"].(string); ok {
 		setParts = append(setParts, "link = ?")
@@ -436,6 +439,7 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		setParts = append(setParts, "started_at = ?")
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
 	}
+	_, lastChapterAtExplicit := req["last_chapter_at"]
 	if v, ok := req["last_chapter_at"].(string); ok {
 		setParts = append(setParts, "last_chapter_at = ?")
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
@@ -443,6 +447,14 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if v, ok := req["finished_at"].(string); ok {
 		setParts = append(setParts, "finished_at = ?")
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
+	}
+
+	if chapterChanged && !lastChapterAtExplicit {
+		var oldChapter int
+		_ = a.DB.QueryRow(`SELECT chapter FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter)
+		if newChapter > oldChapter {
+			setParts = append(setParts, "last_chapter_at = CURRENT_TIMESTAMP")
+		}
 	}
 
 	if len(setParts) == 0 {

@@ -419,6 +419,7 @@
         </div>
     </div>
 
+    <script src="/static/js/datepicker.js"></script>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     <script>
@@ -645,6 +646,7 @@
             stars.forEach(s => s.classList.remove('active'));
         }
         function initEditFormModal(container) {
+            if(window.initBSDatePickers) window.initBSDatePickers(container);
             const picker = container.querySelector('#star-picker');
             const input = container.querySelector('#rating-value');
             if (picker && input) {

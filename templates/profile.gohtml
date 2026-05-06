@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .lang-toggle:hover { background: var(--primary); color: white; }
@@ -75,6 +76,16 @@
         .sessions-table code { font-size: 0.78rem; }
         .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
+        .charts-section { margin-bottom: 1.5rem; }
+        .charts-section-title { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem; }
+        .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
+        .chart-card { background: var(--surface); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--border-subtle); }
+        .chart-card-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.75rem 0; }
+        .chart-card canvas { width: 100% !important; max-height: 220px; }
+        .chart-card-full { grid-column: 1 / -1; }
+        .chart-empty { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
+        [data-theme="dark"] .chart-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -113,6 +124,36 @@
                     <div class="stat-card"><div class="stat-icon orange">📖</div><div><div class="stat-value">{{ .TotalChapters }}</div><div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div></div></div>
                     <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">{{ .CompletedCount }}</div><div class="stat-label">{{ t .T "profile.stats.completed" }}</div></div></div>
                     <div class="stat-card"><div class="stat-icon blue">▶️</div><div><div class="stat-value">{{ .ReadingCount }}</div><div class="stat-label">{{ t .T "profile.stats.reading" }}</div></div></div>
+                </div>
+
+                <div class="charts-section">
+                    <h2 class="charts-section-title">📊 {{ t .T "profile.charts.title" }}</h2>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.monthly_activity" }}</h3>
+                            {{ if .MonthlyActivity }}
+                            <canvas id="chart-monthly"></canvas>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.by_status" }}</h3>
+                            {{ if .StatusDistrib }}
+                            <canvas id="chart-status"></canvas>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="chart-card chart-card-full">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.reading_activity" }}</h3>
+                            {{ if .MonthlyReading }}
+                            <canvas id="chart-reading"></canvas>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </div>
+                    </div>
                 </div>
 
                 <div class="profile-layout">
@@ -406,6 +447,70 @@
             });
         });
     });
+    </script>
+    <script>
+    (function(){
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var textColor = isDark ? '#cbd5e1' : '#64748b';
+        var gridColor = isDark ? 'rgba(100,116,139,0.25)' : 'rgba(15,23,42,0.08)';
+        var primary = isDark ? '#818cf8' : '#4f46e5';
+        var accent  = isDark ? '#fb923c' : '#f97316';
+        var chartDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { labels: { color: textColor, font: { size: 12, family: 'Inter, sans-serif' } } } },
+            scales: {
+                x: { ticks: { color: textColor, font: { size: 11 } }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor, font: { size: 11 }, precision: 0 }, grid: { color: gridColor }, beginAtZero: true }
+            }
+        };
+
+        {{ if .MonthlyActivity }}
+        var maData = {{ toJSON .MonthlyActivity }};
+        new Chart(document.getElementById('chart-monthly'), {
+            type: 'bar',
+            data: {
+                labels: maData.map(function(d){ return d.month; }),
+                datasets: [
+                    { label: {{ t .T "profile.charts.started" }}, data: maData.map(function(d){ return d.started; }), backgroundColor: primary, borderRadius: 4 },
+                    { label: {{ t .T "profile.charts.finished" }}, data: maData.map(function(d){ return d.finished; }), backgroundColor: accent, borderRadius: 4 }
+                ]
+            },
+            options: chartDefaults
+        });
+        {{ end }}
+
+        {{ if .StatusDistrib }}
+        var sdData = {{ toJSON .StatusDistrib }};
+        var statusColors = ['#4f46e5','#f97316','#22c55e','#06b6d4','#a855f7','#ef4444','#64748b','#eab308'];
+        if (isDark) statusColors = ['#818cf8','#fb923c','#4ade80','#22d3ee','#c084fc','#f87171','#94a3b8','#facc15'];
+        new Chart(document.getElementById('chart-status'), {
+            type: 'doughnut',
+            data: {
+                labels: sdData.map(function(d){ return d.status || 'N/A'; }),
+                datasets: [{ data: sdData.map(function(d){ return d.count; }), backgroundColor: statusColors.slice(0, sdData.length), borderWidth: 0 }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '55%',
+                plugins: { legend: { position: 'right', labels: { color: textColor, font: { size: 12, family: 'Inter, sans-serif' }, padding: 12, usePointStyle: true, pointStyleWidth: 10 } } }
+            }
+        });
+        {{ end }}
+
+        {{ if .MonthlyReading }}
+        var mrData = {{ toJSON .MonthlyReading }};
+        new Chart(document.getElementById('chart-reading'), {
+            type: 'bar',
+            data: {
+                labels: mrData.map(function(d){ return d.month; }),
+                datasets: [{ label: {{ t .T "profile.charts.works_count" }}, data: mrData.map(function(d){ return d.count; }), backgroundColor: primary, borderRadius: 4 }]
+            },
+            options: chartDefaults
+        });
+        {{ end }}
+    })();
     </script>
 </body>
 </html>

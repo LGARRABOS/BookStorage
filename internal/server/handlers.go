@@ -20,6 +20,7 @@ import (
 	"os"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -100,6 +101,10 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			if err != nil {
 				return template.JS(`""`)
 			}
+			return template.JS(b)
+		},
+		"toJSON": func(v any) template.JS {
+			b, _ := json.Marshal(v)
 			return template.JS(b)
 		},
 		// Translate status (database stores French values)
@@ -1895,6 +1900,9 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 		if status == "Terminé" && oldStatus != "Terminé" && finishedAtArg == nil {
 			finishedAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
 		}
+		if chapter > work.Chapter && formLastChapterAt == "" {
+			lastChapterAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
+		}
 
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
@@ -2007,10 +2015,20 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 	}
 	chapter = clampChapter(chapter)
 
-	_, err = a.DB.Exec(
-		`UPDATE works SET chapter = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
-		chapter, workID, userID,
-	)
+	var oldChapter int
+	_ = a.DB.QueryRow(`SELECT chapter FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter)
+
+	if chapter > oldChapter {
+		_, err = a.DB.Exec(
+			`UPDATE works SET chapter = ?, last_chapter_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+			chapter, workID, userID,
+		)
+	} else {
+		_, err = a.DB.Exec(
+			`UPDATE works SET chapter = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+			chapter, workID, userID,
+		)
+	}
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -2289,6 +2307,85 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		var readingCount int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
 
+		// --- Charts data ---
+		monthExpr := func(col string) string {
+			if a.Settings.UsePostgres() {
+				return `TO_CHAR(` + col + `, 'YYYY-MM')`
+			}
+			return `strftime('%Y-%m', ` + col + `)`
+		}
+		cutoff := time.Now().AddDate(-1, 0, 0).Format("2006-01")
+
+		type monthCount struct {
+			Month string `json:"month"`
+			Count int    `json:"count"`
+		}
+		queryMonths := func(col string) []monthCount {
+			q := `SELECT ` + monthExpr(col) + ` AS m, COUNT(*) FROM works WHERE user_id = ? AND ` + col + ` IS NOT NULL AND ` + monthExpr(col) + ` >= ? GROUP BY m ORDER BY m`
+			rows, err := a.DB.Query(q, userID, cutoff)
+			if err != nil {
+				return nil
+			}
+			defer func() { _ = rows.Close() }()
+			var out []monthCount
+			for rows.Next() {
+				var mc monthCount
+				if err := rows.Scan(&mc.Month, &mc.Count); err == nil {
+					out = append(out, mc)
+				}
+			}
+			return out
+		}
+		startedByMonth := queryMonths("started_at")
+		finishedByMonth := queryMonths("finished_at")
+		readingByMonth := queryMonths("last_chapter_at")
+
+		type monthActivity struct {
+			Month    string `json:"month"`
+			Started  int    `json:"started"`
+			Finished int    `json:"finished"`
+		}
+		allMonths := map[string]bool{}
+		for _, m := range startedByMonth {
+			allMonths[m.Month] = true
+		}
+		for _, m := range finishedByMonth {
+			allMonths[m.Month] = true
+		}
+		startedMap := map[string]int{}
+		for _, m := range startedByMonth {
+			startedMap[m.Month] = m.Count
+		}
+		finishedMap := map[string]int{}
+		for _, m := range finishedByMonth {
+			finishedMap[m.Month] = m.Count
+		}
+		sortedMonths := make([]string, 0, len(allMonths))
+		for m := range allMonths {
+			sortedMonths = append(sortedMonths, m)
+		}
+		sort.Strings(sortedMonths)
+		var monthlyActivity []monthActivity
+		for _, m := range sortedMonths {
+			monthlyActivity = append(monthlyActivity, monthActivity{Month: m, Started: startedMap[m], Finished: finishedMap[m]})
+		}
+
+		type statusCount struct {
+			Status string `json:"status"`
+			Count  int    `json:"count"`
+		}
+		var statusDistrib []statusCount
+		sRows, err := a.DB.Query(`SELECT COALESCE(status, ''), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
+		if err == nil {
+			defer func() { _ = sRows.Close() }()
+			for sRows.Next() {
+				var sc statusCount
+				if err := sRows.Scan(&sc.Status, &sc.Count); err == nil {
+					statusDistrib = append(statusDistrib, sc)
+				}
+			}
+		}
+
 		sessions, _ := a.listActiveSessions(userID)
 		_, tok, _ := a.currentSession(r)
 		currentSessionHash := ""
@@ -2302,6 +2399,9 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			"TotalChapters":    totalChapters,
 			"CompletedCount":   completedCount,
 			"ReadingCount":     readingCount,
+			"MonthlyActivity":  monthlyActivity,
+			"StatusDistrib":    statusDistrib,
+			"MonthlyReading":   readingByMonth,
 			"Sessions":         sessions,
 			"CurrentSession":   currentSessionHash,
 			"LogoutAllDone":    q.Get("logout_all") == "1",

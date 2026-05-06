@@ -1,5 +1,69 @@
 {{ define "edit_work_form" }}
-<form method="POST" action="/edit/{{ .Work.ID }}" enctype="multipart/form-data" class="edit-work-form">
+<style>
+.bsdp-wrap { position: relative; }
+.bsdp-trigger {
+    display: flex; align-items: center; gap: 0.5rem; width: 100%;
+    padding: 0.75rem 1rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem;
+    font-size: 1rem; background: var(--background); color: var(--text-primary);
+    cursor: pointer; user-select: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.bsdp-trigger:hover, .bsdp-trigger:focus { border-color: var(--primary); outline: none; }
+.bsdp-trigger:focus { box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15); }
+.bsdp-trigger-text { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bsdp-trigger-text.placeholder { color: var(--text-muted); }
+.bsdp-trigger-icon { opacity: 0.5; font-size: 1.05rem; flex-shrink: 0; }
+.bsdp-dropdown {
+    position: absolute; top: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+    z-index: 500; width: 280px; background: var(--surface); border: 1px solid var(--border-subtle);
+    border-radius: 1rem; box-shadow: var(--shadow-lg); padding: 0.85rem; display: none;
+}
+.bsdp-dropdown.open { display: block; animation: bsdpFadeIn 0.15s ease; }
+@keyframes bsdpFadeIn { from { opacity: 0; transform: translateX(-50%) translateY(-4px); } to { opacity: 1; transform: translateX(-50%) translateY(0); } }
+.bsdp-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.6rem; }
+.bsdp-nav {
+    background: none; border: none; cursor: pointer; font-size: 1.2rem; font-weight: 700;
+    color: var(--text-secondary); width: 30px; height: 30px; border-radius: 8px;
+    display: flex; align-items: center; justify-content: center; padding: 0; box-shadow: none;
+    transition: background 0.15s, color 0.15s;
+}
+.bsdp-nav:hover { background: var(--primary-muted); color: var(--primary); }
+.bsdp-month-year { font-weight: 600; font-size: 0.9rem; color: var(--text-primary); text-transform: capitalize; }
+.bsdp-weekdays {
+    display: grid; grid-template-columns: repeat(7, 1fr); text-align: center;
+    font-size: 0.7rem; font-weight: 600; color: var(--text-muted); margin-bottom: 0.35rem;
+    text-transform: uppercase; letter-spacing: 0.04em;
+}
+.bsdp-weekdays span { padding: 0.25rem 0; }
+.bsdp-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 2px; }
+.bsdp-day {
+    width: 100%; aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; cursor: pointer; font-size: 0.85rem; font-weight: 500;
+    color: var(--text-primary); background: none; border: none; padding: 0; box-shadow: none;
+    transition: background 0.12s, color 0.12s, transform 0.1s;
+}
+.bsdp-day:hover { background: var(--primary-muted); color: var(--primary); transform: scale(1.08); }
+.bsdp-day.today { font-weight: 700; box-shadow: inset 0 0 0 2px var(--primary); color: var(--primary); }
+.bsdp-day.selected { background: var(--primary); color: #fff !important; font-weight: 700; }
+.bsdp-day.selected.today { box-shadow: none; }
+.bsdp-day.other { color: var(--text-muted); opacity: 0.4; }
+.bsdp-day.other:hover { opacity: 0.7; }
+.bsdp-footer { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+.bsdp-today-btn, .bsdp-clear-btn {
+    flex: 1; padding: 0.35rem; border: none; border-radius: 0.5rem;
+    font-size: 0.8rem; font-weight: 500; cursor: pointer; box-shadow: none;
+    transition: background 0.15s, color 0.15s;
+}
+.bsdp-today-btn { background: var(--primary-muted); color: var(--primary); }
+.bsdp-today-btn:hover { background: var(--primary); color: #fff; }
+.bsdp-clear-btn { background: none; color: var(--text-muted); }
+.bsdp-clear-btn:hover { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+[data-theme="dark"] .bsdp-dropdown { background: #1e293b; border-color: rgba(100, 116, 139, 0.4); box-shadow: 0 22px 45px rgba(0,0,0,0.5); }
+[data-theme="dark"] .bsdp-day.today { box-shadow: inset 0 0 0 2px var(--primary); }
+[data-theme="dark"] .bsdp-day.selected { background: var(--primary); }
+.edit-modal-content .bsdp-trigger { padding: 0.6rem 0.85rem; border-radius: 0.6rem; font-size: 0.95rem; background: var(--surface); }
+</style>
+<form method="POST" action="/edit/{{ .Work.ID }}" enctype="multipart/form-data" class="edit-work-form" data-bsdp-clear="{{ t .T "work.form.rating.clear" }}" data-bsdp-today="{{ t .T "work.dates.today" }}">
     <div class="form-card">
         <div class="form-card-header"><div class="icon blue">📖</div><div><h2>{{ t .T "work.section.info" }}</h2></div></div>
         <div class="form-group">
@@ -144,18 +208,27 @@
         <div class="form-card-header"><div class="icon blue">📅</div><div><h2>{{ t .T "work.section.dates" }}</h2></div></div>
         <div class="form-row">
             <div class="form-group">
-                <label for="started_at">{{ t .T "work.form.started_at" }}</label>
-                <input id="started_at" type="date" name="started_at" value="{{ fmtDateInput .Work.StartedAt }}">
+                <label>{{ t .T "work.form.started_at" }}</label>
+                <div class="bsdp-wrap">
+                    <input type="hidden" id="started_at" name="started_at" value="{{ fmtDateInput .Work.StartedAt }}">
+                    <div class="bsdp-trigger" tabindex="0"><span class="bsdp-trigger-text"></span><span class="bsdp-trigger-icon">📅</span></div>
+                </div>
                 <p class="form-hint">{{ t .T "work.form.started_at.hint" }}</p>
             </div>
             <div class="form-group">
-                <label for="last_chapter_at">{{ t .T "work.form.last_chapter_at" }}</label>
-                <input id="last_chapter_at" type="date" name="last_chapter_at" value="{{ fmtDateInput .Work.LastChapterAt }}">
+                <label>{{ t .T "work.form.last_chapter_at" }}</label>
+                <div class="bsdp-wrap">
+                    <input type="hidden" id="last_chapter_at" name="last_chapter_at" value="{{ fmtDateInput .Work.LastChapterAt }}">
+                    <div class="bsdp-trigger" tabindex="0"><span class="bsdp-trigger-text"></span><span class="bsdp-trigger-icon">📅</span></div>
+                </div>
                 <p class="form-hint">{{ t .T "work.form.last_chapter_at.hint" }}</p>
             </div>
             <div class="form-group">
-                <label for="finished_at">{{ t .T "work.form.finished_at" }}</label>
-                <input id="finished_at" type="date" name="finished_at" value="{{ fmtDateInput .Work.FinishedAt }}">
+                <label>{{ t .T "work.form.finished_at" }}</label>
+                <div class="bsdp-wrap">
+                    <input type="hidden" id="finished_at" name="finished_at" value="{{ fmtDateInput .Work.FinishedAt }}">
+                    <div class="bsdp-trigger" tabindex="0"><span class="bsdp-trigger-text"></span><span class="bsdp-trigger-icon">📅</span></div>
+                </div>
                 <p class="form-hint">{{ t .T "work.form.finished_at.hint" }}</p>
             </div>
         </div>
