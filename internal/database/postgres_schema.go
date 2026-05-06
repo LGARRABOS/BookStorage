@@ -60,7 +60,10 @@ var postgresSchemaStatements = []string{
 		parent_work_id BIGINT REFERENCES works(id),
 		series_sort INTEGER NOT NULL DEFAULT 0,
 		notify_new_chapters INTEGER NOT NULL DEFAULT 1,
-		reading_site_id BIGINT REFERENCES reading_sites(id)
+		reading_site_id BIGINT REFERENCES reading_sites(id),
+		started_at TIMESTAMPTZ,
+		last_chapter_at TIMESTAMPTZ,
+		finished_at TIMESTAMPTZ
 	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
@@ -181,6 +184,9 @@ var postgresWorkColumns = map[string]string{
 	"series_sort":            "INTEGER DEFAULT 0",
 	"notify_new_chapters":    "INTEGER DEFAULT 1",
 	"reading_site_id":        "BIGINT REFERENCES reading_sites(id)",
+	"started_at":             "TIMESTAMPTZ",
+	"last_chapter_at":        "TIMESTAMPTZ",
+	"finished_at":            "TIMESTAMPTZ",
 }
 
 func ensurePostgresExtraColumns(c *Conn) error {

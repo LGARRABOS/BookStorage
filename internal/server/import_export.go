@@ -72,17 +72,20 @@ func exportWorkFromAniImportEntry(e aniImportEntry) (exportWork, bool) {
 // exportWork is the portable shape for JSON export/import and CSV extended columns.
 // JSON export always emits every key (empty strings / null catalog_id when absent) for a stable object shape.
 type exportWork struct {
-	Title       string `json:"title"`
-	Chapter     int    `json:"chapter"`
-	Link        string `json:"link"`
-	Status      string `json:"status"`
-	ReadingType string `json:"reading_type"`
-	Rating      int    `json:"rating"`
-	Notes       string `json:"notes"`
-	UpdatedAt   string `json:"updated_at"`
-	CatalogID   *int   `json:"catalog_id"`
-	IsAdult     bool   `json:"is_adult"`
-	ImagePath   string `json:"image_path"`
+	Title         string `json:"title"`
+	Chapter       int    `json:"chapter"`
+	Link          string `json:"link"`
+	Status        string `json:"status"`
+	ReadingType   string `json:"reading_type"`
+	Rating        int    `json:"rating"`
+	Notes         string `json:"notes"`
+	UpdatedAt     string `json:"updated_at"`
+	CatalogID     *int   `json:"catalog_id"`
+	IsAdult       bool   `json:"is_adult"`
+	ImagePath     string `json:"image_path"`
+	StartedAt     string `json:"started_at,omitempty"`
+	LastChapterAt string `json:"last_chapter_at,omitempty"`
+	FinishedAt    string `json:"finished_at,omitempty"`
 }
 
 // DuplicateMode controls import when a work with the same title already exists.
@@ -252,6 +255,10 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 		return
 	}
 
+	startedAt := nullIfEmpty(strings.TrimSpace(w.StartedAt))
+	lastChapterAt := nullIfEmpty(strings.TrimSpace(w.LastChapterAt))
+	finishedAt := nullIfEmpty(strings.TrimSpace(w.FinishedAt))
+
 	if existsID > 0 {
 		if mode == DuplicateSkip {
 			report.SkippedDuplicate++
@@ -259,10 +266,12 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 		}
 		_, err := a.DB.Exec(
 			`UPDATE works SET chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, notes = ?, updated_at = CURRENT_TIMESTAMP,
-			 catalog_id = ?, is_adult = ?, image_path = COALESCE(NULLIF(?, ''), image_path)
+			 catalog_id = ?, is_adult = ?, image_path = COALESCE(NULLIF(?, ''), image_path),
+			 started_at = COALESCE(?, started_at), last_chapter_at = COALESCE(?, last_chapter_at), finished_at = COALESCE(?, finished_at)
 			 WHERE id = ? AND user_id = ?`,
 			chapter, link, status, rtype, rating, notes,
 			catID, isAdult, imagePath,
+			startedAt, lastChapterAt, finishedAt,
 			existsID, userID,
 		)
 		if err != nil {
@@ -275,10 +284,10 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 	}
 
 	_, err = a.DB.Exec(
-		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at, catalog_id, is_adult, image_path, notify_new_chapters)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 1)`,
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, updated_at, catalog_id, is_adult, image_path, notify_new_chapters, started_at, last_chapter_at, finished_at)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, 1, ?, ?, ?)`,
 		title, chapter, link, status, rtype, rating, notes, userID,
-		catID, isAdult, imagePath,
+		catID, isAdult, imagePath, startedAt, lastChapterAt, finishedAt,
 	)
 	if err != nil {
 		report.SkippedInvalid++
@@ -563,6 +572,15 @@ func parseCSVWorkRow(record []string) (exportWork, bool) {
 	}
 	if len(record) > 9 {
 		w.ImagePath = strings.TrimSpace(record[9])
+	}
+	if len(record) > 10 {
+		w.StartedAt = strings.TrimSpace(record[10])
+	}
+	if len(record) > 11 {
+		w.LastChapterAt = strings.TrimSpace(record[11])
+	}
+	if len(record) > 12 {
+		w.FinishedAt = strings.TrimSpace(record[12])
 	}
 	return w, true
 }

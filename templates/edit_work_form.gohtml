@@ -140,6 +140,27 @@
         </div>
     </div>
 
+    <div class="form-card">
+        <div class="form-card-header"><div class="icon blue">📅</div><div><h2>{{ t .T "work.section.dates" }}</h2></div></div>
+        <div class="form-row">
+            <div class="form-group">
+                <label for="started_at">{{ t .T "work.form.started_at" }}</label>
+                <input id="started_at" type="date" name="started_at" value="{{ fmtDateInput .Work.StartedAt }}">
+                <p class="form-hint">{{ t .T "work.form.started_at.hint" }}</p>
+            </div>
+            <div class="form-group">
+                <label for="last_chapter_at">{{ t .T "work.form.last_chapter_at" }}</label>
+                <input id="last_chapter_at" type="date" name="last_chapter_at" value="{{ fmtDateInput .Work.LastChapterAt }}">
+                <p class="form-hint">{{ t .T "work.form.last_chapter_at.hint" }}</p>
+            </div>
+            <div class="form-group">
+                <label for="finished_at">{{ t .T "work.form.finished_at" }}</label>
+                <input id="finished_at" type="date" name="finished_at" value="{{ fmtDateInput .Work.FinishedAt }}">
+                <p class="form-hint">{{ t .T "work.form.finished_at.hint" }}</p>
+            </div>
+        </div>
+    </div>
+
     <div class="form-actions">
         <div class="form-actions-left">
             <a href="/delete/{{ .Work.ID }}" class="btn btn-danger {{ if .IsModal }}js-modal-delete{{ else }}js-confirm-delete{{ end }}" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}" {{ if not .IsModal }}data-href="/delete/{{ .Work.ID }}"{{ end }}>🗑️ {{ t .T "work.form.delete" }}</a>

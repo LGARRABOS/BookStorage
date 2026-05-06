@@ -116,6 +116,9 @@ var workColumns = map[string]string{
 	// 1 = suivi ; 0 = non-suivi (filtre tableau de bord), pertinent surtout pour « En cours ».
 	"notify_new_chapters": "INTEGER DEFAULT 1",
 	"reading_site_id":     "INTEGER REFERENCES reading_sites(id)",
+	"started_at":          "DATETIME",
+	"last_chapter_at":     "DATETIME",
+	"finished_at":         "DATETIME",
 }
 
 // sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).

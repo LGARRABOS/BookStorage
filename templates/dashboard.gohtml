@@ -51,6 +51,12 @@
         .works-grid:not(.view-list) .work-cover { aspect-ratio: 5 / 7; }
         .work-cover img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
         .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
+        .work-cover-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.6rem; opacity: 0; transition: opacity 0.25s ease; z-index: 1; padding: 1rem; pointer-events: none; font-size: 0.8rem; text-align: center; }
+        .work-cover:hover .work-cover-overlay { opacity: 1; }
+        .work-cover-overlay .date-row { display: flex; flex-direction: column; align-items: center; gap: 0.15rem; }
+        .work-cover-overlay .date-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.03em; }
+        .work-cover-overlay .date-value { font-weight: 600; font-size: 0.85rem; }
+        .work-cover-overlay .no-dates { opacity: 0.5; font-style: italic; }
         .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
         .work-status-badge { padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px); }
         .work-status-badge[data-status="En cours"], .work-status-badge[data-status="Reading"] { background: rgba(129, 140, 248, 0.9); color: white; }
@@ -316,6 +322,19 @@
                                 {{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}
                                 {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }} · 18+{{ end }}
                             </span>
+                        </div>
+                        {{ $hasAnyDate := or .StartedAt.Valid .LastChapterAt.Valid .FinishedAt.Valid }}
+                        <div class="work-cover-overlay">
+                            {{ if $hasAnyDate }}
+                                {{ if .StartedAt.Valid }}<div class="date-row"><span class="date-label">{{ t $.T "work.dates.started" }}</span><span class="date-value">{{ fmtDateDisplay .StartedAt }}</span></div>{{ end }}
+                                {{ if .FinishedAt.Valid }}
+                                    <div class="date-row"><span class="date-label">{{ t $.T "work.dates.finished" }}</span><span class="date-value">{{ fmtDateDisplay .FinishedAt }}</span></div>
+                                {{ else if .LastChapterAt.Valid }}
+                                    <div class="date-row"><span class="date-label">{{ t $.T "work.dates.last_chapter" }}</span><span class="date-value">{{ fmtDateDisplay .LastChapterAt }}</span></div>
+                                {{ end }}
+                            {{ else }}
+                                <span class="no-dates">{{ t $.T "work.dates.none" }}</span>
+                            {{ end }}
                         </div>
                     </div>
                     {{ if .Link.Valid }}</a>{{ end }}

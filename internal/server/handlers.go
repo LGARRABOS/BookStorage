@@ -108,7 +108,35 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			return i18n.TranslateStatus(status, t)
 		},
 		"upper": strings.ToUpper,
-		"int":   func(v int64) int { return int(v) },
+		"int": func(v int64) int { return int(v) },
+		"fmtDateDisplay": func(n nullFlexTime) string {
+			if !n.Valid || n.String == "" {
+				return ""
+			}
+			for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05Z", time.RFC3339, "2006-01-02"} {
+				if t, err := time.Parse(layout, n.String); err == nil {
+					return t.Format("02/01/2006")
+				}
+			}
+			if len(n.String) >= 10 {
+				return n.String[:10]
+			}
+			return n.String
+		},
+		"fmtDateInput": func(n nullFlexTime) string {
+			if !n.Valid || n.String == "" {
+				return ""
+			}
+			for _, layout := range []string{"2006-01-02 15:04:05", "2006-01-02T15:04:05Z", time.RFC3339} {
+				if t, err := time.Parse(layout, n.String); err == nil {
+					return t.Format("2006-01-02")
+				}
+			}
+			if len(n.String) >= 10 {
+				return n.String[:10]
+			}
+			return n.String
+		},
 		"fmtProbeTime": func(s sql.NullString) string {
 			if !s.Valid || s.String == "" {
 				return "—"
@@ -1116,16 +1144,19 @@ type workRow struct {
 	SeriesSort        int
 	NotifyNewChapters int
 	ReadingSiteID     sql.NullInt64
+	StartedAt         nullFlexTime
+	LastChapterAt     nullFlexTime
+	FinishedAt        nullFlexTime
 }
 
 // sqlWorkRowFull must match scanFullWorkRow field order.
-const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1), reading_site_id`
+const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1), reading_site_id, started_at, last_chapter_at, finished_at`
 
 func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
 	return s.Scan(
 		&w.ID, &w.Title, &w.Chapter, &w.Link, &w.Status, &w.ImagePath, &w.ReadingType,
 		&w.Rating, &w.Notes, &w.UserID, &w.UpdatedAt, &w.IsAdult, &w.ParentWorkID, &w.SeriesSort,
-		&w.NotifyNewChapters, &w.ReadingSiteID,
+		&w.NotifyNewChapters, &w.ReadingSiteID, &w.StartedAt, &w.LastChapterAt, &w.FinishedAt,
 	)
 }
 
@@ -1640,18 +1671,26 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			readingSiteID.Valid = true
 		}
 
+		var startedAtArg, finishedAtArg any
+		if status == "En cours" {
+			startedAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
+		}
+		if status == "Terminé" {
+			finishedAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
+		}
+
 		var dbErr error
 		if imagePath.Valid {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at)
-                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at, started_at, finished_at)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+				title, chapter, link, status, imagePath.String, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID, startedAtArg, finishedAtArg,
 			)
 		} else {
 			_, dbErr = a.DB.Exec(
-				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at)
-                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID,
+				`INSERT INTO works (title, chapter, link, status, image_path, reading_type, rating, is_adult, notes, user_id, catalog_id, notify_new_chapters, reading_site_id, updated_at, started_at, finished_at)
+                 VALUES (?, ?, ?, ?, NULL, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+				title, chapter, link, status, readingType, rating, isAdult, notes, userID, catalogID, notifyCh, readingSiteID, startedAtArg, finishedAtArg,
 			)
 		}
 		if dbErr != nil {
@@ -1825,17 +1864,49 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			readingSiteArg = siteID
 		}
 
+		formStartedAt := strings.TrimSpace(r.FormValue("started_at"))
+		formLastChapterAt := strings.TrimSpace(r.FormValue("last_chapter_at"))
+		formFinishedAt := strings.TrimSpace(r.FormValue("finished_at"))
+
+		var startedAtArg, lastChapterAtArg, finishedAtArg any
+		if formStartedAt != "" {
+			startedAtArg = formStartedAt
+		} else if work.StartedAt.Valid {
+			startedAtArg = work.StartedAt.String
+		}
+		if formLastChapterAt != "" {
+			lastChapterAtArg = formLastChapterAt
+		} else if work.LastChapterAt.Valid {
+			lastChapterAtArg = work.LastChapterAt.String
+		}
+		if formFinishedAt != "" {
+			finishedAtArg = formFinishedAt
+		} else if work.FinishedAt.Valid {
+			finishedAtArg = work.FinishedAt.String
+		}
+
+		oldStatus := ""
+		if work.Status.Valid {
+			oldStatus = work.Status.String
+		}
+		if status == "En cours" && oldStatus != "En cours" && startedAtArg == nil {
+			startedAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
+		}
+		if status == "Terminé" && oldStatus != "Terminé" && finishedAtArg == nil {
+			finishedAtArg = time.Now().UTC().Format("2006-01-02 15:04:05")
+		}
+
 		if newImagePath.Valid {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, image_path = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, started_at = ?, last_chapter_at = ?, finished_at = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, workID, userID,
+				title, chapter, link, status, newImagePath.String, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, startedAtArg, lastChapterAtArg, finishedAtArg, workID, userID,
 			)
 		} else {
 			_, err = a.DB.Exec(
-				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, updated_at = CURRENT_TIMESTAMP
+				`UPDATE works SET title = ?, chapter = ?, link = ?, status = ?, reading_type = ?, rating = ?, is_adult = ?, notes = ?, parent_work_id = ?, series_sort = ?, notify_new_chapters = ?, reading_site_id = ?, started_at = ?, last_chapter_at = ?, finished_at = ?, updated_at = CURRENT_TIMESTAMP
                  WHERE id = ? AND user_id = ?`,
-				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, workID, userID,
+				title, chapter, link, status, readingType, rating, isAdult, notes, parentArg, seriesSort, notifyCh, readingSiteArg, startedAtArg, lastChapterAtArg, finishedAtArg, workID, userID,
 			)
 		}
 		if err != nil {
@@ -1887,7 +1958,7 @@ func (a *App) HandleIncrement(w http.ResponseWriter, r *http.Request) {
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
 	_, err := a.DB.Exec(
-		`UPDATE works SET chapter = chapter + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
+		`UPDATE works SET chapter = chapter + 1, last_chapter_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
 		workID, userID,
 	)
 	if err != nil {
@@ -1972,12 +2043,17 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	updatedAtExpr := `COALESCE(updated_at, '')`
+	dateExpr := func(col string) string { return `COALESCE(` + col + `, '')` }
 	if a.Settings.UsePostgres() {
 		updatedAtExpr = `COALESCE(to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'), '')`
+		dateExpr = func(col string) string {
+			return `COALESCE(to_char(` + col + ` AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'), '')`
+		}
 	}
 	rows, err := a.DB.Query(
 		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, `+updatedAtExpr+`,
-                catalog_id, COALESCE(is_adult, 0), COALESCE(image_path, '')
+                catalog_id, COALESCE(is_adult, 0), COALESCE(image_path, ''),
+                `+dateExpr("started_at")+`, `+dateExpr("last_chapter_at")+`, `+dateExpr("finished_at")+`
          FROM works WHERE user_id = ? ORDER BY title`,
 		userID,
 	)
@@ -1993,7 +2069,7 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 		var link, status, readingType, notes, imagePath sql.NullString
 		var catalogID sql.NullInt64
 		var isAdult int
-		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt, &catalogID, &isAdult, &imagePath); err != nil {
+		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt, &catalogID, &isAdult, &imagePath, &w.StartedAt, &w.LastChapterAt, &w.FinishedAt); err != nil {
 			continue
 		}
 		if link.Valid {
@@ -2041,7 +2117,7 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 	writer := csv.NewWriter(w)
 	writer.Comma = ';'
 	defer writer.Flush()
-	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes", "CatalogID", "IsAdult", "ImagePath"})
+	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes", "CatalogID", "IsAdult", "ImagePath", "StartedAt", "LastChapterAt", "FinishedAt"})
 	for _, row := range works {
 		cat := ""
 		if row.CatalogID != nil {
@@ -2062,6 +2138,9 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 			cat,
 			adult,
 			row.ImagePath,
+			row.StartedAt,
+			row.LastChapterAt,
+			row.FinishedAt,
 		})
 	}
 }

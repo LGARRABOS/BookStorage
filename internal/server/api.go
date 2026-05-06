@@ -24,6 +24,9 @@ type apiWork struct {
 	SeriesSort        int    `json:"series_sort,omitempty"`
 	NotifyNewChapters int    `json:"notify_new_chapters"`
 	ReadingSiteID     *int   `json:"reading_site_id,omitempty"`
+	StartedAt         string `json:"started_at,omitempty"`
+	LastChapterAt     string `json:"last_chapter_at,omitempty"`
+	FinishedAt        string `json:"finished_at,omitempty"`
 }
 
 func workRowToAPIWork(w workRow) apiWork {
@@ -57,6 +60,15 @@ func workRowToAPIWork(w workRow) apiWork {
 	if w.ReadingSiteID.Valid && w.ReadingSiteID.Int64 > 0 {
 		v := int(w.ReadingSiteID.Int64)
 		out.ReadingSiteID = &v
+	}
+	if w.StartedAt.Valid {
+		out.StartedAt = w.StartedAt.String
+	}
+	if w.LastChapterAt.Valid {
+		out.LastChapterAt = w.LastChapterAt.String
+	}
+	if w.FinishedAt.Valid {
+		out.FinishedAt = w.FinishedAt.String
 	}
 	return out
 }
@@ -354,8 +366,20 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if v, ok := req["status"].(string); ok && v != "" {
+		newStatus := normalizeStatusForWrite(v)
 		setParts = append(setParts, "status = ?")
-		args = append(args, normalizeStatusForWrite(v))
+		args = append(args, newStatus)
+		var oldStatus string
+		var startedAtNull, finishedAtNull bool
+		err := a.DB.QueryRow(`SELECT COALESCE(status, ''), (started_at IS NULL), (finished_at IS NULL) FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldStatus, &startedAtNull, &finishedAtNull)
+		if err == nil {
+			if newStatus == "En cours" && oldStatus != "En cours" && startedAtNull {
+				setParts = append(setParts, "started_at = CURRENT_TIMESTAMP")
+			}
+			if newStatus == "Terminé" && oldStatus != "Terminé" && finishedAtNull {
+				setParts = append(setParts, "finished_at = CURRENT_TIMESTAMP")
+			}
+		}
 	}
 	if v, ok := req["reading_type"].(string); ok && v != "" {
 		setParts = append(setParts, "reading_type = ?")
@@ -406,6 +430,19 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 			setParts = append(setParts, "notify_new_chapters = ?")
 			args = append(args, notifyNewChaptersDB(effStatus, v != 0))
 		}
+	}
+
+	if v, ok := req["started_at"].(string); ok {
+		setParts = append(setParts, "started_at = ?")
+		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
+	}
+	if v, ok := req["last_chapter_at"].(string); ok {
+		setParts = append(setParts, "last_chapter_at = ?")
+		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
+	}
+	if v, ok := req["finished_at"].(string); ok {
+		setParts = append(setParts, "finished_at = ?")
+		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
 	}
 
 	if len(setParts) == 0 {
