@@ -130,9 +130,9 @@
                             </td>
                             <td><strong>{{ .Name }}</strong></td>
                             <td class="site-url"><a href="{{ .BaseURL }}" target="_blank" rel="noopener noreferrer">{{ .BaseURL }}</a></td>
-                            <td>{{ fmtProbeTime .LastProbeAt }}</td>
+                            <td><span class="local-time" data-utc="{{ probeTimeISO .LastProbeAt }}">{{ fmtProbeTime .LastProbeAt }}</span></td>
                             <td class="site-actions">
-                                <button type="button" class="btn-detail" title="Détails" onclick="showSiteDetail('{{ .Name }}', '{{ .BaseURL }}', '{{ .ProbeStatus }}', '{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}', '{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}', '{{ fmtProbeTime .LastProbeAt }}')">ℹ️</button>
+                                <button type="button" class="btn-detail" title="Détails" onclick="showSiteDetail('{{ .Name }}', '{{ .BaseURL }}', '{{ .ProbeStatus }}', '{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}', '{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}', this.closest('tr').querySelector('.local-time').textContent)">ℹ️</button>
                                 <button type="button" class="btn-detail" title="Modifier" onclick="showEditSite({{ .ID }}, '{{ .Name }}', '{{ .BaseURL }}')">✏️</button>
                                 <form method="POST" action="/reading-sites/probe">
                                     <input type="hidden" name="id" value="{{ .ID }}">
@@ -221,6 +221,18 @@
             document.getElementById('siteEditModal').classList.remove('open');
         }
     }
+    document.querySelectorAll('.local-time[data-utc]').forEach(function(el) {
+        var iso = el.getAttribute('data-utc');
+        if (!iso) return;
+        var d = new Date(iso);
+        if (isNaN(d)) return;
+        var dd = String(d.getDate()).padStart(2, '0');
+        var mm = String(d.getMonth() + 1).padStart(2, '0');
+        var yyyy = d.getFullYear();
+        var hh = String(d.getHours()).padStart(2, '0');
+        var min = String(d.getMinutes()).padStart(2, '0');
+        el.textContent = dd + '/' + mm + '/' + yyyy + ' ' + hh + ':' + min;
+    });
     </script>
     <script src="/static/js/appearance.js"></script>
 </body>
