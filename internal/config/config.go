@@ -277,7 +277,7 @@ func Load(rootPath string) (*Settings, error) {
 }
 
 // detectTimezone returns the IANA timezone to use for display.
-// Priority: BOOKSTORAGE_TIMEZONE env > TZ env > system local timezone > "UTC".
+// Priority: BOOKSTORAGE_TIMEZONE env > TZ env > system detection > "UTC".
 func detectTimezone() string {
 	if tz := strings.TrimSpace(os.Getenv("BOOKSTORAGE_TIMEZONE")); tz != "" {
 		if _, err := time.LoadLocation(tz); err == nil {
@@ -292,7 +292,34 @@ func detectTimezone() string {
 	if name := time.Now().Location().String(); name != "" && name != "Local" {
 		return name
 	}
+	if tz := detectTimezoneFromSystem(); tz != "" {
+		return tz
+	}
 	return "UTC"
+}
+
+// detectTimezoneFromSystem reads the IANA timezone name from OS-level config.
+// On Linux: /etc/timezone or the /etc/localtime symlink target.
+func detectTimezoneFromSystem() string {
+	// Debian/Ubuntu store the name in /etc/timezone.
+	if b, err := os.ReadFile("/etc/timezone"); err == nil {
+		if tz := strings.TrimSpace(string(b)); tz != "" {
+			if _, err := time.LoadLocation(tz); err == nil {
+				return tz
+			}
+		}
+	}
+	// RHEL/Fedora/Arch: /etc/localtime is a symlink into /usr/share/zoneinfo/.
+	if target, err := os.Readlink("/etc/localtime"); err == nil {
+		const prefix = "/usr/share/zoneinfo/"
+		if idx := strings.Index(target, prefix); idx != -1 {
+			tz := target[idx+len(prefix):]
+			if _, err := time.LoadLocation(tz); err == nil {
+				return tz
+			}
+		}
+	}
+	return ""
 }
 
 func validateSettings(s *Settings) error {
