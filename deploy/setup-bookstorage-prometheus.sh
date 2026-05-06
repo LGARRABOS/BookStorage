@@ -128,7 +128,7 @@ else
 	echo "No distro prometheus package found; trying official binary (v${PROMETHEUS_VERSION})..."
 	if ! install_prometheus_from_github; then
 		echo "Could not install Prometheus automatically." >&2
-		echo "See docs/self-hosting.md (Prometheus metrics) for a manual setup." >&2
+		echo "See https://github.com/LGARRABOS/BookStorage/wiki/Configuration#prometheus-metrics for a manual setup." >&2
 		exit 1
 	fi
 fi

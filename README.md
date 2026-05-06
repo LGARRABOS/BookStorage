@@ -10,32 +10,19 @@ _🇫🇷 [Version française](./README.fr.md)_
 
 ---
 
-## About BookStorage
+## About
 
-BookStorage is a **self-hosted** web app for readers who want a single place to **catalogue** what they read—novels, manga, webtoons, light novels, and similar formats—and **follow progress** over time (planned, reading, completed, dropped). You can attach **ratings and notes**, explore **statistics** on your habits, and use **community libraries** to discover what others have made public, without giving up control of your data.
+BookStorage is a **self-hosted** web app to catalogue what you read and follow your progress over time. Ratings, notes, statistics, community libraries, dark mode, PWA, keyboard shortcuts — everything runs on **your** machine with a **SQLite** or **PostgreSQL** database.
 
-The interface is built for **everyday use**: responsive layout, **dark mode**, **English and French**, optional **PWA** install, and **keyboard shortcuts** for power users. Everything runs on **your** machine or server: a **SQLite** database stores your library locally, with **export/import** when you need backups or a fresh install.
-
----
-
-## Features
+### Key features
 
 - Multi-format library (novels, manga, webtoons, light novels…)
 - Ratings, notes, statistics, public community libraries
-- Dark mode, multilingual UI (EN/FR), installable PWA
-- Mobile PWA with simplified dashboard (search, filter, quick chapter +/-, auto-refresh)
-- Export/import (CSV, JSON), keyboard shortcuts
-
----
-
-## Documentation
-
-| | |
-|---|---|
-| **Self-host** (Linux server, systemd, configuration, daily use) | [docs/self-hosting.md](docs/self-hosting.md) |
-| **Development** (local dev, CI/CD, `bsctl` reference, repo layout) | [docs/development.md](docs/development.md) |
-
-Full index: [docs/README.md](docs/README.md)
+- Dark mode, multilingual UI (EN/FR/DE/ES/IT/PT), installable PWA
+- Mobile PWA with simplified dashboard and quick chapter +/-
+- Export/import (CSV, JSON) + MyAnimeList and AniList import
+- AniList-powered recommendations, catalog integration
+- Admin panel, Prometheus metrics, Google OAuth
 
 ---
 
@@ -53,47 +40,6 @@ Open **http://127.0.0.1:5000**
 
 ---
 
-## Linux distribution support (production)
-
-**Legend:** 🟢 first-class support (`install.sh`, systemd) · 🟠 works, manual install or caveats · 🔴 build or run not realistic (e.g. no Go 1.22+ / GCC — not covered by the distros below)
-
-| Distribution | Status |
-|---|---|
-| AlmaLinux | 🟢 |
-| Alpine Linux | 🟠 |
-| Amazon Linux 2023 | 🟢 |
-| Arch Linux | 🟠 |
-| CentOS Stream | 🟢 |
-| Clear Linux | 🟠 |
-| Debian | 🟢 |
-| Deepin | 🟢 |
-| elementary OS | 🟢 |
-| EndeavourOS | 🟠 |
-| Fedora | 🟢 |
-| Fedora Silverblue | 🟠 |
-| Garuda Linux | 🟠 |
-| Gentoo | 🟠 |
-| Kali Linux | 🟢 |
-| Linux Mint | 🟢 |
-| Manjaro | 🟠 |
-| MX Linux | 🟢 |
-| NixOS | 🟠 |
-| Nobara | 🟢 |
-| openSUSE Leap | 🟠 |
-| openSUSE Tumbleweed | 🟠 |
-| Parrot OS | 🟢 |
-| Pop!_OS | 🟢 |
-| Raspberry Pi OS | 🟢 |
-| RHEL | 🟢 |
-| Rocky Linux | 🟢 |
-| Slackware | 🟠 |
-| Solus | 🟠 |
-| Ubuntu | 🟢 |
-| Void Linux | 🟠 |
-| Zorin OS | 🟢 |
-
----
-
 ## Production (Linux)
 
 ```bash
@@ -103,15 +49,23 @@ sudo ./deploy/install.sh
 bsctl start
 ```
 
-Details: [Self-hosting guide](docs/self-hosting.md).
-
 ---
 
-## Update recommendations
+## Documentation
 
-- **Prefer the latest major release** (`vX.0.0`) if you want maximum stability in production.
-- **Warning**: **non-major** releases (`vX.Y.Z` with \(Y>0\) or \(Z>0\)) may ship with regressions/bugs that can **break some features**.
-- Before updating: take a backup (at least `database.db` and your `static/images` / `static/avatars` folders), then smoke-test the app after restart.
+Full documentation is available on the **[Wiki](https://github.com/LGARRABOS/BookStorage/wiki)**:
+
+- [Installation](https://github.com/LGARRABOS/BookStorage/wiki/Installation) — development and production setup
+- [Configuration](https://github.com/LGARRABOS/BookStorage/wiki/Configuration) — environment variables, OAuth, PostgreSQL
+- [Usage](https://github.com/LGARRABOS/BookStorage/wiki/Usage) — dashboard, PWA, export/import, shortcuts
+- [API Reference](https://github.com/LGARRABOS/BookStorage/wiki/API-Reference) — REST API endpoints
+- [Architecture](https://github.com/LGARRABOS/BookStorage/wiki/Architecture) — tech stack, project structure
+- [Database](https://github.com/LGARRABOS/BookStorage/wiki/Database) — schema, migrations, full-text search
+- [Authentication & Security](https://github.com/LGARRABOS/BookStorage/wiki/Authentication-and-Security) — auth, sessions, hardening
+- [CI / CD](https://github.com/LGARRABOS/BookStorage/wiki/CI-CD) — pipeline, deployment, bsctl CLI
+- [Troubleshooting](https://github.com/LGARRABOS/BookStorage/wiki/Troubleshooting) — common issues and solutions
+
+---
 
 ## License
 

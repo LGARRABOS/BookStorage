@@ -12,32 +12,17 @@ _🇬🇧 [English version](./README.md)_
 
 ## Présentation
 
-BookStorage est une application web **auto-hébergée** pour centraliser ce que vous lisez—romans, mangas, webtoons, light novels, etc.—et **suivre votre progression** (à lire, en cours, terminé, abandonné). Vous pouvez ajouter **évaluations et notes de lecture**, consulter des **statistiques** sur vos habitudes, et parcourir les **bibliothèques publiques** des autres lecteurs lorsqu’ils les partagent, tout en gardant la main sur vos données.
+BookStorage est une application web **auto-hébergée** pour centraliser et suivre vos lectures. Évaluations, notes, statistiques, bibliothèques communautaires, mode sombre, PWA, raccourcis clavier — tout s'exécute **chez vous** avec une base **SQLite** ou **PostgreSQL**.
 
-L’interface vise un **usage quotidien** : mise en page adaptée, **mode sombre**, **français et anglais**, **PWA** optionnelle, **raccourcis clavier** pour aller vite. Tout s’exécute **chez vous** : une base **SQLite** conserve votre bibliothèque localement, avec **export et import** pour sauvegardes ou migration.
-
----
-
-## Fonctionnalités
+### Fonctionnalités
 
 - Bibliothèque multi-formats (romans, mangas, webtoons, light novels…)
-- Notes, statistiques, bibliothèques publiques des autres lecteurs
-- Mode sombre, interface multilingue (FR/EN), PWA installable
-- PWA mobile avec tableau de bord simplifié (recherche, filtres, chapitres +/-, rafraîchissement auto)
-- Export/import (CSV, JSON) + prise en charge des exports externes (MyAnimeList, AniList)
-- API `/api/works` avec pagination, filtres (statut/type/recherche) et tri
-- Raccourcis clavier
-
----
-
-## Documentation
-
-| | |
-|---|---|
-| **Hébergement** (serveur Linux, systemd, configuration, usage quotidien) | [docs/fr/hebergement.md](docs/fr/hebergement.md) |
-| **Développement** (dév local, CI/CD, référence `bsctl`, structure du dépôt) | [docs/fr/developpement.md](docs/fr/developpement.md) |
-
-Index (anglais) : [docs/README.md](docs/README.md)
+- Notes, statistiques, bibliothèques publiques
+- Mode sombre, interface multilingue (FR/EN/DE/ES/IT/PT), PWA installable
+- PWA mobile avec tableau de bord simplifié et chapitres +/-
+- Export/import (CSV, JSON) + import MyAnimeList et AniList
+- Recommandations AniList, intégration catalogue
+- Panel admin, métriques Prometheus, Google OAuth
 
 ---
 
@@ -55,47 +40,6 @@ Ouvrez **http://127.0.0.1:5000**
 
 ---
 
-## Compatibilité Linux (production)
-
-**Légende :** 🟢 prise en charge directe (`install.sh`, systemd) · 🟠 fonctionne, installation ou maintenance manuelle (ou réserves) · 🔴 compilation ou exécution non réalistes (ex. sans Go 1.22+ ni GCC — hors distributions ci-dessous)
-
-| Distribution | Statut |
-|---|---|
-| AlmaLinux | 🟢 |
-| Alpine Linux | 🟠 |
-| Amazon Linux 2023 | 🟢 |
-| Arch Linux | 🟠 |
-| CentOS Stream | 🟢 |
-| Clear Linux | 🟠 |
-| Debian | 🟢 |
-| Deepin | 🟢 |
-| elementary OS | 🟢 |
-| EndeavourOS | 🟠 |
-| Fedora | 🟢 |
-| Fedora Silverblue | 🟠 |
-| Garuda Linux | 🟠 |
-| Gentoo | 🟠 |
-| Kali Linux | 🟢 |
-| Linux Mint | 🟢 |
-| Manjaro | 🟠 |
-| MX Linux | 🟢 |
-| NixOS | 🟠 |
-| Nobara | 🟢 |
-| openSUSE Leap | 🟠 |
-| openSUSE Tumbleweed | 🟠 |
-| Parrot OS | 🟢 |
-| Pop!_OS | 🟢 |
-| Raspberry Pi OS | 🟢 |
-| RHEL | 🟢 |
-| Rocky Linux | 🟢 |
-| Slackware | 🟠 |
-| Solus | 🟠 |
-| Ubuntu | 🟢 |
-| Void Linux | 🟠 |
-| Zorin OS | 🟢 |
-
----
-
 ## Production (Linux)
 
 ```bash
@@ -105,15 +49,23 @@ sudo ./deploy/install.sh
 bsctl start
 ```
 
-Détails : [guide Hébergement](docs/fr/hebergement.md).
-
 ---
 
-## Recommandations de mise à jour
+## Documentation
 
-- **Privilégiez la dernière version majeure** (`vX.0.0`) si vous cherchez un maximum de stabilité en production.
-- **Attention** : les versions **non-majeures** (`vX.Y.Z` avec Y>0 ou Z>0) peuvent contenir des régressions et des bugs pouvant aller jusqu’à **rendre certaines fonctionnalités inutilisables**.
-- Avant une mise à jour : faites une sauvegarde (au minimum du fichier `database.db` et de vos dossiers `static/images` / `static/avatars`), puis testez rapidement l’app après redémarrage.
+La documentation complète est disponible sur le **[Wiki](https://github.com/LGARRABOS/BookStorage/wiki)** :
+
+- [Installation](https://github.com/LGARRABOS/BookStorage/wiki/Installation) — mise en place développement et production
+- [Configuration](https://github.com/LGARRABOS/BookStorage/wiki/Configuration) — variables d'environnement, OAuth, PostgreSQL
+- [Usage](https://github.com/LGARRABOS/BookStorage/wiki/Usage) — tableau de bord, PWA, export/import, raccourcis
+- [API Reference](https://github.com/LGARRABOS/BookStorage/wiki/API-Reference) — endpoints de l'API REST
+- [Architecture](https://github.com/LGARRABOS/BookStorage/wiki/Architecture) — stack technique, structure du projet
+- [Database](https://github.com/LGARRABOS/BookStorage/wiki/Database) — schéma, migrations, recherche plein texte
+- [Authentication & Security](https://github.com/LGARRABOS/BookStorage/wiki/Authentication-and-Security) — authentification, sessions, sécurité
+- [CI / CD](https://github.com/LGARRABOS/BookStorage/wiki/CI-CD) — pipeline, déploiement, CLI bsctl
+- [Troubleshooting](https://github.com/LGARRABOS/BookStorage/wiki/Troubleshooting) — problèmes courants et solutions
+
+---
 
 ## Licence
 

@@ -227,7 +227,7 @@ if [ "${INSTALL_WITH_PROMETHEUS:-}" = "1" ]; then
     if bash "$APP_DIR/deploy/setup-bookstorage-prometheus.sh"; then
         print_success "Service bookstorage-prometheus installé (http://127.0.0.1:9091)"
     else
-        print_warn "Prometheus automatique échoué — voir docs/self-hosting.md (Prometheus metrics)"
+        print_warn "Prometheus automatique échoué — voir https://github.com/LGARRABOS/BookStorage/wiki/Configuration#prometheus-metrics"
     fi
 fi
 

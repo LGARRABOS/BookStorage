@@ -2,7 +2,7 @@
 
 The script [`setup-postgres-vm.sh`](setup-postgres-vm.sh) provisions an empty database role and database for BookStorage on the PostgreSQL host.
 
-For general production install (systemd, `bsctl`, firewall), see [Self-hosting](../docs/self-hosting.md). Project overview in French: [README.fr.md](../README.fr.md).
+For general production install (systemd, `bsctl`, firewall), see the [Wiki — Installation](https://github.com/LGARRABOS/BookStorage/wiki/Installation). Project overview in French: [README.fr.md](../README.fr.md).
 
 ---
 
