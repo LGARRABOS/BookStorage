@@ -76,12 +76,12 @@
         .sessions-table code { font-size: 0.78rem; }
         .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
-        .charts-section { margin-bottom: 1.5rem; }
+        .charts-section { margin-top: 1.5rem; }
         .charts-section-title { font-size: 1.15rem; font-weight: 600; color: var(--text-primary); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem; }
         .charts-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.25rem; }
         .chart-card { background: var(--surface); border-radius: 1rem; padding: 1.25rem; border: 1px solid var(--border-subtle); }
         .chart-card-title { font-size: 0.9rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.75rem 0; }
-        .chart-card canvas { width: 100% !important; max-height: 220px; }
+        .chart-container { position: relative; height: 220px; }
         .chart-card-full { grid-column: 1 / -1; }
         .chart-empty { text-align: center; padding: 2rem 1rem; color: var(--text-muted); font-size: 0.9rem; }
         [data-theme="dark"] .chart-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
@@ -124,36 +124,6 @@
                     <div class="stat-card"><div class="stat-icon orange">📖</div><div><div class="stat-value">{{ .TotalChapters }}</div><div class="stat-label">{{ t .T "dashboard.stats.chapters" }}</div></div></div>
                     <div class="stat-card"><div class="stat-icon green">✅</div><div><div class="stat-value">{{ .CompletedCount }}</div><div class="stat-label">{{ t .T "profile.stats.completed" }}</div></div></div>
                     <div class="stat-card"><div class="stat-icon blue">▶️</div><div><div class="stat-value">{{ .ReadingCount }}</div><div class="stat-label">{{ t .T "profile.stats.reading" }}</div></div></div>
-                </div>
-
-                <div class="charts-section">
-                    <h2 class="charts-section-title">📊 {{ t .T "profile.charts.title" }}</h2>
-                    <div class="charts-grid">
-                        <div class="chart-card">
-                            <h3 class="chart-card-title">{{ t .T "profile.charts.monthly_activity" }}</h3>
-                            {{ if .MonthlyActivity }}
-                            <canvas id="chart-monthly"></canvas>
-                            {{ else }}
-                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
-                            {{ end }}
-                        </div>
-                        <div class="chart-card">
-                            <h3 class="chart-card-title">{{ t .T "profile.charts.by_status" }}</h3>
-                            {{ if .StatusDistrib }}
-                            <canvas id="chart-status"></canvas>
-                            {{ else }}
-                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
-                            {{ end }}
-                        </div>
-                        <div class="chart-card chart-card-full">
-                            <h3 class="chart-card-title">{{ t .T "profile.charts.reading_activity" }}</h3>
-                            {{ if .MonthlyReading }}
-                            <canvas id="chart-reading"></canvas>
-                            {{ else }}
-                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
-                            {{ end }}
-                        </div>
-                    </div>
                 </div>
 
                 <div class="profile-layout">
@@ -354,6 +324,36 @@
                         <div class="form-actions">
                             <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
                             <button type="submit" class="btn btn-primary" form="profile-edit-form">{{ t .T "profile.save" }}</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="charts-section">
+                    <h2 class="charts-section-title">📊 {{ t .T "profile.charts.title" }}</h2>
+                    <div class="charts-grid">
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.monthly_activity" }}</h3>
+                            {{ if .MonthlyActivity }}
+                            <div class="chart-container"><canvas id="chart-monthly"></canvas></div>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="chart-card">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.by_status" }}</h3>
+                            {{ if .StatusDistrib }}
+                            <div class="chart-container"><canvas id="chart-status"></canvas></div>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </div>
+                        <div class="chart-card chart-card-full">
+                            <h3 class="chart-card-title">{{ t .T "profile.charts.reading_activity" }}</h3>
+                            {{ if .MonthlyReading }}
+                            <div class="chart-container"><canvas id="chart-reading"></canvas></div>
+                            {{ else }}
+                            <div class="chart-empty">{{ t .T "profile.charts.no_data" }}</div>
+                            {{ end }}
                         </div>
                     </div>
                 </div>
