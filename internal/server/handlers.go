@@ -113,7 +113,7 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			return i18n.TranslateStatus(status, t)
 		},
 		"upper": strings.ToUpper,
-		"int": func(v int64) int { return int(v) },
+		"int":   func(v int64) int { return int(v) },
 		"fmtDateDisplay": func(n nullFlexTime) string {
 			if !n.Valid || n.String == "" {
 				return ""
