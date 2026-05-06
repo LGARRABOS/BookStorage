@@ -950,14 +950,19 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	lang := a.currentLang(r)
+	tr := i18n.T(lang)
+
 	a.renderTemplate(w, r, "stats", a.mergeData(r, map[string]any{
-		"TotalWorks":    totalWorks,
-		"TotalChapters": totalChapters,
-		"ByStatus":      byStatus,
-		"ByType":        byType,
-		"AvgRating":     avgRating,
-		"RatedCount":    ratedCount,
-		"TopRated":      topRated,
+		"TotalWorks":      totalWorks,
+		"TotalChapters":   totalChapters,
+		"ByStatus":        byStatus,
+		"ByType":          byType,
+		"AvgRating":       avgRating,
+		"RatedCount":      ratedCount,
+		"TopRated":        topRated,
+		"ReadingTimeline": a.readingTimelineForCharts(userID),
+		"StatusDistrib":   a.statusDistribForCharts(userID, tr),
 	}))
 }
 
@@ -2241,6 +2246,87 @@ type profileUser struct {
 	IsPublic    sql.NullInt64
 }
 
+// readingTimelineDay holds sparse daily aggregates for Chart.js (started / finished / last activity).
+type readingTimelineDay struct {
+	Day      string `json:"day"`
+	Started  int    `json:"started"`
+	Finished int    `json:"finished"`
+	Reading  int    `json:"reading"`
+}
+
+// statusChartRow is one doughnut slice; Status is translated for the active locale.
+type statusChartRow struct {
+	Status string `json:"status"`
+	Count  int    `json:"count"`
+}
+
+func (a *App) readingTimelineForCharts(userID int) []readingTimelineDay {
+	dayExpr := func(col string) string {
+		if a.Settings.UsePostgres() {
+			return `TO_CHAR(` + col + ` AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
+		}
+		return `strftime('%Y-%m-%d', ` + col + `)`
+	}
+	type dayCounts struct {
+		Started  int
+		Finished int
+		Reading  int
+	}
+	byDay := map[string]*dayCounts{}
+	addQuery := func(col string, field func(*dayCounts, int)) {
+		q := `SELECT ` + dayExpr(col) + ` AS d, COUNT(*) FROM works WHERE user_id = ? AND ` + col + ` IS NOT NULL GROUP BY d ORDER BY d`
+		rows, qerr := a.DB.Query(q, userID)
+		if qerr != nil {
+			return
+		}
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var d string
+			var n int
+			if rows.Scan(&d, &n) != nil {
+				continue
+			}
+			if byDay[d] == nil {
+				byDay[d] = &dayCounts{}
+			}
+			field(byDay[d], n)
+		}
+	}
+	addQuery("started_at", func(dc *dayCounts, n int) { dc.Started = n })
+	addQuery("finished_at", func(dc *dayCounts, n int) { dc.Finished = n })
+	addQuery("last_chapter_at", func(dc *dayCounts, n int) { dc.Reading = n })
+
+	sortedDays := make([]string, 0, len(byDay))
+	for d := range byDay {
+		sortedDays = append(sortedDays, d)
+	}
+	sort.Strings(sortedDays)
+	out := make([]readingTimelineDay, 0, len(sortedDays))
+	for _, d := range sortedDays {
+		dc := byDay[d]
+		out = append(out, readingTimelineDay{Day: d, Started: dc.Started, Finished: dc.Finished, Reading: dc.Reading})
+	}
+	return out
+}
+
+func (a *App) statusDistribForCharts(userID int, tr i18n.Translations) []statusChartRow {
+	var out []statusChartRow
+	sRows, err := a.DB.Query(`SELECT COALESCE(status, ''), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
+	if err != nil {
+		return out
+	}
+	defer func() { _ = sRows.Close() }()
+	for sRows.Next() {
+		var raw string
+		var c int
+		if sRows.Scan(&raw, &c) != nil {
+			continue
+		}
+		out = append(out, statusChartRow{Status: i18n.TranslateStatus(raw, tr), Count: c})
+	}
+	return out
+}
+
 func deleteMediaFile(folder, storedPath string) {
 	if strings.TrimSpace(storedPath) == "" {
 		return
@@ -2307,75 +2393,6 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		var readingCount int
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
 
-		// --- Charts: sparse daily timeline (started_at / finished_at / last_chapter_at) for interactive chart ---
-		dayExpr := func(col string) string {
-			if a.Settings.UsePostgres() {
-				return `TO_CHAR(` + col + ` AT TIME ZONE 'UTC', 'YYYY-MM-DD')`
-			}
-			return `strftime('%Y-%m-%d', ` + col + `)`
-		}
-		type dayCounts struct {
-			Started  int
-			Finished int
-			Reading  int
-		}
-		byDay := map[string]*dayCounts{}
-		addQuery := func(col string, field func(*dayCounts, int)) {
-			q := `SELECT ` + dayExpr(col) + ` AS d, COUNT(*) FROM works WHERE user_id = ? AND ` + col + ` IS NOT NULL GROUP BY d ORDER BY d`
-			rows, qerr := a.DB.Query(q, userID)
-			if qerr != nil {
-				return
-			}
-			defer func() { _ = rows.Close() }()
-			for rows.Next() {
-				var d string
-				var n int
-				if rows.Scan(&d, &n) != nil {
-					continue
-				}
-				if byDay[d] == nil {
-					byDay[d] = &dayCounts{}
-				}
-				field(byDay[d], n)
-			}
-		}
-		addQuery("started_at", func(dc *dayCounts, n int) { dc.Started = n })
-		addQuery("finished_at", func(dc *dayCounts, n int) { dc.Finished = n })
-		addQuery("last_chapter_at", func(dc *dayCounts, n int) { dc.Reading = n })
-
-		type timelineDay struct {
-			Day      string `json:"day"`
-			Started  int    `json:"started"`
-			Finished int    `json:"finished"`
-			Reading  int    `json:"reading"`
-		}
-		sortedDays := make([]string, 0, len(byDay))
-		for d := range byDay {
-			sortedDays = append(sortedDays, d)
-		}
-		sort.Strings(sortedDays)
-		readingTimeline := make([]timelineDay, 0, len(sortedDays))
-		for _, d := range sortedDays {
-			dc := byDay[d]
-			readingTimeline = append(readingTimeline, timelineDay{Day: d, Started: dc.Started, Finished: dc.Finished, Reading: dc.Reading})
-		}
-
-		type statusCount struct {
-			Status string `json:"status"`
-			Count  int    `json:"count"`
-		}
-		var statusDistrib []statusCount
-		sRows, err := a.DB.Query(`SELECT COALESCE(status, ''), COUNT(*) FROM works WHERE user_id = ? GROUP BY status ORDER BY COUNT(*) DESC`, userID)
-		if err == nil {
-			defer func() { _ = sRows.Close() }()
-			for sRows.Next() {
-				var sc statusCount
-				if err := sRows.Scan(&sc.Status, &sc.Count); err == nil {
-					statusDistrib = append(statusDistrib, sc)
-				}
-			}
-		}
-
 		sessions, _ := a.listActiveSessions(userID)
 		_, tok, _ := a.currentSession(r)
 		currentSessionHash := ""
@@ -2389,8 +2406,6 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			"TotalChapters":    totalChapters,
 			"CompletedCount":   completedCount,
 			"ReadingCount":     readingCount,
-			"ReadingTimeline":  readingTimeline,
-			"StatusDistrib":    statusDistrib,
 			"Sessions":         sessions,
 			"CurrentSession":   currentSessionHash,
 			"LogoutAllDone":    q.Get("logout_all") == "1",

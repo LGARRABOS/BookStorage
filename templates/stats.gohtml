@@ -12,6 +12,7 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
     <style>
         .stats-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
         .stat-box { background: var(--surface); border-radius: var(--radius); padding: 1.5rem; text-align: center; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); }
@@ -43,6 +44,28 @@
         [data-theme="dark"] .stat-bar-track { background: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .top-list li { border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .top-list .title { color: #f1f5f9; }
+        .stats-charts-layout { display: grid; grid-template-columns: 1fr; gap: 1.5rem; }
+        @media (min-width: 960px) {
+            .stats-charts-layout { grid-template-columns: 1fr minmax(280px, 360px); align-items: start; }
+        }
+        .stats-chart-heading { font-size: 1rem; font-weight: 600; margin: 0 0 1rem 0; color: var(--text-primary); }
+        .stats-chart-toolbar { display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; margin-bottom: 0.85rem; }
+        .stats-chart-toolbar .toolbar-field { display: flex; flex-direction: column; gap: 0.3rem; margin: 0; }
+        .stats-chart-toolbar .toolbar-field label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+        .stats-chart-toolbar select,
+        .stats-chart-toolbar input[type="date"] { padding: 0.5rem 0.65rem; border-radius: var(--radius); border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-size: 0.88rem; box-shadow: none; }
+        .stats-chart-toolbar .btn-chart-apply {
+            padding: 0.5rem 1rem; border-radius: var(--radius); border: none;
+            background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%); color: white; font-weight: 600; font-size: 0.88rem; cursor: pointer;
+        }
+        .stats-chart-toolbar .btn-chart-apply:hover { filter: brightness(1.05); }
+        .stats-chart-custom-range { display: none; flex-wrap: wrap; gap: 0.75rem; align-items: flex-end; width: 100%; }
+        .stats-chart-custom-range.visible { display: flex; }
+        .stats-chart-granularity-hint { font-size: 0.78rem; color: var(--text-muted); margin: -0.35rem 0 0.65rem 0; line-height: 1.4; }
+        .stats-chart-canvas-wrap { position: relative; width: 100%; min-height: 260px; height: 280px; }
+        .stats-chart-canvas-wrap.timeline { height: 300px; min-height: 280px; }
+        .stats-chart-canvas-wrap.donut { height: 280px; max-width: 100%; margin: 0 auto; }
+        .stats-chart-panel-donut .stats-chart-canvas-wrap.donut { max-width: 340px; }
     </style>
 </head>
 <body>
@@ -124,6 +147,53 @@
                     </section>
                 </div>
 
+                <section class="stats-section">
+                    <h2>📊 {{ t .T "profile.charts.title" }}</h2>
+                    <div class="stats-charts-layout">
+                        <article class="stats-card stats-chart-panel">
+                            <h3 class="stats-chart-heading">{{ t .T "profile.charts.timeline" }}</h3>
+                            {{ if .ReadingTimeline }}
+                            <div class="stats-chart-toolbar">
+                                <div class="toolbar-field">
+                                    <label for="stats-chart-period-preset">{{ t .T "profile.charts.period" }}</label>
+                                    <select id="stats-chart-period-preset" aria-describedby="stats-chart-granularity-hint">
+                                        <option value="7">{{ t .T "profile.charts.period_7d" }}</option>
+                                        <option value="30">{{ t .T "profile.charts.period_30d" }}</option>
+                                        <option value="90">{{ t .T "profile.charts.period_90d" }}</option>
+                                        <option value="365" selected>{{ t .T "profile.charts.period_365d" }}</option>
+                                        <option value="all">{{ t .T "profile.charts.period_all" }}</option>
+                                        <option value="custom">{{ t .T "profile.charts.period_custom" }}</option>
+                                    </select>
+                                </div>
+                                <div class="stats-chart-custom-range" id="stats-chart-custom-range">
+                                    <div class="toolbar-field">
+                                        <label for="stats-chart-date-from">{{ t .T "profile.charts.date_from" }}</label>
+                                        <input type="date" id="stats-chart-date-from">
+                                    </div>
+                                    <div class="toolbar-field">
+                                        <label for="stats-chart-date-to">{{ t .T "profile.charts.date_to" }}</label>
+                                        <input type="date" id="stats-chart-date-to">
+                                    </div>
+                                    <button type="button" class="btn-chart-apply" id="stats-chart-apply-custom">{{ t .T "profile.charts.apply" }}</button>
+                                </div>
+                            </div>
+                            <p id="stats-chart-granularity-hint" class="stats-chart-granularity-hint">{{ t .T "profile.charts.granularity_hint" }}</p>
+                            <div class="stats-chart-canvas-wrap timeline"><canvas id="stats-chart-timeline"></canvas></div>
+                            {{ else }}
+                            <div class="empty-stat">{{ t $.T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </article>
+                        <article class="stats-card stats-chart-panel stats-chart-panel-donut">
+                            <h3 class="stats-chart-heading">{{ t .T "profile.charts.by_status" }}</h3>
+                            {{ if .StatusDistrib }}
+                            <div class="stats-chart-canvas-wrap donut"><canvas id="stats-chart-status"></canvas></div>
+                            {{ else }}
+                            <div class="empty-stat">{{ t $.T "profile.charts.no_data" }}</div>
+                            {{ end }}
+                        </article>
+                    </div>
+                </section>
+
                 {{ if .TopRated }}
                 <section class="stats-section">
                     <h2>🏆 {{ t .T "stats.top_rated" }}</h2>
@@ -149,6 +219,270 @@
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
+    <script>
+    (function(){
+        var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        var textColor = isDark ? '#cbd5e1' : '#64748b';
+        var gridColor = isDark ? 'rgba(100,116,139,0.25)' : 'rgba(15,23,42,0.08)';
+        var primary = isDark ? '#818cf8' : '#4f46e5';
+        var accent  = isDark ? '#fb923c' : '#f97316';
+        var tertiary = isDark ? '#22d3ee' : '#0891b2';
+        var lang = document.documentElement.lang || 'fr';
+
+        var lineDefaults = {
+            responsive: true,
+            maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
+            plugins: {
+                legend: { labels: { color: textColor, font: { size: 12, family: 'Inter, sans-serif' } } },
+                tooltip: { enabled: true }
+            },
+            scales: {
+                x: { ticks: { color: textColor, font: { size: 10 }, maxRotation: 45, minRotation: 0 }, grid: { color: gridColor } },
+                y: { ticks: { color: textColor, font: { size: 11 }, precision: 0 }, grid: { color: gridColor }, beginAtZero: true }
+            }
+        };
+
+        function pad2(n) { return (n < 10 ? '0' : '') + n; }
+        function formatDay(d) {
+            return d.getFullYear() + '-' + pad2(d.getMonth() + 1) + '-' + pad2(d.getDate());
+        }
+        function parseDayStr(s) {
+            var p = s.split('-');
+            return new Date(parseInt(p[0], 10), parseInt(p[1], 10) - 1, parseInt(p[2], 10));
+        }
+        function eachDay(fromD, toD, fn) {
+            var d = new Date(fromD.getFullYear(), fromD.getMonth(), fromD.getDate());
+            var end = new Date(toD.getFullYear(), toD.getMonth(), toD.getDate());
+            while (d <= end) {
+                fn(formatDay(d));
+                d.setDate(d.getDate() + 1);
+            }
+        }
+        function mondayOf(d) {
+            var x = new Date(d.getFullYear(), d.getMonth(), d.getDate());
+            var dow = (x.getDay() + 6) % 7;
+            x.setDate(x.getDate() - dow);
+            return x;
+        }
+        function monthKey(dayStr) {
+            return dayStr.slice(0, 7);
+        }
+        function pickGranularity(dayCount) {
+            if (dayCount <= 35) return 'day';
+            if (dayCount <= 120) return 'week';
+            return 'month';
+        }
+        function aggregateTimeline(lookup, fromStr, toStr) {
+            var fromD = parseDayStr(fromStr);
+            var toD = parseDayStr(toStr);
+            var dayCount = Math.round((toD - fromD) / 864e5) + 1;
+            var mode = pickGranularity(dayCount);
+            var labels = [];
+            var started = [];
+            var finished = [];
+            var reading = [];
+            if (mode === 'day') {
+                eachDay(fromD, toD, function(dayStr) {
+                    var r = lookup[dayStr] || { s: 0, f: 0, r: 0 };
+                    labels.push(new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' }).format(parseDayStr(dayStr)));
+                    started.push(r.s); finished.push(r.f); reading.push(r.r);
+                });
+            } else if (mode === 'week') {
+                var buckets = {};
+                eachDay(fromD, toD, function(dayStr) {
+                    var d = parseDayStr(dayStr);
+                    var m = mondayOf(d);
+                    var k = formatDay(m);
+                    if (!buckets[k]) buckets[k] = { s: 0, f: 0, r: 0, monday: m };
+                    var row = lookup[dayStr] || { s: 0, f: 0, r: 0 };
+                    buckets[k].s += row.s; buckets[k].f += row.f; buckets[k].r += row.r;
+                });
+                Object.keys(buckets).sort().forEach(function(k) {
+                    var b = buckets[k];
+                    labels.push(new Intl.DateTimeFormat(lang, { day: 'numeric', month: 'short' }).format(b.monday));
+                    started.push(b.s); finished.push(b.f); reading.push(b.r);
+                });
+            } else {
+                var mb = {};
+                eachDay(fromD, toD, function(dayStr) {
+                    var mk = monthKey(dayStr);
+                    if (!mb[mk]) mb[mk] = { s: 0, f: 0, r: 0 };
+                    var row = lookup[dayStr] || { s: 0, f: 0, r: 0 };
+                    mb[mk].s += row.s; mb[mk].f += row.f; mb[mk].r += row.r;
+                });
+                Object.keys(mb).sort().forEach(function(mk) {
+                    var parts = mk.split('-');
+                    var first = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, 1);
+                    labels.push(new Intl.DateTimeFormat(lang, { month: 'short', year: 'numeric' }).format(first));
+                    started.push(mb[mk].s); finished.push(mb[mk].f); reading.push(mb[mk].r);
+                });
+            }
+            return { labels: labels, started: started, finished: finished, reading: reading, mode: mode };
+        }
+
+        {{ if .ReadingTimeline }}
+        var timelineRaw = {{ toJSON .ReadingTimeline }};
+        var lookup = {};
+        timelineRaw.forEach(function(row) {
+            lookup[row.day] = { s: row.started, f: row.finished, r: row.reading };
+        });
+        var dayKeys = timelineRaw.map(function(r) { return r.day; }).sort();
+        var dataMin = dayKeys.length ? dayKeys[0] : null;
+        var dataMax = dayKeys.length ? dayKeys[dayKeys.length - 1] : null;
+
+        function todayStr() {
+            return formatDay(new Date());
+        }
+        function addDaysStr(dayStr, delta) {
+            var d = parseDayStr(dayStr);
+            d.setDate(d.getDate() + delta);
+            return formatDay(d);
+        }
+
+        var timelineChart = null;
+        var canvas = document.getElementById('stats-chart-timeline');
+        var presetSel = document.getElementById('stats-chart-period-preset');
+        var customWrap = document.getElementById('stats-chart-custom-range');
+        var inputFrom = document.getElementById('stats-chart-date-from');
+        var inputTo = document.getElementById('stats-chart-date-to');
+        var btnApply = document.getElementById('stats-chart-apply-custom');
+
+        function clampBoundsToFirstStat(b) {
+            if (!b || !b.from || !b.to || !dataMin) return b;
+            var from = b.from < dataMin ? dataMin : b.from;
+            var to = b.to;
+            if (from > to) {
+                return dataMax ? { from: dataMin, to: dataMax } : { from: dataMin, to: from };
+            }
+            return { from: from, to: to };
+        }
+
+        function boundsForPreset() {
+            var v = presetSel.value;
+            var today = todayStr();
+            if (v === 'all' && dataMin && dataMax) {
+                return { from: dataMin, to: dataMax };
+            }
+            if (v === 'custom' && inputFrom.value && inputTo.value) {
+                var a = inputFrom.value <= inputTo.value ? inputFrom.value : inputTo.value;
+                var b = inputFrom.value <= inputTo.value ? inputTo.value : inputFrom.value;
+                return { from: a, to: b };
+            }
+            var days = parseInt(v, 10);
+            if (!isFinite(days) || days < 1) days = 365;
+            return { from: addDaysStr(today, -(days - 1)), to: today };
+        }
+
+        function renderTimeline() {
+            if (!canvas || typeof Chart === 'undefined') return;
+            var b = clampBoundsToFirstStat(boundsForPreset());
+            if (!b || !b.from || !b.to) return;
+            var agg = aggregateTimeline(lookup, b.from, b.to);
+            if (timelineChart) timelineChart.destroy();
+            timelineChart = new Chart(canvas, {
+                type: 'line',
+                data: {
+                    labels: agg.labels,
+                    datasets: [
+                        {
+                            label: {{ jsstr (t .T "profile.charts.started") }},
+                            data: agg.started,
+                            borderColor: primary,
+                            tension: 0.35,
+                            fill: false,
+                            borderWidth: 2,
+                            pointBackgroundColor: primary,
+                            pointRadius: agg.mode === 'day' ? 2 : 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: {{ jsstr (t .T "profile.charts.finished") }},
+                            data: agg.finished,
+                            borderColor: accent,
+                            tension: 0.35,
+                            fill: false,
+                            borderWidth: 2,
+                            pointBackgroundColor: accent,
+                            pointRadius: agg.mode === 'day' ? 2 : 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: {{ jsstr (t .T "profile.charts.reading_series") }},
+                            data: agg.reading,
+                            borderColor: tertiary,
+                            tension: 0.35,
+                            fill: false,
+                            borderWidth: 2,
+                            pointBackgroundColor: tertiary,
+                            pointRadius: agg.mode === 'day' ? 2 : 3,
+                            pointHoverRadius: 5
+                        }
+                    ]
+                },
+                options: lineDefaults
+            });
+        }
+
+        function syncCustomVisibility() {
+            if (!customWrap || !presetSel) return;
+            customWrap.classList.toggle('visible', presetSel.value === 'custom');
+        }
+
+        if (presetSel) {
+            presetSel.addEventListener('change', function() {
+                syncCustomVisibility();
+                if (presetSel.value !== 'custom') renderTimeline();
+            });
+        }
+        if (btnApply) btnApply.addEventListener('click', renderTimeline);
+        if (inputFrom && dataMin) inputFrom.min = dataMin;
+        if (inputTo && dataMax) inputTo.max = dataMax;
+        if (inputFrom && dataMax) inputFrom.max = dataMax;
+        if (inputTo && dataMin) inputTo.min = dataMin;
+        if (inputFrom && dataMin) inputFrom.value = dataMin;
+        if (inputTo && dataMax) inputTo.value = dataMax;
+
+        syncCustomVisibility();
+        renderTimeline();
+        {{ end }}
+
+        {{ if .StatusDistrib }}
+        var sdData = {{ toJSON .StatusDistrib }};
+        var statusColors = ['#4f46e5','#f97316','#22c55e','#06b6d4','#a855f7','#ef4444','#64748b','#eab308'];
+        if (isDark) statusColors = ['#818cf8','#fb923c','#4ade80','#22d3ee','#c084fc','#f87171','#94a3b8','#facc15'];
+        var statusCanvas = document.getElementById('stats-chart-status');
+        if (statusCanvas) {
+            new Chart(statusCanvas, {
+                type: 'doughnut',
+                data: {
+                    labels: sdData.map(function(d){ return d.status || 'N/A'; }),
+                    datasets: [{ data: sdData.map(function(d){ return d.count; }), backgroundColor: statusColors.slice(0, sdData.length), borderWidth: 0 }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '55%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: textColor,
+                                font: { size: 12, family: 'Inter, sans-serif' },
+                                padding: 18,
+                                usePointStyle: true,
+                                pointStyle: 'circle',
+                                boxWidth: 12,
+                                boxHeight: 12
+                            }
+                        }
+                    }
+                }
+            });
+        }
+        {{ end }}
+    })();
+    </script>
 </body>
 </html>
 {{ end }}
