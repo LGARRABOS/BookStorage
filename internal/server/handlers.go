@@ -2322,29 +2322,33 @@ func utcCalendarDayFromNullFlexTime(n nullFlexTime) string {
 		return ""
 	}
 	s := strings.TrimSpace(n.String)
-	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
-		return s[:10]
-	}
-	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
-		return t.UTC().Format("2006-01-02")
-	}
 	if t, err := time.Parse(time.RFC3339, s); err == nil {
 		return t.UTC().Format("2006-01-02")
+	}
+	// Match storage used for works.last_chapter_at (naive UTC in SQLite schema / timestamptz in Postgres).
+	if t, err := time.ParseInLocation("2006-01-02 15:04:05", s, time.UTC); err == nil {
+		return t.UTC().Format("2006-01-02")
+	}
+	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
+		if t, err := time.ParseInLocation("2006-01-02", s[:10], time.UTC); err == nil {
+			return t.Format("2006-01-02")
+		}
 	}
 	return ""
 }
 
 // adjustReadingActivityDaily adds delta (may be negative) to chapter_increments for one UTC calendar day, clamped at 0.
-func (a *App) adjustReadingActivityDaily(userID int, dayUTC string, delta int) {
+// Returns the number of rows SQLite/Postgres report as affected (used to detect “wrong day” for corrections).
+func (a *App) adjustReadingActivityDaily(userID int, dayUTC string, delta int) int64 {
 	if a.DB == nil || userID <= 0 || delta == 0 {
-		return
+		return 0
 	}
 	dayUTC = strings.TrimSpace(dayUTC)
 	if len(dayUTC) >= 10 {
 		dayUTC = dayUTC[:10]
 	}
 	if dayUTC == "" {
-		return
+		return 0
 	}
 	var qUpdate string
 	if a.Settings != nil && a.Settings.UsePostgres() {
@@ -2355,22 +2359,24 @@ func (a *App) adjustReadingActivityDaily(userID int, dayUTC string, delta int) {
 	res, err := a.DB.Exec(qUpdate, delta, userID, dayUTC)
 	if err != nil {
 		log.Printf("reading_activity_daily update: %v", err)
-		return
+		return 0
 	}
 	nAff, _ := res.RowsAffected()
 	if nAff > 0 {
-		return
+		return nAff
 	}
 	if delta < 0 {
-		return
+		return 0
 	}
 	if _, err := a.DB.Exec(`INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)`, userID, dayUTC, delta); err != nil {
 		log.Printf("reading_activity_daily insert: %v", err)
+		return 0
 	}
+	return 1
 }
 
 // applyChapterDeltaToReadingStats syncs reading_activity_daily when the user edits chapter count: increases log on
-// today's UTC bucket; decreases adjust the bucket for last_chapter_at (before edit) so tallies can be corrected.
+// today's UTC bucket; decreases correct tallies even when last_chapter_at and the typo landed on different UTC days.
 func (a *App) applyChapterDeltaToReadingStats(userID int, delta int, lastChapterAtBefore nullFlexTime) {
 	if delta == 0 {
 		return
@@ -2379,11 +2385,40 @@ func (a *App) applyChapterDeltaToReadingStats(userID int, delta int, lastChapter
 		a.adjustReadingActivityDaily(userID, time.Now().UTC().Format("2006-01-02"), delta)
 		return
 	}
-	day := utcCalendarDayFromNullFlexTime(lastChapterAtBefore)
-	if day == "" {
-		day = time.Now().UTC().Format("2006-01-02")
+	need := -delta // chapters to remove from the daily stats
+	today := time.Now().UTC().Format("2006-01-02")
+	primary := utcCalendarDayFromNullFlexTime(lastChapterAtBefore)
+	if primary == "" {
+		primary = today
 	}
-	a.adjustReadingActivityDaily(userID, day, delta)
+
+	// Typical fat-finger: one day holds the whole spike — prefer the newest day with enough count.
+	var heavy string
+	if err := a.DB.QueryRow(`
+		SELECT day FROM reading_activity_daily
+		WHERE user_id = ? AND chapter_increments >= ?
+		ORDER BY day DESC LIMIT 1`, userID, need).Scan(&heavy); err == nil && strings.TrimSpace(heavy) != "" {
+		if a.adjustReadingActivityDaily(userID, strings.TrimSpace(heavy), delta) > 0 {
+			return
+		}
+	}
+	if a.adjustReadingActivityDaily(userID, primary, delta) > 0 {
+		return
+	}
+	if primary != today && a.adjustReadingActivityDaily(userID, today, delta) > 0 {
+		return
+	}
+	var fallback string
+	if err := a.DB.QueryRow(`
+		SELECT day FROM reading_activity_daily
+		WHERE user_id = ? AND chapter_increments > 0
+		ORDER BY chapter_increments DESC, day DESC
+		LIMIT 1`, userID).Scan(&fallback); err == nil && strings.TrimSpace(fallback) != "" {
+		if a.adjustReadingActivityDaily(userID, strings.TrimSpace(fallback), delta) > 0 {
+			return
+		}
+	}
+	log.Printf("reading_activity_daily: chapter correction delta %d not applied for user %d (no matching day row)", delta, userID)
 }
 
 // recordReadingChapterIncrements adds a positive delta to today's UTC rollup (+ button, etc.).
