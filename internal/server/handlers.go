@@ -1114,6 +1114,24 @@ func (a *App) HandleLogoutAll(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/profile?logout_all=1", http.StatusFound)
 }
 
+func (a *App) HandleProfileResetReadingActivity(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, ok := a.currentUserID(r)
+	if !ok {
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
+		return
+	}
+	if _, err := a.DB.Exec(`DELETE FROM reading_activity_daily WHERE user_id = ?`, userID); err != nil {
+		log.Printf("reset reading_activity_daily for user %d: %v", userID, err)
+		http.Redirect(w, r, "/profile?reading_stats_reset=0", http.StatusFound)
+		return
+	}
+	http.Redirect(w, r, "/profile?reading_stats_reset=1", http.StatusFound)
+}
+
 // nullFlexTime scans SQLite text timestamps and PostgreSQL timestamptz into a string form.
 type nullFlexTime struct {
 	sql.NullString
@@ -2508,17 +2526,18 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		}
 		q := r.URL.Query()
 		a.renderTemplate(w, r, "profile", a.mergeData(r, map[string]any{
-			"User":             u,
-			"TotalWorks":       totalWorks,
-			"TotalChapters":    totalChapters,
-			"CompletedCount":   completedCount,
-			"ReadingCount":     readingCount,
-			"Sessions":         sessions,
-			"CurrentSession":   currentSessionHash,
-			"LogoutAllDone":    q.Get("logout_all") == "1",
-			"GoogleLinked":     q.Get("google_linked") == "1",
-			"GoogleUnlinked":   q.Get("google_unlinked") == "1",
-			"GoogleOAuthError": strings.TrimSpace(q.Get("google_error")),
+			"User":              u,
+			"TotalWorks":        totalWorks,
+			"TotalChapters":     totalChapters,
+			"CompletedCount":    completedCount,
+			"ReadingCount":      readingCount,
+			"Sessions":          sessions,
+			"CurrentSession":    currentSessionHash,
+			"LogoutAllDone":     q.Get("logout_all") == "1",
+			"GoogleLinked":      q.Get("google_linked") == "1",
+			"GoogleUnlinked":    q.Get("google_unlinked") == "1",
+			"GoogleOAuthError":  strings.TrimSpace(q.Get("google_error")),
+			"ReadingStatsReset": strings.TrimSpace(q.Get("reading_stats_reset")),
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {

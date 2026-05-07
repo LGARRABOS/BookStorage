@@ -73,6 +73,9 @@
         .sessions-table th, .sessions-table td { padding: 0.55rem 0.6rem; border-top: 1px solid var(--border-subtle); text-align: left; font-size: 0.85rem; color: var(--text-secondary); vertical-align: top; }
         .sessions-table th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
         .sessions-table code { font-size: 0.78rem; }
+        .stats-reset-box { margin-top: 1rem; border: 1px solid rgba(234, 179, 8, 0.4); background: rgba(234, 179, 8, 0.1); border-radius: 0.75rem; padding: 0.9rem; }
+        .stats-reset-box h3 { margin: 0 0 0.35rem 0; color: #ca8a04; font-size: 0.95rem; }
+        .stats-reset-box p { margin: 0 0 0.75rem 0; font-size: 0.84rem; color: var(--text-secondary); }
         .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
     </style>
@@ -107,6 +110,8 @@
                 {{ if eq .GoogleOAuthError "link_taken" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.link_taken" }}</p></div>{{ end }}
                 {{ if eq .GoogleOAuthError "link_other" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.link_other" }}</p></div>{{ end }}
                 {{ if eq .GoogleOAuthError "unlink_need_password" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.google_error.unlink_need_password" }}</p></div>{{ end }}
+                {{ if eq .ReadingStatsReset "1" }}<div class="notice">{{ t .T "profile.stats_reset.done" }}</div>{{ end }}
+                {{ if eq .ReadingStatsReset "0" }}<div class="flash-messages" style="margin-bottom:1rem;"><p>{{ t .T "profile.stats_reset.error" }}</p></div>{{ end }}
 
                 <div class="quick-stats">
                     <div class="stat-card"><div class="stat-icon purple">📚</div><div><div class="stat-value">{{ .TotalWorks }}</div><div class="stat-label">{{ t .T "dashboard.stats.works" }}</div></div></div>
@@ -290,6 +295,14 @@
                                 </table>
                             </div>
 
+                            <div class="stats-reset-box">
+                                <h3>{{ t .T "profile.stats_reset.title" }}</h3>
+                                <p>{{ t .T "profile.stats_reset.desc" }}</p>
+                                <form method="POST" action="/profile/reset_reading_activity" id="profile-reset-reading-activity-form">
+                                    <button type="submit" class="btn btn-secondary">{{ t .T "profile.stats_reset.button" }}</button>
+                                </form>
+                            </div>
+
                             <div class="danger-zone">
                                 <h3>{{ t .T "profile.delete.title" }}</h3>
                                 <p>{{ t .T "profile.delete.desc" }}</p>
@@ -334,7 +347,8 @@
         modalConfirmTitle: {{ jsstr (t .T "common.confirm") }},
         modalCancel: {{ jsstr (t .T "common.cancel") }},
         modalOk: {{ jsstr (t .T "common.ok") }},
-        deleteModalOk: {{ jsstr (t .T "profile.delete.action") }}
+        deleteModalOk: {{ jsstr (t .T "profile.delete.action") }},
+        statsResetConfirm: {{ jsstr (t .T "profile.stats_reset.confirm") }}
     };
     document.addEventListener('DOMContentLoaded', function() {
         var logoutForm = document.getElementById('profile-logout-all-form');
@@ -347,6 +361,23 @@
                     return;
                 }
                 window.showConfirm(PROFILE_I18N.logoutAllConfirm, {
+                    title: PROFILE_I18N.modalConfirmTitle,
+                    okLabel: PROFILE_I18N.modalOk,
+                    cancelLabel: PROFILE_I18N.modalCancel,
+                    okClass: 'btn-primary'
+                }).then(function (ok) { if (ok) form.submit(); });
+            });
+        }
+        var resetStatsForm = document.getElementById('profile-reset-reading-activity-form');
+        if (resetStatsForm) {
+            resetStatsForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                var form = this;
+                if (typeof window.showConfirm !== 'function') {
+                    if (window.confirm(PROFILE_I18N.statsResetConfirm)) form.submit();
+                    return;
+                }
+                window.showConfirm(PROFILE_I18N.statsResetConfirm, {
                     title: PROFILE_I18N.modalConfirmTitle,
                     okLabel: PROFILE_I18N.modalOk,
                     cancelLabel: PROFILE_I18N.modalCancel,
@@ -393,7 +424,7 @@
             });
         }
         const params = new URLSearchParams(window.location.search);
-        if (params.get('delete_error') === '1') {
+        if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0') {
             const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
             if (securityBtn) securityBtn.click();
         }
