@@ -39,8 +39,6 @@ type Settings struct {
 	TranslateAPIKey string
 	// MetricsToken, if non-empty, protects GET /metrics (Bearer or ?token=). If empty, /metrics is only reachable from loopback clients.
 	MetricsToken string
-	// PrometheusQueryURL is the base URL for Prometheus HTTP API (instant queries) used by the admin monitoring page. Empty defaults to http://127.0.0.1:9091. Host must be loopback.
-	PrometheusQueryURL string
 	// PublicOrigin is the public base URL without trailing slash (e.g. https://books.example.com). Required for Google OAuth redirect_uri.
 	PublicOrigin string
 	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
@@ -264,7 +262,6 @@ func Load(rootPath string) (*Settings, error) {
 		TranslateURL:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
 		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 		MetricsToken:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_METRICS_TOKEN")),
-		PrometheusQueryURL:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_PROMETHEUS_QUERY_URL")),
 		PublicOrigin:             publicOrigin,
 		GoogleClientID:           strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_ID")),
 		GoogleClientSecret:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_SECRET")),

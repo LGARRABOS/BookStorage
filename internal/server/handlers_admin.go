@@ -379,17 +379,6 @@ func (a *App) HandlePromoteAccount(w http.ResponseWriter, r *http.Request) {
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 
-func (a *App) HandleAdminMonitoring(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	summary := FetchPrometheusAdminSummary(a.Settings)
-	a.renderTemplate(w, r, "admin_monitoring", a.mergeData(r, map[string]any{
-		"PrometheusSummary": summary,
-	}))
-}
-
 func (a *App) HandleAdminDatabase(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -420,85 +409,4 @@ func (a *App) showPostgresMigrateTab(r *http.Request) bool {
 		return false
 	}
 	return sup != 0
-}
-
-func (a *App) HandleAPIAdminPrometheusSummary(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	s := FetchPrometheusAdminSummary(a.Settings)
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
-		"reachable":       s.Reachable,
-		"query_base":      s.QueryBase,
-		"up":              s.Up,
-		"scrape_ok":       s.ScrapeJobHealthy,
-		"requests_total":  s.RequestsTotal,
-		"request_rate_5m": s.RequestRate5m,
-		"requests_2xx":    s.Requests2xx,
-		"requests_3xx":    s.Requests3xx,
-		"requests_4xx":    s.Requests4xx,
-		"requests_5xx":    s.Requests5xx,
-		"requests_get":    s.RequestsGet,
-		"requests_post":   s.RequestsPost,
-		"error_rate_5m":   s.ErrorRate5m,
-		"latency_p50":     s.LatencyP50,
-		"latency_p95":     s.LatencyP95,
-		"error":           s.Error,
-		"invalid_url":     s.Error == "invalid_prometheus_url",
-	})
-}
-
-func (a *App) HandleAdminUpdate(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	latestTag, latestInfo, latestOK := a.computeUpdateTag(updateModeLatest)
-	majorTag, majorInfo, majorOK := a.computeUpdateTag(updateModeLatestMajor)
-
-	a.renderTemplate(w, r, "admin_update", a.mergeData(r, map[string]any{
-		"LatestTag":       latestTag,
-		"LatestTagOK":     latestOK,
-		"LatestInfo":      latestInfo,
-		"LatestMajorTag":  majorTag,
-		"LatestMajorOK":   majorOK,
-		"LatestMajorInfo": majorInfo,
-	}))
-}
-
-func (a *App) HandleAPIUpdateLatest(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	res := a.triggerUpdate(r.Context(), updateModeLatest)
-	w.Header().Set("Content-Type", "application/json")
-	if !res.OK {
-		w.WriteHeader(http.StatusBadGateway)
-	}
-	_ = json.NewEncoder(w).Encode(res)
-}
-
-func (a *App) HandleAPIUpdateLatestMajor(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	res := a.triggerUpdate(r.Context(), updateModeLatestMajor)
-	w.Header().Set("Content-Type", "application/json")
-	if !res.OK {
-		w.WriteHeader(http.StatusBadGateway)
-	}
-	_ = json.NewEncoder(w).Encode(res)
-}
-
-func (a *App) HandleAPIUpdateStatus(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(a.updateStatus())
 }

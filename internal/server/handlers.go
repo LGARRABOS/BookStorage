@@ -1420,19 +1420,6 @@ func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 			})
 		}
 	}
-	mangadexResults, err := catalog.SearchMangadex(q, 10)
-	if err == nil {
-		for _, m := range mangadexResults {
-			results = append(results, catalogSearchResult{
-				Source:      "mangadex",
-				ExternalID:  m.ID,
-				Title:       m.Title,
-				ReadingType: m.ReadingType,
-				ImageURL:    m.ImageURL,
-				IsAdult:     m.IsAdult,
-			})
-		}
-	}
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
 }
@@ -2383,19 +2370,6 @@ func deleteMediaFile(folder, storedPath string) {
 	}
 	target := filepath.Join(folder, filename)
 	_ = os.Remove(target)
-}
-
-// clearWorkUploadedImage removes the work's locally stored cover file (if any) and clears image_path.
-func (a *App) clearWorkUploadedImage(workID int) error {
-	var path sql.NullString
-	if err := a.DB.QueryRow(`SELECT image_path FROM works WHERE id = ?`, workID).Scan(&path); err != nil {
-		return err
-	}
-	if path.Valid && strings.TrimSpace(path.String) != "" {
-		deleteMediaFile(a.Settings.UploadFolder, path.String)
-	}
-	_, err := a.DB.Exec(`UPDATE works SET image_path = NULL, updated_at = CURRENT_TIMESTAMP WHERE id = ?`, workID)
-	return err
 }
 
 func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
