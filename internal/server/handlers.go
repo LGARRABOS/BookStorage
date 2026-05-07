@@ -1920,9 +1920,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		if chapter > work.Chapter {
-			a.recordReadingChapterIncrements(userID, chapter-work.Chapter)
-		}
+		a.applyChapterDeltaToReadingStats(userID, chapter-work.Chapter, work.LastChapterAt)
 		if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
 			w.Header().Set("Content-Type", "application/json")
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
@@ -2015,7 +2013,8 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 	chapter = clampChapter(chapter)
 
 	var oldChapter int
-	_ = a.DB.QueryRow(`SELECT chapter FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter)
+	var lastAt nullFlexTime
+	_ = a.DB.QueryRow(`SELECT chapter, last_chapter_at FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter, &lastAt)
 
 	if chapter > oldChapter {
 		_, err = a.DB.Exec(
@@ -2032,9 +2031,7 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if chapter > oldChapter {
-		a.recordReadingChapterIncrements(userID, chapter-oldChapter)
-	}
+	a.applyChapterDeltaToReadingStats(userID, chapter-oldChapter, lastAt)
 	_, _ = w.Write([]byte("ok"))
 }
 
@@ -2320,27 +2317,81 @@ func (a *App) readingTimelineForCharts(userID int) []readingTimelineDay {
 	return out
 }
 
-// recordReadingChapterIncrements adds delta to the user's UTC calendar-day rollup (chapter reads).
-func (a *App) recordReadingChapterIncrements(userID int, delta int) {
-	if a.DB == nil || userID <= 0 || delta <= 0 {
+func utcCalendarDayFromNullFlexTime(n nullFlexTime) string {
+	if !n.Valid || strings.TrimSpace(n.String) == "" {
+		return ""
+	}
+	s := strings.TrimSpace(n.String)
+	if len(s) >= 10 && s[4] == '-' && s[7] == '-' {
+		return s[:10]
+	}
+	if t, err := time.Parse("2006-01-02 15:04:05", s); err == nil {
+		return t.UTC().Format("2006-01-02")
+	}
+	if t, err := time.Parse(time.RFC3339, s); err == nil {
+		return t.UTC().Format("2006-01-02")
+	}
+	return ""
+}
+
+// adjustReadingActivityDaily adds delta (may be negative) to chapter_increments for one UTC calendar day, clamped at 0.
+func (a *App) adjustReadingActivityDaily(userID int, dayUTC string, delta int) {
+	if a.DB == nil || userID <= 0 || delta == 0 {
 		return
 	}
-	day := time.Now().UTC().Format("2006-01-02")
-	var q string
+	dayUTC = strings.TrimSpace(dayUTC)
+	if len(dayUTC) >= 10 {
+		dayUTC = dayUTC[:10]
+	}
+	if dayUTC == "" {
+		return
+	}
+	var qUpdate string
 	if a.Settings != nil && a.Settings.UsePostgres() {
-		q = `
-INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)
-ON CONFLICT (user_id, day) DO UPDATE SET
-	chapter_increments = reading_activity_daily.chapter_increments + EXCLUDED.chapter_increments`
+		qUpdate = `UPDATE reading_activity_daily SET chapter_increments = GREATEST(0, chapter_increments + ?) WHERE user_id = ? AND day = ?`
 	} else {
-		q = `
-INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)
-ON CONFLICT(user_id, day) DO UPDATE SET chapter_increments = chapter_increments + excluded.chapter_increments`
+		qUpdate = `UPDATE reading_activity_daily SET chapter_increments = MAX(0, chapter_increments + ?) WHERE user_id = ? AND day = ?`
 	}
-	_, err := a.DB.Exec(q, userID, day, delta)
+	res, err := a.DB.Exec(qUpdate, delta, userID, dayUTC)
 	if err != nil {
-		log.Printf("reading_activity_daily upsert: %v", err)
+		log.Printf("reading_activity_daily update: %v", err)
+		return
 	}
+	nAff, _ := res.RowsAffected()
+	if nAff > 0 {
+		return
+	}
+	if delta < 0 {
+		return
+	}
+	if _, err := a.DB.Exec(`INSERT INTO reading_activity_daily (user_id, day, chapter_increments) VALUES (?, ?, ?)`, userID, dayUTC, delta); err != nil {
+		log.Printf("reading_activity_daily insert: %v", err)
+	}
+}
+
+// applyChapterDeltaToReadingStats syncs reading_activity_daily when the user edits chapter count: increases log on
+// today's UTC bucket; decreases adjust the bucket for last_chapter_at (before edit) so tallies can be corrected.
+func (a *App) applyChapterDeltaToReadingStats(userID int, delta int, lastChapterAtBefore nullFlexTime) {
+	if delta == 0 {
+		return
+	}
+	if delta > 0 {
+		a.adjustReadingActivityDaily(userID, time.Now().UTC().Format("2006-01-02"), delta)
+		return
+	}
+	day := utcCalendarDayFromNullFlexTime(lastChapterAtBefore)
+	if day == "" {
+		day = time.Now().UTC().Format("2006-01-02")
+	}
+	a.adjustReadingActivityDaily(userID, day, delta)
+}
+
+// recordReadingChapterIncrements adds a positive delta to today's UTC rollup (+ button, etc.).
+func (a *App) recordReadingChapterIncrements(userID int, delta int) {
+	if delta <= 0 {
+		return
+	}
+	a.adjustReadingActivityDaily(userID, time.Now().UTC().Format("2006-01-02"), delta)
 }
 
 func (a *App) statusDistribForCharts(userID int, tr i18n.Translations) []statusChartRow {

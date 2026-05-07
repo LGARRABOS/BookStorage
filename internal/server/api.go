@@ -450,14 +450,13 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		args = append(args, nullIfEmpty(strings.TrimSpace(v)))
 	}
 
+	var lastChapterAtBefore nullFlexTime
 	if chapterChanged {
 		var oldChapter int
-		_ = a.DB.QueryRow(`SELECT chapter FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter)
-		if newChapter > oldChapter {
-			chapterDelta = newChapter - oldChapter
-			if !lastChapterAtExplicit {
-				setParts = append(setParts, "last_chapter_at = CURRENT_TIMESTAMP")
-			}
+		_ = a.DB.QueryRow(`SELECT chapter, last_chapter_at FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&oldChapter, &lastChapterAtBefore)
+		chapterDelta = newChapter - oldChapter
+		if newChapter > oldChapter && !lastChapterAtExplicit {
+			setParts = append(setParts, "last_chapter_at = CURRENT_TIMESTAMP")
 		}
 	}
 
@@ -479,8 +478,8 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusNotFound, "not_found")
 		return
 	}
-	if chapterDelta > 0 {
-		a.recordReadingChapterIncrements(userID, chapterDelta)
+	if chapterChanged {
+		a.applyChapterDeltaToReadingStats(userID, chapterDelta, lastChapterAtBefore)
 	}
 
 	// Reuse detail payload while forcing a GET method.
