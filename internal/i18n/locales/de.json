@@ -343,6 +343,7 @@
   "profile.charts.apply": "Anwenden",
   "profile.charts.granularity_hint": "Die Auflösung (Tag, Woche oder Monat) passt sich automatisch der gewählten Spanne an.",
   "profile.charts.reading_series": "Gelesene Kapitel",
+  "profile.charts.timeline_legend_toggle": "Klicken Sie eine Serie in der Legende, um sie ein- oder auszublenden. Ihre Auswahl wird in diesem Browser gespeichert.",
   "profile.bio.empty": "Keine Biografie",
   "profile.display_name": "Anzeigename",
   "users.empty": "Keine Leser gefunden",

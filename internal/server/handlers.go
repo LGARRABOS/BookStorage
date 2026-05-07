@@ -954,6 +954,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 	tr := i18n.T(lang)
 
 	a.renderTemplate(w, r, "stats", a.mergeData(r, map[string]any{
+		"StatsUserID":     userID,
 		"TotalWorks":      totalWorks,
 		"TotalChapters":   totalChapters,
 		"ByStatus":        byStatus,

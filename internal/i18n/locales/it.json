@@ -343,6 +343,7 @@
   "profile.charts.apply": "Applica",
   "profile.charts.granularity_hint": "Il dettaglio (giorno, settimana o mese) si adatta automaticamente all'intervallo.",
   "profile.charts.reading_series": "Capitoli letti",
+  "profile.charts.timeline_legend_toggle": "Cliccare una serie nella legenda per mostrarla o nasconderla. Le scelte restano salvate in questo browser.",
   "profile.bio.empty": "Nessuna biografia",
   "profile.display_name": "Nome visualizzato",
   "users.empty": "Nessun lettore trovato",

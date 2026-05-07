@@ -174,6 +174,7 @@
                                 </div>
                             </div>
                             <p id="stats-chart-granularity-hint" class="stats-chart-granularity-hint">{{ t .T "profile.charts.granularity_hint" }}</p>
+                            <p class="stats-chart-granularity-hint" style="margin-top: -0.2rem;">{{ t .T "profile.charts.timeline_legend_toggle" }}</p>
                             <div class="stats-chart-canvas-wrap timeline"><canvas id="stats-chart-timeline"></canvas></div>
                             {{ else }}
                             <div class="empty-stat">{{ t $.T "profile.charts.no_data" }}</div>
@@ -238,6 +239,33 @@
                 y: { ticks: { color: textColor, font: { size: 11 }, precision: 0 }, grid: { color: gridColor }, beginAtZero: true }
             }
         };
+
+        function buildTimelineChartOptions(saveVisibility) {
+            return {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: lineDefaults.interaction,
+                plugins: {
+                    legend: {
+                        labels: lineDefaults.plugins.legend.labels,
+                        onClick: function(evt, legendItem, legend) {
+                            var chart = legend.chart;
+                            var idx = legendItem.datasetIndex;
+                            if (typeof idx !== 'number') return;
+                            chart.setDatasetVisibility(idx, !chart.isDatasetVisible(idx));
+                            chart.update();
+                            if (typeof saveVisibility === 'function') saveVisibility(chart);
+                        },
+                        onHover: function(evt, legendItem) {
+                            var tgt = evt.native && evt.native.target;
+                            if (tgt) tgt.style.cursor = legendItem ? 'pointer' : 'default';
+                        }
+                    },
+                    tooltip: lineDefaults.plugins.tooltip
+                },
+                scales: lineDefaults.scales
+            };
+        }
 
         function pad2(n) { return (n < 10 ? '0' : '') + n; }
         function formatDay(d) {
@@ -318,6 +346,35 @@
         }
 
         {{ if .ReadingTimeline }}
+        var statsTimelineUserID = {{ .StatsUserID }};
+        function timelineLegendStorageKey() {
+            return 'bookstorage.stats.timeline.legend.v1.' + statsTimelineUserID;
+        }
+        function loadTimelineLegendVisibility() {
+            var base = { started: true, finished: true, reading: true };
+            try {
+                var raw = localStorage.getItem(timelineLegendStorageKey());
+                if (!raw) return base;
+                var o = JSON.parse(raw);
+                return {
+                    started: o.started !== false,
+                    finished: o.finished !== false,
+                    reading: o.reading !== false
+                };
+            } catch (e) {
+                return base;
+            }
+        }
+        function saveTimelineLegendVisibilityFromChart(chart) {
+            try {
+                localStorage.setItem(timelineLegendStorageKey(), JSON.stringify({
+                    started: chart.isDatasetVisible(0),
+                    finished: chart.isDatasetVisible(1),
+                    reading: chart.isDatasetVisible(2)
+                }));
+            } catch (e) { /* quota / private mode */ }
+        }
+
         var timelineRaw = {{ toJSON .ReadingTimeline }};
         var lookup = {};
         timelineRaw.forEach(function(row) {
@@ -375,6 +432,7 @@
             var b = clampBoundsToFirstStat(boundsForPreset());
             if (!b || !b.from || !b.to) return;
             var agg = aggregateTimeline(lookup, b.from, b.to);
+            var legVis = loadTimelineLegendVisibility();
             if (timelineChart) timelineChart.destroy();
             timelineChart = new Chart(canvas, {
                 type: 'line',
@@ -384,6 +442,7 @@
                         {
                             label: {{ jsstr (t .T "profile.charts.started") }},
                             data: agg.started,
+                            hidden: !legVis.started,
                             borderColor: primary,
                             tension: 0.35,
                             fill: false,
@@ -395,6 +454,7 @@
                         {
                             label: {{ jsstr (t .T "profile.charts.finished") }},
                             data: agg.finished,
+                            hidden: !legVis.finished,
                             borderColor: accent,
                             tension: 0.35,
                             fill: false,
@@ -406,6 +466,7 @@
                         {
                             label: {{ jsstr (t .T "profile.charts.reading_series") }},
                             data: agg.reading,
+                            hidden: !legVis.reading,
                             borderColor: tertiary,
                             tension: 0.35,
                             fill: false,
@@ -416,7 +477,7 @@
                         }
                     ]
                 },
-                options: lineDefaults
+                options: buildTimelineChartOptions(saveTimelineLegendVisibilityFromChart)
             });
         }
 
