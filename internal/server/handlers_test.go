@@ -532,6 +532,56 @@ func TestImportFromJSON_AniListExport(t *testing.T) {
 	}
 }
 
+func TestHandleAddWork_AnilistNotInCatalog(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	_ = w.WriteField("title", "Test AniList Work")
+	_ = w.WriteField("chapter", "1")
+	_ = w.WriteField("status", "À lire")
+	_ = w.WriteField("reading_type", "Manga")
+	_ = w.WriteField("catalog_source", "anilist")
+	_ = w.WriteField("catalog_external_id", "999001")
+	_ = w.WriteField("image_url", "https://example.test/cover.jpg")
+	_ = w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/add_work", &b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.Header.Set("Origin", "http://example.test")
+	req.Host = "example.test"
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.WithRequestPolicies(http.HandlerFunc(app.HandleAddWork)).ServeHTTP(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	var catalogID int64
+	err := db.QueryRow(
+		`SELECT id FROM catalog WHERE source = 'anilist' AND external_id = '999001'`,
+	).Scan(&catalogID)
+	if err != nil || catalogID <= 0 {
+		t.Fatalf("catalog anilist: id=%d err=%v", catalogID, err)
+	}
+
+	var workStatus string
+	var workCatalogID sql.NullInt64
+	err = db.QueryRow(
+		`SELECT status, catalog_id FROM works WHERE user_id = 1 AND title = 'Test AniList Work'`,
+	).Scan(&workStatus, &workCatalogID)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if workStatus != "À lire" {
+		t.Fatalf("status: got %q", workStatus)
+	}
+	if !workCatalogID.Valid || workCatalogID.Int64 != catalogID {
+		t.Fatalf("catalog_id lié: got %v want %d", workCatalogID, catalogID)
+	}
+}
+
 func TestImportFromCSV_MAL(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

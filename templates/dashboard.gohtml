@@ -47,9 +47,7 @@
         .work-series-child { margin-left: 0.75rem; border-left: 3px solid var(--primary); padding-left: 0.35rem; }
         .work-cover-link { display: block; text-decoration: none; cursor: pointer; }
         .work-cover { position: relative; width: 100%; aspect-ratio: 2 / 3; background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.1)); overflow: hidden; }
-        /* Grille : cartes un peu plus étroites = couverture moins haute tout en gardant object-fit: contain sur l’image. */
-        .works-grid:not(.view-list) .work-cover { aspect-ratio: 5 / 7; }
-        .work-cover img { width: 100%; height: 100%; object-fit: contain; object-position: center; }
+        .work-cover img { width: 100%; height: 100%; object-fit: cover; object-position: center; }
         .work-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
         .work-cover-overlay { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.85); color: white; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 0.6rem; opacity: 0; transition: opacity 0.25s ease; z-index: 1; padding: 1rem; pointer-events: none; font-size: 0.8rem; text-align: center; }
         .work-cover:hover .work-cover-overlay { opacity: 1; }

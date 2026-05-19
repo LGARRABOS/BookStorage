@@ -253,7 +253,7 @@
                         </div>
                         <div class="form-group">
                             <label for="status">{{ t .T "work.form.status" }}</label>
-                            <select id="status" name="status">{{ range .Statuses }}<option value="{{ . }}">{{ translateStatus . $.T }}</option>{{ end }}</select>
+                            <select id="status" name="status">{{ range .Statuses }}<option value="{{ . }}" {{ if eq . $.DefaultStatus }}selected{{ end }}>{{ translateStatus . $.T }}</option>{{ end }}</select>
                         </div>
                         <div class="form-group">
                             <label for="reading_type">{{ t .T "work.form.type" }}</label>

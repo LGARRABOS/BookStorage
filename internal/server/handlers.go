@@ -1546,12 +1546,74 @@ func (a *App) HandleRecommendationMedia(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
+// ensureCatalogID returns the catalog row id for (source, external_id), creating the row if needed.
+// Uses RETURNING on PostgreSQL because lib/pq does not support sql.Result.LastInsertId.
+func (a *App) ensureCatalogID(source, externalID, title, readingType, imgURL string) (int64, error) {
+	source = strings.TrimSpace(source)
+	externalID = strings.TrimSpace(externalID)
+	if source == "" {
+		source = "manual"
+	}
+	if externalID != "" {
+		var existingID int64
+		err := a.DB.QueryRow(
+			`SELECT id FROM catalog WHERE source = ? AND external_id = ? LIMIT 1`,
+			source, externalID,
+		).Scan(&existingID)
+		if err == nil {
+			return existingID, nil
+		}
+		if err != sql.ErrNoRows {
+			return 0, err
+		}
+	}
+
+	var id int64
+	if a.DB.B == database.BackendPostgres {
+		if externalID != "" {
+			err := a.DB.QueryRow(
+				`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, ?, ?) RETURNING id`,
+				title, readingType, imgURL, source, externalID,
+			).Scan(&id)
+			return id, err
+		}
+		err := a.DB.QueryRow(
+			`INSERT INTO catalog (title, reading_type, image_url, source) VALUES (?, ?, ?, ?) RETURNING id`,
+			title, readingType, imgURL, source,
+		).Scan(&id)
+		return id, err
+	}
+
+	var res sql.Result
+	var err error
+	if externalID != "" {
+		res, err = a.DB.Exec(
+			`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, ?, ?)`,
+			title, readingType, imgURL, source, externalID,
+		)
+	} else {
+		res, err = a.DB.Exec(
+			`INSERT INTO catalog (title, reading_type, image_url, source) VALUES (?, ?, ?, ?)`,
+			title, readingType, imgURL, source,
+		)
+	}
+	if err != nil {
+		return 0, err
+	}
+	id, err = res.LastInsertId()
+	if err != nil || id <= 0 {
+		return 0, fmt.Errorf("catalog insert: invalid id")
+	}
+	return id, nil
+}
+
 func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
 		data := map[string]any{
-			"ReadingTypes": readingTypes,
-			"Statuses":     readingStatuses,
+			"ReadingTypes":  readingTypes,
+			"Statuses":      readingStatuses,
+			"DefaultStatus": "À lire",
 		}
 		if aid := strings.TrimSpace(r.URL.Query().Get("anilist_id")); aid != "" {
 			if id, err := strconv.Atoi(aid); err == nil && id > 0 {
@@ -1599,59 +1661,15 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 		if !catalogID.Valid {
-			source := r.FormValue("catalog_source")
+			source := strings.TrimSpace(r.FormValue("catalog_source"))
 			externalID := strings.TrimSpace(r.FormValue("catalog_external_id"))
 			imgURL := strings.TrimSpace(r.FormValue("image_url"))
-			if source == "anilist" && externalID != "" {
-				var existingID int64
-				err := a.DB.QueryRow(
-					`SELECT id FROM catalog WHERE source = 'anilist' AND external_id = ? LIMIT 1`,
-					externalID,
-				).Scan(&existingID)
-				if err == nil {
-					catalogID.Int64 = existingID
-					catalogID.Valid = true
-				} else {
-					res, err := a.DB.Exec(
-						`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, 'anilist', ?)`,
-						title, readingType, imgURL, externalID,
-					)
-					if err == nil {
-						id, _ := res.LastInsertId()
-						catalogID.Int64 = id
-						catalogID.Valid = true
-					}
-				}
-			} else if source == "mangadex" && externalID != "" {
-				var existingID int64
-				err := a.DB.QueryRow(
-					`SELECT id FROM catalog WHERE source = 'mangadex' AND external_id = ? LIMIT 1`,
-					externalID,
-				).Scan(&existingID)
-				if err == nil {
-					catalogID.Int64 = existingID
-					catalogID.Valid = true
-				} else {
-					res, err := a.DB.Exec(
-						`INSERT INTO catalog (title, reading_type, image_url, source, external_id) VALUES (?, ?, ?, 'mangadex', ?)`,
-						title, readingType, imgURL, externalID,
-					)
-					if err == nil {
-						id, _ := res.LastInsertId()
-						catalogID.Int64 = id
-						catalogID.Valid = true
-					}
-				}
-			} else {
-				res, err := a.DB.Exec(
-					`INSERT INTO catalog (title, reading_type, image_url, source) VALUES (?, ?, ?, 'manual')`,
-					title, readingType, imgURL,
-				)
-				if err == nil {
-					id, _ := res.LastInsertId()
-					catalogID.Int64 = id
-					catalogID.Valid = true
-				}
+			if source == "" {
+				source = "manual"
+			}
+			if id, err := a.ensureCatalogID(source, externalID, title, readingType, imgURL); err == nil && id > 0 {
+				catalogID.Int64 = id
+				catalogID.Valid = true
 			}
 		}
 
