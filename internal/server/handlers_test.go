@@ -17,6 +17,7 @@ import (
 	"testing"
 	"time"
 
+	"bookstorage/internal/catalog"
 	"bookstorage/internal/config"
 	"bookstorage/internal/database"
 	"bookstorage/internal/recommend"
@@ -426,6 +427,13 @@ func TestFilterValidCatalogReadingTypes(t *testing.T) {
 	}
 	if filterValidCatalogReadingTypes(nil) != nil {
 		t.Fatal("expected nil for empty input")
+	}
+}
+
+func TestFilterValidAdultOrientationsHandler(t *testing.T) {
+	got := catalog.FilterValidAdultOrientations([]string{"gay", "invalid", "lesbian"})
+	if len(got) != 2 || got[0] != "gay" || got[1] != "lesbian" {
+		t.Fatalf("got %v", got)
 	}
 }
 

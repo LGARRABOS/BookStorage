@@ -104,6 +104,12 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 	adultOnly := strings.TrimSpace(r.URL.Query().Get("adult")) == "only"
 	isAdult := adultOnly
 
+	adultOrient := catalog.FilterValidAdultOrientations(r.URL.Query()["adult_orient"])
+	if !adultOnly {
+		adultOrient = nil
+	}
+	orientFilter := catalog.ResolveAdultOrientationFilter(adultOrient)
+
 	const (
 		displayPerPage = 20
 		fetchPerPage   = 25
@@ -120,6 +126,9 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		NotInIDs:       known,
 		IsAdult:        &isAdult,
 		ReadingTypesIn: readingTypes,
+		TagIn:          orientFilter.TagIn,
+		TagNotIn:       orientFilter.TagNotIn,
+		TagMatch:       orientFilter.MatchFunc,
 	}, (page-1)*displayPerPage, displayPerPage)
 	if err != nil {
 		log.Printf("catalog browse: %v", err)
@@ -154,6 +163,7 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		"genres":        genres,
 		"reading_types": readingTypes,
 		"adult":         adultFilter,
+		"adult_orient":  adultOrient,
 		"sort":          sort,
 	})
 }

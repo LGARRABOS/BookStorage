@@ -74,6 +74,24 @@
                     <button type="button" class="btn btn-primary" id="catalog-browse-btn">{{ t .T "catalog.explore.discover" }}</button>
                 </div>
 
+                <div class="catalog-adult-orient-wrap" id="catalog-adult-orient-wrap" hidden>
+                    <p class="catalog-explore-filter-label">{{ t .T "catalog.explore.adult_orient_label" }}</p>
+                    <div class="catalog-adult-orient-chips">
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="catalog-adult-orient" value="hetero">
+                            {{ t .T "catalog.explore.adult_orient.hetero" }}
+                        </label>
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="catalog-adult-orient" value="gay">
+                            {{ t .T "catalog.explore.adult_orient.gay" }}
+                        </label>
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="catalog-adult-orient" value="lesbian">
+                            {{ t .T "catalog.explore.adult_orient.lesbian" }}
+                        </label>
+                    </div>
+                </div>
+
                 <div class="catalog-browse-grid" id="catalog-browse-grid" hidden>
                     <p class="catalog-browse-msg" id="catalog-browse-loading">{{ t .T "catalog.explore.loading" }}</p>
                 </div>
@@ -97,6 +115,7 @@
         var btn = document.getElementById('catalog-browse-btn');
         var sortSel = document.getElementById('catalog-browse-sort');
         var adultOnlyCheck = document.getElementById('catalog-adult-only-check');
+        var adultOrientWrap = document.getElementById('catalog-adult-orient-wrap');
         var pagination = document.getElementById('catalog-browse-pagination');
         var prevBtn = document.getElementById('catalog-browse-prev');
         var nextBtn = document.getElementById('catalog-browse-next');
@@ -132,6 +151,27 @@
                 if (el.value) out.push(el.value);
             });
             return out;
+        }
+
+        function selectedAdultOrientations() {
+            if (!adultOnlyCheck || !adultOnlyCheck.checked) return [];
+            var out = [];
+            document.querySelectorAll('input[name="catalog-adult-orient"]:checked').forEach(function(el) {
+                if (el.value) out.push(el.value);
+            });
+            return out;
+        }
+
+        function syncAdultOrientVisibility() {
+            if (!adultOrientWrap || !adultOnlyCheck) return;
+            if (adultOnlyCheck.checked) {
+                adultOrientWrap.hidden = false;
+                return;
+            }
+            adultOrientWrap.hidden = true;
+            document.querySelectorAll('input[name="catalog-adult-orient"]').forEach(function(el) {
+                el.checked = false;
+            });
         }
 
         function renderCard(item) {
@@ -170,6 +210,7 @@
             var params = new URLSearchParams();
             selectedGenres().forEach(function(g) { params.append('genre', g); });
             selectedReadingTypes().forEach(function(t) { params.append('reading_type', t); });
+            selectedAdultOrientations().forEach(function(o) { params.append('adult_orient', o); });
             params.set('page', String(currentPage));
             if (sortSel && sortSel.value) params.set('sort', sortSel.value);
             if (adultOnlyCheck && adultOnlyCheck.checked) params.set('adult', 'only');
@@ -206,6 +247,8 @@
         }
 
         btn.addEventListener('click', function() { loadBrowse(1); });
+        if (adultOnlyCheck) adultOnlyCheck.addEventListener('change', syncAdultOrientVisibility);
+        syncAdultOrientVisibility();
         if (prevBtn) prevBtn.addEventListener('click', function() { if (currentPage > 1) loadBrowse(currentPage - 1); });
         if (nextBtn) nextBtn.addEventListener('click', function() { if (hasNext) loadBrowse(currentPage + 1); });
 

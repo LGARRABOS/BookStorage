@@ -223,6 +223,7 @@ func pickTitleFromAnilistTitle(t anilistTitle) string {
 type BrowseMediaParams struct {
 	GenreIn        []string // e.g. "Romance"
 	TagIn          []string // AniList tag names
+	TagNotIn       []string // AniList tag exclusions
 	Page           int
 	PerPage        int
 	Sort           string // POPULARITY_DESC, SCORE_DESC
@@ -230,6 +231,7 @@ type BrowseMediaParams struct {
 	MaxResults     int
 	IsAdult        *bool    // nil = no AniList isAdult filter; true/false filters at API and in-loop
 	ReadingTypesIn []string // BookStorage reading_type labels (post-filter)
+	TagMatch       func(tagNames []string) bool
 }
 
 // BrowseMedia runs a single Page query with genre/tag filters (OR within lists per AniList rules).
@@ -248,9 +250,9 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 	if sort == "" {
 		sort = "POPULARITY_DESC"
 	}
-	q := `query($page: Int, $perPage: Int, $genreIn: [String], $tagIn: [String], $sort: [MediaSort], $isAdult: Boolean) {
+	q := `query($page: Int, $perPage: Int, $genreIn: [String], $tagIn: [String], $tagNotIn: [String], $sort: [MediaSort], $isAdult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(type: MANGA, genre_in: $genreIn, tag_in: $tagIn, sort: $sort, isAdult: $isAdult) {
+    media(type: MANGA, genre_in: $genreIn, tag_in: $tagIn, tag_not_in: $tagNotIn, sort: $sort, isAdult: $isAdult) {
       id
       title { romaji english }
       type
@@ -277,6 +279,11 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 		vars["tagIn"] = p.TagIn
 	} else {
 		vars["tagIn"] = nil
+	}
+	if len(p.TagNotIn) > 0 {
+		vars["tagNotIn"] = p.TagNotIn
+	} else {
+		vars["tagNotIn"] = nil
 	}
 	if p.IsAdult != nil {
 		vars["isAdult"] = *p.IsAdult
@@ -323,6 +330,9 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 		var tagNames []string
 		for _, tg := range m.Tags {
 			tagNames = append(tagNames, tg.Name)
+		}
+		if p.TagMatch != nil && !p.TagMatch(tagNames) {
+			continue
 		}
 		readingType := mapAnilistReadingType(m)
 		if len(typeFilter) > 0 {

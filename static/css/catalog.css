@@ -21,6 +21,14 @@
 
 .catalog-type-chips { margin-bottom: 1rem; }
 
+.catalog-adult-orient-wrap { margin-bottom: 1rem; }
+
+.catalog-adult-orient-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+}
+
 .catalog-filter-check {
   display: inline-flex;
   align-items: center;
