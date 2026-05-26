@@ -2,46 +2,44 @@ package catalog
 
 import "strings"
 
+// User-facing filter ids (API: adult_orient=...).
 const (
-	AdultOrientHetero  = "hetero"
-	AdultOrientGay     = "gay"
-	AdultOrientLesbian = "lesbian"
+	AdultOrientHeterosexual = "heterosexual"
+	AdultOrientBoysLove     = "boys_love"
+	AdultOrientYuri         = "yuri"
 )
 
-var gayOrientationTags = []string{"Boys Love", "Yaoi", "Shounen Ai"}
-var lesbianOrientationTags = []string{"Girls Love", "Yuri", "Shoujo Ai"}
+// Exact AniList MediaTag names (MediaTagCollection).
+const (
+	anilistTagBoysLove     = "Boys' Love"
+	anilistTagYuri         = "Yuri"
+	anilistTagHeterosexual = "Heterosexual"
+	anilistTagLGBTQThemes  = "LGBTQ+ Themes"
+)
 
-// LGBT tags excluded for hetero-only AniList queries.
-var lgbtOrientationTags []string
+var boysLoveLabels = []string{anilistTagBoysLove, anilistTagLGBTQThemes}
+var yuriLabels = []string{anilistTagYuri}
+var lgbtExcludeLabels = []string{anilistTagBoysLove, anilistTagYuri, anilistTagLGBTQThemes}
 
-func init() {
-	seen := make(map[string]struct{})
-	for _, t := range append(append([]string{}, gayOrientationTags...), lesbianOrientationTags...) {
-		key := strings.ToLower(t)
-		if _, dup := seen[key]; dup {
-			continue
-		}
-		seen[key] = struct{}{}
-		lgbtOrientationTags = append(lgbtOrientationTags, t)
-	}
-}
-
-// AdultOrientationFilter maps user-facing +18 orientation picks to AniList tag filters.
+// AdultOrientationFilter maps +18 orientation picks to AniList tag filters.
 type AdultOrientationFilter struct {
-	TagIn     []string
-	TagNotIn  []string
-	MatchFunc func(tagNames []string) bool
+	TagIn      []string
+	TagNotIn   []string
+	MatchMedia func(genres, tags []string) bool
 }
 
-// FilterValidAdultOrientations keeps known orientation ids (hetero, gay, lesbian).
+// FilterValidAdultOrientations keeps known orientation ids.
 func FilterValidAdultOrientations(in []string) []string {
 	if len(in) == 0 {
 		return nil
 	}
-	allowed := map[string]struct{}{
-		AdultOrientHetero:  {},
-		AdultOrientGay:     {},
-		AdultOrientLesbian: {},
+	allowed := map[string]string{
+		AdultOrientHeterosexual: AdultOrientHeterosexual,
+		AdultOrientBoysLove:     AdultOrientBoysLove,
+		AdultOrientYuri:         AdultOrientYuri,
+		"hetero":                AdultOrientHeterosexual,
+		"gay":                   AdultOrientBoysLove,
+		"lesbian":               AdultOrientYuri,
 	}
 	seen := make(map[string]struct{})
 	out := make([]string, 0, len(in))
@@ -50,20 +48,20 @@ func FilterValidAdultOrientations(in []string) []string {
 		if v == "" {
 			continue
 		}
-		if _, ok := allowed[v]; !ok {
+		canon, ok := allowed[v]
+		if !ok {
 			continue
 		}
-		if _, dup := seen[v]; dup {
+		if _, dup := seen[canon]; dup {
 			continue
 		}
-		seen[v] = struct{}{}
-		out = append(out, v)
+		seen[canon] = struct{}{}
+		out = append(out, canon)
 	}
 	return out
 }
 
 // ResolveAdultOrientationFilter builds AniList tag filters for selected orientations.
-// Empty selection means no orientation filter (all +18).
 func ResolveAdultOrientationFilter(selected []string) AdultOrientationFilter {
 	if len(selected) == 0 {
 		return AdultOrientationFilter{}
@@ -72,50 +70,87 @@ func ResolveAdultOrientationFilter(selected []string) AdultOrientationFilter {
 	for _, s := range selected {
 		has[s] = true
 	}
-	hasHetero := has[AdultOrientHetero]
-	hasGay := has[AdultOrientGay]
-	hasLesbian := has[AdultOrientLesbian]
+	hasHetero := has[AdultOrientHeterosexual]
+	hasBL := has[AdultOrientBoysLove]
+	hasYuri := has[AdultOrientYuri]
 
-	if hasHetero && !hasGay && !hasLesbian {
-		return AdultOrientationFilter{TagNotIn: append([]string(nil), lgbtOrientationTags...)}
+	matchCombined := func(genres, tags []string) bool {
+		labels := mediaLabels(genres, tags)
+		isBL := labelsMatchAny(labels, boysLoveLabels)
+		isYuri := labelsMatchAny(labels, yuriLabels)
+		isHetero := labelsMatchAny(labels, []string{anilistTagHeterosexual}) || (!isBL && !isYuri)
+		if hasBL && isBL {
+			return true
+		}
+		if hasYuri && isYuri {
+			return true
+		}
+		if hasHetero && isHetero && !isBL && !isYuri {
+			return true
+		}
+		return false
 	}
-	if hasHetero {
+
+	if hasHetero && !hasBL && !hasYuri {
 		return AdultOrientationFilter{
-			MatchFunc: func(tags []string) bool {
-				isGay := tagsMatchAny(tags, gayOrientationTags)
-				isLesbian := tagsMatchAny(tags, lesbianOrientationTags)
-				if hasGay && isGay {
-					return true
-				}
-				if hasLesbian && isLesbian {
-					return true
-				}
-				if hasHetero && !isGay && !isLesbian {
-					return true
-				}
-				return false
+			TagNotIn: append([]string(nil), lgbtExcludeLabels...),
+			MatchMedia: func(genres, tags []string) bool {
+				labels := mediaLabels(genres, tags)
+				return !labelsMatchAny(labels, lgbtExcludeLabels)
 			},
 		}
 	}
-	if hasGay && hasLesbian {
-		return AdultOrientationFilter{TagIn: append(append([]string{}, gayOrientationTags...), lesbianOrientationTags...)}
+	if hasHetero {
+		return AdultOrientationFilter{MatchMedia: matchCombined}
 	}
-	if hasGay {
-		return AdultOrientationFilter{TagIn: append([]string(nil), gayOrientationTags...)}
+	if hasBL && hasYuri {
+		return AdultOrientationFilter{
+			TagIn: []string{anilistTagBoysLove, anilistTagYuri},
+			MatchMedia: func(genres, tags []string) bool {
+				labels := mediaLabels(genres, tags)
+				return labelsMatchAny(labels, boysLoveLabels) || labelsMatchAny(labels, yuriLabels)
+			},
+		}
 	}
-	if hasLesbian {
-		return AdultOrientationFilter{TagIn: append([]string(nil), lesbianOrientationTags...)}
+	if hasBL {
+		return AdultOrientationFilter{
+			TagIn: []string{anilistTagBoysLove},
+			MatchMedia: func(genres, tags []string) bool {
+				return labelsMatchAny(mediaLabels(genres, tags), boysLoveLabels)
+			},
+		}
+	}
+	if hasYuri {
+		return AdultOrientationFilter{
+			TagIn: []string{anilistTagYuri},
+			MatchMedia: func(genres, tags []string) bool {
+				return labelsMatchAny(mediaLabels(genres, tags), yuriLabels)
+			},
+		}
 	}
 	return AdultOrientationFilter{}
 }
 
-func tagsMatchAny(tags, needles []string) bool {
+func mediaLabels(genres, tags []string) []string {
+	out := make([]string, 0, len(genres)+len(tags))
+	out = append(out, genres...)
+	out = append(out, tags...)
+	return out
+}
+
+func normalizeMediaLabel(s string) string {
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = strings.NewReplacer("'", "", "'", "", "’", "", " ", "").Replace(s)
+	return s
+}
+
+func labelsMatchAny(labels, needles []string) bool {
 	set := make(map[string]struct{}, len(needles))
 	for _, n := range needles {
-		set[strings.ToLower(strings.TrimSpace(n))] = struct{}{}
+		set[normalizeMediaLabel(n)] = struct{}{}
 	}
-	for _, t := range tags {
-		if _, ok := set[strings.ToLower(strings.TrimSpace(t))]; ok {
+	for _, label := range labels {
+		if _, ok := set[normalizeMediaLabel(label)]; ok {
 			return true
 		}
 	}

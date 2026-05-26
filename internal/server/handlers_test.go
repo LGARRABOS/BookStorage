@@ -431,8 +431,8 @@ func TestFilterValidCatalogReadingTypes(t *testing.T) {
 }
 
 func TestFilterValidAdultOrientationsHandler(t *testing.T) {
-	got := catalog.FilterValidAdultOrientations([]string{"gay", "invalid", "lesbian"})
-	if len(got) != 2 || got[0] != "gay" || got[1] != "lesbian" {
+	got := catalog.FilterValidAdultOrientations([]string{"boys_love", "invalid", "yuri"})
+	if len(got) != 2 || got[0] != "boys_love" || got[1] != "yuri" {
 		t.Fatalf("got %v", got)
 	}
 }

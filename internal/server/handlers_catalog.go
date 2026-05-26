@@ -128,7 +128,7 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		ReadingTypesIn: readingTypes,
 		TagIn:          orientFilter.TagIn,
 		TagNotIn:       orientFilter.TagNotIn,
-		TagMatch:       orientFilter.MatchFunc,
+		MediaMatch:     orientFilter.MatchMedia,
 	}, (page-1)*displayPerPage, displayPerPage)
 	if err != nil {
 		log.Printf("catalog browse: %v", err)

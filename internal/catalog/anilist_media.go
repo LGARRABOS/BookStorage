@@ -231,7 +231,7 @@ type BrowseMediaParams struct {
 	MaxResults     int
 	IsAdult        *bool    // nil = no AniList isAdult filter; true/false filters at API and in-loop
 	ReadingTypesIn []string // BookStorage reading_type labels (post-filter)
-	TagMatch       func(tagNames []string) bool
+	MediaMatch     func(genres, tagNames []string) bool
 }
 
 // BrowseMedia runs a single Page query with genre/tag filters (OR within lists per AniList rules).
@@ -331,7 +331,7 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 		for _, tg := range m.Tags {
 			tagNames = append(tagNames, tg.Name)
 		}
-		if p.TagMatch != nil && !p.TagMatch(tagNames) {
+		if p.MediaMatch != nil && !p.MediaMatch(m.Genres, tagNames) {
 			continue
 		}
 		readingType := mapAnilistReadingType(m)
