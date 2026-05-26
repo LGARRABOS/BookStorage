@@ -396,7 +396,7 @@ func TestHandleCatalogBrowse_invalidGenre(t *testing.T) {
 	}
 }
 
-func TestHandleCatalogBrowse_noGenre(t *testing.T) {
+func TestHandleCatalogBrowse_noGenreAllowed(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
 	session := mustCreateSession(t, app, 1)
@@ -405,8 +405,11 @@ func TestHandleCatalogBrowse_noGenre(t *testing.T) {
 	req.AddCookie(&http.Cookie{Name: "session", Value: session})
 	rec := httptest.NewRecorder()
 	app.HandleCatalogBrowse(rec, req)
-	if rec.Code != http.StatusBadRequest {
-		t.Fatalf("status %d", rec.Code)
+	if rec.Code == http.StatusBadRequest {
+		t.Fatalf("browse without genre should be allowed, body=%s", rec.Body.String())
+	}
+	if rec.Code != http.StatusOK && rec.Code != http.StatusBadGateway {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
 	}
 }
 

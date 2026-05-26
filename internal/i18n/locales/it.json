@@ -124,7 +124,7 @@
   "catalog.title": "Catalogo",
   "catalog.intro": "Scopri opere da aggiungere alla tua biblioteca",
   "catalog.explore.title": "Esplora per genere",
-  "catalog.explore.hint": "Scegli uno o più generi, eventualmente un tipo, e avvia la ricerca",
+  "catalog.explore.hint": "Filtra per genere e tipo se vuoi, poi cerca (tutti i generi senza selezione)",
   "catalog.explore.discover": "Scopri",
   "catalog.explore.loading": "Caricamento…",
   "catalog.explore.empty": "Nessun risultato per questa selezione",

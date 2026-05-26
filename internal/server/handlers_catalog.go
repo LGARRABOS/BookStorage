@@ -79,8 +79,9 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	genres := catalog.FilterValidAnilistGenres(r.URL.Query()["genre"], 3)
-	if len(genres) == 0 {
+	rawGenres := r.URL.Query()["genre"]
+	genres := catalog.FilterValidAnilistGenres(rawGenres, 3)
+	if len(rawGenres) > 0 && len(genres) == 0 {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusBadRequest)
 		_ = json.NewEncoder(w).Encode(map[string]any{"error": "invalid_genre", "results": []any{}})

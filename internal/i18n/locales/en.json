@@ -124,7 +124,7 @@
   "catalog.title": "Catalog",
   "catalog.intro": "Discover works to add to your library",
   "catalog.explore.title": "Browse by genre",
-  "catalog.explore.hint": "Pick one or more genres, optionally a type, then search",
+  "catalog.explore.hint": "Optionally filter by genre and type, then search (all genres if none selected)",
   "catalog.explore.discover": "Discover",
   "catalog.explore.loading": "Loading…",
   "catalog.explore.empty": "No results for this selection",

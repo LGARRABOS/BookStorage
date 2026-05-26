@@ -106,7 +106,6 @@
         var openLbl = {{ jsstr (t .T "dashboard.recommendations.detail.open") }};
         var emptyMsg = {{ jsstr (t .T "catalog.explore.empty") }};
         var errMsg = {{ jsstr (t .T "catalog.explore.error") }};
-        var pickGenreMsg = {{ jsstr (t .T "catalog.explore.pick_genre") }};
         var loadingMsg = {{ jsstr (t .T "catalog.explore.loading") }};
         var currentPage = 1;
         var hasNext = false;
@@ -162,13 +161,6 @@
         }
 
         function loadBrowse(page) {
-            var genres = selectedGenres();
-            if (!genres.length) {
-                grid.hidden = false;
-                pagination.hidden = true;
-                grid.innerHTML = '<p class="catalog-browse-msg">' + pickGenreMsg + '</p>';
-                return;
-            }
             currentPage = page || 1;
             grid.hidden = false;
             grid.innerHTML = '<p class="catalog-browse-msg" id="catalog-browse-loading">' + loadingMsg + '</p>';
@@ -176,7 +168,7 @@
             btn.disabled = true;
 
             var params = new URLSearchParams();
-            genres.forEach(function(g) { params.append('genre', g); });
+            selectedGenres().forEach(function(g) { params.append('genre', g); });
             selectedReadingTypes().forEach(function(t) { params.append('reading_type', t); });
             params.set('page', String(currentPage));
             if (sortSel && sortSel.value) params.set('sort', sortSel.value);
