@@ -17,7 +17,7 @@ func TestGetMediaByID_live(t *testing.T) {
 }
 
 func TestBrowseMedia_live(t *testing.T) {
-	r, err := BrowseMedia(BrowseMediaParams{
+	r, _, err := BrowseMedia(BrowseMediaParams{
 		GenreIn:    []string{"Action"},
 		PerPage:    5,
 		MaxResults: 3,

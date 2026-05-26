@@ -12,6 +12,35 @@
 
 .catalog-explore-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem 0; color: var(--text-primary); }
 .catalog-explore-hint { font-size: 0.85rem; color: var(--text-muted); margin: 0 0 1rem 0; }
+.catalog-explore-filter-label {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  margin: 0 0 0.45rem 0;
+}
+
+.catalog-type-chips { margin-bottom: 1rem; }
+
+.catalog-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+  line-height: 1;
+}
+
+.catalog-filter-check input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--primary);
+  flex-shrink: 0;
+}
 
 .catalog-genre-chips {
   display: flex;

@@ -338,7 +338,7 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 	var out []Suggestion
 
 	if len(genreIn) > 0 {
-		browse, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
+		browse, _, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
 			GenreIn:    genreIn,
 			TagIn:      tagIn,
 			Page:       1,

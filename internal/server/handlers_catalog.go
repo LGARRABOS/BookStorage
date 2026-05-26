@@ -20,13 +20,50 @@ type catalogBrowseItem struct {
 	Genres      []string `json:"genres,omitempty"`
 }
 
+// Types returned by mapAnilistReadingType for AniList MANGA browse results.
+var catalogBrowseReadingTypes = []string{
+	"Manga",
+	"Manhwa",
+	"Webtoon",
+	"Light Novel",
+	"Autre",
+}
+
+func filterValidCatalogReadingTypes(raw []string) []string {
+	if len(raw) == 0 {
+		return nil
+	}
+	allowed := make(map[string]struct{}, len(catalogBrowseReadingTypes))
+	for _, t := range catalogBrowseReadingTypes {
+		allowed[t] = struct{}{}
+	}
+	seen := make(map[string]struct{})
+	out := make([]string, 0, len(raw))
+	for _, t := range raw {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if _, ok := allowed[t]; !ok {
+			continue
+		}
+		if _, dup := seen[t]; dup {
+			continue
+		}
+		seen[t] = struct{}{}
+		out = append(out, t)
+	}
+	return out
+}
+
 func (a *App) HandleCatalog(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
 	data := map[string]any{
-		"Genres": catalog.AnilistGenres(),
+		"Genres":       catalog.AnilistGenres(),
+		"ReadingTypes": catalogBrowseReadingTypes,
 	}
 	a.renderTemplate(w, r, "catalog", a.mergeData(r, data))
 }
@@ -61,19 +98,29 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		sort = "POPULARITY_DESC"
 	}
 
-	const perPage = 20
+	readingTypes := filterValidCatalogReadingTypes(r.URL.Query()["reading_type"])
+
+	adultOnly := strings.TrimSpace(r.URL.Query().Get("adult")) == "only"
+	isAdult := adultOnly
+
+	const (
+		displayPerPage = 20
+		fetchPerPage   = 25
+	)
 	known := map[int]struct{}{}
 	if works, err := recommend.LoadUserAnilistWorks(a.DB, int64(userID)); err == nil {
 		known = recommend.CollectKnownAnilistIDs(works)
 	}
 
-	results, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
-		GenreIn:    genres,
-		Page:       page,
-		PerPage:    perPage,
-		Sort:       sort,
-		NotInIDs:   known,
-		MaxResults: perPage,
+	results, sourceCount, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
+		GenreIn:        genres,
+		Page:           page,
+		PerPage:        fetchPerPage,
+		Sort:           sort,
+		NotInIDs:       known,
+		MaxResults:     displayPerPage,
+		IsAdult:        &isAdult,
+		ReadingTypesIn: readingTypes,
 	})
 	if err != nil {
 		log.Printf("catalog browse: %v", err)
@@ -95,12 +142,19 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 
+	adultFilter := ""
+	if adultOnly {
+		adultFilter = "only"
+	}
+
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{
-		"results":  out,
-		"page":     page,
-		"has_next": len(out) >= perPage,
-		"genres":   genres,
-		"sort":     sort,
+		"results":       out,
+		"page":          page,
+		"has_next":      sourceCount >= fetchPerPage || len(out) >= displayPerPage,
+		"genres":        genres,
+		"reading_types": readingTypes,
+		"adult":         adultFilter,
+		"sort":          sort,
 	})
 }

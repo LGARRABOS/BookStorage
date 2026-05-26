@@ -52,11 +52,25 @@
                     {{ end }}
                 </div>
 
+                <p class="catalog-explore-filter-label">{{ t .T "catalog.explore.type_label" }}</p>
+                <div class="catalog-type-chips" id="catalog-type-chips">
+                    {{ range .ReadingTypes }}
+                    <label class="catalog-genre-chip catalog-type-chip">
+                        <input type="checkbox" name="catalog-type" value="{{ . }}">
+                        {{ . }}
+                    </label>
+                    {{ end }}
+                </div>
+
                 <div class="catalog-explore-toolbar">
                     <select id="catalog-browse-sort" aria-label="{{ t .T "catalog.explore.sort_label" }}">
                         <option value="POPULARITY_DESC">{{ t .T "catalog.explore.sort_popularity" }}</option>
                         <option value="SCORE_DESC">{{ t .T "catalog.explore.sort_score" }}</option>
                     </select>
+                    <label class="catalog-filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
+                        <input type="checkbox" id="catalog-adult-only-check">
+                        +18
+                    </label>
                     <button type="button" class="btn btn-primary" id="catalog-browse-btn">{{ t .T "catalog.explore.discover" }}</button>
                 </div>
 
@@ -82,6 +96,7 @@
         var grid = document.getElementById('catalog-browse-grid');
         var btn = document.getElementById('catalog-browse-btn');
         var sortSel = document.getElementById('catalog-browse-sort');
+        var adultOnlyCheck = document.getElementById('catalog-adult-only-check');
         var pagination = document.getElementById('catalog-browse-pagination');
         var prevBtn = document.getElementById('catalog-browse-prev');
         var nextBtn = document.getElementById('catalog-browse-next');
@@ -107,6 +122,14 @@
         function selectedGenres() {
             var out = [];
             document.querySelectorAll('input[name="catalog-genre"]:checked').forEach(function(el) {
+                if (el.value) out.push(el.value);
+            });
+            return out;
+        }
+
+        function selectedReadingTypes() {
+            var out = [];
+            document.querySelectorAll('input[name="catalog-type"]:checked').forEach(function(el) {
                 if (el.value) out.push(el.value);
             });
             return out;
@@ -154,8 +177,10 @@
 
             var params = new URLSearchParams();
             genres.forEach(function(g) { params.append('genre', g); });
+            selectedReadingTypes().forEach(function(t) { params.append('reading_type', t); });
             params.set('page', String(currentPage));
             if (sortSel && sortSel.value) params.set('sort', sortSel.value);
+            if (adultOnlyCheck && adultOnlyCheck.checked) params.set('adult', 'only');
 
             fetch('/api/catalog/browse?' + params.toString())
                 .then(function(r) {

@@ -221,17 +221,20 @@ func pickTitleFromAnilistTitle(t anilistTitle) string {
 
 // BrowseMediaParams filters Page.media (MANGA type includes manga + LN in AniList).
 type BrowseMediaParams struct {
-	GenreIn    []string // e.g. "Romance"
-	TagIn      []string // AniList tag names
-	Page       int
-	PerPage    int
-	Sort       string // POPULARITY_DESC, SCORE_DESC
-	NotInIDs   map[int]struct{}
-	MaxResults int
+	GenreIn        []string // e.g. "Romance"
+	TagIn          []string // AniList tag names
+	Page           int
+	PerPage        int
+	Sort           string // POPULARITY_DESC, SCORE_DESC
+	NotInIDs       map[int]struct{}
+	MaxResults     int
+	IsAdult        *bool    // nil = no AniList isAdult filter; true/false filters at API and in-loop
+	ReadingTypesIn []string // BookStorage reading_type labels (post-filter)
 }
 
 // BrowseMedia runs a single Page query with genre/tag filters (OR within lists per AniList rules).
-func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
+// The second return value is the raw item count from AniList before local filters.
+func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 	if p.PerPage <= 0 {
 		p.PerPage = 12
 	}
@@ -245,9 +248,9 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 	if sort == "" {
 		sort = "POPULARITY_DESC"
 	}
-	q := `query($page: Int, $perPage: Int, $genreIn: [String], $tagIn: [String], $sort: [MediaSort]) {
+	q := `query($page: Int, $perPage: Int, $genreIn: [String], $tagIn: [String], $sort: [MediaSort], $isAdult: Boolean) {
   Page(page: $page, perPage: $perPage) {
-    media(type: MANGA, genre_in: $genreIn, tag_in: $tagIn, sort: $sort) {
+    media(type: MANGA, genre_in: $genreIn, tag_in: $tagIn, sort: $sort, isAdult: $isAdult) {
       id
       title { romaji english }
       type
@@ -275,22 +278,32 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 	} else {
 		vars["tagIn"] = nil
 	}
+	if p.IsAdult != nil {
+		vars["isAdult"] = *p.IsAdult
+	} else {
+		vars["isAdult"] = nil
+	}
 	payload := map[string]any{"query": q, "variables": vars}
 	raw, err := json.Marshal(payload)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	resp, err := anilistPost(raw)
 	if err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 	var out browsePageResponse
 	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
-		return nil, err
+		return nil, 0, err
 	}
 	if len(out.Errors) > 0 {
-		return nil, fmt.Errorf("anilist: %s", out.Errors[0].Message)
+		return nil, 0, fmt.Errorf("anilist: %s", out.Errors[0].Message)
+	}
+	sourceCount := len(out.Data.Page.Media)
+	typeFilter := make(map[string]struct{}, len(p.ReadingTypesIn))
+	for _, rt := range p.ReadingTypesIn {
+		typeFilter[rt] = struct{}{}
 	}
 	var results []AnilistResult
 	max := p.MaxResults
@@ -303,10 +316,19 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 				continue
 			}
 		}
+		if p.IsAdult != nil && m.IsAdult != *p.IsAdult {
+			continue
+		}
 		title := pickTitleFromAnilistTitle(anilistTitle{Romaji: m.Title.Romaji, English: m.Title.English})
 		var tagNames []string
 		for _, tg := range m.Tags {
 			tagNames = append(tagNames, tg.Name)
+		}
+		readingType := mapAnilistReadingType(m)
+		if len(typeFilter) > 0 {
+			if _, ok := typeFilter[readingType]; !ok {
+				continue
+			}
 		}
 		results = append(results, AnilistResult{
 			ID:           m.ID,
@@ -315,7 +337,7 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 			TitleEnglish: strings.TrimSpace(m.Title.English),
 			Type:         m.Type,
 			ImageURL:     m.CoverImage.Large,
-			ReadingType:  mapAnilistReadingType(m),
+			ReadingType:  readingType,
 			IsAdult:      m.IsAdult,
 			Genres:       append([]string(nil), m.Genres...),
 			Tags:         tagNames,
@@ -324,7 +346,7 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, error) {
 			break
 		}
 	}
-	return results, nil
+	return results, sourceCount, nil
 }
 
 // AnilistMediaToResult converts a parsed anilistMedia to AnilistResult (used by recommend package).

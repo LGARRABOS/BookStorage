@@ -410,6 +410,22 @@ func TestHandleCatalogBrowse_noGenre(t *testing.T) {
 	}
 }
 
+func TestFilterValidCatalogReadingTypes(t *testing.T) {
+	got := filterValidCatalogReadingTypes([]string{"Manga", "Bad", "Manga", " Manhwa ", "Roman"})
+	want := []string{"Manga", "Manhwa"}
+	if len(got) != len(want) {
+		t.Fatalf("got %v want %v", got, want)
+	}
+	for i := range want {
+		if got[i] != want[i] {
+			t.Fatalf("got %v want %v", got, want)
+		}
+	}
+	if filterValidCatalogReadingTypes(nil) != nil {
+		t.Fatal("expected nil for empty input")
+	}
+}
+
 func TestNotifyNewChaptersAPICreate(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
