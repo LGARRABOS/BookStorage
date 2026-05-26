@@ -283,6 +283,73 @@ func TestHandleAPIWorksList_WithFiltersAndMeta(t *testing.T) {
 	}
 }
 
+func TestHandleAPIWorksList_ReadingSiteFilter(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	res, err := db.Exec(
+		`INSERT INTO reading_sites (user_id, name, base_url, probe_status) VALUES (1, 'TestSite', 'https://example.com', 'unknown')`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	siteID, err := res.LastInsertId()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = db.Exec(
+		`INSERT INTO works (title, chapter, link, status, reading_type, rating, notes, user_id, reading_site_id, updated_at)
+		 VALUES
+		 ('WithSite', 1, 'https://example.com/manga/1', 'En cours', 'Manga', 0, '', 1, ?, CURRENT_TIMESTAMP),
+		 ('NoSite', 1, NULL, 'En cours', 'Manga', 0, '', 1, NULL, CURRENT_TIMESTAMP)`,
+		siteID,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	session := mustCreateSession(t, app, 1)
+
+	reqSite := httptest.NewRequest(http.MethodGet, "/api/works?reading_site_id="+strconv.FormatInt(siteID, 10), nil)
+	reqSite.AddCookie(&http.Cookie{Name: "session", Value: session})
+	recSite := httptest.NewRecorder()
+	app.HandleAPIWorksList(recSite, reqSite)
+	if recSite.Code != http.StatusOK {
+		t.Fatalf("site filter status %d body=%s", recSite.Code, recSite.Body.String())
+	}
+	var payloadSite struct {
+		Data []apiWork `json:"data"`
+		Meta struct {
+			Total int `json:"total"`
+		} `json:"meta"`
+	}
+	if err := json.NewDecoder(recSite.Body).Decode(&payloadSite); err != nil {
+		t.Fatal(err)
+	}
+	if payloadSite.Meta.Total != 1 || len(payloadSite.Data) != 1 || payloadSite.Data[0].Title != "WithSite" {
+		t.Fatalf("site filter: total=%d data=%+v", payloadSite.Meta.Total, payloadSite.Data)
+	}
+
+	reqNone := httptest.NewRequest(http.MethodGet, "/api/works?reading_site_id=none", nil)
+	reqNone.AddCookie(&http.Cookie{Name: "session", Value: session})
+	recNone := httptest.NewRecorder()
+	app.HandleAPIWorksList(recNone, reqNone)
+	if recNone.Code != http.StatusOK {
+		t.Fatalf("none filter status %d body=%s", recNone.Code, recNone.Body.String())
+	}
+	var payloadNone struct {
+		Data []apiWork `json:"data"`
+		Meta struct {
+			Total int `json:"total"`
+		} `json:"meta"`
+	}
+	if err := json.NewDecoder(recNone.Body).Decode(&payloadNone); err != nil {
+		t.Fatal(err)
+	}
+	if payloadNone.Meta.Total != 1 || len(payloadNone.Data) != 1 || payloadNone.Data[0].Title != "NoSite" {
+		t.Fatalf("none filter: total=%d data=%+v", payloadNone.Meta.Total, payloadNone.Data)
+	}
+}
+
 func TestNotifyNewChaptersAPICreate(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

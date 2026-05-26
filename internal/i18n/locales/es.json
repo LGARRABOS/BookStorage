@@ -116,6 +116,8 @@
   "dashboard.filter.adult_short": "−18",
   "dashboard.filter.follow_all": "Seguimiento: todos",
   "dashboard.filter.unfollowed_only": "Sin seguimiento",
+  "dashboard.filter.site": "Sitio de lectura",
+  "dashboard.filter.no_site": "Sin sitio detectado",
   "dashboard.sort": "Ordenar por",
   "dashboard.sort.alpha": "Alfabético",
   "dashboard.sort.recent": "Más reciente",

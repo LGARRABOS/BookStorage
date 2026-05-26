@@ -146,6 +146,18 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 		whereParts = append(whereParts, "reading_type = ?")
 		args = append(args, typeFilter)
 	}
+	readingSiteFilter := strings.TrimSpace(r.URL.Query().Get("reading_site_id"))
+	switch readingSiteFilter {
+	case "":
+		// no filter
+	case "none":
+		whereParts = append(whereParts, "(reading_site_id IS NULL OR reading_site_id = 0)")
+	default:
+		if siteID, err := strconv.ParseInt(readingSiteFilter, 10, 64); err == nil && siteID > 0 {
+			whereParts = append(whereParts, "reading_site_id = ? AND EXISTS (SELECT 1 FROM reading_sites rs WHERE rs.id = ? AND rs.user_id = ?)")
+			args = append(args, siteID, siteID, userID)
+		}
+	}
 	if search != "" {
 		usedFTS := false
 		if database.WorksFTSEnabled(a.DB) {

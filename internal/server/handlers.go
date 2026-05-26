@@ -1364,6 +1364,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		"AdultFilter":          adultFilter,
 		"SearchQuery":          r.URL.Query().Get("q"),
 		"ReadingSiteMap":       readingSiteStatusMap,
+		"ReadingSites":         a.loadUserReadingSites(userID),
 	}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)
