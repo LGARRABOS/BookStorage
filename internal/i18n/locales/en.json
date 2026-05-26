@@ -110,6 +110,8 @@
   "dashboard.search.label": "Search your library",
   "dashboard.filter.all": "All",
   "dashboard.filter.type": "Type",
+  "dashboard.filter.type_all": "Type: all",
+  "dashboard.filter.site_all": "Site: all",
   "dashboard.filter.status": "Status",
   "dashboard.filter.hide_adult": "Hide 18+",
   "dashboard.filter.only_adult": "Only 18+",

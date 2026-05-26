@@ -258,23 +258,27 @@
                         <option value="Abandonné">{{ t .T "status.dropped" }}</option>
                         <option value="À lire">{{ t .T "status.plan_to_read" }}</option>
                     </select>
-                    <select id="type-filter">
-                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                    <select id="type-filter" aria-label="{{ t .T "dashboard.filter.type" }}">
+                        <option value="">{{ t .T "dashboard.filter.type_all" }}</option>
                         {{ range .ReadingTypes }}<option value="{{ . }}">{{ . }}</option>{{ end }}
                     </select>
                     <select id="site-filter" aria-label="{{ t .T "dashboard.filter.site" }}">
-                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                        <option value="">{{ t .T "dashboard.filter.site_all" }}</option>
                         <option value="none">{{ t .T "dashboard.filter.no_site" }}</option>
                         {{ range .ReadingSites }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
+                    </select>
+                    <select id="sort-select" onchange="applyDashboardFilters()">
+                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
+                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
+                        <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.modified_desc" }}</option>
+                        <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ t .T "dashboard.sort.modified_asc" }}</option>
+                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
+                        <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
                     </select>
                     <div class="filter-checks">
                         <label class="filter-check" title="{{ t .T "dashboard.filter.unfollowed_only" }}">
                             <input type="checkbox" id="follow-unfollowed-check">
                             {{ t .T "dashboard.filter.unfollowed_only" }}
-                        </label>
-                        <label class="filter-check" title="{{ t .T "dashboard.filter.hide_adult" }}">
-                            <input type="checkbox" id="adult-hide-check" {{ if ne .AdultFilter "only" }}checked{{ end }}>
-                            {{ t .T "dashboard.filter.adult_short" }}
                         </label>
                         <label class="filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
                             <input type="checkbox" id="adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
@@ -285,14 +289,6 @@
                         <button type="button" id="view-grid-btn" class="active" aria-pressed="true" aria-label="{{ t .T "dashboard.view.grid" }}">▦</button>
                         <button type="button" id="view-list-btn" aria-pressed="false" aria-label="{{ t .T "dashboard.view.list" }}">☰</button>
                     </div>
-                    <select id="sort-select" onchange="applyDashboardFilters()">
-                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
-                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
-                        <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.modified_desc" }}</option>
-                        <option value="modified_asc" {{ if eq .SortBy "modified_asc" }}selected{{ end }}>{{ t .T "dashboard.sort.modified_asc" }}</option>
-                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "dashboard.sort.recent" }}</option>
-                        <option value="oldest" {{ if eq .SortBy "oldest" }}selected{{ end }}>{{ t .T "dashboard.sort.oldest" }}</option>
-                    </select>
                 </div>
             </div>
 
@@ -442,7 +438,6 @@
         const typeFilter = document.getElementById('type-filter');
         const followUnfollowedCheck = document.getElementById('follow-unfollowed-check');
         const siteFilter = document.getElementById('site-filter');
-        const adultHideCheck = document.getElementById('adult-hide-check');
         const adultOnlyCheck = document.getElementById('adult-only-check');
 
         // Precompute searchable text once to avoid repeated DOM reads on each keystroke.
@@ -537,28 +532,7 @@
             window.location.href = '/dashboard' + query;
         };
 
-        function onAdultFilterChange(changed) {
-            if (changed === adultOnlyCheck && adultOnlyCheck.checked) {
-                if (adultHideCheck) adultHideCheck.checked = false;
-                applyDashboardFilters();
-                return;
-            }
-            if (changed === adultHideCheck && adultHideCheck.checked) {
-                if (adultOnlyCheck) adultOnlyCheck.checked = false;
-                applyDashboardFilters();
-                return;
-            }
-            if (adultHideCheck && adultOnlyCheck && !adultHideCheck.checked && !adultOnlyCheck.checked) {
-                if (changed === adultOnlyCheck) {
-                    adultHideCheck.checked = true;
-                } else {
-                    adultHideCheck.checked = true;
-                }
-                applyDashboardFilters();
-            }
-        }
-        if (adultHideCheck) adultHideCheck.addEventListener('change', function() { onAdultFilterChange(adultHideCheck); });
-        if (adultOnlyCheck) adultOnlyCheck.addEventListener('change', function() { onAdultFilterChange(adultOnlyCheck); });
+        if (adultOnlyCheck) adultOnlyCheck.addEventListener('change', applyDashboardFilters);
         
         // Chapter increment/decrement buttons
         document.querySelectorAll('.chapter-btn.plus').forEach(btn => {
