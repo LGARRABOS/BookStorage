@@ -13,6 +13,17 @@ import (
 	"golang.org/x/crypto/pbkdf2"
 )
 
+const minPasswordLen = 8
+
+// passwordHashNeedsUpgrade reports whether a stored hash should be re-hashed to bcrypt on next login.
+func passwordHashNeedsUpgrade(stored string) bool {
+	s := strings.TrimSpace(stored)
+	if s == "" {
+		return false
+	}
+	return !strings.HasPrefix(s, "$2a$") && !strings.HasPrefix(s, "$2b$") && !strings.HasPrefix(s, "$2y$")
+}
+
 // hashPassword hashes a password using bcrypt.
 func hashPassword(password string) (string, error) {
 	hash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)

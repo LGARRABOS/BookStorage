@@ -80,6 +80,7 @@
   "register.error.exists": "Este nome de usuário já existe",
   "register.error.mismatch": "As senhas não coincidem",
   "register.error.required": "Preencha todos os campos.",
+  "register.error.weak": "A senha deve ter pelo menos 8 caracteres.",
   "register.has_account": "Já tem uma conta?",
   "register.login": "Entrar",
   "register.password": "Senha",

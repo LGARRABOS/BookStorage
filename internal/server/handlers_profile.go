@@ -3,14 +3,11 @@ package server
 import (
 	"bookstorage/internal/i18n"
 	"database/sql"
-	"io"
 	"log"
 	"net/http"
 	"os"
-	"path"
 	"path/filepath"
 	"sort"
-	"strconv"
 	"strings"
 	"time"
 )
@@ -398,20 +395,9 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		previousAvatar := u.AvatarPath.String
 		newAvatarPath := previousAvatar
 
-		file, header, err := r.FormFile("avatar")
-		if err == nil && header != nil && header.Filename != "" {
-			defer func() { _ = file.Close() }()
-			if allowedFile(header.Filename) {
-				filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
-				full := filepath.Join(a.Settings.ProfileUploadFolder, filename)
-				dst, err := os.Create(full)
-				if err == nil {
-					defer func() { _ = dst.Close() }()
-					_, _ = io.Copy(dst, file)
-					newAvatarPath = buildMediaRelativePath(filename, a.Settings.ProfileUploadURLPath)
-					updates["avatar_path"] = newAvatarPath
-				}
-			}
+		if rel, err := saveImageFromForm(r, "avatar", a.Settings.ProfileUploadFolder, a.Settings.ProfileUploadURLPath, userID); err == nil {
+			newAvatarPath = rel
+			updates["avatar_path"] = newAvatarPath
 		}
 
 		if len(updates) == 0 {

@@ -51,11 +51,13 @@ func (rl *rateLimiter) allow(key string, capacity, refillPerSec float64) bool {
 
 var globalRateLimiter = newRateLimiter()
 
-func clientIP(r *http.Request) string {
-	if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
-		parts := strings.Split(xff, ",")
-		if len(parts) > 0 {
-			return strings.TrimSpace(parts[0])
+func clientIP(r *http.Request, trustProxy bool) string {
+	if trustProxy {
+		if xff := strings.TrimSpace(r.Header.Get("X-Forwarded-For")); xff != "" {
+			parts := strings.Split(xff, ",")
+			if len(parts) > 0 {
+				return strings.TrimSpace(parts[0])
+			}
 		}
 	}
 	host, _, err := net.SplitHostPort(r.RemoteAddr)
@@ -127,15 +129,16 @@ func shouldRateLimitOAuthGET(path, method string) (key string, capacity, refillP
 // WithRequestPolicies applies lightweight CSRF and rate limiting checks.
 func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		trustProxy := a.Settings != nil && a.Settings.TrustProxy
 		if key, cap, refill, ok := shouldRateLimitOAuthGET(r.URL.Path, r.Method); ok {
-			limiterKey := key + ":" + clientIP(r)
+			limiterKey := key + ":" + clientIP(r, trustProxy)
 			if !globalRateLimiter.allow(limiterKey, cap, refill) {
 				http.Error(w, http.StatusText(http.StatusTooManyRequests), http.StatusTooManyRequests)
 				return
 			}
 		}
 		if key, cap, refill, ok := shouldRateLimit(r.URL.Path); ok && isMutatingMethod(r.Method) {
-			limiterKey := key + ":" + clientIP(r)
+			limiterKey := key + ":" + clientIP(r, trustProxy)
 			if !globalRateLimiter.allow(limiterKey, cap, refill) {
 				if strings.HasPrefix(r.URL.Path, "/api/") {
 					a.apiWriteError(w, http.StatusTooManyRequests, "rate_limited")
@@ -146,15 +149,13 @@ func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 			}
 		}
 
-		if isMutatingMethod(r.Method) {
-			if _, err := r.Cookie("session"); err == nil && !isSameOriginRequest(r) {
-				if strings.HasPrefix(r.URL.Path, "/api/") {
-					a.apiWriteError(w, http.StatusForbidden, "csrf_blocked")
-				} else {
-					w.WriteHeader(http.StatusForbidden)
-				}
-				return
+		if isMutatingMethod(r.Method) && !isSameOriginRequest(r) {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				a.apiWriteError(w, http.StatusForbidden, "csrf_blocked")
+			} else {
+				w.WriteHeader(http.StatusForbidden)
 			}
+			return
 		}
 		next.ServeHTTP(w, r)
 	})

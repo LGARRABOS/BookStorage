@@ -779,7 +779,7 @@ func TestWithRequestPolicies_CSRFAndRateLimit(t *testing.T) {
 	})
 	handler := app.WithRequestPolicies(next)
 
-	// CSRF: mutating request with session but no Origin/Referer must be blocked.
+	// CSRF: mutating request without same-origin must be blocked (with or without session).
 	req := httptest.NewRequest(http.MethodPost, "/api/works", strings.NewReader(`{}`))
 	req.RemoteAddr = "127.0.0.1:9000"
 	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
@@ -787,6 +787,16 @@ func TestWithRequestPolicies_CSRFAndRateLimit(t *testing.T) {
 	handler.ServeHTTP(rec, req)
 	if rec.Code != http.StatusForbidden {
 		t.Fatalf("csrf attendu 403, obtenu %d", rec.Code)
+	}
+
+	reqLogin := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader("username=u&password=p"))
+	reqLogin.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	reqLogin.Header.Set("Origin", "https://evil.example")
+	reqLogin.Host = "example.test"
+	recLogin := httptest.NewRecorder()
+	handler.ServeHTTP(recLogin, reqLogin)
+	if recLogin.Code != http.StatusForbidden {
+		t.Fatalf("csrf login sans session attendu 403, obtenu %d", recLogin.Code)
 	}
 
 	// Rate-limit login: multiple attempts from the same IP should end in 429.

@@ -249,14 +249,6 @@ var readingStatuses = []string{
 	"À lire",
 }
 
-func allowedFile(filename string) bool {
-	filename = strings.ToLower(filename)
-	return strings.HasSuffix(filename, ".png") ||
-		strings.HasSuffix(filename, ".jpg") ||
-		strings.HasSuffix(filename, ".jpeg") ||
-		strings.HasSuffix(filename, ".gif")
-}
-
 func buildMediaRelativePath(filename, urlPath string) string {
 	urlPath = strings.Trim(urlPath, "/")
 	if urlPath == "" {

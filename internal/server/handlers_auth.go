@@ -16,6 +16,7 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		data := a.mergeData(r, map[string]any{
 			"RegisterErrorEmpty":  q.Get("error") == "empty",
 			"RegisterErrorExists": q.Get("error") == "exists",
+			"RegisterErrorWeak":   q.Get("error") == "weak",
 		})
 		a.renderTemplate(w, r, "register", data)
 	case http.MethodPost:
@@ -24,6 +25,10 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 
 		if username == "" || password == "" {
 			http.Redirect(w, r, "/register?error=empty", http.StatusFound)
+			return
+		}
+		if len(password) < minPasswordLen {
+			http.Redirect(w, r, "/register?error=weak", http.StatusFound)
 			return
 		}
 
@@ -113,6 +118,11 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		if !u.Password.Valid || !verifyPassword(u.Password.String, password) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
+		}
+		if u.Password.Valid && passwordHashNeedsUpgrade(u.Password.String) {
+			if upgraded, err := hashPassword(password); err == nil {
+				_, _ = a.DB.Exec(`UPDATE users SET password = ? WHERE id = ?`, upgraded, u.ID)
+			}
 		}
 		if (a.Settings == nil || a.Settings.RequireAccountValidation) && u.Validated == 0 && u.IsAdmin == 0 {
 			// Account not yet validated by staff

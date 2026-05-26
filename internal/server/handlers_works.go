@@ -5,11 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
-	"io"
 	"net/http"
-	"os"
-	"path"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -90,20 +86,9 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 
 		// If no URL, check for file upload
 		if !imagePath.Valid {
-			file, header, err := r.FormFile("image")
-			if err == nil && header != nil && header.Filename != "" {
-				defer func() { _ = file.Close() }()
-				if allowedFile(header.Filename) {
-					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
-					full := filepath.Join(a.Settings.UploadFolder, filename)
-					dst, err := os.Create(full)
-					if err == nil {
-						defer func() { _ = dst.Close() }()
-						_, _ = io.Copy(dst, file)
-						imagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
-						imagePath.Valid = true
-					}
-				}
+			if rel, err := saveImageFromForm(r, "image", a.Settings.UploadFolder, a.Settings.UploadURLPath, userID); err == nil {
+				imagePath.String = rel
+				imagePath.Valid = true
 			}
 		}
 
@@ -278,21 +263,9 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			newImagePath.String = imageURL
 			newImagePath.Valid = true
 		} else if !aniListImageLock {
-			// If no URL, check for file upload (désactivé côté serveur si catalogue AniList)
-			file, header, err := r.FormFile("image")
-			if err == nil && header != nil && header.Filename != "" {
-				defer func() { _ = file.Close() }()
-				if allowedFile(header.Filename) {
-					filename := strconv.FormatInt(int64(userID), 10) + "_" + path.Base(header.Filename)
-					full := filepath.Join(a.Settings.UploadFolder, filename)
-					dst, err := os.Create(full)
-					if err == nil {
-						defer func() { _ = dst.Close() }()
-						_, _ = io.Copy(dst, file)
-						newImagePath.String = buildMediaRelativePath(filename, a.Settings.UploadURLPath)
-						newImagePath.Valid = true
-					}
-				}
+			if rel, err := saveImageFromForm(r, "image", a.Settings.UploadFolder, a.Settings.UploadURLPath, userID); err == nil {
+				newImagePath.String = rel
+				newImagePath.Valid = true
 			}
 		}
 		// Remplace en base une ancienne couverture custom par l’URL canonique AniList (affichage + export cohérents).

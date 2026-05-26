@@ -37,8 +37,10 @@ type Settings struct {
 	// TranslateURL is a LibreTranslate-compatible API base URL (no trailing slash), e.g. https://libretranslate.com — empty disables auto-translation.
 	TranslateURL    string
 	TranslateAPIKey string
-	// MetricsToken, if non-empty, protects GET /metrics (Bearer or ?token=). If empty, /metrics is only reachable from loopback clients.
+	// MetricsToken, if non-empty, protects GET /metrics (Authorization: Bearer only). If empty, /metrics is only reachable from loopback clients.
 	MetricsToken string
+	// TrustProxy uses X-Forwarded-For as client IP for rate limiting when true (set behind a trusted reverse proxy).
+	TrustProxy bool
 	// PublicOrigin is the public base URL without trailing slash (e.g. https://books.example.com). Required for Google OAuth redirect_uri.
 	PublicOrigin string
 	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
@@ -262,6 +264,7 @@ func Load(rootPath string) (*Settings, error) {
 		TranslateURL:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_URL")),
 		TranslateAPIKey:          strings.TrimSpace(os.Getenv("BOOKSTORAGE_TRANSLATE_API_KEY")),
 		MetricsToken:             strings.TrimSpace(os.Getenv("BOOKSTORAGE_METRICS_TOKEN")),
+		TrustProxy:               envBoolOr("BOOKSTORAGE_TRUST_PROXY", false),
 		PublicOrigin:             publicOrigin,
 		GoogleClientID:           strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_ID")),
 		GoogleClientSecret:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_SECRET")),

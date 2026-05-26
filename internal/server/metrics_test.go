@@ -45,12 +45,12 @@ func TestMetricsRequestAuthorized_bearerToken(t *testing.T) {
 	}
 }
 
-func TestMetricsRequestAuthorized_queryToken(t *testing.T) {
+func TestMetricsRequestAuthorized_queryTokenRejected(t *testing.T) {
 	a := &App{Settings: &config.Settings{MetricsToken: "abc"}}
 	req := httptest.NewRequest(http.MethodGet, "/metrics?token=abc", nil)
 	req.RemoteAddr = "192.0.2.1:5555"
-	if !a.metricsRequestAuthorized(req) {
-		t.Fatal("expected valid query token to be allowed")
+	if a.metricsRequestAuthorized(req) {
+		t.Fatal("query token must not authorize /metrics (use Authorization: Bearer)")
 	}
 }
 

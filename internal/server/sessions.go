@@ -71,7 +71,8 @@ func (a *App) createSession(r *http.Request, userID int) (token string, err erro
 	}
 	now := time.Now().UTC()
 	expires := now.Add(sessionSlidingTTL)
-	ip := clientIP(r)
+	trustProxy := a.Settings != nil && a.Settings.TrustProxy
+	ip := clientIP(r, trustProxy)
 	ua := ""
 	if r != nil {
 		ua = r.UserAgent()

@@ -93,10 +93,6 @@ func (a *App) metricsRequestAuthorized(r *http.Request) bool {
 				return true
 			}
 		}
-		q := strings.TrimSpace(r.URL.Query().Get("token"))
-		if q != "" && secureStringEqual(q, token) {
-			return true
-		}
 		return false
 	}
 	ip := net.ParseIP(metricsRemoteHost(r))

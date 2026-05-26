@@ -80,6 +80,7 @@
   "register.error.exists": "This username already exists",
   "register.error.mismatch": "Passwords do not match",
   "register.error.required": "Please fill in all fields.",
+  "register.error.weak": "Password must be at least 8 characters.",
   "register.has_account": "Already have an account?",
   "register.login": "Sign in",
   "register.password": "Password",

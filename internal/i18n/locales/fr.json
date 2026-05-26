@@ -80,6 +80,7 @@
   "register.error.exists": "Ce nom d'utilisateur existe déjà",
   "register.error.mismatch": "Les mots de passe ne correspondent pas",
   "register.error.required": "Veuillez renseigner tous les champs.",
+  "register.error.weak": "Le mot de passe doit contenir au moins 8 caractères.",
   "register.has_account": "Déjà un compte ?",
   "register.login": "Se connecter",
   "register.password": "Mot de passe",
