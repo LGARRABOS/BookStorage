@@ -436,29 +436,6 @@ func BrowseMediaCollect(p BrowseMediaParams, skip, take int) ([]AnilistResult, b
 	return out, hasNext, nil
 }
 
-// AnilistMediaToResult converts a parsed anilistMedia to AnilistResult (used by recommend package).
-func AnilistMediaToResult(m anilistMedia) AnilistResult {
-	title := pickTitleFromAnilistTitle(anilistTitle{Romaji: m.Title.Romaji, English: m.Title.English})
-	if title == "" {
-		title = m.Title.Romaji
-	}
-	return AnilistResult{
-		ID:           m.ID,
-		Title:        title,
-		TitleRomaji:  strings.TrimSpace(m.Title.Romaji),
-		TitleEnglish: strings.TrimSpace(m.Title.English),
-		Type:         m.Type,
-		ImageURL:     m.CoverImage.Large,
-		ReadingType:  mapAnilistReadingType(m),
-		IsAdult:      m.IsAdult,
-	}
-}
-
-// NormalizeTagName trims and lowercases for deduplication keys (display uses original).
-func NormalizeTagName(s string) string {
-	return strings.TrimSpace(strings.ToLower(s))
-}
-
 // ReadingTypeFromAnilistDetail maps stored RawMedia to BookStorage reading_type labels.
 func ReadingTypeFromAnilistDetail(d *MediaDetail) string {
 	if d == nil {

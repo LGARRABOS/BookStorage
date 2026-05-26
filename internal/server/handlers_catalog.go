@@ -167,3 +167,66 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		"sort":          sort,
 	})
 }
+
+// Add a work (with basic image upload support)
+type catalogSearchResult struct {
+	Source      string `json:"source"`
+	CatalogID   int64  `json:"catalog_id,omitempty"`
+	ExternalID  string `json:"external_id,omitempty"`
+	Title       string `json:"title"`
+	ReadingType string `json:"reading_type"`
+	ImageURL    string `json:"image_url,omitempty"`
+	IsAdult     bool   `json:"is_adult"`
+}
+
+func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	q := strings.TrimSpace(r.URL.Query().Get("q"))
+	if q == "" {
+		w.Header().Set("Content-Type", "application/json")
+		_ = json.NewEncoder(w).Encode(map[string]any{"results": []catalogSearchResult{}})
+		return
+	}
+	var results []catalogSearchResult
+	pattern := "%" + strings.ToLower(q) + "%"
+	rows, err := a.DB.Query(
+		`SELECT id, title, reading_type, COALESCE(image_url, '') FROM catalog WHERE LOWER(title) LIKE ? ORDER BY title LIMIT 15`,
+		pattern,
+	)
+	if err == nil {
+		defer func() { _ = rows.Close() }()
+		for rows.Next() {
+			var id int64
+			var title, readingType, imageURL string
+			if err := rows.Scan(&id, &title, &readingType, &imageURL); err != nil {
+				continue
+			}
+			results = append(results, catalogSearchResult{
+				Source:      "catalog",
+				CatalogID:   id,
+				Title:       title,
+				ReadingType: readingType,
+				ImageURL:    imageURL,
+				IsAdult:     false,
+			})
+		}
+	}
+	anilistResults, err := catalog.SearchAnilist(q, 10)
+	if err == nil {
+		for _, m := range anilistResults {
+			results = append(results, catalogSearchResult{
+				Source:      "anilist",
+				ExternalID:  strconv.Itoa(m.ID),
+				Title:       m.Title,
+				ReadingType: m.ReadingType,
+				ImageURL:    m.ImageURL,
+				IsAdult:     m.IsAdult,
+			})
+		}
+	}
+	w.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(w).Encode(map[string]any{"results": results})
+}

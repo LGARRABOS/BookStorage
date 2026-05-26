@@ -1,13 +1,19 @@
 package server
 
 import (
+	"bytes"
 	"database/sql"
 	"encoding/base64"
+	"encoding/csv"
 	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 	"unicode/utf8"
 )
 
@@ -651,4 +657,175 @@ func parseAniListExportJSON(data []byte) ([]exportWork, bool) {
 		}
 	}
 	return out, len(out) > 0
+}
+
+func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
+	userID, _ := a.currentUserID(r)
+
+	updatedAtExpr := `COALESCE(updated_at, '')`
+	dateExpr := func(col string) string { return `COALESCE(` + col + `, '')` }
+	if a.Settings.UsePostgres() {
+		updatedAtExpr = `COALESCE(to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'), '')`
+		dateExpr = func(col string) string {
+			return `COALESCE(to_char(` + col + ` AT TIME ZONE 'UTC', 'YYYY-MM-DD HH24:MI:SS'), '')`
+		}
+	}
+	rows, err := a.DB.Query(
+		`SELECT title, chapter, link, status, reading_type, COALESCE(rating, 0), notes, `+updatedAtExpr+`,
+                catalog_id, COALESCE(is_adult, 0), COALESCE(image_path, ''),
+                `+dateExpr("started_at")+`, `+dateExpr("last_chapter_at")+`, `+dateExpr("finished_at")+`
+         FROM works WHERE user_id = ? ORDER BY title`,
+		userID,
+	)
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	var works []exportWork
+	for rows.Next() {
+		var w exportWork
+		var link, status, readingType, notes, imagePath sql.NullString
+		var catalogID sql.NullInt64
+		var isAdult int
+		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt, &catalogID, &isAdult, &imagePath, &w.StartedAt, &w.LastChapterAt, &w.FinishedAt); err != nil {
+			continue
+		}
+		if link.Valid {
+			w.Link = link.String
+		}
+		if status.Valid {
+			w.Status = status.String
+		}
+		if readingType.Valid {
+			w.ReadingType = readingType.String
+		}
+		if notes.Valid {
+			w.Notes = notes.String
+		}
+		if catalogID.Valid && catalogID.Int64 > 0 {
+			cid := int(catalogID.Int64)
+			w.CatalogID = &cid
+		}
+		w.IsAdult = isAdult != 0
+		if imagePath.Valid {
+			w.ImagePath = imagePath.String
+		}
+		works = append(works, w)
+	}
+
+	dateStr := time.Now().Format("2006-01-02")
+	if r.URL.Query().Get("format") == "json" {
+		w.Header().Set("Content-Type", "application/json; charset=utf-8")
+		w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"bookstorage_export_%s.json\"", dateStr))
+		payload := map[string]any{
+			"export_version": ExportFormatVersion,
+			"works":          works,
+			"exported_at":    time.Now().Format(time.RFC3339),
+		}
+		enc := json.NewEncoder(w)
+		enc.SetIndent("", "  ")
+		_ = enc.Encode(payload)
+		return
+	}
+
+	// CSV
+	w.Header().Set("Content-Type", "text/csv; charset=utf-8")
+	w.Header().Set("Content-Disposition", fmt.Sprintf("attachment; filename=\"bookstorage_export_%s.csv\"", dateStr))
+	_, _ = w.Write([]byte{0xEF, 0xBB, 0xBF})
+	writer := csv.NewWriter(w)
+	writer.Comma = ';'
+	defer writer.Flush()
+	_ = writer.Write([]string{"Title", "Chapter", "Link", "Status", "Type", "Rating", "Notes", "CatalogID", "IsAdult", "ImagePath", "StartedAt", "LastChapterAt", "FinishedAt"})
+	for _, row := range works {
+		cat := ""
+		if row.CatalogID != nil {
+			cat = strconv.Itoa(*row.CatalogID)
+		}
+		adult := "0"
+		if row.IsAdult {
+			adult = "1"
+		}
+		_ = writer.Write([]string{
+			row.Title,
+			strconv.Itoa(row.Chapter),
+			row.Link,
+			row.Status,
+			row.ReadingType,
+			strconv.Itoa(row.Rating),
+			row.Notes,
+			cat,
+			adult,
+			row.ImagePath,
+			row.StartedAt,
+			row.LastChapterAt,
+			row.FinishedAt,
+		})
+	}
+}
+
+// HandleImport accepts CSV or JSON (file upload or JSON body).
+func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	userID, _ := a.currentUserID(r)
+	mode := parseDuplicateMode(r.URL.Query().Get("duplicate_mode"))
+
+	ct := r.Header.Get("Content-Type")
+	if strings.HasPrefix(ct, "application/json") {
+		body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20))
+		if err != nil {
+			http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+			return
+		}
+		a.ImportFromJSONBytes(w, r, userID, body, mode)
+		return
+	}
+
+	if err := r.ParseMultipartForm(10 << 20); err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	mode = parseDuplicateMode(r.FormValue("duplicate_mode"))
+
+	var file multipart.File
+	var filename string
+	if f, h, err := r.FormFile("import_file"); err == nil {
+		file, filename = f, h.Filename
+	} else if f, h, err := r.FormFile("csv_file"); err == nil {
+		file, filename = f, h.Filename
+	} else if f, h, err := r.FormFile("json_file"); err == nil {
+		file, filename = f, h.Filename
+	} else {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	defer func() { _ = file.Close() }()
+
+	data, err := io.ReadAll(io.LimitReader(file, 32<<20))
+	if err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	trim := strings.TrimSpace(string(data))
+	isJSON := strings.HasSuffix(strings.ToLower(filename), ".json") ||
+		strings.HasPrefix(trim, "{") || strings.HasPrefix(trim, "[")
+	if isJSON {
+		a.ImportFromJSONBytes(w, r, userID, data, mode)
+		return
+	}
+
+	reader := csv.NewReader(bytes.NewReader(data))
+	reader.Comma = ';'
+	reader.LazyQuotes = true
+	records, err := reader.ReadAll()
+	if err != nil {
+		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		return
+	}
+	a.ImportFromCSVRecords(w, r, userID, records, mode)
 }
