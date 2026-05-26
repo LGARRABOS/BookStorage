@@ -113,16 +113,14 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		known = recommend.CollectKnownAnilistIDs(works)
 	}
 
-	results, sourceCount, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
+	results, hasNext, err := catalog.BrowseMediaCollect(catalog.BrowseMediaParams{
 		GenreIn:        genres,
-		Page:           page,
 		PerPage:        fetchPerPage,
 		Sort:           sort,
 		NotInIDs:       known,
-		MaxResults:     displayPerPage,
 		IsAdult:        &isAdult,
 		ReadingTypesIn: readingTypes,
-	})
+	}, (page-1)*displayPerPage, displayPerPage)
 	if err != nil {
 		log.Printf("catalog browse: %v", err)
 		w.Header().Set("Content-Type", "application/json")
@@ -152,7 +150,7 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"results":       out,
 		"page":          page,
-		"has_next":      sourceCount >= fetchPerPage || len(out) >= displayPerPage,
+		"has_next":      hasNext,
 		"genres":        genres,
 		"reading_types": readingTypes,
 		"adult":         adultFilter,

@@ -349,6 +349,83 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 	return results, sourceCount, nil
 }
 
+type browsePageBatch struct {
+	items []AnilistResult
+	full  bool
+}
+
+func paginateBrowseBatches(pages []browsePageBatch, skip, take int) ([]AnilistResult, bool) {
+	if take <= 0 {
+		take = 20
+	}
+	var out []AnilistResult
+	skipped := 0
+
+	for _, page := range pages {
+		batch := page.items
+		for i, item := range batch {
+			if skipped < skip {
+				skipped++
+				continue
+			}
+			out = append(out, item)
+			if len(out) >= take {
+				hasNext := i < len(batch)-1 || page.full
+				return out, hasNext
+			}
+		}
+	}
+	return out, false
+}
+
+// BrowseMediaCollect pages through AniList until skip filtered results are discarded
+// and up to take matches are returned (for post-filters like reading type or library exclusion).
+func BrowseMediaCollect(p BrowseMediaParams, skip, take int) ([]AnilistResult, bool, error) {
+	if take <= 0 {
+		take = 20
+	}
+	perPage := p.PerPage
+	if perPage <= 0 {
+		perPage = 25
+	}
+	if perPage > 25 {
+		perPage = 25
+	}
+	p.PerPage = perPage
+
+	var pages []browsePageBatch
+	const maxAPIPages = 40
+
+	for apiPage := 1; apiPage <= maxAPIPages; apiPage++ {
+		pageP := p
+		pageP.Page = apiPage
+		pageP.MaxResults = perPage
+
+		batch, sourceCount, err := BrowseMedia(pageP)
+		if err != nil {
+			return nil, false, err
+		}
+		pages = append(pages, browsePageBatch{
+			items: batch,
+			full:  sourceCount >= perPage,
+		})
+		if !pages[len(pages)-1].full {
+			break
+		}
+		// Stop early once we have enough data to satisfy skip+take.
+		total := 0
+		for _, pg := range pages {
+			total += len(pg.items)
+		}
+		if total >= skip+take {
+			break
+		}
+	}
+
+	out, hasNext := paginateBrowseBatches(pages, skip, take)
+	return out, hasNext, nil
+}
+
 // AnilistMediaToResult converts a parsed anilistMedia to AnilistResult (used by recommend package).
 func AnilistMediaToResult(m anilistMedia) AnilistResult {
 	title := pickTitleFromAnilistTitle(anilistTitle{Romaji: m.Title.Romaji, English: m.Title.English})
