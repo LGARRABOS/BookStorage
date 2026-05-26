@@ -212,6 +212,8 @@ func main() {
 	mux.HandleFunc("/users/{id}", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleUserDetail)))
 	mux.HandleFunc("POST /users/{user_id}/import/{work_id}", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleImportWork)))
 	mux.HandleFunc("/add_work", app.RequireLogin(app.HandleAddWork))
+	mux.HandleFunc("/catalog", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleCatalog)))
+	mux.HandleFunc("/api/catalog/browse", app.RequireLogin(app.HandleCatalogBrowse))
 	mux.HandleFunc("/api/catalog/search", app.RequireLogin(app.HandleCatalogSearch))
 	mux.HandleFunc("GET /api/recommendations", app.RequireLogin(app.HandleRecommendations))
 	mux.HandleFunc("POST /api/recommendations/dismiss", app.RequireLogin(app.HandleDismissRecommendation))

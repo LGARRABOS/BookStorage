@@ -115,6 +115,8 @@
             if (item.matched_tags && item.matched_tags.length)
                 parts.push(lblTags + ': ' + item.matched_tags.map(function(tg) { return escapeHtml(tg); }).join(', '));
             if (parts.length) return whyBrowseMatched.replace('{details}', parts.join(' · '));
+            if (item.genres && item.genres.length)
+                return lblGenres + ': ' + item.genres.map(function(g) { return escapeHtml(g); }).join(', ');
             var g = (recoProfile.top_genres && recoProfile.top_genres.length) ? recoProfile.top_genres.join(', ') : '—';
             var t = (recoProfile.top_tags && recoProfile.top_tags.length) ? recoProfile.top_tags.join(', ') : '—';
             return whyBrowseProfile.replace('{genres}', escapeHtml(g)).replace('{tags}', escapeHtml(t));
@@ -127,16 +129,17 @@
             recoModal.setAttribute('aria-hidden', 'true');
             document.body.style.overflow = '';
         }
-        function openRecoDetail(idx) {
-            var item = recoListData[idx];
-            if (!item || !recoModal || !recoBody || !recoLoadEl) return;
+        function openRecoDetailByItem(item, options) {
+            options = options || {};
+            if (!item || !item.anilist_id || !recoModal || !recoBody || !recoLoadEl) return;
             recoModal.setAttribute('aria-hidden', 'false');
             document.body.style.overflow = 'hidden';
             recoBody.style.display = 'none';
             recoLoadEl.style.display = 'block';
             recoLoadEl.textContent = detailLoading;
             var whyHtml = buildWhyHtml(item);
-            var dismissLbl = (document.documentElement.lang === 'fr') ? 'Pas intéressé' : 'Not interested';
+            var dismissable = options.dismissable !== false && item.source !== 'browse';
+            var dismissIdx = typeof options.idx === 'number' ? options.idx : -1;
             fetch('/api/recommendations/media?anilist_id=' + encodeURIComponent(item.anilist_id))
                 .then(function(r) {
                     if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
@@ -156,6 +159,13 @@
                     if (d.tags && d.tags.length) {
                         tagsStr = d.tags.map(function(tg) { return escapeHtml(tg.name || ''); }).filter(Boolean).join(', ');
                     }
+                    var whyBlock = whyHtml
+                        ? '<div class="reco-detail-section"><h3>' + lblWhy + '</h3><p>' + whyHtml + '</p></div>'
+                        : '';
+                    var dismissLbl = (document.documentElement.lang === 'fr') ? 'Pas intéressé' : 'Not interested';
+                    var dismissBtnHtml = dismissable
+                        ? '<button type="button" class="btn btn-secondary" id="reco-detail-dismiss-btn">' + dismissLbl + '</button>'
+                        : '';
                     recoBody.innerHTML =
                         '<div class="reco-detail-header">' +
                         (d.image_url ? '<img src="' + String(d.image_url).replace(/"/g, '&quot;') + '" alt="">' : '') +
@@ -163,18 +173,18 @@
                         '<p class="reco-detail-meta">' + escapeHtml(d.reading_type || item.reading_type || '') +
                         (d.is_adult || item.is_adult ? ' · 18+' : '') +
                         (d.format ? ' · ' + escapeHtml(d.format) : '') + '</p></div></div>' +
-                        '<div class="reco-detail-section"><h3>' + lblWhy + '</h3><p>' + whyHtml + '</p></div>' +
+                        whyBlock +
                         '<div class="reco-detail-section"><h3>' + lblSynopsis + '</h3><p>' + (desc || '—') + '</p>' +
                         (d.description_translated ? '<p class="reco-detail-machine">' + lblMachineTranslated + '</p>' : '') + '</div>' +
                         '<div class="reco-detail-section"><h3>' + lblGenres + ' / ' + lblTags + '</h3><p>' + genresStr + ' · ' + tagsStr + '</p></div>' +
                         (scoreLine ? '<div class="reco-detail-section reco-detail-scores"><h3>' + lblScore + '</h3><p>' + escapeHtml(scoreLine) + '</p></div>' : '') +
                         '<div class="reco-detail-actions">' +
                         '<a class="btn btn-primary" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + detailAdd + '</a>' +
-                        '<button type="button" class="btn btn-secondary" id="reco-detail-dismiss-btn">' + dismissLbl + '</button>' +
+                        dismissBtnHtml +
                         '</div>';
 
                     var dismissBtn = document.getElementById('reco-detail-dismiss-btn');
-                    if (dismissBtn) {
+                    if (dismissBtn && dismissable) {
                         dismissBtn.addEventListener('click', function() {
                             fetch('/api/recommendations/dismiss', {
                                 method: 'POST',
@@ -182,18 +192,21 @@
                                 body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
                             }).then(function(r) {
                                 if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
-                                // Remove the corresponding card if it still exists.
-                                var card = document.querySelector('.reco-card[data-reco-idx="' + idx + '"]');
-                                if (card) card.remove();
-                                recoListData[idx] = null;
+                                if (dismissIdx >= 0) {
+                                    var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
+                                    if (card) card.remove();
+                                    recoListData[dismissIdx] = null;
+                                    setupRecoScroll();
+                                }
                                 closeRecoDetailModal();
-                                setupRecoScroll();
                             }).catch(function() {
-                                var card = document.querySelector('.reco-card[data-reco-idx="' + idx + '"]');
-                                if (card) card.remove();
-                                recoListData[idx] = null;
+                                if (dismissIdx >= 0) {
+                                    var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
+                                    if (card) card.remove();
+                                    recoListData[dismissIdx] = null;
+                                    setupRecoScroll();
+                                }
                                 closeRecoDetailModal();
-                                setupRecoScroll();
                             });
                         });
                     }
@@ -205,6 +218,12 @@
                     var rb = document.getElementById('reco-detail-retry-close');
                     if (rb) rb.addEventListener('click', function(e) { e.preventDefault(); closeRecoDetailModal(); });
                 });
+        }
+        window.openRecoDetailByItem = openRecoDetailByItem;
+        function openRecoDetail(idx) {
+            var item = recoListData[idx];
+            if (!item) return;
+            openRecoDetailByItem(item, { dismissable: true, idx: idx });
         }
         var recoCloseBtn = document.getElementById('reco-detail-close-btn');
         var recoBackdrop = document.getElementById('reco-detail-backdrop');

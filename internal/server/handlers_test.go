@@ -350,6 +350,66 @@ func TestHandleAPIWorksList_ReadingSiteFilter(t *testing.T) {
 	}
 }
 
+func TestHandleCatalog_requiresLogin(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	req := httptest.NewRequest(http.MethodGet, "/catalog", nil)
+	rec := httptest.NewRecorder()
+	app.RequireLogin(app.HandleCatalog)(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d want redirect", rec.Code)
+	}
+	if !strings.Contains(rec.Header().Get("Location"), "/login") {
+		t.Fatalf("expected login redirect, got %q", rec.Header().Get("Location"))
+	}
+}
+
+func TestHandleCatalogBrowse_requiresLogin(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	req := httptest.NewRequest(http.MethodGet, "/api/catalog/browse?genre=Action", nil)
+	rec := httptest.NewRecorder()
+	app.RequireLogin(app.HandleCatalogBrowse)(rec, req)
+	if rec.Code != http.StatusUnauthorized {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
+
+func TestHandleCatalogBrowse_invalidGenre(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/catalog/browse?genre=NotARealGenre", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleCatalogBrowse(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["error"] != "invalid_genre" {
+		t.Fatalf("error=%v", payload["error"])
+	}
+}
+
+func TestHandleCatalogBrowse_noGenre(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	req := httptest.NewRequest(http.MethodGet, "/api/catalog/browse", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleCatalogBrowse(rec, req)
+	if rec.Code != http.StatusBadRequest {
+		t.Fatalf("status %d", rec.Code)
+	}
+}
+
 func TestNotifyNewChaptersAPICreate(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
