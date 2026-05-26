@@ -10,7 +10,7 @@
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css?v=7">
     <link rel="stylesheet" href="/static/css/mobile.css?v=7">
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=7">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=8">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
@@ -32,19 +32,25 @@
                     <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
                     <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.recent_short" }}</option>
                 </select>
-                <select id="mobile-filter-follow" autocomplete="off">
-                    <option value="">{{ t .T "dashboard.filter.follow_all" }}</option>
-                    <option value="unfollowed">{{ t .T "dashboard.filter.unfollowed_only" }}</option>
-                </select>
                 <select id="mobile-filter-site" autocomplete="off" aria-label="{{ t .T "dashboard.filter.site" }}">
                     <option value="">{{ t .T "dashboard.filter.all" }}</option>
                     <option value="none">{{ t .T "dashboard.filter.no_site" }}</option>
                     {{ range .ReadingSites }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
                 </select>
-                <select id="mobile-filter-adult" autocomplete="off">
-                    <option value="" {{ if or (eq .AdultFilter "") (not .AdultFilter) }}selected{{ end }}>{{ t .T "dashboard.filter.adult_short" }}</option>
-                    <option value="only" {{ if eq .AdultFilter "only" }}selected{{ end }}>+18</option>
-                </select>
+            </div>
+            <div class="mobile-filter-checks">
+                <label class="mobile-filter-check" title="{{ t .T "dashboard.filter.unfollowed_only" }}">
+                    <input type="checkbox" id="mobile-follow-unfollowed-check">
+                    {{ t .T "dashboard.filter.unfollowed_only" }}
+                </label>
+                <label class="mobile-filter-check" title="{{ t .T "dashboard.filter.hide_adult" }}">
+                    <input type="checkbox" id="mobile-adult-hide-check" {{ if ne .AdultFilter "only" }}checked{{ end }}>
+                    {{ t .T "dashboard.filter.adult_short" }}
+                </label>
+                <label class="mobile-filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
+                    <input type="checkbox" id="mobile-adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
+                    +18
+                </label>
             </div>
 
             {{ if .Works }}
@@ -109,18 +115,20 @@
     (function () {
       var search = document.getElementById("mobile-search");
       var status = document.getElementById("mobile-filter-status");
-      var adult = document.getElementById("mobile-filter-adult");
-      var follow = document.getElementById("mobile-filter-follow");
+      var followCheck = document.getElementById("mobile-follow-unfollowed-check");
+      var adultHideCheck = document.getElementById("mobile-adult-hide-check");
+      var adultOnlyCheck = document.getElementById("mobile-adult-only-check");
       var site = document.getElementById("mobile-filter-site");
       var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
-      if (!cards.length) return;
+      var sortSel = document.getElementById("mobile-sort");
 
       function normalize(v) { return (v || "").toLowerCase(); }
 
       function applyFilters() {
+        if (!cards.length) return;
         var q = normalize(search ? search.value : "");
         var s = status ? normalize(status.value) : "";
-        var fl = follow ? follow.value : "";
+        var fl = followCheck && followCheck.checked ? "unfollowed" : "";
         var siteVal = site ? site.value : "";
         cards.forEach(function (card) {
           var title = normalize(card.getAttribute("data-title"));
@@ -135,8 +143,6 @@
         });
       }
 
-      var sortSel = document.getElementById("mobile-sort");
-
       function applyServerFilters() {
         var u = new URL(window.location.href);
         if (sortSel && sortSel.value && sortSel.value !== "title") {
@@ -144,19 +150,37 @@
         } else {
           u.searchParams.delete("sort");
         }
-        if (adult && adult.value) {
-          u.searchParams.set("adult", adult.value);
+        if (adultOnlyCheck && adultOnlyCheck.checked) {
+          u.searchParams.set("adult", "only");
         } else {
           u.searchParams.delete("adult");
         }
         window.location.href = u.toString();
       }
 
+      function onMobileAdultFilterChange(changed) {
+        if (changed === adultOnlyCheck && adultOnlyCheck.checked) {
+          if (adultHideCheck) adultHideCheck.checked = false;
+          applyServerFilters();
+          return;
+        }
+        if (changed === adultHideCheck && adultHideCheck.checked) {
+          if (adultOnlyCheck) adultOnlyCheck.checked = false;
+          applyServerFilters();
+          return;
+        }
+        if (adultHideCheck && adultOnlyCheck && !adultHideCheck.checked && !adultOnlyCheck.checked) {
+          adultHideCheck.checked = true;
+          applyServerFilters();
+        }
+      }
+
       if (search) search.addEventListener("input", applyFilters);
       if (status) status.addEventListener("change", applyFilters);
-      if (follow) follow.addEventListener("change", applyFilters);
+      if (followCheck) followCheck.addEventListener("change", applyFilters);
       if (site) site.addEventListener("change", applyFilters);
-      if (adult) adult.addEventListener("change", applyServerFilters);
+      if (adultHideCheck) adultHideCheck.addEventListener("change", function () { onMobileAdultFilterChange(adultHideCheck); });
+      if (adultOnlyCheck) adultOnlyCheck.addEventListener("change", function () { onMobileAdultFilterChange(adultOnlyCheck); });
       if (sortSel) sortSel.addEventListener("change", applyServerFilters);
     })();
 

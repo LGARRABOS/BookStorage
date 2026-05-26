@@ -57,9 +57,31 @@
   font-size: 0.75rem;
 }
 
-#mobile-filter-adult {
-  flex: 0 0 auto;
-  width: 3.5rem;
+.mobile-filter-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.55rem 0.75rem;
+  margin-bottom: 0.8rem;
+}
+
+.mobile-filter-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.mobile-filter-check input[type="checkbox"] {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  cursor: pointer;
+  accent-color: var(--primary);
+  flex-shrink: 0;
 }
 
 /* --- Works list --- */
