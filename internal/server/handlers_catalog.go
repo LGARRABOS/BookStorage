@@ -23,10 +23,8 @@ type catalogBrowseItem struct {
 // Types returned by mapAnilistReadingType for AniList MANGA browse results.
 var catalogBrowseReadingTypes = []string{
 	"Manga",
-	"Manhwa",
 	"Webtoon",
 	"Light Novel",
-	"Autre",
 }
 
 func filterValidCatalogReadingTypes(raw []string) []string {

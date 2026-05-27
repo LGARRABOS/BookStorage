@@ -163,28 +163,40 @@ func isValidStatus(s string) bool {
 }
 
 var readingTypeAliases = map[string]string{
-	"comic":         "BD",
-	"graphic novel": "Roman",
-	"graphic_novel": "Roman",
+	"comic":         "Manga",
+	"graphic novel": "Manga",
+	"graphic_novel": "Manga",
 	"ln":            "Light Novel",
-	"novel":         "Roman",
+	"lightnovel":    "Light Novel",
+	"light_novel":   "Light Novel",
+	"novel":         "Light Novel",
+	"manhwa":        "Webtoon",
+	"manhua":        "Webtoon",
+	"webtoon":       "Webtoon",
+	"manga":         "Manga",
 }
 
 func normalizeReadingType(raw string) string {
 	s := strings.TrimSpace(raw)
 	if s == "" {
-		return "Roman"
+		return readingTypes[0]
 	}
 	lower := strings.ToLower(s)
 	if v, ok := readingTypeAliases[lower]; ok {
 		s = v
+	}
+	switch strings.ToLower(s) {
+	case "manhwa", "manhua":
+		return "Webtoon"
+	case "roman", "bd", "autre", "18+":
+		return "Manga"
 	}
 	for _, rt := range readingTypes {
 		if strings.EqualFold(s, rt) {
 			return rt
 		}
 	}
-	return s
+	return readingTypes[0]
 }
 
 func isValidReadingType(s string) bool {
@@ -498,12 +510,14 @@ func mapMALStatus(s string) string {
 
 func mapMALType(s string) string {
 	switch strings.ToLower(strings.TrimSpace(s)) {
-	case "manga", "manhwa", "manhua":
+	case "manga":
 		return "Manga"
+	case "manhwa", "manhua":
+		return "Webtoon"
 	case "novel":
-		return "Roman"
+		return "Light Novel"
 	default:
-		return s
+		return normalizeReadingType(s)
 	}
 }
 
@@ -529,9 +543,9 @@ func mapAniListFormat(s string) string {
 	case "manga", "one_shot":
 		return "Manga"
 	case "novel":
-		return "Roman"
+		return "Light Novel"
 	default:
-		return s
+		return normalizeReadingType(s)
 	}
 }
 
@@ -542,7 +556,7 @@ func parseCSVWorkRow(record []string) (exportWork, bool) {
 	w := exportWork{
 		Title:       strings.TrimSpace(record[0]),
 		Status:      "En cours",
-		ReadingType: "Roman",
+		ReadingType: "Manga",
 	}
 	if len(record) > 1 {
 		w.Chapter, _ = strconv.Atoi(strings.TrimSpace(record[1]))

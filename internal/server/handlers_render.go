@@ -233,13 +233,9 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 }
 
 var readingTypes = []string{
-	"Roman",
 	"Manga",
-	"BD",
-	"Light Novel",
 	"Webtoon",
-	"Manhwa",
-	"Autre",
+	"Light Novel",
 }
 
 var readingStatuses = []string{

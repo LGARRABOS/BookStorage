@@ -115,10 +115,18 @@ CREATE TABLE IF NOT EXISTS reading_activity_daily (
 	FOREIGN KEY (user_id) REFERENCES users(id)
 );
 `},
+	{Version: 14, Name: "reading_types_chapter_formats", Up: `
+UPDATE works SET reading_type = 'Webtoon' WHERE reading_type IN ('Manhwa', 'Manhua');
+UPDATE works SET reading_type = 'Light Novel' WHERE reading_type = 'Roman';
+UPDATE works SET reading_type = 'Manga' WHERE reading_type IN ('BD', 'Autre', '18+');
+UPDATE catalog SET reading_type = 'Webtoon' WHERE reading_type IN ('Manhwa', 'Manhua');
+UPDATE catalog SET reading_type = 'Light Novel' WHERE reading_type = 'Roman';
+UPDATE catalog SET reading_type = 'Manga' WHERE reading_type IN ('BD', 'Autre', '18+');
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 13
+const LatestSchemaMigrationVersion = 14
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

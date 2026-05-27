@@ -416,7 +416,7 @@ func TestHandleCatalogBrowse_noGenreAllowed(t *testing.T) {
 
 func TestFilterValidCatalogReadingTypes(t *testing.T) {
 	got := filterValidCatalogReadingTypes([]string{"Manga", "Bad", "Manga", " Manhwa ", "Roman"})
-	want := []string{"Manga", "Manhwa"}
+	want := []string{"Manga"}
 	if len(got) != len(want) {
 		t.Fatalf("got %v want %v", got, want)
 	}

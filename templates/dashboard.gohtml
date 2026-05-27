@@ -295,7 +295,7 @@
             {{ if .Works }}
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
-                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Autre{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
+                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}

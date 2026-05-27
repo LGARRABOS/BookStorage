@@ -41,7 +41,13 @@ CREATE TABLE works (
 	id INTEGER PRIMARY KEY AUTOINCREMENT,
 	title TEXT NOT NULL,
 	user_id INTEGER NOT NULL,
+	reading_type TEXT,
 	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE TABLE catalog (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	title TEXT NOT NULL,
+	reading_type TEXT NOT NULL DEFAULT 'Manga'
 );
 INSERT INTO users (username, password, validated, is_admin, is_superadmin)
 	VALUES ('reader', 'hashed', 1, 0, 0);

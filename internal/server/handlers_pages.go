@@ -69,7 +69,7 @@ func (a *App) HandleStats(w http.ResponseWriter, r *http.Request) {
 		Count int
 	}
 	var byType []typeCount
-	rows2, err := a.DB.Query(`SELECT COALESCE(reading_type, 'Autre'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
+	rows2, err := a.DB.Query(`SELECT COALESCE(reading_type, 'Manga'), COUNT(*) FROM works WHERE user_id = ? GROUP BY reading_type ORDER BY COUNT(*) DESC`, userID)
 	if err == nil {
 		defer func() { _ = rows2.Close() }()
 		for rows2.Next() {

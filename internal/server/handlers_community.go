@@ -225,7 +225,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	readingType := "Roman"
+	readingType := "Manga"
 	if src.ReadingType.Valid && src.ReadingType.String != "" {
 		readingType = src.ReadingType.String
 	}

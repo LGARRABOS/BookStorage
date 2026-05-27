@@ -165,7 +165,7 @@ func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, use
 			rt = normalizeReadingTypeForWrite(strings.TrimSpace(row[rtCol]))
 		}
 		if rt == "" {
-			rt = normalizeReadingTypeForWrite("Autre")
+			rt = normalizeReadingTypeForWrite("Manga")
 		}
 		_, err := a.DB.Exec(
 			`INSERT INTO works (title, chapter, status, reading_type, rating, notes, user_id, updated_at)

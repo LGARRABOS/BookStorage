@@ -85,7 +85,7 @@
             <div class="form-group">
                 <label for="reading_type">{{ t .T "work.form.type" }}</label>
                 <select id="reading_type" name="reading_type">
-                    {{ $currentType := "Roman" }}{{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
+                    {{ $currentType := "Manga" }}{{ if .Work.ReadingType.Valid }}{{ $currentType = .Work.ReadingType.String }}{{ end }}
                     {{ range .ReadingTypes }}<option value="{{ . }}" {{ if eq . $currentType }}selected{{ end }}>{{ . }}</option>{{ end }}
                 </select>
             </div>

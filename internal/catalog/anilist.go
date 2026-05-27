@@ -53,21 +53,15 @@ type anilistResponse struct {
 	} `json:"data"`
 }
 
-// isWebtoonKeyword returns true if s (lowercase) indicates webtoon/manhwa/manhua
+// isWebtoonKeyword returns true if s (lowercase) indicates webtoon/manhwa/manhua.
 func isWebtoonKeyword(s string) bool {
 	s = strings.ToLower(s)
 	return s == "webtoon" || s == "manhwa" || s == "manhua" ||
-		strings.Contains(s, "webtoon") || strings.Contains(s, "web comic") || strings.Contains(s, "webcomic")
-}
-
-// isManhwaKeyword returns true if s indicates manhwa (Korean comics)
-func isManhwaKeyword(s string) bool {
-	s = strings.ToLower(s)
-	return s == "manhwa" || strings.Contains(s, "manhwa")
+		strings.Contains(s, "webtoon") || strings.Contains(s, "web comic") || strings.Contains(s, "webcomic") ||
+		strings.Contains(s, "manhwa") || strings.Contains(s, "manhua")
 }
 
 // anilistMediaTypeUpper returns uppercased Type, or infers from Format when Type is missing.
-// Some GraphQL queries don't include `type` on Media; without it, Korea cannot be mapped to Manhwa.
 func anilistMediaTypeUpper(media anilistMedia) string {
 	t := strings.ToUpper(strings.TrimSpace(media.Type))
 	if t != "" {
@@ -83,26 +77,13 @@ func anilistMediaTypeUpper(media anilistMedia) string {
 	return ""
 }
 
-// Map AniList type, format, country, genres and tags to our reading types (Manga vs Webtoon vs Manhwa etc.)
+// Map AniList type, format, country, genres and tags to BookStorage reading types.
 func mapAnilistReadingType(media anilistMedia) string {
-	// Korea: manhwa
 	country := strings.ToUpper(strings.TrimSpace(media.CountryOfOrigin))
 	t := anilistMediaTypeUpper(media)
-	if t == "MANGA" && (country == "KR" || country == "KP") {
-		return "Manhwa"
+	if t == "MANGA" && (country == "KR" || country == "KP" || country == "CN") {
+		return "Webtoon"
 	}
-	// Genres/tags manhwa explicites
-	for _, g := range media.Genres {
-		if isManhwaKeyword(g) {
-			return "Manhwa"
-		}
-	}
-	for _, tag := range media.Tags {
-		if isManhwaKeyword(tag.Name) {
-			return "Manhwa"
-		}
-	}
-	// Webtoon / manhua (Chine) et autres formats web
 	for _, g := range media.Genres {
 		if isWebtoonKeyword(g) {
 			return "Webtoon"
@@ -113,10 +94,6 @@ func mapAnilistReadingType(media anilistMedia) string {
 			return "Webtoon"
 		}
 	}
-	if t == "MANGA" && country == "CN" {
-		return "Webtoon"
-	}
-	// Sinon mapping classique type/format
 	f := strings.ToUpper(media.Format)
 	switch {
 	case t == "NOVEL" || f == "NOVEL" || f == "LIGHT_NOVEL":
@@ -124,7 +101,7 @@ func mapAnilistReadingType(media anilistMedia) string {
 	case t == "MANGA", f == "MANGA", f == "ONE_SHOT":
 		return "Manga"
 	default:
-		return "Autre"
+		return "Manga"
 	}
 }
 
