@@ -91,6 +91,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"LoginNext":        loginNext,
 			"GoogleAuthURL":    googleAuthURL,
 			"GoogleOAuthError": strings.TrimSpace(q.Get("google_error")),
+			"WebAuthnError":    strings.TrimSpace(q.Get("webauthn_error")),
 		})
 		a.renderTemplate(w, r, "login", data)
 	case http.MethodPost:
@@ -111,6 +112,10 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 		if u.GoogleSub.Valid && strings.TrimSpace(u.GoogleSub.String) != "" && (!u.Password.Valid || strings.TrimSpace(u.Password.String) == "") {
 			http.Redirect(w, r, "/login?google_error=use_google", http.StatusFound)
+			return
+		}
+		if a.userPasskeyOnly(u.ID) {
+			http.Redirect(w, r, "/login?webauthn_error=use_passkey", http.StatusFound)
 			return
 		}
 

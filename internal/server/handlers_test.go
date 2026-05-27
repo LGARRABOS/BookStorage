@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"html/template"
 	"io"
 	"mime/multipart"
@@ -1090,6 +1091,246 @@ func TestHandleLogin_PostIgnoresUnsafeNext(t *testing.T) {
 	}
 	if g := rec.Header().Get("Location"); g != "/dashboard" {
 		t.Fatalf("Location %q", g)
+	}
+}
+
+func TestAPIWorksBulk_StatusPatch(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	res, err := db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, user_id, updated_at)
+		 VALUES ('Bulk A', 1, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id1, _ := res.LastInsertId()
+	res, err = db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, user_id, updated_at)
+		 VALUES ('Bulk B', 2, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	id2, _ := res.LastInsertId()
+
+	body := fmt.Sprintf(`{"ids":[%d,%d],"patch":{"status":"Terminé"}}`, id1, id2)
+	req := httptest.NewRequest(http.MethodPost, "/api/works/bulk", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleAPIWorksBulk(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Updated int `json:"updated"`
+		Errors  []struct {
+			ID    int    `json:"id"`
+			Error string `json:"error"`
+		} `json:"errors"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Updated != 2 || len(payload.Errors) != 0 {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+	var st string
+	if err := db.QueryRow(`SELECT status FROM works WHERE id = ?`, id1).Scan(&st); err != nil {
+		t.Fatal(err)
+	}
+	if st != "Terminé" {
+		t.Fatalf("status=%q want Terminé", st)
+	}
+}
+
+func TestAPIWorksBulk_ReadingSiteID(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	res, err := db.Exec(`INSERT INTO reading_sites (user_id, name, base_url) VALUES (1, 'Site', 'https://read.example')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	siteID, _ := res.LastInsertId()
+
+	res, err = db.Exec(
+		`INSERT INTO works (title, chapter, link, status, reading_type, user_id, updated_at)
+		 VALUES ('Linked', 1, 'https://read.example/m/1', 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	body := fmt.Sprintf(`{"ids":[%d],"patch":{"reading_site_id":%d}}`, workID, siteID)
+	req := httptest.NewRequest(http.MethodPost, "/api/works/bulk", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleAPIWorksBulk(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var rsID sql.NullInt64
+	if err := db.QueryRow(`SELECT reading_site_id FROM works WHERE id = ?`, workID).Scan(&rsID); err != nil {
+		t.Fatal(err)
+	}
+	if !rsID.Valid || rsID.Int64 != siteID {
+		t.Fatalf("reading_site_id=%v want %d", rsID, siteID)
+	}
+}
+
+func TestAPIWorksBulk_LinkReplace(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	res, err := db.Exec(
+		`INSERT INTO works (title, chapter, link, status, reading_type, user_id, updated_at)
+		 VALUES ('LinkWork', 1, 'https://old.example/ch/1', 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	body := fmt.Sprintf(`{"ids":[%d],"link_replace":{"from":"old.example","to":"new.example"}}`, workID)
+	req := httptest.NewRequest(http.MethodPost, "/api/works/bulk", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleAPIWorksBulk(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var link string
+	if err := db.QueryRow(`SELECT link FROM works WHERE id = ?`, workID).Scan(&link); err != nil {
+		t.Fatal(err)
+	}
+	if link != "https://new.example/ch/1" {
+		t.Fatalf("link=%q", link)
+	}
+}
+
+func TestAPIWorksBulk_RejectsOtherUserWorks(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	_, err := db.Exec(`INSERT INTO users (id, username, password, validated) VALUES (2, 'other', 'x', 1)`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	res, err := db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, user_id, updated_at)
+		 VALUES ('Foreign', 1, 'En cours', 'Manga', 2, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	body := fmt.Sprintf(`{"ids":[%d],"patch":{"status":"Terminé"}}`, workID)
+	req := httptest.NewRequest(http.MethodPost, "/api/works/bulk", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleAPIWorksBulk(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload struct {
+		Updated int `json:"updated"`
+		Errors  []struct {
+			ID    int    `json:"id"`
+			Error string `json:"error"`
+		} `json:"errors"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload.Updated != 0 || len(payload.Errors) != 1 || payload.Errors[0].Error != "not_found" {
+		t.Fatalf("unexpected payload: %+v", payload)
+	}
+}
+
+func TestAPIWorksBulk_Delete(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	res, err := db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, user_id, updated_at)
+		 VALUES ('ToDelete', 1, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	body := fmt.Sprintf(`{"ids":[%d],"delete":true}`, workID)
+	req := httptest.NewRequest(http.MethodPost, "/api/works/bulk", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+	req.AddCookie(&http.Cookie{Name: "session", Value: session})
+	rec := httptest.NewRecorder()
+	app.HandleAPIWorksBulk(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status=%d body=%s", rec.Code, rec.Body.String())
+	}
+
+	var n int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM works WHERE id = ?`, workID).Scan(&n); err != nil {
+		t.Fatal(err)
+	}
+	if n != 0 {
+		t.Fatalf("work still exists")
+	}
+}
+
+func TestAPIWorksUpdate_ReadingSiteID(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	session := mustCreateSession(t, app, 1)
+
+	res, err := db.Exec(`INSERT INTO reading_sites (user_id, name, base_url) VALUES (1, 'Site', 'https://read.example')`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	siteID, _ := res.LastInsertId()
+
+	res, err = db.Exec(
+		`INSERT INTO works (title, chapter, status, reading_type, user_id, updated_at)
+		 VALUES ('PatchSite', 1, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	updateReq := httptest.NewRequest(http.MethodPatch, "/api/works/"+strconv.FormatInt(workID, 10),
+		strings.NewReader(fmt.Sprintf(`{"reading_site_id":%d}`, siteID)))
+	updateReq.Header.Set("Content-Type", "application/json")
+	updateReq.AddCookie(&http.Cookie{Name: "session", Value: session})
+	updateReq.SetPathValue("id", strconv.FormatInt(workID, 10))
+	updateRec := httptest.NewRecorder()
+	app.HandleAPIWorksUpdate(updateRec, updateReq)
+	if updateRec.Code != http.StatusOK {
+		t.Fatalf("update status=%d body=%s", updateRec.Code, updateRec.Body.String())
+	}
+
+	var rsID sql.NullInt64
+	if err := db.QueryRow(`SELECT reading_site_id FROM works WHERE id = ?`, workID).Scan(&rsID); err != nil {
+		t.Fatal(err)
+	}
+	if !rsID.Valid || rsID.Int64 != siteID {
+		t.Fatalf("reading_site_id=%v want %d", rsID, siteID)
 	}
 }
 

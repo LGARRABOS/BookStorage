@@ -10,6 +10,8 @@ import (
 	"net/url"
 	"strings"
 	"time"
+
+	"bookstorage/internal/database"
 )
 
 // ProbeStatus represents the availability state of a reading site.
@@ -117,9 +119,9 @@ func normalizePath(p string) string {
 	return p
 }
 
-// ProbeReadingSite performs a safe HTTP probe of the given base URL and returns the status.
-func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, httpStatus int, detail string) {
-	parsed, err := url.Parse(strings.TrimSpace(baseURL))
+// ProbeURL performs an SSRF-safe HTTP probe of rawURL (http/https only).
+func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatus int, detail string) {
+	parsed, err := url.Parse(strings.TrimSpace(rawURL))
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
 		return ProbeStatusDown, 0, "invalid URL scheme"
 	}
@@ -143,6 +145,7 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 		}
 	}
 
+	targetURL := parsed.String()
 	client := &http.Client{
 		Timeout: 8 * time.Second,
 		CheckRedirect: func(req *http.Request, via []*http.Request) error {
@@ -165,7 +168,7 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 
 	const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodHead, baseURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodHead, targetURL, nil)
 	if err != nil {
 		return ProbeStatusDown, 0, "bad request"
 	}
@@ -187,7 +190,7 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 	code := resp.StatusCode
 	// HEAD returned 4xx (blocked or not allowed) — retry with GET
 	if code == http.StatusMethodNotAllowed || (code >= 400 && code < 500) {
-		req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, baseURL, nil)
+		req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
 		req2.Header.Set("User-Agent", browserUA)
 		req2.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
 		resp2, err2 := client.Do(req2)
@@ -213,6 +216,11 @@ func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, 
 	default:
 		return ProbeStatusDown, code, "server error"
 	}
+}
+
+// ProbeReadingSite performs a safe HTTP probe of the given base URL and returns the status.
+func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, httpStatus int, detail string) {
+	return ProbeURL(ctx, baseURL)
 }
 
 func isPrivateOrLoopback(host string) bool {
@@ -362,7 +370,10 @@ func (a *App) StartBackgroundProber(ctx context.Context, interval time.Duration)
 	}()
 }
 
-const probePerSiteTimeout = 15 * time.Second
+const (
+	probePerSiteTimeout = 15 * time.Second
+	probeWorkLinksQuota = 50
+)
 
 func (a *App) runProberCycle(ctx context.Context) {
 	start := time.Now()
@@ -370,8 +381,67 @@ func (a *App) runProberCycle(ctx context.Context) {
 
 	a.BackfillReadingSiteIDs()
 	a.probeAllSites(ctx)
+	a.ProbeWorkLinks(ctx, probeWorkLinksQuota)
 
 	log.Printf("[prober] cycle finished in %v", time.Since(start).Round(time.Millisecond))
+}
+
+// ProbeWorkLinks probes up to limit work links (oldest probe first) and updates link_probe_* columns.
+func (a *App) ProbeWorkLinks(ctx context.Context, limit int) {
+	if limit <= 0 {
+		return
+	}
+	orderClause := "ORDER BY link_probe_at ASC NULLS FIRST, id ASC"
+	if a.DB != nil && a.DB.B != database.BackendPostgres {
+		orderClause = "ORDER BY CASE WHEN link_probe_at IS NULL THEN 0 ELSE 1 END, link_probe_at ASC, id ASC"
+	}
+	q := `SELECT id, link FROM works WHERE link IS NOT NULL AND TRIM(link) != '' ` + orderClause + ` LIMIT ?`
+	rows, err := a.DB.Query(q, limit)
+	if err != nil {
+		log.Printf("[prober] failed to list work links: %v", err)
+		return
+	}
+	defer func() { _ = rows.Close() }()
+
+	type workLink struct {
+		ID   int
+		Link string
+	}
+	var pending []workLink
+	for rows.Next() {
+		var w workLink
+		if err := rows.Scan(&w.ID, &w.Link); err != nil {
+			continue
+		}
+		pending = append(pending, w)
+	}
+	if len(pending) == 0 {
+		return
+	}
+	log.Printf("[prober] probing %d work links", len(pending))
+	for _, w := range pending {
+		select {
+		case <-ctx.Done():
+			return
+		default:
+		}
+		probeCtx, cancel := context.WithTimeout(ctx, probePerSiteTimeout)
+		status, httpCode, detail := ProbeURL(probeCtx, w.Link)
+		cancel()
+		now := time.Now().UTC().Format("2006-01-02 15:04:05")
+		var httpArg any
+		if httpCode > 0 {
+			httpArg = httpCode
+		}
+		var detailArg any
+		if detail != "" {
+			detailArg = detail
+		}
+		_, _ = a.DB.Exec(
+			`UPDATE works SET link_probe_status = ?, link_probe_at = ?, link_probe_http_status = ?, link_probe_detail = ? WHERE id = ?`,
+			string(status), now, httpArg, detailArg, w.ID,
+		)
+	}
 }
 
 func (a *App) probeAllSites(ctx context.Context) {

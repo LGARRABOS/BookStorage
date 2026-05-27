@@ -16,13 +16,15 @@ import (
 )
 
 type App struct {
-	Settings        *config.Settings
-	SiteConfig      *config.SiteConfig
-	DB              *database.Conn
-	TemplatesWeb    *template.Template
-	TemplatesMobile *template.Template
-	Version         string
-	dbProbe         dbAvailabilityProbe
+	Settings           *config.Settings
+	SiteConfig         *config.SiteConfig
+	DB                 *database.Conn
+	TemplatesWeb       *template.Template
+	TemplatesMobile    *template.Template
+	Version            string
+	ProcessStartedAt   time.Time
+	webAuthnChallenges *webauthnChallengeStore
+	dbProbe            dbAvailabilityProbe
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *database.Conn, version string) *App {
@@ -92,6 +94,7 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 			return i18n.TranslateStatus(status, t)
 		},
 		"upper": strings.ToUpper,
+		"join":  strings.Join,
 		"int":   func(v int64) int { return int(v) },
 		"fmtDateDisplay": func(n nullFlexTime) string {
 			if !n.Valid || n.String == "" {
@@ -165,12 +168,13 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 		filepath.Join("templates", "mobile"),
 	})
 	return &App{
-		Settings:        settings,
-		SiteConfig:      siteConfig,
-		DB:              db,
-		TemplatesWeb:    webTpl,
-		TemplatesMobile: mobileTpl,
-		Version:         strings.TrimSpace(version),
+		Settings:           settings,
+		SiteConfig:         siteConfig,
+		DB:                 db,
+		TemplatesWeb:       webTpl,
+		TemplatesMobile:    mobileTpl,
+		Version:            strings.TrimSpace(version),
+		webAuthnChallenges: newWebAuthnChallengeStore(),
 	}
 }
 

@@ -46,7 +46,7 @@ var adminDatabaseTableSpecs = []struct {
 func adminDatabaseOmitColumn(table, col string) bool {
 	c := strings.ToLower(strings.TrimSpace(col))
 	switch c {
-	case "password", "token_hash":
+	case "password", "token_hash", "secret":
 		return true
 	}
 	if strings.EqualFold(table, "users") && c == "username" {
@@ -181,6 +181,7 @@ func (a *App) HandleAPIAdminDatabaseDelete(w http.ResponseWriter, r *http.Reques
 		a.apiWriteError(w, http.StatusNotFound, "not_found")
 		return
 	}
+	a.logAdminAction(r, "database_delete", req.Table, req.ID, map[string]any{"deleted": n})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true, "deleted": n})
 }
@@ -331,6 +332,7 @@ func (a *App) HandleApproveAccount(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	a.logAdminAction(r, "approve_account", "user", strconv.Itoa(userID), nil)
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 
@@ -360,6 +362,7 @@ func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	a.logAdminAction(r, "delete_account", "user", strconv.Itoa(targetID), nil)
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 
@@ -376,6 +379,7 @@ func (a *App) HandlePromoteAccount(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	a.logAdminAction(r, "promote_account", "user", strconv.Itoa(targetID), nil)
 	http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 }
 

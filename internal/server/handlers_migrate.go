@@ -117,6 +117,7 @@ func (a *App) HandleAPIAdminMigratePostgresRun(w http.ResponseWriter, r *http.Re
 		})
 		return
 	}
+	a.logAdminAction(r, "migrate_postgres", "database", "", map[string]string{"postgres_url": "redacted"})
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true})
 	sqlitePath := a.Settings.Database
 	go func() {

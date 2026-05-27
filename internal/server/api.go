@@ -447,6 +447,26 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 			args = append(args, notifyNewChaptersDB(effStatus, v != 0))
 		}
 	}
+	if raw, ok := req["reading_site_id"]; ok {
+		switch v := raw.(type) {
+		case nil:
+			setParts = append(setParts, "reading_site_id = NULL")
+		case float64:
+			siteID := int64(v)
+			if siteID <= 0 {
+				setParts = append(setParts, "reading_site_id = NULL")
+			} else if !a.readingSiteOwnedBy(userID, siteID) {
+				a.apiWriteError(w, http.StatusBadRequest, "invalid_reading_site")
+				return
+			} else {
+				setParts = append(setParts, "reading_site_id = ?")
+				args = append(args, siteID)
+			}
+		default:
+			a.apiWriteError(w, http.StatusBadRequest, "invalid_reading_site")
+			return
+		}
+	}
 
 	if v, ok := req["started_at"].(string); ok {
 		setParts = append(setParts, "started_at = ?")
@@ -494,6 +514,19 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 		a.applyChapterDeltaToReadingStats(userID, chapterDelta, lastChapterAtBefore)
 	}
 
+	var wr workRow
+	if err := scanFullWorkRow(&wr, a.DB.QueryRow(
+		`SELECT `+sqlWorkRowFull+` FROM works WHERE id = ? AND user_id = ?`, workID, userID,
+	)); err == nil {
+		a.EmitWebhookEvent(userID, webhookEventWorkUpdated, map[string]any{"work": workRowToAPIWork(wr)})
+		if chapterChanged {
+			a.EmitWebhookEvent(userID, webhookEventWorkChapterChanged, map[string]any{
+				"work_id": workID,
+				"chapter": wr.Chapter,
+			})
+		}
+	}
+
 	// Reuse detail payload while forcing a GET method.
 	detailReq := r.Clone(r.Context())
 	detailReq.Method = http.MethodGet
@@ -518,6 +551,8 @@ func (a *App) HandleAPIWorksDelete(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusNotFound, "not_found")
 		return
 	}
+
+	a.EmitWebhookEvent(userID, webhookEventWorkDeleted, map[string]any{"id": workID})
 
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true})
 }

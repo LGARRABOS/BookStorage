@@ -243,7 +243,56 @@
 
                         <section class="tab-panel tab-panel-security-extra" id="panel-security-extra" aria-labelledby="profile-security-extra-heading">
                             <h2 class="panel-title sr-only" id="profile-security-extra-heading">{{ t .T "profile.section.security" }}</h2>
-                            {{ if .GoogleOAuthEnabled }}
+                            <div class="sessions-box" id="blocklist" style="margin-bottom:1rem;">
+                                <h3>{{ t .T "profile.blocklist.title" }}</h3>
+                                <p>{{ t .T "profile.blocklist.desc" }}</p>
+                                {{ if .BlocklistAdded }}<p class="notice" style="margin-bottom:0.6rem;">{{ t .T "profile.blocklist.added" }}</p>{{ end }}
+                                {{ if .BlocklistRemoved }}<p class="notice" style="margin-bottom:0.6rem;">{{ t .T "profile.blocklist.removed" }}</p>{{ end }}
+                                {{ if .BlocklistError }}<p style="color:#dc2626;font-size:0.85rem;">{{ t .T "profile.blocklist.error" }}</p>{{ end }}
+                                <form method="POST" action="/profile/blocklist/add" class="form-row" style="margin-bottom:0.75rem;">
+                                    <div class="form-group">
+                                        <label for="blocklist_label_type">{{ t .T "profile.blocklist.genre" }} / {{ t .T "profile.blocklist.tag" }}</label>
+                                        <select id="blocklist_label_type" name="label_type" required>
+                                            <option value="genre">{{ t .T "profile.blocklist.genre" }}</option>
+                                            <option value="tag">{{ t .T "profile.blocklist.tag" }}</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="blocklist_label_name">{{ t .T "profile.blocklist.name" }}</label>
+                                        <input id="blocklist_label_name" name="label_name" type="text" required placeholder="Horror">
+                                    </div>
+                                    <div class="form-group" style="align-self:end;">
+                                        <button type="submit" class="btn btn-secondary">{{ t .T "profile.blocklist.add" }}</button>
+                                    </div>
+                                </form>
+                                {{ if or .BlocklistGenres .BlocklistTags }}
+                                <ul style="list-style:none;padding:0;margin:0;">
+                                    {{ range .BlocklistGenres }}
+                                    <li style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-top:1px solid var(--border-subtle);">
+                                        <span><strong>{{ t $.T "profile.blocklist.genre" }}</strong> · {{ . }}</span>
+                                        <form method="POST" action="/profile/blocklist/remove">
+                                            <input type="hidden" name="label_type" value="genre">
+                                            <input type="hidden" name="label_name" value="{{ . }}">
+                                            <button type="submit" class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem;">{{ t $.T "profile.blocklist.remove" }}</button>
+                                        </form>
+                                    </li>
+                                    {{ end }}
+                                    {{ range .BlocklistTags }}
+                                    <li style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-top:1px solid var(--border-subtle);">
+                                        <span><strong>{{ t $.T "profile.blocklist.tag" }}</strong> · {{ . }}</span>
+                                        <form method="POST" action="/profile/blocklist/remove">
+                                            <input type="hidden" name="label_type" value="tag">
+                                            <input type="hidden" name="label_name" value="{{ . }}">
+                                            <button type="submit" class="btn btn-secondary" style="padding:0.25rem 0.5rem;font-size:0.8rem;">{{ t $.T "profile.blocklist.remove" }}</button>
+                                        </form>
+                                    </li>
+                                    {{ end }}
+                                </ul>
+                                {{ else }}
+                                <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.blocklist.empty" }}</p>
+                                {{ end }}
+                            </div>
+                {{ if .GoogleOAuthEnabled }}
                             <div class="sessions-box" style="margin-bottom:1rem;">
                                 <h3>{{ t .T "profile.google.title" }}</h3>
                                 <p>{{ t .T "profile.google.desc" }}</p>
@@ -259,6 +308,29 @@
                                 {{ else }}
                                     <a class="btn btn-primary" href="/auth/google/link">{{ t .T "profile.google.link" }}</a>
                                 {{ end }}
+                            </div>
+                            {{ end }}
+                            {{ if .WebAuthnEnabled }}
+                            <div class="sessions-box" style="margin-bottom:1rem;">
+                                <h3>{{ t .T "profile.passkey.title" }}</h3>
+                                <p>{{ t .T "profile.passkey.desc" }}</p>
+                                {{ if .WebAuthnRegistered }}<p style="font-size:0.9rem;color:#15803d;">{{ t .T "profile.passkey.registered" }}</p>{{ end }}
+                                {{ if .WebAuthnDeleted }}<p style="font-size:0.9rem;color:#15803d;">{{ t .T "profile.passkey.deleted" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "last_credential" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.last_credential" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "server" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.server" }}</p>{{ end }}
+                                {{ if .WebAuthnPasskeys }}
+                                <ul style="list-style:none;padding:0;margin:0.75rem 0;">
+                                {{ range .WebAuthnPasskeys }}
+                                    <li style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.45rem 0;border-top:1px solid var(--border-subtle);">
+                                        <span><strong>{{ if .Name }}{{ .Name }}{{ else }}Passkey{{ end }}</strong> <span style="color:var(--text-muted);font-size:0.82rem;">#{{ .ID }}</span></span>
+                                        <form method="POST" action="/profile/webauthn/delete/{{ .ID }}"><button type="submit" class="btn btn-secondary">{{ t $.T "profile.passkey.delete" }}</button></form>
+                                    </li>
+                                {{ end }}
+                                </ul>
+                                {{ else }}
+                                <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.passkey.empty" }}</p>
+                                {{ end }}
+                                <button type="button" class="btn btn-primary" id="passkey-register-btn">{{ t .T "profile.passkey.register" }}</button>
                             </div>
                             {{ end }}
                             <div class="sessions-box">
@@ -293,6 +365,113 @@
                                         {{ end }}
                                     </tbody>
                                 </table>
+                            </div>
+
+                            <div class="sessions-box">
+                                <h3>{{ t .T "profile.api_tokens.title" }}</h3>
+                                <p>{{ t .T "profile.api_tokens.desc" }}</p>
+                                {{ if .APITokenCreated }}
+                                <div style="margin-bottom:0.8rem;padding:0.75rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);">
+                                    <strong>{{ t .T "profile.api_tokens.created_title" }}</strong>
+                                    <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.api_tokens.created_hint" }}</p>
+                                    <code style="word-break:break-all;">{{ .NewAPIToken }}</code>
+                                </div>
+                                {{ end }}
+                                {{ if .APITokenRevoked }}
+                                <p style="color:var(--text-secondary);">{{ t .T "profile.api_tokens.revoked_ok" }}</p>
+                                {{ end }}
+                                <form method="POST" action="/profile/api-tokens" style="margin-bottom:1rem;">
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label for="api_token_name">{{ t .T "profile.api_tokens.name" }}</label>
+                                            <input id="api_token_name" name="name" type="text" placeholder="{{ t .T "profile.api_tokens.name_placeholder" }}">
+                                        </div>
+                                    </div>
+                                    <div class="form-group">
+                                        <label>{{ t .T "profile.api_tokens.scopes" }}</label>
+                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="scope_read" value="1" checked> works:read</label>
+                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="scope_write" value="1"> works:write</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">{{ t .T "profile.api_tokens.create" }}</button>
+                                </form>
+                                <table class="sessions-table">
+                                    <thead>
+                                        <tr>
+                                            <th>{{ t .T "profile.api_tokens.name" }}</th>
+                                            <th>{{ t .T "profile.api_tokens.scopes" }}</th>
+                                            <th>{{ t .T "profile.api_tokens.created" }}</th>
+                                            <th></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {{ range .APITokens }}
+                                        <tr>
+                                            <td>{{ .Name }}</td>
+                                            <td><code>{{ join .Scopes ", " }}</code></td>
+                                            <td><code>{{ .CreatedAt }}</code></td>
+                                            <td>
+                                                <form method="POST" action="/profile/api-tokens/revoke/{{ .ID }}" style="display:inline;">
+                                                    <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "profile.api_tokens.revoke" }}</button>
+                                                </form>
+                                            </td>
+                                        </tr>
+                                        {{ else }}
+                                        <tr><td colspan="4" style="color:var(--text-muted)">{{ t .T "profile.api_tokens.empty" }}</td></tr>
+                                        {{ end }}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <div class="sessions-box">
+                                <h3>{{ t .T "profile.webhooks.title" }}</h3>
+                                <p>{{ t .T "profile.webhooks.desc" }}</p>
+                                {{ if .WebhookCreated }}
+                                <div style="margin-bottom:0.8rem;padding:0.75rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);">
+                                    <strong>{{ t .T "profile.webhooks.created_title" }}</strong>
+                                    <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.webhooks.secret_hint" }}</p>
+                                    <code style="word-break:break-all;">{{ .NewWebhook.Secret }}</code>
+                                </div>
+                                {{ end }}
+                                {{ if .WebhookUpdated }}<p style="color:var(--text-secondary);">{{ t .T "profile.webhooks.updated_ok" }}</p>{{ end }}
+                                {{ if .WebhookDeleted }}<p style="color:var(--text-secondary);">{{ t .T "profile.webhooks.deleted_ok" }}</p>{{ end }}
+                                {{ if .WebhookTestSent }}<p style="color:var(--text-secondary);">{{ t .T "profile.webhooks.test_ok" }}</p>{{ end }}
+                                {{ if .WebhookError }}<p style="color:var(--danger, #c0392b);">{{ t .T "profile.webhooks.error" }}</p>{{ end }}
+                                <form method="POST" action="/profile/webhooks" style="margin-bottom:1rem;">
+                                    <div class="form-group">
+                                        <label for="webhook_url">{{ t .T "profile.webhooks.url" }}</label>
+                                        <input id="webhook_url" name="url" type="url" required placeholder="https://example.com/hooks/bookstorage">
+                                    </div>
+                                    <div class="form-group">
+                                        <label>{{ t .T "profile.webhooks.events" }}</label>
+                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="event_work_updated" value="1" checked> work.updated</label>
+                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="event_work_deleted" value="1" checked> work.deleted</label>
+                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="event_work_chapter_changed" value="1" checked> work.chapter_changed</label>
+                                    </div>
+                                    <button type="submit" class="btn btn-secondary">{{ t .T "profile.webhooks.create" }}</button>
+                                </form>
+                                {{ range .Webhooks }}
+                                <div style="border:1px solid var(--border);border-radius:6px;padding:0.75rem;margin-bottom:0.75rem;">
+                                    <div><code>{{ .URL }}</code></div>
+                                    <div style="font-size:0.85rem;color:var(--text-muted);margin:0.4rem 0;">{{ t $.T "profile.webhooks.events" }}: <code>{{ join .Events ", " }}</code></div>
+                                    <form method="POST" action="/profile/webhooks/{{ .ID }}" style="margin-top:0.5rem;">
+                                        <input type="hidden" name="url" value="{{ .URL }}">
+                                        <label style="font-weight:normal;"><input type="checkbox" name="enabled" value="1" {{ if .Enabled }}checked{{ end }}> {{ t $.T "profile.webhooks.enabled" }}</label>
+                                        <div style="margin-top:0.5rem;display:flex;gap:0.4rem;flex-wrap:wrap;">
+                                            <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "profile.webhooks.save" }}</button>
+                                        </div>
+                                    </form>
+                                    <div style="margin-top:0.4rem;display:flex;gap:0.4rem;flex-wrap:wrap;">
+                                        <form method="POST" action="/profile/webhooks/{{ .ID }}/test">
+                                            <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "profile.webhooks.test" }}</button>
+                                        </form>
+                                        <form method="POST" action="/profile/webhooks/{{ .ID }}/delete">
+                                            <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "profile.webhooks.delete" }}</button>
+                                        </form>
+                                    </div>
+                                </div>
+                                {{ else }}
+                                <p style="color:var(--text-muted)">{{ t .T "profile.webhooks.empty" }}</p>
+                                {{ end }}
                             </div>
 
                             <div class="stats-reset-box">
@@ -435,6 +614,27 @@
                 this.classList.add('active');
                 setActiveProfileTab(target);
             });
+        });
+        document.getElementById('passkey-register-btn')?.addEventListener('click', async function() {
+            try {
+                const begin = await fetch('/auth/webauthn/register/begin', { method: 'POST', credentials: 'same-origin' });
+                if (!begin.ok) { window.location.href = '/profile?webauthn_error=server'; return; }
+                const options = await begin.json();
+                options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+                options.user.id = Uint8Array.from(atob(options.user.id.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+                if (options.excludeCredentials) options.excludeCredentials = options.excludeCredentials.map(c => ({ ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), ch => ch.charCodeAt(0)) }));
+                const cred = await navigator.credentials.create({ publicKey: options });
+                const finish = await fetch('/auth/webauthn/register/finish', {
+                    method: 'POST',
+                    credentials: 'same-origin',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(cred.toJSON ? cred.toJSON() : cred)
+                });
+                if (finish.ok) { window.location.href = '/profile?webauthn_registered=1'; return; }
+                window.location.href = '/profile?webauthn_error=server';
+            } catch (e) {
+                window.location.href = '/profile?webauthn_error=server';
+            }
         });
     });
     </script>

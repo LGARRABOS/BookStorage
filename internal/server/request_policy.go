@@ -96,7 +96,8 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 	switch {
 	case path == "/login", path == "/register":
 		return "auth", 8, 0.5, true
-	case strings.HasPrefix(path, "/api/works"),
+	case path == "/api/works/bulk",
+		strings.HasPrefix(path, "/api/works"),
 		strings.HasPrefix(path, "/api/increment/"),
 		strings.HasPrefix(path, "/api/decrement/"),
 		strings.HasPrefix(path, "/api/set-chapter/"),
@@ -150,6 +151,10 @@ func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 		}
 
 		if isMutatingMethod(r.Method) && !isSameOriginRequest(r) {
+			if strings.HasPrefix(r.URL.Path, "/api/") && a.hasValidAPIToken(r) {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if strings.HasPrefix(r.URL.Path, "/api/") {
 				a.apiWriteError(w, http.StatusForbidden, "csrf_blocked")
 			} else {

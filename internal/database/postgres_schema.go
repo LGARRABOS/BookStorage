@@ -30,6 +30,11 @@ var postgresSchemaStatements = []string{
 		image_url TEXT,
 		source TEXT NOT NULL DEFAULT 'manual',
 		external_id TEXT,
+		synopsis TEXT,
+		alt_titles TEXT,
+		genres TEXT,
+		tags TEXT,
+		fetched_at TIMESTAMPTZ,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 	)`,
 	`CREATE TABLE IF NOT EXISTS reading_sites (
@@ -63,7 +68,11 @@ var postgresSchemaStatements = []string{
 		reading_site_id BIGINT REFERENCES reading_sites(id),
 		started_at TIMESTAMPTZ,
 		last_chapter_at TIMESTAMPTZ,
-		finished_at TIMESTAMPTZ
+		finished_at TIMESTAMPTZ,
+		link_probe_status TEXT DEFAULT 'unknown',
+		link_probe_at TIMESTAMPTZ,
+		link_probe_http_status INTEGER,
+		link_probe_detail TEXT
 	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
@@ -111,6 +120,62 @@ var postgresSchemaStatements = []string{
 		chapter_increments INTEGER NOT NULL DEFAULT 0,
 		PRIMARY KEY (user_id, day)
 	)`,
+	`CREATE TABLE IF NOT EXISTS api_tokens (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		name TEXT NOT NULL,
+		token_hash TEXT NOT NULL UNIQUE,
+		scopes TEXT NOT NULL DEFAULT '[]',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		last_used_at TIMESTAMPTZ,
+		revoked_at TIMESTAMPTZ
+	)`,
+	`CREATE TABLE IF NOT EXISTS webhook_endpoints (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		url TEXT NOT NULL,
+		secret TEXT NOT NULL,
+		events TEXT NOT NULL DEFAULT '[]',
+		enabled INTEGER NOT NULL DEFAULT 1,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`,
+	`CREATE TABLE IF NOT EXISTS webhook_deliveries (
+		id BIGSERIAL PRIMARY KEY,
+		endpoint_id BIGINT NOT NULL REFERENCES webhook_endpoints(id) ON DELETE CASCADE,
+		event TEXT NOT NULL,
+		payload TEXT NOT NULL,
+		status TEXT NOT NULL DEFAULT 'pending',
+		attempts INTEGER NOT NULL DEFAULT 0,
+		next_retry_at TIMESTAMPTZ,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`,
+	`CREATE TABLE IF NOT EXISTS user_catalog_blocklist (
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		label_type TEXT NOT NULL,
+		label_name TEXT NOT NULL,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		PRIMARY KEY (user_id, label_type, label_name)
+	)`,
+	`CREATE TABLE IF NOT EXISTS admin_audit_log (
+		id BIGSERIAL PRIMARY KEY,
+		actor_user_id BIGINT NOT NULL REFERENCES users(id),
+		action TEXT NOT NULL,
+		target_type TEXT,
+		target_id TEXT,
+		detail_json TEXT,
+		ip TEXT,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+	)`,
+	`CREATE TABLE IF NOT EXISTS webauthn_credentials (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		credential_id BYTEA NOT NULL UNIQUE,
+		public_key BYTEA NOT NULL,
+		sign_count INTEGER NOT NULL DEFAULT 0,
+		name TEXT NOT NULL DEFAULT '',
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		last_used_at TIMESTAMPTZ
+	)`,
 	`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version INTEGER PRIMARY KEY,
 		applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -132,6 +197,15 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_sessions_user_id ON sessions(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_user_revoked ON sessions(user_id, revoked_at)`,
 	`CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at)`,
+	`CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_api_tokens_token_hash ON api_tokens(token_hash)`,
+	`CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user_id ON webhook_endpoints(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint_id ON webhook_deliveries(endpoint_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status)`,
+	`CREATE INDEX IF NOT EXISTS idx_user_catalog_blocklist_user_id ON user_catalog_blocklist(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created_at ON admin_audit_log(created_at)`,
+	`CREATE INDEX IF NOT EXISTS idx_admin_audit_log_actor ON admin_audit_log(actor_user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id)`,
 }
 
 // postgresSchemaAfterExtraColumns runs after ALTER TABLE ... ADD COLUMN for works, so indexes
@@ -178,6 +252,14 @@ var postgresProfileColumns = map[string]string{
 	"is_public":    "INTEGER DEFAULT 1",
 }
 
+var postgresCatalogColumns = map[string]string{
+	"synopsis":   "TEXT",
+	"alt_titles": "TEXT",
+	"genres":     "TEXT",
+	"tags":       "TEXT",
+	"fetched_at": "TIMESTAMPTZ",
+}
+
 var postgresWorkColumns = map[string]string{
 	"reading_type":           "TEXT",
 	"rating":                 "INTEGER DEFAULT 0",
@@ -193,10 +275,17 @@ var postgresWorkColumns = map[string]string{
 	"started_at":             "TIMESTAMPTZ",
 	"last_chapter_at":        "TIMESTAMPTZ",
 	"finished_at":            "TIMESTAMPTZ",
+	"link_probe_status":      "TEXT DEFAULT 'unknown'",
+	"link_probe_at":          "TIMESTAMPTZ",
+	"link_probe_http_status": "INTEGER",
+	"link_probe_detail":      "TEXT",
 }
 
 func ensurePostgresExtraColumns(c *Conn) error {
 	if err := ensureColumnsPostgres(c, "users", postgresProfileColumns); err != nil {
+		return err
+	}
+	if err := ensureColumnsPostgres(c, "catalog", postgresCatalogColumns); err != nil {
 		return err
 	}
 	return ensureColumnsPostgres(c, "works", postgresWorkColumns)

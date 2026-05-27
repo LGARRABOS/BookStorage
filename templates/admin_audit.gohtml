@@ -1,0 +1,77 @@
+{{ define "admin_audit" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.audit.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_account_links" .}}
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>{{ t .T "admin.audit.title" }}</h1>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/database">{{ t .T "admin.database" }}</a>
+                        <a class="admin-tab" href="/admin/backups">{{ t .T "admin.backups" }}</a>
+                        <a class="admin-tab active" href="/admin/audit">{{ t .T "admin.audit.tab" }}</a>
+                        {{ if .ShowPostgresMigrate }}<a class="admin-tab" href="/admin/migrate-postgres">{{ t .T "admin.migrate_pg.tab" }}</a>{{ end }}
+                    </nav>
+                </header>
+                <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">{{ t .T "admin.audit.intro" }}</p>
+                {{ if .AuditEntries }}
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>{{ t .T "admin.audit.when" }}</th>
+                                <th>{{ t .T "admin.audit.actor" }}</th>
+                                <th>{{ t .T "admin.audit.action" }}</th>
+                                <th>{{ t .T "admin.audit.target" }}</th>
+                                <th>IP</th>
+                                <th>{{ t .T "admin.audit.detail" }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .AuditEntries }}
+                            <tr>
+                                <td>{{ .ID }}</td>
+                                <td><code>{{ .CreatedAt }}</code></td>
+                                <td>{{ .ActorName }} <span style="color:var(--text-muted)">(#{{ .ActorUserID }})</span></td>
+                                <td><code>{{ .Action }}</code></td>
+                                <td>{{ if .TargetType.Valid }}{{ .TargetType.String }}{{ end }}{{ if .TargetID.Valid }} / {{ .TargetID.String }}{{ end }}</td>
+                                <td>{{ if .IP.Valid }}<code>{{ .IP.String }}</code>{{ end }}</td>
+                                <td style="max-width:18rem;word-break:break-word;font-size:0.82rem;">{{ if .DetailJSON.Valid }}{{ .DetailJSON.String }}{{ end }}</td>
+                            </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </div>
+                {{ else }}
+                <p>{{ t .T "admin.audit.empty" }}</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

@@ -124,6 +124,16 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	readingSiteStatusMap := a.loadReadingSiteStatusMap(userID)
 
+	var sitesDownCount, linkDeadCount int
+	_ = a.DB.QueryRow(
+		`SELECT COUNT(*) FROM reading_sites WHERE user_id = ? AND probe_status IN ('down', 'degraded')`,
+		userID,
+	).Scan(&sitesDownCount)
+	_ = a.DB.QueryRow(
+		`SELECT COUNT(*) FROM works WHERE user_id = ? AND link IS NOT NULL AND TRIM(link) != '' AND link_probe_status IN ('down', 'degraded')`,
+		userID,
+	).Scan(&linkDeadCount)
+
 	data := map[string]any{
 		"Works":                works,
 		"CatalogCoverByWorkID": catalogCoverByWorkID,
@@ -136,6 +146,8 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 		"SearchQuery":          r.URL.Query().Get("q"),
 		"ReadingSiteMap":       readingSiteStatusMap,
 		"ReadingSites":         a.loadUserReadingSites(userID),
+		"SitesDownCount":       sitesDownCount,
+		"LinkDeadCount":        linkDeadCount,
 	}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)

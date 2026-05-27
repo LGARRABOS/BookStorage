@@ -275,6 +275,9 @@ type Suggestion struct {
 
 // ForUser returns merged browse + graph recommendations, excluding already-owned ids.
 func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error) {
+	blocklist, _ := catalog.LoadUserBlocklist(db, userID)
+	mediaFilter := catalog.MergeBlocklistFilter(blocklist, catalog.AdultOrientationFilter{})
+
 	works, err := LoadUserAnilistWorks(db, userID)
 	if err != nil {
 		return nil, err
@@ -341,6 +344,8 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 		browse, _, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
 			GenreIn:    genreIn,
 			TagIn:      tagIn,
+			TagNotIn:   mediaFilter.TagNotIn,
+			MediaMatch: mediaFilter.MatchMedia,
 			Page:       1,
 			PerPage:    browsePerPage,
 			Sort:       "POPULARITY_DESC",
@@ -382,6 +387,9 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 		}
 		for _, r := range d.Recommendations {
 			if _, dup := seen[r.ID]; dup {
+				continue
+			}
+			if mediaFilter.MatchMedia != nil && !mediaFilter.MatchMedia(r.Genres, r.Tags) {
 				continue
 			}
 			seen[r.ID] = struct{}{}

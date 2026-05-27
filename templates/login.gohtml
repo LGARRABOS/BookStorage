@@ -35,7 +35,7 @@
                     <h1>{{ t .T "login.title" }}</h1>
                     <p>{{ t .T "login.subtitle" }}</p>
                 </header>
-                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired .GoogleOAuthError }}
+                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired .GoogleOAuthError .WebAuthnError }}
                 <div class="flash-messages">
                     {{ if .SessionExpired }}
                         <p>{{ t .T "login.expired" }}</p>
@@ -53,7 +53,15 @@
                     {{ if eq .GoogleOAuthError "token" }}<p>{{ t .T "login.google_error.token" }}</p>{{ end }}
                     {{ if eq .GoogleOAuthError "server" }}<p>{{ t .T "login.google_error.server" }}</p>{{ end }}
                     {{ if eq .GoogleOAuthError "use_google" }}<p>{{ t .T "login.google_error.use_google" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "use_passkey" }}<p>{{ t .T "login.webauthn_error.use_passkey" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "failed" }}<p>{{ t .T "login.webauthn_error.failed" }}</p>{{ end }}
                 </div>
+                {{ end }}
+                {{ if .WebAuthnEnabled }}
+                <p style="margin-bottom:1rem;">
+                    <button type="button" class="btn btn-secondary" id="passkey-login-btn" style="display:inline-flex;align-items:center;gap:0.5rem;">🔐 {{ t .T "login.passkey.continue" }}</button>
+                </p>
+                <p style="text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">{{ t .T "login.passkey.or" }}</p>
                 {{ end }}
                 {{ if .GoogleOAuthEnabled }}
                 <p style="margin-bottom:1rem;">
@@ -85,6 +93,36 @@
         <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div>
     </footer>
     <script src="/static/js/appearance.js"></script>
+    {{ if .WebAuthnEnabled }}
+    <script nonce="{{ .CSPNonce }}">
+    document.getElementById('passkey-login-btn')?.addEventListener('click', async function() {
+        const username = document.getElementById('username')?.value?.trim() || '';
+        if (!username) { alert('{{ t .T "login.username" }}'); return; }
+        try {
+            const begin = await fetch('/auth/webauthn/login/begin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username: username })
+            });
+            if (!begin.ok) { window.location.href = '/login?webauthn_error=failed'; return; }
+            const options = await begin.json();
+            options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
+            if (options.allowCredentials) options.allowCredentials = options.allowCredentials.map(c => ({ ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), ch => ch.charCodeAt(0)) }));
+            const cred = await navigator.credentials.get({ publicKey: options });
+            const finish = await fetch('/auth/webauthn/login/finish' + ({{ jsstr .LoginNext }} ? ('?next=' + encodeURIComponent({{ jsstr .LoginNext }})) : ''), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(cred.toJSON ? cred.toJSON() : cred)
+            });
+            const data = await finish.json().catch(() => ({}));
+            if (data.ok && data.redirect) { window.location.href = data.redirect; return; }
+            window.location.href = '/login?webauthn_error=failed';
+        } catch (e) {
+            window.location.href = '/login?webauthn_error=failed';
+        }
+    });
+    </script>
+    {{ end }}
 </body>
 </html>
 {{ end }}

@@ -123,10 +123,93 @@ UPDATE catalog SET reading_type = 'Webtoon' WHERE reading_type IN ('Manhwa', 'Ma
 UPDATE catalog SET reading_type = 'Light Novel' WHERE reading_type = 'Roman';
 UPDATE catalog SET reading_type = 'Manga' WHERE reading_type IN ('BD', 'Autre', '18+');
 `},
+	{Version: 15, Name: "api_tokens", Up: `
+CREATE TABLE IF NOT EXISTS api_tokens (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id INTEGER NOT NULL,
+	name TEXT NOT NULL,
+	token_hash TEXT NOT NULL UNIQUE,
+	scopes TEXT NOT NULL DEFAULT '[]',
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	last_used_at DATETIME,
+	revoked_at DATETIME,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_user_id ON api_tokens(user_id);
+CREATE INDEX IF NOT EXISTS idx_api_tokens_token_hash ON api_tokens(token_hash);
+`},
+	{Version: 16, Name: "webhook_endpoints_deliveries", Up: `
+CREATE TABLE IF NOT EXISTS webhook_endpoints (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id INTEGER NOT NULL,
+	url TEXT NOT NULL,
+	secret TEXT NOT NULL,
+	events TEXT NOT NULL DEFAULT '[]',
+	enabled INTEGER NOT NULL DEFAULT 1,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_endpoints_user_id ON webhook_endpoints(user_id);
+CREATE TABLE IF NOT EXISTS webhook_deliveries (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	endpoint_id INTEGER NOT NULL,
+	event TEXT NOT NULL,
+	payload TEXT NOT NULL,
+	status TEXT NOT NULL DEFAULT 'pending',
+	attempts INTEGER NOT NULL DEFAULT 0,
+	next_retry_at DATETIME,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (endpoint_id) REFERENCES webhook_endpoints(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_endpoint_id ON webhook_deliveries(endpoint_id);
+CREATE INDEX IF NOT EXISTS idx_webhook_deliveries_status ON webhook_deliveries(status);
+`},
+	{Version: 17, Name: "user_catalog_blocklist", Up: `
+CREATE TABLE IF NOT EXISTS user_catalog_blocklist (
+	user_id INTEGER NOT NULL,
+	label_type TEXT NOT NULL,
+	label_name TEXT NOT NULL,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	PRIMARY KEY (user_id, label_type, label_name),
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_catalog_blocklist_user_id ON user_catalog_blocklist(user_id);
+`},
+	{Version: 18, Name: "catalog_metadata_and_catalog_fts5_placeholder", Up: ""},
+	{Version: 19, Name: "works_link_probe", Up: ""},
+	{Version: 20, Name: "admin_audit_log", Up: `
+CREATE TABLE IF NOT EXISTS admin_audit_log (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	actor_user_id INTEGER NOT NULL,
+	action TEXT NOT NULL,
+	target_type TEXT,
+	target_id TEXT,
+	detail_json TEXT,
+	ip TEXT,
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	FOREIGN KEY (actor_user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_created_at ON admin_audit_log(created_at);
+CREATE INDEX IF NOT EXISTS idx_admin_audit_log_actor ON admin_audit_log(actor_user_id);
+`},
+	{Version: 21, Name: "webauthn_credentials", Up: `
+CREATE TABLE IF NOT EXISTS webauthn_credentials (
+	id INTEGER PRIMARY KEY AUTOINCREMENT,
+	user_id INTEGER NOT NULL,
+	credential_id BLOB NOT NULL UNIQUE,
+	public_key BLOB NOT NULL,
+	sign_count INTEGER NOT NULL DEFAULT 0,
+	name TEXT NOT NULL DEFAULT '',
+	created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+	last_used_at DATETIME,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id);
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 14
+const LatestSchemaMigrationVersion = 21
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

@@ -1,0 +1,293 @@
+openapi: 3.0.3
+info:
+  title: BookStorage API
+  version: 1.0.0
+  description: |
+    REST API for managing reading works in BookStorage.
+    Authenticate with a session cookie (browser) or `Authorization: Bearer <api_token>`.
+servers:
+  - url: /
+security:
+  - bearerAuth: []
+  - cookieAuth: []
+paths:
+  /api/works:
+    get:
+      summary: List works
+      operationId: listWorks
+      security:
+        - bearerAuth: [works:read]
+        - cookieAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema: { type: integer, minimum: 1, default: 1 }
+        - name: limit
+          in: query
+          schema: { type: integer, minimum: 1, maximum: 100, default: 20 }
+        - name: status
+          in: query
+          schema: { type: string }
+        - name: reading_type
+          in: query
+          schema: { type: string }
+        - name: search
+          in: query
+          schema: { type: string }
+        - name: sort
+          in: query
+          schema:
+            type: string
+            enum: [recent, title_asc, title_desc, chapter_asc, chapter_desc, updated_asc, updated_desc]
+      responses:
+        "200":
+          description: Paginated works list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/Work" }
+                  meta: { $ref: "#/components/schemas/ListMeta" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+    post:
+      summary: Create work
+      operationId: createWork
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkCreate" }
+      responses:
+        "201":
+          description: Created
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Work" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
+  /api/works/{id}:
+    parameters:
+      - name: id
+        in: path
+        required: true
+        schema: { type: integer }
+    get:
+      summary: Get work
+      operationId: getWork
+      security:
+        - bearerAuth: [works:read]
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Work detail
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Work" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    patch:
+      summary: Update work
+      operationId: updateWork
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/WorkUpdate" }
+      responses:
+        "200":
+          description: Updated work
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data: { $ref: "#/components/schemas/Work" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "404": { $ref: "#/components/responses/NotFound" }
+    delete:
+      summary: Delete work
+      operationId: deleteWork
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Deleted
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  ok: { type: boolean }
+        "404": { $ref: "#/components/responses/NotFound" }
+  /api/stats:
+    get:
+      summary: User reading stats
+      operationId: getStats
+      security:
+        - bearerAuth: [works:read]
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Stats
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: object
+                    properties:
+                      total_works: { type: integer }
+                      total_chapters: { type: integer }
+                      avg_rating: { type: number }
+                      rated_count: { type: integer }
+  /api/increment/{id}:
+    post:
+      summary: Increment chapter by 1
+      operationId: incrementChapter
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK (plain text `ok`)
+  /api/decrement/{id}:
+    post:
+      summary: Decrement chapter by 1
+      operationId: decrementChapter
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      responses:
+        "200":
+          description: OK (plain text `ok`)
+  /api/set-chapter/{id}:
+    post:
+      summary: Set chapter (form field `chapter`)
+      operationId: setChapter
+      security:
+        - bearerAuth: [works:write]
+        - cookieAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer }
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                chapter: { type: integer }
+      responses:
+        "200":
+          description: OK (plain text `ok`)
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      description: API token from Profile → API tokens. Scopes `works:read`, `works:write`.
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: session
+      description: Browser session cookie
+  schemas:
+    Work:
+      type: object
+      properties:
+        id: { type: integer }
+        title: { type: string }
+        chapter: { type: integer }
+        link: { type: string }
+        status: { type: string }
+        reading_type: { type: string }
+        rating: { type: integer }
+        notes: { type: string }
+        updated_at: { type: string }
+        parent_work_id: { type: integer, nullable: true }
+        series_sort: { type: integer }
+        notify_new_chapters: { type: integer }
+        reading_site_id: { type: integer, nullable: true }
+        started_at: { type: string }
+        last_chapter_at: { type: string }
+        finished_at: { type: string }
+    WorkCreate:
+      type: object
+      required: [title]
+      properties:
+        title: { type: string }
+        chapter: { type: integer }
+        link: { type: string }
+        status: { type: string }
+        reading_type: { type: string }
+        rating: { type: integer }
+        notes: { type: string }
+    WorkUpdate:
+      type: object
+      additionalProperties: true
+    ListMeta:
+      type: object
+      properties:
+        page: { type: integer }
+        limit: { type: integer }
+        total: { type: integer }
+        total_pages: { type: integer }
+        has_next: { type: boolean }
+        has_prev: { type: boolean }
+        sort: { type: string }
+        search: { type: string }
+    Error:
+      type: object
+      properties:
+        error: { type: string }
+  responses:
+    Unauthorized:
+      description: Missing or invalid auth
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+          example: { error: session_expired }
+    Forbidden:
+      description: CSRF blocked or insufficient scope
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    BadRequest:
+      description: Invalid input
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema: { $ref: "#/components/schemas/Error" }

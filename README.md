@@ -69,6 +69,7 @@ Full documentation is available on the **[Wiki](https://github.com/LGARRABOS/Boo
 - [Configuration](https://github.com/LGARRABOS/BookStorage/wiki/Configuration) — environment variables, OAuth, PostgreSQL
 - [Usage](https://github.com/LGARRABOS/BookStorage/wiki/Usage) — dashboard, PWA, export/import, shortcuts
 - [API Reference](https://github.com/LGARRABOS/BookStorage/wiki/API-Reference) — REST API endpoints
+- [OpenAPI spec](./docs/openapi.yaml) — machine-readable API schema (Bearer tokens, bulk, webhooks)
 - [Architecture](https://github.com/LGARRABOS/BookStorage/wiki/Architecture) — tech stack, project structure
 - [Database](https://github.com/LGARRABOS/BookStorage/wiki/Database) — schema, migrations, full-text search
 - [Authentication & Security](https://github.com/LGARRABOS/BookStorage/wiki/Authentication-and-Security) — auth, sessions, hardening

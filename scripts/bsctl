@@ -122,7 +122,10 @@ case "$1" in
         cmd_logs
         ;;
     backup)
-        cmd_backup
+        cmd_backup "$2"
+        ;;
+    works)
+        cmd_works "${@:2}"
         ;;
     *)
         printf "${YELLOW}Unknown command: %s${NC}\n\n" "$1"

@@ -10,6 +10,9 @@ import (
 )
 
 func (a *App) currentUserID(r *http.Request) (int, bool) {
+	if id, ok := apiAuthUserIDFromContext(r.Context()); ok {
+		return id, true
+	}
 	id, _, ok := a.currentSession(r)
 	return id, ok
 }
@@ -60,6 +63,7 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		currentPath = r.URL.Path
 	}
 	googleOAuth := a.Settings != nil && a.Settings.GoogleOAuthConfigured()
+	webAuthnOn := a.webAuthnEnabled()
 	return map[string]any{
 		"Lang":               lang,
 		"T":                  i18n.T(lang),
@@ -69,6 +73,7 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		"CurrentPath":        currentPath,
 		"AppVersion":         a.Version,
 		"GoogleOAuthEnabled": googleOAuth,
+		"WebAuthnEnabled":    webAuthnOn,
 		"CSPNonce":           cspNonceFromContext(r.Context()),
 	}
 }
@@ -213,6 +218,10 @@ func isMobileRequest(r *http.Request) bool {
 
 func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if userID, ok := apiAuthUserIDFromContext(r.Context()); ok && userID > 0 {
+			next(w, r)
+			return
+		}
 		_, token, ok := a.currentSession(r)
 		if !ok {
 			// API requests: return 401 so the frontend can redirect to login

@@ -223,8 +223,8 @@
 
             <form method="POST" enctype="multipart/form-data" id="add-work-form">
                 <input type="hidden" name="catalog_id" id="catalog_id" value="">
-                <input type="hidden" name="catalog_source" id="catalog_source" value="{{ if .PrefillAnilistID }}anilist{{ end }}">
-                <input type="hidden" name="catalog_external_id" id="catalog_external_id" value="{{ if .PrefillAnilistID }}{{ printf "%d" .PrefillAnilistID }}{{ end }}">
+                <input type="hidden" name="catalog_source" id="catalog_source" value="{{ if .PrefillCatalogSource }}{{ .PrefillCatalogSource }}{{ else if .PrefillAnilistID }}anilist{{ end }}">
+                <input type="hidden" name="catalog_external_id" id="catalog_external_id" value="{{ if .PrefillCatalogExternalID }}{{ .PrefillCatalogExternalID }}{{ else if .PrefillAnilistID }}{{ printf "%d" .PrefillAnilistID }}{{ end }}">
                 <div class="form-card">
                     <div class="form-card-header">
                         <div class="icon blue">📖</div>

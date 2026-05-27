@@ -63,6 +63,10 @@
                 </div>
 
                 <div class="catalog-explore-toolbar">
+                    <select id="catalog-browse-source" aria-label="{{ t .T "catalog.explore.source_label" }}">
+                        <option value="anilist"{{ if eq .CatalogSource "anilist" }} selected{{ end }}>{{ t .T "catalog.explore.source_anilist" }}</option>
+                        <option value="mangadex"{{ if eq .CatalogSource "mangadex" }} selected{{ end }}>{{ t .T "catalog.explore.source_mangadex" }}</option>
+                    </select>
                     <select id="catalog-browse-sort" aria-label="{{ t .T "catalog.explore.sort_label" }}">
                         <option value="POPULARITY_DESC">{{ t .T "catalog.explore.sort_popularity" }}</option>
                         <option value="SCORE_DESC">{{ t .T "catalog.explore.sort_score" }}</option>
@@ -113,6 +117,7 @@
     (function catalogBrowse() {
         var grid = document.getElementById('catalog-browse-grid');
         var btn = document.getElementById('catalog-browse-btn');
+        var sourceSel = document.getElementById('catalog-browse-source');
         var sortSel = document.getElementById('catalog-browse-sort');
         var adultOnlyCheck = document.getElementById('catalog-adult-only-check');
         var adultOrientWrap = document.getElementById('catalog-adult-orient-wrap');
@@ -174,26 +179,41 @@
             });
         }
 
+        function browseItemKey(item) {
+            if (item.anilist_id) return String(item.anilist_id);
+            return (item.source || '') + ':' + (item.external_id || '');
+        }
+
+        function addWorkHref(item) {
+            var src = item.source || 'anilist';
+            var ext = item.external_id || (item.anilist_id ? String(item.anilist_id) : '');
+            if (src === 'anilist' && item.anilist_id) {
+                return '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            }
+            return '/add_work?catalog_source=' + encodeURIComponent(src) + '&catalog_external_id=' + encodeURIComponent(ext);
+        }
+
         function renderCard(item) {
             var img = item.image_url
                 ? '<img src="' + String(item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
                 : '<span class="no-cover">📖</span>';
             var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
+            var key = browseItemKey(item);
             return '<article class="reco-card">' +
-                '<button type="button" class="reco-card-cover reco-card-cover--btn" data-browse-id="' + encodeURIComponent(item.anilist_id) + '" aria-label="' + openLbl + '">' + img + '</button>' +
+                '<button type="button" class="reco-card-cover reco-card-cover--btn" data-browse-key="' + encodeURIComponent(key) + '" aria-label="' + openLbl + '">' + img + '</button>' +
                 '<div class="reco-card-body">' +
                 '<div class="reco-card-title">' + escapeHtml(item.title || '') + '</div>' +
                 '<div class="reco-card-meta">' + escapeHtml(meta) + '</div>' +
-                '<a class="btn-reco" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + addLabel + '</a>' +
+                '<a class="btn-reco" href="' + addWorkHref(item) + '">' + addLabel + '</a>' +
                 '</div></article>';
         }
 
         function bindBrowseCards() {
-            grid.querySelectorAll('.reco-card-cover--btn[data-browse-id]').forEach(function(el) {
+            grid.querySelectorAll('.reco-card-cover--btn[data-browse-key]').forEach(function(el) {
                 el.addEventListener('click', function() {
-                    var id = parseInt(el.getAttribute('data-browse-id'), 10);
-                    if (isNaN(id) || !window.openRecoDetailByItem) return;
-                    var item = browseItemsById[id];
+                    var key = decodeURIComponent(el.getAttribute('data-browse-key') || '');
+                    if (!key || !window.openRecoDetailByItem) return;
+                    var item = browseItemsById[key];
                     if (!item) return;
                     window.openRecoDetailByItem(Object.assign({ source: 'browse' }, item), { dismissable: false });
                 });
@@ -213,6 +233,7 @@
             selectedAdultOrientations().forEach(function(o) { params.append('adult_orient', o); });
             params.set('page', String(currentPage));
             if (sortSel && sortSel.value) params.set('sort', sortSel.value);
+            if (sourceSel && sourceSel.value) params.set('source', sourceSel.value);
             if (adultOnlyCheck && adultOnlyCheck.checked) params.set('adult', 'only');
 
             fetch('/api/catalog/browse?' + params.toString())
@@ -232,7 +253,7 @@
                         return;
                     }
                     browseItemsById = {};
-                    list.forEach(function(item) { browseItemsById[item.anilist_id] = item; });
+                    list.forEach(function(item) { browseItemsById[browseItemKey(item)] = item; });
                     grid.innerHTML = list.map(renderCard).join('');
                     bindBrowseCards();
                     pagination.hidden = false;

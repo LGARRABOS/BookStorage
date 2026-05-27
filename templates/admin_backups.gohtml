@@ -1,0 +1,69 @@
+{{ define "admin_backups" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    <title>{{ t .T "admin.backups.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/admin.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    <header class="topbar">
+        <div class="container nav-layout">
+            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            <nav class="nav-links">
+                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_account_links" .}}
+            </nav>
+        </div>
+    </header>
+    <main class="page-body">
+        <div class="container content-card">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1>{{ t .T "admin.backups.title" }}</h1>
+                    <nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+                        <a class="admin-tab" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+                        <a class="admin-tab" href="/admin/database">{{ t .T "admin.database" }}</a>
+                        <a class="admin-tab active" href="/admin/backups">{{ t .T "admin.backups" }}</a>
+                        <a class="admin-tab" href="/admin/audit">{{ t .T "admin.audit.tab" }}</a>
+                        {{ if .ShowPostgresMigrate }}<a class="admin-tab" href="/admin/migrate-postgres">{{ t .T "admin.migrate_pg.tab" }}</a>{{ end }}
+                    </nav>
+                </header>
+                <p style="color:var(--text-muted);font-size:0.9rem;margin-bottom:1rem;">{{ t .T "admin.backups.intro" }} <code>{{ .BackupDir }}</code></p>
+                {{ if .BackupFiles }}
+                <div class="table-wrapper">
+                    <table class="data-table">
+                        <thead>
+                            <tr>
+                                <th>{{ t .T "admin.backups.file" }}</th>
+                                <th>{{ t .T "admin.backups.size" }}</th>
+                                <th>{{ t .T "admin.backups.modified" }}</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {{ range .BackupFiles }}
+                            <tr>
+                                <td><code>{{ .Name }}</code></td>
+                                <td>{{ .Size }} B</td>
+                                <td><code>{{ .ModTime }}</code></td>
+                            </tr>
+                        {{ end }}
+                        </tbody>
+                    </table>
+                </div>
+                {{ else }}
+                <p>{{ t .T "admin.backups.empty" }}</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

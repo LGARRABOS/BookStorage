@@ -521,7 +521,8 @@ cmd_help() {
     printf "    ${GREEN}restart${NC}      Restart the service\n"
     printf "    ${GREEN}status${NC}       Show service status\n"
     printf "    ${GREEN}logs${NC}         Show logs in real-time\n"
-    printf "    ${GREEN}backup${NC}       Snapshot SQLite (reads ${BLUE}BOOKSTORAGE_DATABASE${NC} from ${BOOKSTORAGE_ENV_FILE:-/opt/bookstorage/.env})\n"
+    printf "    ${GREEN}backup${NC}       Snapshot DB (SQLite or PostgreSQL pg_dump)\n"
+    printf "    ${GREEN}works${NC}        API: list | get | patch | bulk | chapter inc\n"
     printf "\n"
     printf "${BOLD}EXAMPLES${NC}\n"
     printf "    ${BLUE}bsctl run${NC}              Local development\n"
@@ -538,6 +539,10 @@ cmd_help() {
     printf "    - BOOKSTORAGE_HOST         (default: 127.0.0.1)\n"
     printf "    - BOOKSTORAGE_PORT         (default: 5000)\n"
     printf "    - BOOKSTORAGE_DATABASE     (default: database.db)\n"
+    printf "    - BOOKSTORAGE_POSTGRES_URL (optional PostgreSQL URL)\n"
+    printf "    - BOOKSTORAGE_API_URL      (optional, for ${GREEN}bsctl works${NC})\n"
+    printf "    - BOOKSTORAGE_TOKEN        (optional Bearer API token)\n"
+    printf "    - BOOKSTORAGE_BACKUP_DIR   (default: /var/lib/bookstorage/backups)\n"
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "    - BOOKSTORAGE_METRICS_TOKEN (optional) secures GET /metrics for Prometheus scrapers\n"
     printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v4.0.1 — non-interactive ${GREEN}bsctl update${NC}\n"
@@ -740,8 +745,89 @@ cmd_logs() {
     journalctl -u ${APP_NAME} -f
 }
 
+# Read a single KEY=value from env file (last match wins).
+bsctl_env_get() {
+    local key="$1" file="${2:-${BOOKSTORAGE_ENV_FILE:-/opt/bookstorage/.env}}"
+    [[ -f "$file" ]] || return 1
+    grep -E "^[[:space:]]*${key}=" "$file" 2>/dev/null | tail -n1 | sed -E "s/^[[:space:]]*${key}=//" | tr -d '\r' | sed -e 's/^["'\''\'']//' -e 's/["'\''\'']$//'
+}
+
+bsctl_api_url() {
+    local u="${BOOKSTORAGE_API_URL:-}"
+    if [[ -z "$u" ]]; then
+        local host port
+        host="$(bsctl_env_get BOOKSTORAGE_HOST 2>/dev/null || true)"
+        port="$(bsctl_env_get BOOKSTORAGE_PORT 2>/dev/null || true)"
+        host="${host:-127.0.0.1}"
+        port="${port:-5000}"
+        u="http://${host}:${port}"
+    fi
+    printf '%s' "${u%/}"
+}
+
+bsctl_api_curl() {
+    local method="$1" path="$2" body="${3:-}"
+    local url token args=(-sS -X "$method")
+    url="$(bsctl_api_url)${path}"
+    token="${BOOKSTORAGE_TOKEN:-}"
+    if [[ -z "$token" ]]; then
+        token="$(bsctl_env_get BOOKSTORAGE_TOKEN 2>/dev/null || true)"
+    fi
+    if [[ -n "$token" ]]; then
+        args+=(-H "Authorization: Bearer ${token}")
+    fi
+    if [[ -n "$body" ]]; then
+        args+=(-H "Content-Type: application/json" -d "$body")
+    fi
+    if ! command -v curl >/dev/null 2>&1; then
+        print_error "curl is required for bsctl works"
+        return 1
+    fi
+    curl "${args[@]}" "$url"
+}
+
+cmd_works() {
+    local sub="${1:-}"
+    case "$sub" in
+        list)
+            bsctl_api_curl GET "/api/works?${2:-limit=50}" | { command -v jq >/dev/null 2>&1 && jq . || cat; }
+            ;;
+        get)
+            [[ -n "${2:-}" ]] || { print_error "Usage: bsctl works get <id>"; return 1; }
+            bsctl_api_curl GET "/api/works/${2}" | { command -v jq >/dev/null 2>&1 && jq . || cat; }
+            ;;
+        patch)
+            [[ -n "${2:-}" && -n "${3:-}" ]] || { print_error "Usage: bsctl works patch <id> '<json-patch>'"; return 1; }
+            bsctl_api_curl PATCH "/api/works/${2}" "${3}" | { command -v jq >/dev/null 2>&1 && jq . || cat; }
+            ;;
+        bulk)
+            [[ -n "${2:-}" ]] || { print_error "Usage: bsctl works bulk '<json-body>'"; return 1; }
+            bsctl_api_curl POST "/api/works/bulk" "${2}" | { command -v jq >/dev/null 2>&1 && jq . || cat; }
+            ;;
+        chapter|inc)
+            [[ -n "${2:-}" ]] || { print_error "Usage: bsctl works chapter inc <id>"; return 1; }
+            bsctl_api_curl POST "/api/increment/${2}"
+            printf '\n'
+            ;;
+        *)
+            print_error "Usage: bsctl works {list|get|patch|bulk|chapter inc}"
+            return 1
+            ;;
+    esac
+}
+
 cmd_backup() {
-    print_info "SQLite backup..."
+    local sub="${1:-run}"
+    if [[ "$sub" == "list" ]]; then
+        local backup_root="${BOOKSTORAGE_BACKUP_DIR:-/var/lib/bookstorage/backups}"
+        if [[ ! -d "$backup_root" ]]; then
+            print_info "No backup directory: $backup_root"
+            return 0
+        fi
+        ls -lah "$backup_root"/bookstorage-* 2>/dev/null || print_info "(empty)"
+        return 0
+    fi
+    print_info "Database backup..."
     local env_file="${BOOKSTORAGE_ENV_FILE:-/opt/bookstorage/.env}"
     local backup_root="${BOOKSTORAGE_BACKUP_DIR:-/var/lib/bookstorage/backups}"
     local retention_days="${BOOKSTORAGE_BACKUP_RETENTION_DAYS:-14}"
@@ -749,30 +835,37 @@ cmd_backup() {
         print_error "Missing env file: $env_file (set BOOKSTORAGE_ENV_FILE)"
         exit 1
     fi
-    local db_line db_path
-    db_line="$(grep -E '^[[:space:]]*BOOKSTORAGE_DATABASE=' "$env_file" | tail -n1 || true)"
-    db_path="${db_line#*=}"
-    db_path="${db_path%\"}"
-    db_path="${db_path#\"}"
-    db_path="${db_path%\'}"
-    db_path="${db_path#\'}"
-    db_path="$(echo -n "$db_path" | tr -d '\r')"
-    if [[ -z "$db_path" || ! -f "$db_path" ]]; then
-        print_error "BOOKSTORAGE_DATABASE not set or file missing: '${db_path}'"
-        exit 1
-    fi
     mkdir -p "$backup_root"
-    local stamp dest
+    local stamp dest pg_url
     stamp="$(date -u +%Y%m%dT%H%M%SZ)"
-    dest="${backup_root}/bookstorage-${stamp}.sqlite"
-    if command -v sqlite3 >/dev/null 2>&1; then
-        sqlite3 "$db_path" ".backup '$dest'"
+    pg_url="$(bsctl_env_get BOOKSTORAGE_POSTGRES_URL "$env_file" 2>/dev/null || true)"
+    if [[ -n "$pg_url" ]]; then
+        if ! command -v pg_dump >/dev/null 2>&1; then
+            print_error "pg_dump not found (BOOKSTORAGE_POSTGRES_URL is set)"
+            exit 1
+        fi
+        dest="${backup_root}/bookstorage-${stamp}.pgsql"
+        pg_dump "$pg_url" >"$dest"
+        chmod 600 "$dest" 2>/dev/null || true
+        print_success "PostgreSQL backup: $dest"
+        find "$backup_root" -maxdepth 1 -type f \( -name 'bookstorage-*.pgsql' -o -name 'bookstorage-*.sql' \) -mtime "+${retention_days}" -delete 2>/dev/null || true
     else
-        cp -a -- "$db_path" "$dest"
+        local db_path
+        db_path="$(bsctl_env_get BOOKSTORAGE_DATABASE "$env_file")"
+        if [[ -z "$db_path" || ! -f "$db_path" ]]; then
+            print_error "BOOKSTORAGE_DATABASE not set or file missing: '${db_path}'"
+            exit 1
+        fi
+        dest="${backup_root}/bookstorage-${stamp}.sqlite"
+        if command -v sqlite3 >/dev/null 2>&1; then
+            sqlite3 "$db_path" ".backup '$dest'"
+        else
+            cp -a -- "$db_path" "$dest"
+        fi
+        chmod 600 "$dest" 2>/dev/null || true
+        print_success "SQLite backup: $dest"
+        find "$backup_root" -maxdepth 1 -type f -name 'bookstorage-*.sqlite' -mtime "+${retention_days}" -delete 2>/dev/null || true
     fi
-    chmod 600 "$dest" 2>/dev/null || true
-    print_success "Backup: $dest"
-    find "$backup_root" -maxdepth 1 -type f -name 'bookstorage-*.sqlite' -mtime "+${retention_days}" -delete 2>/dev/null || true
     print_success "Pruned backups older than ${retention_days} days (if find supports -mtime)."
 }
 

@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bookstorage/internal/catalog"
 	"bookstorage/internal/i18n"
 	"database/sql"
 	"log"
@@ -244,6 +245,81 @@ func deleteMediaFile(folder, storedPath string) {
 	_ = os.Remove(target)
 }
 
+func (a *App) renderProfilePage(w http.ResponseWriter, r *http.Request, userID int, extra map[string]any) {
+	var u profileUser
+	if v, ok := extra["User"].(profileUser); ok {
+		u = v
+	} else {
+		err := a.DB.QueryRow(
+			`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public
+			 FROM users WHERE id = ?`,
+			userID,
+		).Scan(
+			&u.ID, &u.Username, &u.Password, &u.GoogleSub, &u.GoogleEmail,
+			&u.DisplayName, &u.Email, &u.Bio, &u.AvatarPath, &u.IsPublic,
+		)
+		if err != nil {
+			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
+			return
+		}
+	}
+
+	var totalWorks int
+	_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
+	var totalChapters int
+	_ = a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters)
+	var completedCount int
+	_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'Terminé' OR status = 'Completed')`, userID).Scan(&completedCount)
+	var readingCount int
+	_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
+
+	sessions, _ := a.listActiveSessions(userID)
+	apiTokens, _ := a.listAPITokens(userID)
+	webhooks, _ := a.listWebhookEndpoints(userID)
+	passkeys, _ := a.listWebAuthnCredentials(userID)
+	_, tok, _ := a.currentSession(r)
+	currentSessionHash := ""
+	if tok != "" {
+		currentSessionHash = hashSessionToken(tok)
+	}
+	blocklist, _ := catalog.LoadUserBlocklist(a.DB, int64(userID))
+	q := r.URL.Query()
+	data := map[string]any{
+		"User":               u,
+		"TotalWorks":         totalWorks,
+		"TotalChapters":      totalChapters,
+		"CompletedCount":     completedCount,
+		"ReadingCount":       readingCount,
+		"Sessions":           sessions,
+		"CurrentSession":     currentSessionHash,
+		"APITokens":          apiTokens,
+		"Webhooks":           webhooks,
+		"WebAuthnPasskeys":   passkeys,
+		"BlocklistGenres":    blocklist.Genres,
+		"BlocklistTags":      blocklist.Tags,
+		"BlocklistAdded":     q.Get("blocklist_added") == "1",
+		"BlocklistRemoved":   q.Get("blocklist_removed") == "1",
+		"BlocklistError":     q.Get("blocklist_error") == "1",
+		"LogoutAllDone":      q.Get("logout_all") == "1",
+		"GoogleLinked":       q.Get("google_linked") == "1",
+		"GoogleUnlinked":     q.Get("google_unlinked") == "1",
+		"GoogleOAuthError":   strings.TrimSpace(q.Get("google_error")),
+		"ReadingStatsReset":  strings.TrimSpace(q.Get("reading_stats_reset")),
+		"APITokenRevoked":    q.Get("api_token_revoked") == "1",
+		"WebhookUpdated":     q.Get("webhook_updated") == "1",
+		"WebhookDeleted":     q.Get("webhook_deleted") == "1",
+		"WebhookTestSent":    q.Get("webhook_test") == "1",
+		"WebhookError":       q.Get("webhook_error") == "1",
+		"WebAuthnDeleted":    q.Get("webauthn_deleted") == "1",
+		"WebAuthnRegistered": q.Get("webauthn_registered") == "1",
+		"WebAuthnError":      strings.TrimSpace(q.Get("webauthn_error")),
+	}
+	for k, v := range extra {
+		data[k] = v
+	}
+	a.renderTemplate(w, r, "profile", a.mergeData(r, data))
+}
+
 func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := a.currentUserID(r)
 	if !ok {
@@ -275,37 +351,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		// Profile stats
-		var totalWorks int
-		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ?`, userID).Scan(&totalWorks)
-		var totalChapters int
-		_ = a.DB.QueryRow(`SELECT COALESCE(SUM(chapter), 0) FROM works WHERE user_id = ?`, userID).Scan(&totalChapters)
-		var completedCount int
-		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'Terminé' OR status = 'Completed')`, userID).Scan(&completedCount)
-		var readingCount int
-		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE user_id = ? AND (status = 'En cours' OR status = 'Reading')`, userID).Scan(&readingCount)
-
-		sessions, _ := a.listActiveSessions(userID)
-		_, tok, _ := a.currentSession(r)
-		currentSessionHash := ""
-		if tok != "" {
-			currentSessionHash = hashSessionToken(tok)
-		}
-		q := r.URL.Query()
-		a.renderTemplate(w, r, "profile", a.mergeData(r, map[string]any{
-			"User":              u,
-			"TotalWorks":        totalWorks,
-			"TotalChapters":     totalChapters,
-			"CompletedCount":    completedCount,
-			"ReadingCount":      readingCount,
-			"Sessions":          sessions,
-			"CurrentSession":    currentSessionHash,
-			"LogoutAllDone":     q.Get("logout_all") == "1",
-			"GoogleLinked":      q.Get("google_linked") == "1",
-			"GoogleUnlinked":    q.Get("google_unlinked") == "1",
-			"GoogleOAuthError":  strings.TrimSpace(q.Get("google_error")),
-			"ReadingStatsReset": strings.TrimSpace(q.Get("reading_stats_reset")),
-		}))
+		a.renderProfilePage(w, r, userID, map[string]any{"User": u})
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {
 			w.WriteHeader(http.StatusBadRequest)

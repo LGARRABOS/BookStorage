@@ -23,11 +23,20 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			if id, err := strconv.Atoi(aid); err == nil && id > 0 {
 				if d, err := catalog.GetMediaByID(id); err == nil && d != nil && d.Title != "" {
 					data["PrefillAnilistID"] = id
+					data["PrefillCatalogSource"] = "anilist"
+					data["PrefillCatalogExternalID"] = aid
 					data["PrefillTitle"] = d.Title
 					data["PrefillImageURL"] = d.ImageURL
 					data["PrefillReadingType"] = catalog.ReadingTypeFromAnilistDetail(d)
 					data["PrefillIsAdult"] = d.RawMedia.IsAdult
 				}
+			}
+		}
+		if src := strings.TrimSpace(r.URL.Query().Get("catalog_source")); src != "" {
+			ext := strings.TrimSpace(r.URL.Query().Get("catalog_external_id"))
+			if ext != "" {
+				data["PrefillCatalogSource"] = src
+				data["PrefillCatalogExternalID"] = ext
 			}
 		}
 		a.renderTemplate(w, r, "add_work", a.mergeData(r, data))
@@ -364,6 +373,7 @@ func (a *App) HandleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok": false})
 		return
 	}
+	a.EmitWebhookEvent(userID, webhookEventWorkDeleted, map[string]any{"id": workID})
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 }
@@ -386,6 +396,12 @@ func (a *App) HandleIncrement(w http.ResponseWriter, r *http.Request) {
 	}
 	if n, _ := res.RowsAffected(); n > 0 {
 		a.recordReadingChapterIncrements(userID, 1)
+		var chapter int
+		_ = a.DB.QueryRow(`SELECT chapter FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&chapter)
+		a.EmitWebhookEvent(userID, webhookEventWorkChapterChanged, map[string]any{
+			"work_id": workID,
+			"chapter": chapter,
+		})
 	}
 	_, _ = w.Write([]byte("ok"))
 }
@@ -449,5 +465,11 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	a.applyChapterDeltaToReadingStats(userID, chapter-oldChapter, lastAt)
+	if chapter != oldChapter {
+		a.EmitWebhookEvent(userID, webhookEventWorkChapterChanged, map[string]any{
+			"work_id": workID,
+			"chapter": chapter,
+		})
+	}
 	_, _ = w.Write([]byte("ok"))
 }

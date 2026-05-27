@@ -52,6 +52,25 @@ CREATE TABLE IF NOT EXISTS catalog (
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );`
 
+const createUserCatalogBlocklistSQL = `
+CREATE TABLE IF NOT EXISTS user_catalog_blocklist (
+    user_id INTEGER NOT NULL,
+    label_type TEXT NOT NULL,
+    label_name TEXT NOT NULL,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, label_type, label_name),
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_user_catalog_blocklist_user_id ON user_catalog_blocklist(user_id);`
+
+var catalogColumns = map[string]string{
+	"synopsis":   "TEXT",
+	"alt_titles": "TEXT",
+	"genres":     "TEXT",
+	"tags":       "TEXT",
+	"fetched_at": "DATETIME",
+}
+
 const createDismissedRecommendationsTableSQL = `
 CREATE TABLE IF NOT EXISTS dismissed_recommendations (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -114,11 +133,15 @@ var workColumns = map[string]string{
 	// 1 = exclue du lot / file enrichissement AniList (œuvre sans correspondance catalogue).
 	"anilist_enrich_opt_out": "INTEGER DEFAULT 0",
 	// 1 = suivi ; 0 = non-suivi (filtre tableau de bord), pertinent surtout pour « En cours ».
-	"notify_new_chapters": "INTEGER DEFAULT 1",
-	"reading_site_id":     "INTEGER REFERENCES reading_sites(id)",
-	"started_at":          "DATETIME",
-	"last_chapter_at":     "DATETIME",
-	"finished_at":         "DATETIME",
+	"notify_new_chapters":    "INTEGER DEFAULT 1",
+	"reading_site_id":        "INTEGER REFERENCES reading_sites(id)",
+	"started_at":             "DATETIME",
+	"last_chapter_at":        "DATETIME",
+	"finished_at":            "DATETIME",
+	"link_probe_status":      "TEXT DEFAULT 'unknown'",
+	"link_probe_at":          "DATETIME",
+	"link_probe_http_status": "INTEGER",
+	"link_probe_detail":      "TEXT",
 }
 
 // sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).
@@ -202,6 +225,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		if err := ensurePostgresFullText(c); err != nil {
 			return err
 		}
+		if err := ensureCatalogFTS(c); err != nil {
+			return err
+		}
 		return ensureSuperAdmin(c, s)
 	}
 
@@ -210,6 +236,12 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createCatalogTableSQL); err != nil {
+		return err
+	}
+	if err := ensureColumnsSQLite(db, "catalog", catalogColumns); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createUserCatalogBlocklistSQL); err != nil {
 		return err
 	}
 	if _, err := db.Exec(createSessionsTableSQL); err != nil {
@@ -234,6 +266,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		return err
 	}
 	if err := ensureWorksFTS5(db); err != nil {
+		return err
+	}
+	if err := ensureCatalogFTS(c); err != nil {
 		return err
 	}
 	return ensureSuperAdmin(c, s)

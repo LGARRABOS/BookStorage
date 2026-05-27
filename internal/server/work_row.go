@@ -32,35 +32,40 @@ func (n *nullFlexTime) Scan(src any) error {
 }
 
 type workRow struct {
-	ID                int
-	Title             string
-	Chapter           int
-	Link              sql.NullString
-	Status            sql.NullString
-	ImagePath         sql.NullString
-	ReadingType       sql.NullString
-	Rating            int
-	Notes             sql.NullString
-	UserID            int
-	UpdatedAt         nullFlexTime
-	IsAdult           sql.NullInt64
-	ParentWorkID      sql.NullInt64
-	SeriesSort        int
-	NotifyNewChapters int
-	ReadingSiteID     sql.NullInt64
-	StartedAt         nullFlexTime
-	LastChapterAt     nullFlexTime
-	FinishedAt        nullFlexTime
+	ID                  int
+	Title               string
+	Chapter             int
+	Link                sql.NullString
+	Status              sql.NullString
+	ImagePath           sql.NullString
+	ReadingType         sql.NullString
+	Rating              int
+	Notes               sql.NullString
+	UserID              int
+	UpdatedAt           nullFlexTime
+	IsAdult             sql.NullInt64
+	ParentWorkID        sql.NullInt64
+	SeriesSort          int
+	NotifyNewChapters   int
+	ReadingSiteID       sql.NullInt64
+	StartedAt           nullFlexTime
+	LastChapterAt       nullFlexTime
+	FinishedAt          nullFlexTime
+	LinkProbeStatus     sql.NullString
+	LinkProbeAt         nullFlexTime
+	LinkProbeHTTPStatus sql.NullInt64
+	LinkProbeDetail     sql.NullString
 }
 
 // sqlWorkRowFull must match scanFullWorkRow field order.
-const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1), reading_site_id, started_at, last_chapter_at, finished_at`
+const sqlWorkRowFull = `id, title, chapter, link, status, image_path, reading_type, COALESCE(rating, 0), notes, user_id, updated_at, COALESCE(is_adult, 0), parent_work_id, COALESCE(series_sort, 0), COALESCE(notify_new_chapters, 1), reading_site_id, started_at, last_chapter_at, finished_at, COALESCE(link_probe_status, 'unknown'), link_probe_at, link_probe_http_status, link_probe_detail`
 
 func scanFullWorkRow(w *workRow, s interface{ Scan(dest ...any) error }) error {
 	return s.Scan(
 		&w.ID, &w.Title, &w.Chapter, &w.Link, &w.Status, &w.ImagePath, &w.ReadingType,
 		&w.Rating, &w.Notes, &w.UserID, &w.UpdatedAt, &w.IsAdult, &w.ParentWorkID, &w.SeriesSort,
 		&w.NotifyNewChapters, &w.ReadingSiteID, &w.StartedAt, &w.LastChapterAt, &w.FinishedAt,
+		&w.LinkProbeStatus, &w.LinkProbeAt, &w.LinkProbeHTTPStatus, &w.LinkProbeDetail,
 	)
 }
 
