@@ -395,7 +395,7 @@ func (a *App) ProbeWorkLinks(ctx context.Context, limit int) {
 	if a.DB != nil && a.DB.B != database.BackendPostgres {
 		orderClause = "ORDER BY CASE WHEN link_probe_at IS NULL THEN 0 ELSE 1 END, link_probe_at ASC, id ASC"
 	}
-	q := `SELECT id, link FROM works WHERE link IS NOT NULL AND TRIM(link) != '' ` + orderClause + ` LIMIT ?`
+	q := `SELECT id, link FROM works WHERE link IS NOT NULL AND TRIM(link) != '' AND status IN ('En cours', 'Reading') ` + orderClause + ` LIMIT ?`
 	rows, err := a.DB.Query(q, limit)
 	if err != nil {
 		log.Printf("[prober] failed to list work links: %v", err)

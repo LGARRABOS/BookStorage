@@ -116,8 +116,24 @@ func (a *App) catalogAnilistCoverForUserWork(userID, workID int) (imageURL strin
 	return strings.TrimSpace(catImg), true
 }
 
+func workIsInProgress(w workRow) bool {
+	if !w.Status.Valid {
+		return false
+	}
+	switch strings.TrimSpace(w.Status.String) {
+	case "En cours", "Reading":
+		return true
+	default:
+		return false
+	}
+}
+
 // effectiveLinkDotStatus matches dashboard display: link probe, or reading site status when link probe is still unknown.
+// Only applies to works « En cours » — other statuses are not link-checked.
 func effectiveLinkDotStatus(w workRow, siteMap map[int]readingSite) string {
+	if !workIsInProgress(w) {
+		return "none"
+	}
 	if !w.Link.Valid || strings.TrimSpace(w.Link.String) == "" {
 		return "none"
 	}

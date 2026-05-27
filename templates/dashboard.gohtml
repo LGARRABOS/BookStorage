@@ -386,7 +386,7 @@
                     <div class="work-body">
                         <div class="work-title-row">
                             <h3 class="work-card-title">{{ .Title }}</h3>
-                            {{ if .Link.Valid }}<span class="link-dot link-dot--{{ $linkDotStatus }}" title="{{ t $.T "dashboard.link_probe" }}: {{ $linkDotStatus }}"></span>{{ end }}
+                            {{ if and .Link.Valid (ne $linkDotStatus "none") }}<span class="link-dot link-dot--{{ $linkDotStatus }}" title="{{ t $.T "dashboard.link_probe" }}: {{ $linkDotStatus }}"></span>{{ end }}
                             {{ if .Notes.Valid }}{{ if .Notes.String }}<span class="notes-icon" title="{{ .Notes.String }}">📝</span>{{ end }}{{ end }}
                         </div>
                         <div class="work-chapter">
