@@ -130,7 +130,7 @@
   "dashboard.sites_down": "Sites down",
   "dashboard.sites_down.title": "Sites de lecture signalés down ou dégradés",
   "dashboard.links_dead": "Liens morts",
-  "dashboard.links_dead.title": "Liens d'œuvres signalés down ou dégradés",
+  "dashboard.links_dead.title": "Liens d'œuvres signalés down ou dégradés — cliquer pour filtrer",
   "dashboard.link_probe": "Statut lien",
   "dashboard.bulk.select": "Lot",
   "dashboard.bulk.select_visible": "Sélection visible",

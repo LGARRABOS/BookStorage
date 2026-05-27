@@ -20,12 +20,12 @@
         .dashboard-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
         .dashboard-title p { color: var(--text-muted); margin: 0; }
         .header-actions { display: flex; gap: 0.75rem; }
-        .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
-        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-direction: column; flex-wrap: wrap; gap: 0.75rem; align-items: center; justify-content: center; }
+        .search-box { width: 100%; max-width: 520px; min-width: 200px; position: relative; flex: none; }
         .search-box input { width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.95rem; background: var(--background); transition: border-color 0.2s ease, box-shadow 0.2s ease; }
         .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1); }
         .search-box::before { content: "🔍"; position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
-        .filter-group { display: flex; gap: 0.5rem; align-items: center; }
+        .filter-group { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; justify-content: center; }
         .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); cursor: pointer; transition: border-color 0.2s ease; }
         .filter-group select:focus { outline: none; border-color: var(--primary); }
         .filter-checks { display: flex; gap: 0.55rem; align-items: center; flex-shrink: 0; }
@@ -112,6 +112,12 @@
         .link-dot--degraded { background: #f59e0b; }
         .link-dot--unknown { background: #94a3b8; }
         .sites-down-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.78rem; font-weight: 600; background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.25); margin-top: 0.35rem; }
+        .sites-down-badge--clickable { cursor: pointer; transition: background 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease; }
+        .sites-down-badge--clickable:hover { filter: brightness(0.97); }
+        .sites-down-badge--clickable.active { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45); font-weight: 700; }
+        .sites-down-badge--dead { background: rgba(245,158,11,0.12); color: #b45309; border-color: rgba(245,158,11,0.25); }
+        .sites-down-badge--dead.active { background: rgba(245,158,11,0.22); border-color: rgba(245,158,11,0.55); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35); }
+        button.sites-down-badge { font: inherit; margin-top: 0.35rem; }
         .bulk-bar { display: none; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1rem; background: var(--primary-muted); border: 1px solid var(--primary); border-radius: 0.75rem; }
         .bulk-bar.active { display: flex; }
         .work-bulk-check-wrap { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none; margin-right: auto; }
@@ -245,7 +251,7 @@
                 <div class="dashboard-title">
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
                     {{ if gt .SitesDownCount 0 }}<div class="sites-down-badge" title="{{ t .T "dashboard.sites_down.title" }}">⚠ {{ t .T "dashboard.sites_down" }} ({{ .SitesDownCount }})</div>{{ end }}
-                    {{ if gt .LinkDeadCount 0 }}<div class="sites-down-badge" style="background:rgba(245,158,11,0.12);color:#b45309;border-color:rgba(245,158,11,0.25);" title="{{ t .T "dashboard.links_dead.title" }}">🔗 {{ t .T "dashboard.links_dead" }} ({{ .LinkDeadCount }})</div>{{ end }}
+                    {{ if gt .LinkDeadCount 0 }}<button type="button" id="dead-links-toggle" class="sites-down-badge sites-down-badge--clickable sites-down-badge--dead" title="{{ t .T "dashboard.links_dead.title" }}" aria-pressed="false">🔗 {{ t .T "dashboard.links_dead" }} ({{ .LinkDeadCount }})</button>{{ end }}
                 </div>
             </div>
 
@@ -330,7 +336,7 @@
                     {{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}
                     {{ if or (eq $rs.ProbeStatus "down") (eq $rs.ProbeStatus "degraded") }}{{ $linkDotStatus = $rs.ProbeStatus }}{{ end }}
                 {{ end }}
-                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-link-probe-status="{{ $linkProbe }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
+                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-link-dot-status="{{ if .Link.Valid }}{{ $linkDotStatus }}{{ else }}none{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
@@ -488,6 +494,8 @@
         const bulkLinkTo = document.getElementById('bulk-link-to');
         const bulkApplyLink = document.getElementById('bulk-apply-link');
         const bulkDeleteBtn = document.getElementById('bulk-delete');
+        const deadLinksToggle = document.getElementById('dead-links-toggle');
+        let deadLinksOnly = false;
 
         // Precompute searchable text once to avoid repeated DOM reads on each keystroke.
         cards.forEach(card => {
@@ -566,16 +574,27 @@
                 const cardType = card.dataset.type || '';
                 const notifyVal = card.dataset.notifyNewChapters || '1';
                 const cardSite = card.dataset.readingSiteId || 'none';
+                const linkDot = card.dataset.linkDotStatus || 'none';
                 const hay = card.dataset.search || '';
                 const matchSearch = !search || hay.includes(search);
                 const matchStatus = !status || cardStatus === status;
                 const matchType = !type || cardType === type;
                 const matchFollow = !follow || (follow === 'unfollowed' && cardStatus === 'En cours' && notifyVal === '0');
                 const matchSite = !site || (site === 'none' ? cardSite === 'none' : cardSite === site);
+                const matchDead = !deadLinksOnly || linkDot === 'down' || linkDot === 'degraded';
                 
-                card.style.display = (matchSearch && matchStatus && matchType && matchFollow && matchSite) ? '' : 'none';
+                card.style.display = (matchSearch && matchStatus && matchType && matchFollow && matchSite && matchDead) ? '' : 'none';
             });
             updateBulkBar();
+        }
+
+        if (deadLinksToggle) {
+            deadLinksToggle.addEventListener('click', function() {
+                deadLinksOnly = !deadLinksOnly;
+                deadLinksToggle.classList.toggle('active', deadLinksOnly);
+                deadLinksToggle.setAttribute('aria-pressed', deadLinksOnly ? 'true' : 'false');
+                filterWorks();
+            });
         }
         
         if (searchInput) searchInput.addEventListener('input', debounce(filterWorks, 120));

@@ -130,7 +130,7 @@
   "dashboard.sites_down": "Sites down",
   "dashboard.sites_down.title": "Reading sites reported down or degraded",
   "dashboard.links_dead": "Dead links",
-  "dashboard.links_dead.title": "Work links reported down or degraded",
+  "dashboard.links_dead.title": "Work links reported down or degraded — click to filter",
   "dashboard.link_probe": "Link status",
   "dashboard.bulk.select": "Bulk",
   "dashboard.bulk.select_visible": "Select visible",
