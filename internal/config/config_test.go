@@ -146,9 +146,8 @@ func TestValidateSettingsGoogleRequiresAllParts(t *testing.T) {
 	err := validateSettings(&Settings{
 		Environment:        "development",
 		SecretKey:          defaultSecretKey,
-		PublicOrigin:       "https://a.example",
-		GoogleClientID:     "",
-		GoogleClientSecret: "x",
+		GoogleClientID:     "id",
+		GoogleClientSecret: "",
 	})
 	if err == nil {
 		t.Fatal("expected error when only some Google OAuth variables are set")
@@ -162,6 +161,15 @@ func TestValidateSettingsGoogleRequiresAllParts(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatal(err)
+	}
+	err = validateSettings(&Settings{
+		Environment:        "development",
+		SecretKey:          defaultSecretKey,
+		GoogleClientID:     "id",
+		GoogleClientSecret: "sec",
+	})
+	if err == nil {
+		t.Fatal("expected error when Google credentials set without public origin")
 	}
 }
 
@@ -208,5 +216,81 @@ func TestNormalizePostgresURLForLibPQUnsupportedMode(t *testing.T) {
 	_, err := NormalizePostgresURLForLibPQ("postgresql://u:p@127.0.0.1:5432/db?sslmode=notamode")
 	if err == nil {
 		t.Fatal("expected error")
+	}
+}
+
+func TestValidateSettingsMailRequiresAllParts(t *testing.T) {
+	err := validateSettings(&Settings{
+		Environment:          "development",
+		SecretKey:            defaultSecretKey,
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "",
+		MailFrom:             "noreply@example.com",
+	})
+	if err == nil {
+		t.Fatal("expected error when only some mail variables are set")
+	}
+	err = validateSettings(&Settings{
+		Environment:          "development",
+		SecretKey:            defaultSecretKey,
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "priv",
+		MailFrom:             "noreply@example.com",
+	})
+	if err == nil {
+		t.Fatal("expected error when mail keys set without public origin")
+	}
+	err = validateSettings(&Settings{
+		Environment:          "development",
+		SecretKey:            defaultSecretKey,
+		PublicOrigin:         "https://books.example.com",
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "priv",
+		MailFrom:             "BookStorage <noreply@books.example.com>",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateSettingsProductionMailRequiresHTTPSOrigin(t *testing.T) {
+	err := validateSettings(&Settings{
+		Environment:          "production",
+		SecretKey:            strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword:   "TestAdmin!99",
+		PublicOrigin:         "http://books.example.com",
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "priv",
+		MailFrom:             "noreply@books.example.com",
+	})
+	if err == nil {
+		t.Fatal("expected error for http public origin with mail in production")
+	}
+	err = validateSettings(&Settings{
+		Environment:          "production",
+		SecretKey:            strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword:   "TestAdmin!99",
+		PublicOrigin:         "https://books.example.com",
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "priv",
+		MailFrom:             "noreply@books.example.com",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestMailConfigured(t *testing.T) {
+	if (&Settings{}).MailConfigured() {
+		t.Fatal("expected false for empty settings")
+	}
+	s := &Settings{
+		PublicOrigin:         "https://x.example",
+		MailjetAPIKeyPublic:  "pub",
+		MailjetAPIKeyPrivate: "priv",
+		MailFrom:             "noreply@x.example",
+	}
+	if !s.MailConfigured() {
+		t.Fatal("expected mail configured")
 	}
 }

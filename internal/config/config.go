@@ -47,6 +47,10 @@ type Settings struct {
 	// GoogleClientID / GoogleClientSecret enable Sign in with Google when set with PublicOrigin.
 	GoogleClientID     string
 	GoogleClientSecret string
+	// MailjetAPIKeyPublic / MailjetAPIKeyPrivate / MailFrom enable transactional email when set with PublicOrigin.
+	MailjetAPIKeyPublic  string
+	MailjetAPIKeyPrivate string
+	MailFrom             string
 	// Timezone is the IANA timezone name used to display times in the web UI (e.g. "Europe/Paris"). Defaults to UTC.
 	Timezone string
 }
@@ -89,6 +93,17 @@ func (s *Settings) GoogleOAuthConfigured() bool {
 	return strings.TrimSpace(s.PublicOrigin) != "" &&
 		strings.TrimSpace(s.GoogleClientID) != "" &&
 		strings.TrimSpace(s.GoogleClientSecret) != ""
+}
+
+// MailConfigured reports whether transactional email (password reset) should be active.
+func (s *Settings) MailConfigured() bool {
+	if s == nil {
+		return false
+	}
+	return strings.TrimSpace(s.PublicOrigin) != "" &&
+		strings.TrimSpace(s.MailjetAPIKeyPublic) != "" &&
+		strings.TrimSpace(s.MailjetAPIKeyPrivate) != "" &&
+		strings.TrimSpace(s.MailFrom) != ""
 }
 
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
@@ -273,6 +288,9 @@ func Load(rootPath string) (*Settings, error) {
 		PublicOrigin:             publicOrigin,
 		GoogleClientID:           strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_ID")),
 		GoogleClientSecret:       strings.TrimSpace(os.Getenv("BOOKSTORAGE_GOOGLE_CLIENT_SECRET")),
+		MailjetAPIKeyPublic:      strings.TrimSpace(os.Getenv("BOOKSTORAGE_MAILJET_API_KEY_PUBLIC")),
+		MailjetAPIKeyPrivate:     strings.TrimSpace(os.Getenv("BOOKSTORAGE_MAILJET_API_KEY_PRIVATE")),
+		MailFrom:                 strings.TrimSpace(os.Getenv("BOOKSTORAGE_MAIL_FROM")),
 		Timezone:                 detectTimezone(),
 	}
 	if err := validateSettings(s); err != nil {
@@ -375,18 +393,35 @@ func isPostgresHostLANSafe(host string) bool {
 }
 
 func validateSettings(s *Settings) error {
-	googleParts := 0
-	if strings.TrimSpace(s.PublicOrigin) != "" {
-		googleParts++
-	}
+	googleSpecific := 0
 	if strings.TrimSpace(s.GoogleClientID) != "" {
-		googleParts++
+		googleSpecific++
 	}
 	if strings.TrimSpace(s.GoogleClientSecret) != "" {
-		googleParts++
+		googleSpecific++
 	}
-	if googleParts != 0 && googleParts != 3 {
-		return fmt.Errorf("google OAuth requires all of BOOKSTORAGE_PUBLIC_ORIGIN, BOOKSTORAGE_GOOGLE_CLIENT_ID, and BOOKSTORAGE_GOOGLE_CLIENT_SECRET")
+	if googleSpecific != 0 && googleSpecific != 2 {
+		return fmt.Errorf("google OAuth requires both BOOKSTORAGE_GOOGLE_CLIENT_ID and BOOKSTORAGE_GOOGLE_CLIENT_SECRET")
+	}
+	if googleSpecific == 2 && strings.TrimSpace(s.PublicOrigin) == "" {
+		return fmt.Errorf("google OAuth requires BOOKSTORAGE_PUBLIC_ORIGIN when Google client credentials are set")
+	}
+
+	mailSpecific := 0
+	if strings.TrimSpace(s.MailjetAPIKeyPublic) != "" {
+		mailSpecific++
+	}
+	if strings.TrimSpace(s.MailjetAPIKeyPrivate) != "" {
+		mailSpecific++
+	}
+	if strings.TrimSpace(s.MailFrom) != "" {
+		mailSpecific++
+	}
+	if mailSpecific != 0 && mailSpecific != 3 {
+		return fmt.Errorf("mail requires all of BOOKSTORAGE_MAILJET_API_KEY_PUBLIC, BOOKSTORAGE_MAILJET_API_KEY_PRIVATE, and BOOKSTORAGE_MAIL_FROM")
+	}
+	if mailSpecific == 3 && strings.TrimSpace(s.PublicOrigin) == "" {
+		return fmt.Errorf("mail requires BOOKSTORAGE_PUBLIC_ORIGIN when Mailjet keys and BOOKSTORAGE_MAIL_FROM are set")
 	}
 
 	if strings.TrimSpace(s.PostgresURL) != "" {
@@ -426,6 +461,12 @@ func validateSettings(s *Settings) error {
 		u, err := url.Parse(s.PublicOrigin)
 		if err != nil || u.Scheme != "https" || u.Host == "" {
 			return fmt.Errorf("BOOKSTORAGE_PUBLIC_ORIGIN must be an https URL with host when BOOKSTORAGE_ENV=production and Google OAuth is configured")
+		}
+	}
+	if s.MailConfigured() {
+		u, err := url.Parse(s.PublicOrigin)
+		if err != nil || u.Scheme != "https" || u.Host == "" {
+			return fmt.Errorf("BOOKSTORAGE_PUBLIC_ORIGIN must be an https URL with host when BOOKSTORAGE_ENV=production and mail is configured")
 		}
 	}
 	return nil

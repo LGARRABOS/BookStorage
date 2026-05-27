@@ -13,6 +13,7 @@ func TestHandleRegister_rejectsShortPassword(t *testing.T) {
 	app := &App{Settings: s, DB: db}
 	form := url.Values{}
 	form.Set("username", "shortpwuser")
+	form.Set("email", "user@example.com")
 	form.Set("password", "abc")
 	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
 	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
@@ -23,6 +24,45 @@ func TestHandleRegister_rejectsShortPassword(t *testing.T) {
 	}
 	if !strings.Contains(rec.Header().Get("Location"), "error=weak") {
 		t.Fatalf("expected weak password redirect, got %q", rec.Header().Get("Location"))
+	}
+}
+
+func TestHandleRegister_requiresValidEmail(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	form := url.Values{}
+	form.Set("username", "mailuser")
+	form.Set("email", "not-an-email")
+	form.Set("password", "ValidPass!99")
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	app.HandleRegister(rec, req)
+	if !strings.Contains(rec.Header().Get("Location"), "error=email") {
+		t.Fatalf("expected email error redirect, got %q", rec.Header().Get("Location"))
+	}
+}
+
+func TestHandleRegister_storesNormalizedEmail(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	form := url.Values{}
+	form.Set("username", "mailuser2")
+	form.Set("email", "  User@Example.COM ")
+	form.Set("password", "ValidPass!99")
+	req := httptest.NewRequest(http.MethodPost, "/register", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	app.HandleRegister(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	var email string
+	if err := db.QueryRow(`SELECT email FROM users WHERE username = ?`, "mailuser2").Scan(&email); err != nil {
+		t.Fatal(err)
+	}
+	if email != "user@example.com" {
+		t.Fatalf("email %q", email)
 	}
 }
 

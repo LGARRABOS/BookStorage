@@ -35,10 +35,13 @@
                     <h1>{{ t .T "login.title" }}</h1>
                     <p>{{ t .T "login.subtitle" }}</p>
                 </header>
-                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired .GoogleOAuthError .WebAuthnError }}
+                {{ if or .LoginError .LoginPending .RegisterSuccess .SessionExpired .GoogleOAuthError .WebAuthnError .PasswordResetOK }}
                 <div class="flash-messages">
                     {{ if .SessionExpired }}
                         <p>{{ t .T "login.expired" }}</p>
+                    {{ end }}
+                    {{ if .PasswordResetOK }}
+                        <p>{{ t .T "login.reset_success" }}</p>
                     {{ end }}
                     {{ if .RegisterSuccess }}
                         <p>{{ if .RegisterAuto }}{{ t .T "register.success_auto" }}{{ else }}{{ t .T "register.success" }}{{ end }}</p>
@@ -80,6 +83,9 @@
                     <div class="form-field">
                         <label for="password">{{ t .T "login.password" }}</label>
                         <input id="password" type="password" name="password" autocomplete="current-password" required>
+                        {{ if .PasswordResetEnabled }}
+                        <p style="margin-top:0.5rem;font-size:0.85rem;"><a href="/forgot-password">{{ t .T "login.forgot_link" }}</a></p>
+                        {{ end }}
                     </div>
                     <div class="form-actions">
                         <button type="submit" class="btn btn-primary">{{ t .T "login.submit" }}</button>

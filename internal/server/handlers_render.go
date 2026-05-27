@@ -63,18 +63,20 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		currentPath = r.URL.Path
 	}
 	googleOAuth := a.Settings != nil && a.Settings.GoogleOAuthConfigured()
+	passwordReset := a.Settings != nil && a.Settings.MailConfigured()
 	webAuthnOn := a.webAuthnEnabled()
 	return map[string]any{
-		"Lang":               lang,
-		"T":                  i18n.T(lang),
-		"Languages":          i18n.Languages(),
-		"ViewMode":           mode,
-		"IsMobileView":       isMobile,
-		"CurrentPath":        currentPath,
-		"AppVersion":         a.Version,
-		"GoogleOAuthEnabled": googleOAuth,
-		"WebAuthnEnabled":    webAuthnOn,
-		"CSPNonce":           cspNonceFromContext(r.Context()),
+		"Lang":                 lang,
+		"T":                    i18n.T(lang),
+		"Languages":            i18n.Languages(),
+		"ViewMode":             mode,
+		"IsMobileView":         isMobile,
+		"CurrentPath":          currentPath,
+		"AppVersion":           a.Version,
+		"GoogleOAuthEnabled":   googleOAuth,
+		"PasswordResetEnabled": passwordReset,
+		"WebAuthnEnabled":      webAuthnOn,
+		"CSPNonce":             cspNonceFromContext(r.Context()),
 	}
 }
 

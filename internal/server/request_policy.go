@@ -94,7 +94,7 @@ func isSameOriginRequest(r *http.Request) bool {
 
 func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, ok bool) {
 	switch {
-	case path == "/login", path == "/register":
+	case path == "/login", path == "/register", path == "/forgot-password", path == "/reset-password":
 		return "auth", 8, 0.5, true
 	case path == "/api/works/bulk",
 		strings.HasPrefix(path, "/api/works"),

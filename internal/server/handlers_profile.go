@@ -313,6 +313,7 @@ func (a *App) renderProfilePage(w http.ResponseWriter, r *http.Request, userID i
 		"WebAuthnDeleted":    q.Get("webauthn_deleted") == "1",
 		"WebAuthnRegistered": q.Get("webauthn_registered") == "1",
 		"WebAuthnError":      strings.TrimSpace(q.Get("webauthn_error")),
+		"ProfileEmailError":  q.Get("profile_error") == "email",
 	}
 	for k, v := range extra {
 		data[k] = v
@@ -371,6 +372,11 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			http.Redirect(w, r, "/profile", http.StatusFound)
 			return
 		}
+		if !validAccountEmail(email) {
+			http.Redirect(w, r, "/profile?profile_error=email", http.StatusFound)
+			return
+		}
+		email = normalizeAccountEmail(email)
 
 		updates := map[string]any{}
 		requirePasswordCheck := false
@@ -418,11 +424,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 			updates["display_name"] = nil
 		}
 
-		if email != "" {
-			updates["email"] = email
-		} else {
-			updates["email"] = nil
-		}
+		updates["email"] = email
 
 		if bio != "" {
 			updates["bio"] = bio

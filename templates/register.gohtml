@@ -35,12 +35,15 @@
                     <h1>{{ t .T "register.title" }}</h1>
                     <p>{{ t .T "register.subtitle" }}</p>
                 </header>
-                {{ if or .RegisterErrorEmpty .RegisterErrorExists .RegisterErrorWeak }}
+                {{ if or .RegisterErrorEmpty .RegisterErrorExists .RegisterErrorWeak .RegisterErrorEmail }}
                 <div class="flash-messages">
                     {{ if .RegisterErrorEmpty }}
                         <p>
                             {{ t .T "register.error.required" }}
                         </p>
+                    {{ end }}
+                    {{ if .RegisterErrorEmail }}
+                        <p>{{ t .T "register.error.email" }}</p>
                     {{ end }}
                     {{ if .RegisterErrorWeak }}
                         <p>{{ t .T "register.error.weak" }}</p>
@@ -54,6 +57,10 @@
                     <div class="form-field">
                         <label for="username">{{ t .T "register.username" }}</label>
                         <input id="username" type="text" name="username" autocomplete="username" required>
+                    </div>
+                    <div class="form-field">
+                        <label for="email">{{ t .T "register.email" }}</label>
+                        <input id="email" type="email" name="email" autocomplete="email" required>
                     </div>
                     <div class="form-field">
                         <label for="password">{{ t .T "register.password" }}</label>

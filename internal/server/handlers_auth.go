@@ -17,14 +17,20 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			"RegisterErrorEmpty":  q.Get("error") == "empty",
 			"RegisterErrorExists": q.Get("error") == "exists",
 			"RegisterErrorWeak":   q.Get("error") == "weak",
+			"RegisterErrorEmail":  q.Get("error") == "email",
 		})
 		a.renderTemplate(w, r, "register", data)
 	case http.MethodPost:
 		username := strings.TrimSpace(r.FormValue("username"))
+		email := strings.TrimSpace(r.FormValue("email"))
 		password := r.FormValue("password")
 
-		if username == "" || password == "" {
+		if username == "" || password == "" || email == "" {
 			http.Redirect(w, r, "/register?error=empty", http.StatusFound)
+			return
+		}
+		if !validAccountEmail(email) {
+			http.Redirect(w, r, "/register?error=email", http.StatusFound)
 			return
 		}
 		if len(password) < minPasswordLen {
@@ -42,9 +48,9 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			validated = 1
 		}
 		_, err = a.DB.Exec(
-			`INSERT INTO users (username, password, validated, is_admin)
-             VALUES (?, ?, ?, 0)`,
-			username, hashedPassword, validated,
+			`INSERT INTO users (username, password, validated, is_admin, email)
+             VALUES (?, ?, ?, 0, ?)`,
+			username, hashedPassword, validated, normalizeAccountEmail(email),
 		)
 		if err != nil {
 			// conflit de username, etc.
@@ -88,6 +94,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			"RegisterSuccess":  q.Get("registered") != "",
 			"RegisterAuto":     q.Get("auto") == "1",
 			"SessionExpired":   q.Get("expired") != "",
+			"PasswordResetOK":  q.Get("reset") != "",
 			"LoginNext":        loginNext,
 			"GoogleAuthURL":    googleAuthURL,
 			"GoogleOAuthError": strings.TrimSpace(q.Get("google_error")),

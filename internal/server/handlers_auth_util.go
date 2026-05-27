@@ -5,6 +5,7 @@ import (
 	"crypto/subtle"
 	"encoding/hex"
 	"net/http"
+	"net/mail"
 	"net/url"
 	"strconv"
 	"strings"
@@ -14,6 +15,23 @@ import (
 )
 
 const minPasswordLen = 8
+
+func normalizeAccountEmail(email string) string {
+	return strings.ToLower(strings.TrimSpace(email))
+}
+
+func validAccountEmail(email string) bool {
+	email = strings.TrimSpace(email)
+	if email == "" {
+		return false
+	}
+	addr, err := mail.ParseAddress(email)
+	if err != nil {
+		return false
+	}
+	local, domain, ok := strings.Cut(addr.Address, "@")
+	return ok && local != "" && domain != "" && strings.Contains(domain, ".")
+}
 
 // passwordHashNeedsUpgrade reports whether a stored hash should be re-hashed to bcrypt on next login.
 func passwordHashNeedsUpgrade(stored string) bool {

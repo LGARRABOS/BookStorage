@@ -188,6 +188,8 @@ func main() {
 	mux.HandleFunc("/lang/{lang}", app.HandleSetLanguage)
 	mux.HandleFunc("/register", app.HandleRegister)
 	mux.HandleFunc("/login", app.HandleLogin)
+	mux.HandleFunc("/forgot-password", app.HandleForgotPassword)
+	mux.HandleFunc("/reset-password", app.HandleResetPassword)
 	mux.HandleFunc("/auth/google", app.HandleGoogleOAuthStart)
 	mux.HandleFunc("/auth/google/callback", app.HandleGoogleOAuthCallback)
 	mux.HandleFunc("/auth/google/link", app.RequireLogin(app.HandleGoogleOAuthLink))
