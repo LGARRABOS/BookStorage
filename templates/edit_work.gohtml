@@ -146,7 +146,7 @@
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
-    <script>
+    <script nonce="{{ .CSPNonce }}">
         function previewImage(input) {
             if (!input || !input.files || !input.files[0]) return;
             const preview = document.getElementById('image-preview');
@@ -178,9 +178,14 @@
                 const del = e.target.closest('.js-confirm-delete');
                 if (del) {
                     e.preventDefault();
-                    const href = del.getAttribute('data-href') || del.getAttribute('href');
+                    const deleteId = del.dataset.deleteId;
                     const msg = del.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
-                    showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+                    showConfirm(msg).then(function(ok) {
+                        if (!ok || !deleteId) return;
+                        fetch('/api/delete/' + deleteId, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                            .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.json(); })
+                            .then(data => { if (data && data.ok) window.location.href = '/dashboard'; });
+                    });
                 }
             });
             const picker = document.getElementById('star-picker'), input = document.getElementById('rating-value'), stars = picker.querySelectorAll('.star');

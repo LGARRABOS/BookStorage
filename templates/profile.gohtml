@@ -340,7 +340,7 @@
     <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     const PROFILE_I18N = {
         logoutAllConfirm: {{ jsstr (t .T "profile.sessions.logout_all.confirm") }},
         deleteProfileConfirm: {{ jsstr (t .T "profile.delete.confirm_js") }},

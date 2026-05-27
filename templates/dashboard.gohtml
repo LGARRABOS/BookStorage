@@ -371,7 +371,7 @@
                         <div class="work-meta">
                             <div class="work-actions">
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
-                                <a href="/delete/{{ .ID }}" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-href="/delete/{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</a>
+                                <button type="button" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</button>
                             </div>
                         </div>
                     </div>
@@ -430,7 +430,7 @@
     <script src="/static/js/datepicker.js"></script>
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     document.addEventListener('DOMContentLoaded', function() {
         const cards = Array.from(document.querySelectorAll('.work-card'));
         const searchInput = document.getElementById('search-input');
@@ -744,9 +744,24 @@
                 e.preventDefault();
                 e.stopPropagation();
                 e.stopImmediatePropagation();
-                const href = confirmDel.getAttribute('data-href') || confirmDel.getAttribute('href');
+                const deleteId = confirmDel.dataset.deleteId;
                 const msg = confirmDel.dataset.confirm || '{{ t .T "dashboard.delete.confirm" }}';
-                showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
+                showConfirm(msg).then(function(ok) {
+                    if (!ok || !deleteId) return;
+                    fetch('/api/delete/' + deleteId, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                        .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.json(); })
+                        .then(data => {
+                            if (data && data.ok) {
+                                const cardEl = document.querySelector('.js-edit-work[data-edit-id="' + deleteId + '"]');
+                                if (cardEl) {
+                                    const workCard = cardEl.closest('.work-card');
+                                    if (workCard) workCard.remove();
+                                } else {
+                                    window.location.reload();
+                                }
+                            }
+                        });
+                });
                 return;
             }
             const editBtn = e.target.closest('.js-edit-work');

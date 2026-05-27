@@ -228,7 +228,6 @@ func main() {
 	mux.HandleFunc("POST /api/increment/{id}", app.RequireLogin(app.HandleIncrement))
 	mux.HandleFunc("POST /api/decrement/{id}", app.RequireLogin(app.HandleDecrement))
 	mux.HandleFunc("POST /api/set-chapter/{id}", app.RequireLogin(app.HandleSetChapter))
-	mux.HandleFunc("/delete/{id}", app.RequireLogin(app.HandleDeleteWork))
 	mux.HandleFunc("POST /api/delete/{id}", app.RequireLogin(app.HandleDeleteWorkAPI))
 	mux.HandleFunc("/export", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleExport)))
 	mux.HandleFunc("POST /import", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleImport)))
@@ -238,9 +237,9 @@ func main() {
 	mux.HandleFunc("POST /api/admin/migrate-postgres/test", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAPIAdminMigratePostgresTest))))
 	mux.HandleFunc("POST /api/admin/migrate-postgres/run", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAPIAdminMigratePostgresRun))))
 	mux.HandleFunc("POST /api/admin/database/delete", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminDatabaseDelete)))
-	mux.HandleFunc("/admin/approve/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleApproveAccount)))
-	mux.HandleFunc("/admin/delete_account/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleDeleteAccount)))
-	mux.HandleFunc("/admin/promote/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandlePromoteAccount)))
+	mux.HandleFunc("POST /admin/approve/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleApproveAccount)))
+	mux.HandleFunc("POST /admin/delete_account/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleDeleteAccount)))
+	mux.HandleFunc("POST /admin/promote/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandlePromoteAccount)))
 
 	// Background prober: check all reading sites every 5 minutes.
 	proberCtx, proberCancel := context.WithCancel(context.Background())

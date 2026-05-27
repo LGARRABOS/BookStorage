@@ -216,7 +216,7 @@
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     (function(){
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';
         var textColor = isDark ? '#cbd5e1' : '#64748b';

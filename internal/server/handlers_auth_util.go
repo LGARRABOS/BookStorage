@@ -34,8 +34,7 @@ func hashPassword(password string) (string, error) {
 }
 
 // verifyPassword checks a password against a hash.
-// Supporte bcrypt ($2a$, $2b$, $2y$), Werkzeug pbkdf2:sha256:iterations$salt$hash,
-// et la comparaison en clair (legacy).
+// Supports bcrypt ($2a$, $2b$, $2y$) and Werkzeug pbkdf2:sha256:iterations$salt$hash.
 func verifyPassword(storedHash, password string) bool {
 	if strings.HasPrefix(storedHash, "$2a$") || strings.HasPrefix(storedHash, "$2b$") || strings.HasPrefix(storedHash, "$2y$") {
 		err := bcrypt.CompareHashAndPassword([]byte(storedHash), []byte(password))
@@ -44,7 +43,7 @@ func verifyPassword(storedHash, password string) bool {
 	if strings.HasPrefix(storedHash, "pbkdf2:") {
 		return verifyWerkzeugHash(storedHash, password)
 	}
-	return storedHash == password
+	return false
 }
 
 // verifyWerkzeugHash checks a password against a Werkzeug hash.

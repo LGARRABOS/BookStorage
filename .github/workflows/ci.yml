@@ -207,7 +207,7 @@ jobs:
           curl -sSf http://127.0.0.1:5000/register >/dev/null
 
   # ===========================================================================
-  # Security scans (warn-only: continue-on-error keeps CI green)
+  # Security scans (DAST + secrets blocking; SAST/vuln warn-only until debt cleared)
   # ===========================================================================
 
   security-sast:
@@ -230,7 +230,7 @@ jobs:
         run: go install github.com/securego/gosec/v2/cmd/gosec@latest
 
       - name: Run gosec
-        run: gosec -fmt=json -out=gosec-report.json -stdout ./... || true
+        run: gosec -fmt=json -out=gosec-report.json -stdout ./...
 
       - name: Upload gosec report
         uses: actions/upload-artifact@v4
@@ -258,7 +258,7 @@ jobs:
         run: go install golang.org/x/vuln/cmd/govulncheck@latest
 
       - name: Run govulncheck
-        run: govulncheck -json ./... > govulncheck-report.json || true
+        run: govulncheck -json ./... > govulncheck-report.json
 
       - name: Upload govulncheck report
         uses: actions/upload-artifact@v4
@@ -270,7 +270,6 @@ jobs:
     name: "Security: Secrets scan (gitleaks)"
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -284,7 +283,6 @@ jobs:
           GITLEAKS_LICENSE: ""
         with:
           args: detect --source=. --report-format=json --report-path=gitleaks-report.json --no-banner
-        continue-on-error: true
 
       - name: Upload gitleaks report
         uses: actions/upload-artifact@v4
@@ -298,7 +296,6 @@ jobs:
     runs-on: ubuntu-latest
     needs: build
     timeout-minutes: 10
-    continue-on-error: true
 
     steps:
       - name: Checkout repository
@@ -335,7 +332,7 @@ jobs:
           done
 
           chmod +x ./scripts/ci/security_smoke.sh
-          ./scripts/ci/security_smoke.sh || true
+          ./scripts/ci/security_smoke.sh
 
       - name: Upload DAST smoke report
         uses: actions/upload-artifact@v4

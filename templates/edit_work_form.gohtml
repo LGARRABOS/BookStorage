@@ -236,7 +236,7 @@
 
     <div class="form-actions">
         <div class="form-actions-left">
-            <a href="/delete/{{ .Work.ID }}" class="btn btn-danger {{ if .IsModal }}js-modal-delete{{ else }}js-confirm-delete{{ end }}" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}" {{ if not .IsModal }}data-href="/delete/{{ .Work.ID }}"{{ end }}>🗑️ {{ t .T "work.form.delete" }}</a>
+            <button type="button" class="btn btn-danger {{ if .IsModal }}js-modal-delete{{ else }}js-confirm-delete{{ end }}" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}">🗑️ {{ t .T "work.form.delete" }}</button>
         </div>
         <div class="form-actions-right">
             <a href="/dashboard" class="btn btn-secondary js-modal-cancel">{{ t .T "common.cancel" }}</a>
@@ -244,7 +244,7 @@
         </div>
     </div>
 </form>
-<script>
+<script nonce="{{ .CSPNonce }}">
 (function(){
     var timer;
     window.detectReadingSite = function(input) {

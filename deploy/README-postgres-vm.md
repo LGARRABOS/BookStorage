@@ -147,5 +147,19 @@ Common causes:
 
 4. Application table schema is created on first BookStorage start (`EnsureSchema`); this script does not create the app schema separately.
 
+## Production checklist (app VM)
+
+When `BOOKSTORAGE_ENV=production`:
+
+| Variable | Recommendation |
+|----------|----------------|
+| `BOOKSTORAGE_SECRET_KEY` | ≥ 32 characters, randomly generated (not the dev default) |
+| `BOOKSTORAGE_SUPERADMIN_PASSWORD` | Strong, unique; not `SuperAdmin!2023` or `ChangeThisPassword!` |
+| `BOOKSTORAGE_ENABLE_HSTS` | `true` when served over HTTPS |
+| `BOOKSTORAGE_TRUST_PROXY` | `true` behind a trusted reverse proxy (rate limiting uses `X-Forwarded-For`) |
+| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` or `verify-full` for non-loopback hosts |
+
+Post-install: rotate the superadmin password if the instance was created with defaults, then run `./scripts/ci/security_smoke.sh` against the live URL.
+
 To print the URL with a specific host or IP (instead of the auto-detected value), on the Postgres VM run:  
 `sudo env BS_PG_HOST=192.168.1.117 ./deploy/setup-postgres-vm.sh` (adjust the IP or hostname).

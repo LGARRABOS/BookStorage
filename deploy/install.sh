@@ -180,13 +180,18 @@ print_step "7/7" "Configuration de l'application..."
 
 if [ ! -f "$APP_DIR/.env" ]; then
     SECRET=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9' | fold -w 64 | head -n 1)
+    ADMIN_PASS=$(cat /dev/urandom | tr -dc 'a-zA-Z0-9!@#$%^&*' | fold -w 24 | head -n 1)
     cat > $APP_DIR/.env << EOF
 # BookStorage Configuration
+BOOKSTORAGE_ENV=production
 BOOKSTORAGE_HOST=0.0.0.0
 BOOKSTORAGE_PORT=5000
 BOOKSTORAGE_SECRET_KEY=$SECRET
+BOOKSTORAGE_SUPERADMIN_PASSWORD=$ADMIN_PASS
+# Set BOOKSTORAGE_ENABLE_HSTS=true when served over HTTPS via a reverse proxy
 EOF
-    print_success "Fichier .env créé avec clé secrète générée"
+    print_success "Fichier .env créé avec clé secrète et mot de passe superadmin générés"
+    print_warn "Mot de passe superadmin (affiché une seule fois) : ${ADMIN_PASS}"
 else
     print_success "Fichier .env existant conservé"
 fi

@@ -451,24 +451,3 @@ func (a *App) HandleSetChapter(w http.ResponseWriter, r *http.Request) {
 	a.applyChapterDeltaToReadingStats(userID, chapter-oldChapter, lastAt)
 	_, _ = w.Write([]byte("ok"))
 }
-
-func (a *App) HandleDeleteWork(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	userID, _ := a.currentUserID(r)
-	workID, _ := strconv.Atoi(r.PathValue("id"))
-
-	result, err := a.DB.Exec(`DELETE FROM works WHERE id = ? AND user_id = ?`, workID, userID)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	n, _ := result.RowsAffected()
-	if n == 0 {
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
-	http.Redirect(w, r, "/dashboard", http.StatusFound)
-}

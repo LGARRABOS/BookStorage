@@ -81,10 +81,10 @@
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                             {{ t $.T "dashboard.edit" }}
                         </a>
-                        <a href="/delete/{{ .ID }}" class="btn-mobile btn-mobile--delete">
+                        <button type="button" class="btn-mobile btn-mobile--delete js-confirm-delete" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
                             {{ t $.T "dashboard.delete" }}
-                        </a>
+                        </button>
                     </div>
                 </article>
                 {{ end }}
@@ -100,14 +100,40 @@
     </main>
 
     {{ template "mobile_bottom_nav" . }}
+    <script src="/static/js/modals.js"></script>
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/pwa/sw.js').catch(function(){});
     }
     </script>
-    <script>
+    <script nonce="{{ .CSPNonce }}">
+    (function () {
+      document.addEventListener("click", function (e) {
+        var del = e.target.closest(".js-confirm-delete");
+        if (!del) return;
+        e.preventDefault();
+        var deleteId = del.getAttribute("data-delete-id");
+        var msg = del.getAttribute("data-confirm") || "Confirm?";
+        showConfirm(msg).then(function (ok) {
+          if (!ok || !deleteId) return;
+          fetch("/api/delete/" + deleteId, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
+            .then(function (r) {
+              if (r.status === 401) { window.location.href = "/login?expired=1"; return null; }
+              return r.json();
+            })
+            .then(function (data) {
+              if (data && data.ok) {
+                var card = del.closest(".work-mobile-card");
+                if (card) card.remove();
+                else window.location.reload();
+              }
+            });
+        });
+      });
+    })();
+
     (function () {
       var search = document.getElementById("mobile-search");
       var status = document.getElementById("mobile-filter-status");

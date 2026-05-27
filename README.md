@@ -49,6 +49,16 @@ sudo ./deploy/install.sh
 bsctl start
 ```
 
+`install.sh` generates `.env` with `BOOKSTORAGE_ENV=production`, a random secret key, and a random superadmin password (shown once). Also verify:
+
+| Variable | Recommendation |
+|----------|----------------|
+| `BOOKSTORAGE_ENABLE_HSTS` | `true` behind HTTPS |
+| `BOOKSTORAGE_TRUST_PROXY` | `true` when behind a trusted reverse proxy |
+| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` when the database is remote |
+
+Post-install: rotate the superadmin password if needed, enable HSTS, run `./scripts/ci/security_smoke.sh` against the instance.
+
 ---
 
 ## Documentation
@@ -69,4 +79,4 @@ Full documentation is available on the **[Wiki](https://github.com/LGARRABOS/Boo
 
 ## License
 
-MIT License
+[MIT License](./LICENSE)

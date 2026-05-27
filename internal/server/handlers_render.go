@@ -69,6 +69,7 @@ func (a *App) baseData(r *http.Request) map[string]any {
 		"CurrentPath":        currentPath,
 		"AppVersion":         a.Version,
 		"GoogleOAuthEnabled": googleOAuth,
+		"CSPNonce":           cspNonceFromContext(r.Context()),
 	}
 }
 

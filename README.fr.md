@@ -49,6 +49,16 @@ sudo ./deploy/install.sh
 bsctl start
 ```
 
+`install.sh` génère un `.env` avec `BOOKSTORAGE_ENV=production`, une clé secrète et un mot de passe superadmin aléatoires (affiché une seule fois). Vérifiez aussi :
+
+| Variable | Recommandation |
+|----------|----------------|
+| `BOOKSTORAGE_ENABLE_HSTS` | `true` derrière HTTPS |
+| `BOOKSTORAGE_TRUST_PROXY` | `true` si reverse-proxy de confiance |
+| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` si la base est distante |
+
+Checklist post-install : changer le mot de passe superadmin si besoin, activer HSTS, lancer `./scripts/ci/security_smoke.sh` contre l’instance.
+
 ---
 
 ## Documentation
@@ -69,4 +79,4 @@ La documentation complète est disponible sur le **[Wiki](https://github.com/LGA
 
 ## Licence
 
-Licence MIT
+[MIT License](./LICENSE)

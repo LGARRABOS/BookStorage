@@ -186,6 +186,33 @@ else
 fi
 
 # ---------------------------------------------------------------------------
+# 8) State-changing routes must not accept GET
+# ---------------------------------------------------------------------------
+
+echo ""
+echo "=== GET state-changing routes blocked ==="
+
+for route in "/admin/approve/1" "/admin/promote/1" "/admin/delete_account/1"; do
+  status=$(curl -s -o /dev/null -w '%{http_code}' "${BASE_URL}${route}")
+  if [ "$status" = "405" ] || [ "$status" = "404" ]; then
+    log_pass "GET ${route} => ${status} (no GET handler)"
+  else
+    log_fail "GET ${route} => ${status} (expected 405 or 404)"
+  fi
+done
+
+# POST admin actions with foreign Origin must be CSRF-blocked
+status=$(curl -s -o /dev/null -w '%{http_code}' \
+  -X POST "${BASE_URL}/admin/promote/1" \
+  -H "Cookie: session=fake-session-value" \
+  -H "Origin: https://evil.example.com")
+if [ "$status" = "403" ]; then
+  log_pass "POST /admin/promote/1 with foreign Origin => 403 (CSRF blocked)"
+else
+  log_fail "POST /admin/promote/1 with foreign Origin => ${status} (expected 403)"
+fi
+
+# ---------------------------------------------------------------------------
 # Summary
 # ---------------------------------------------------------------------------
 

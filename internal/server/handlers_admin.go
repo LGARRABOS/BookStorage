@@ -319,7 +319,7 @@ func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandleApproveAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -335,7 +335,7 @@ func (a *App) HandleApproveAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
@@ -364,7 +364,7 @@ func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 }
 
 func (a *App) HandlePromoteAccount(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
+	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}

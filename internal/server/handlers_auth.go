@@ -114,7 +114,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		// Verify password (supports Werkzeug and plaintext)
+		// Verify password (supports bcrypt and Werkzeug pbkdf2)
 		if !u.Password.Valid || !verifyPassword(u.Password.String, password) {
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return

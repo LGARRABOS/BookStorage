@@ -51,7 +51,7 @@
         </div>
     </main>
     <script src="/static/js/modals.js"></script>
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     (function(){
         const out = document.getElementById('out');
         const errPrefix = {{ jsstr (t .T "admin.migrate_pg.error_prefix") }};

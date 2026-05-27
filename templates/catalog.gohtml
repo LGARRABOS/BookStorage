@@ -108,7 +108,7 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     {{ template "recommendations_js_body" . }}
     (function catalogBrowse() {
         var grid = document.getElementById('catalog-browse-grid');

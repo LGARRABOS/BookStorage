@@ -19,7 +19,7 @@
         .lang-toggle:hover { background: var(--primary); color: white; }
     </style>
 </head>
-<body>
+<body data-confirm-prompt="{{ t .T "common.confirm.prompt" }}">
     {{ if not .IsMobileView }}
     <header class="topbar">
         <div class="container nav-layout">
@@ -67,9 +67,21 @@
                                 <td>{{ if eq .IsSuperadmin 1 }}<span class="badge info">{{ t $.T "common.yes" }}</span>{{ else }}{{ t $.T "common.no" }}{{ end }}</td>
                                 <td>
                                     <div class="action-buttons">
-                                        {{ if ne .Validated 1 }}<a class="btn btn-icon primary" href="/admin/approve/{{ .ID }}">{{ t $.T "admin.approve" }}</a>{{ end }}
-                                        {{ if ne .IsAdmin 1 }}<a class="btn btn-icon" href="/admin/promote/{{ .ID }}">{{ t $.T "admin.promote" }}</a>{{ end }}
-                                        {{ if ne .IsSuperadmin 1 }}<a class="btn btn-icon danger js-confirm-delete" href="/admin/delete_account/{{ .ID }}" data-href="/admin/delete_account/{{ .ID }}" data-confirm="{{ t $.T "admin.delete.confirm" }}">{{ t $.T "admin.delete" }}</a>{{ end }}
+                                        {{ if ne .Validated 1 }}
+                                        <form method="POST" action="/admin/approve/{{ .ID }}" class="inline-form">
+                                            <button type="submit" class="btn btn-icon primary">{{ t $.T "admin.approve" }}</button>
+                                        </form>
+                                        {{ end }}
+                                        {{ if ne .IsAdmin 1 }}
+                                        <form method="POST" action="/admin/promote/{{ .ID }}" class="inline-form">
+                                            <button type="submit" class="btn btn-icon">{{ t $.T "admin.promote" }}</button>
+                                        </form>
+                                        {{ end }}
+                                        {{ if ne .IsSuperadmin 1 }}
+                                        <form method="POST" action="/admin/delete_account/{{ .ID }}" class="inline-form js-confirm-delete-form">
+                                            <button type="submit" class="btn btn-icon danger js-confirm-delete" data-confirm="{{ t $.T "admin.delete.confirm" }}">{{ t $.T "admin.delete" }}</button>
+                                        </form>
+                                        {{ end }}
                                     </div>
                                 </td>
                             </tr>
@@ -88,19 +100,7 @@
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            document.addEventListener('click', function(e) {
-                const del = e.target.closest('.js-confirm-delete');
-                if (del) {
-                    e.preventDefault();
-                    const href = del.getAttribute('data-href') || del.getAttribute('href');
-                    const msg = del.dataset.confirm || '{{ t .T "common.confirm.prompt" }}';
-                    showConfirm(msg).then(function(ok) { if (ok) window.location.href = href; });
-                }
-            });
-        });
-    </script>
+    <script src="/static/js/admin-accounts.js"></script>
 </body>
 </html>
 {{ end }}

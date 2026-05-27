@@ -26,7 +26,7 @@ func TestHandleRegister_rejectsShortPassword(t *testing.T) {
 	}
 }
 
-func TestHandleLogin_upgradesLegacyPasswordHash(t *testing.T) {
+func TestHandleLogin_rejectsPlaintextPassword(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
 	plain := "legacy-plain-pass"
@@ -46,14 +46,7 @@ func TestHandleLogin_upgradesLegacyPasswordHash(t *testing.T) {
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status %d", rec.Code)
 	}
-	var stored string
-	if err := db.QueryRow(`SELECT password FROM users WHERE username = 'legacyuser'`).Scan(&stored); err != nil {
-		t.Fatal(err)
-	}
-	if !strings.HasPrefix(stored, "$2") {
-		t.Fatalf("expected bcrypt hash after login, got %q", stored)
-	}
-	if !verifyPassword(stored, plain) {
-		t.Fatal("upgraded hash does not verify")
+	if !strings.Contains(rec.Header().Get("Location"), "error=1") {
+		t.Fatalf("expected login failure redirect, got %q", rec.Header().Get("Location"))
 	}
 }

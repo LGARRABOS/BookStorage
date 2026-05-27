@@ -193,7 +193,7 @@
             </form>
         </div>
     </div>
-    <script>
+    <script nonce="{{ .CSPNonce }}">
     function showSiteDetail(name, url, status, httpCode, detail, lastCheck) {
         document.getElementById('detailTitle').textContent = name + ' — Diagnostic';
         document.getElementById('detailName').textContent = name;

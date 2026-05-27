@@ -116,7 +116,7 @@
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
-    <script>
+    <script nonce="{{ .CSPNonce }}">
 (function () {
   var box = document.getElementById("dup-modal-i18n");
   function attr(k, fb) { return (box && box.getAttribute("data-" + k)) || fb; }

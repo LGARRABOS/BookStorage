@@ -93,15 +93,19 @@ func (s *Settings) GoogleOAuthConfigured() bool {
 // MinProductionSecretKeyLen is the minimum length for BOOKSTORAGE_SECRET_KEY in production.
 const MinProductionSecretKeyLen = 32
 
+// MinProductionSuperadminPasswordLen is the minimum length for BOOKSTORAGE_SUPERADMIN_PASSWORD in production.
+const MinProductionSuperadminPasswordLen = 12
+
 const (
-	defaultSecretKey      = "dev-secret-change-me"
-	defaultDatabaseName   = "database.db"
-	defaultUploadDir      = "static/images"
-	defaultAvatarDir      = "static/avatars"
-	defaultUploadURLPath  = "images"
-	defaultAvatarURLPath  = "avatars"
-	defaultSuperadminUser = "superadmin"
-	defaultSuperadminPass = "SuperAdmin!2023"
+	defaultSecretKey             = "dev-secret-change-me"
+	defaultDatabaseName          = "database.db"
+	defaultUploadDir             = "static/images"
+	defaultAvatarDir             = "static/avatars"
+	defaultUploadURLPath         = "images"
+	defaultAvatarURLPath         = "avatars"
+	defaultSuperadminUser        = "superadmin"
+	defaultSuperadminPass        = "SuperAdmin!2023"
+	documentedWeakSuperadminPass = "ChangeThisPassword!"
 )
 
 func resolveDirectory(root, candidate, def string) (string, error) {
@@ -322,6 +326,46 @@ func detectTimezoneFromSystem() string {
 	return ""
 }
 
+func isWeakSuperadminPassword(password string) bool {
+	password = strings.TrimSpace(password)
+	if password == "" {
+		return true
+	}
+	if password == defaultSuperadminPass || password == documentedWeakSuperadminPass {
+		return true
+	}
+	if len(password) < MinProductionSuperadminPasswordLen {
+		return true
+	}
+	var hasUpper, hasDigit, hasSymbol bool
+	for _, r := range password {
+		switch {
+		case r >= 'A' && r <= 'Z':
+			hasUpper = true
+		case r >= '0' && r <= '9':
+			hasDigit = true
+		case strings.ContainsRune("!@#$%^&*()-_=+[]{}|;:',.<>?/`~\"\\", r):
+			hasSymbol = true
+		}
+	}
+	return !hasUpper || !hasDigit || !hasSymbol
+}
+
+func isPostgresHostLocal(host string) bool {
+	host = strings.TrimSpace(strings.ToLower(host))
+	if host == "" {
+		return true
+	}
+	if h, _, ok := strings.Cut(host, ":"); ok {
+		host = h
+	}
+	switch host {
+	case "localhost", "127.0.0.1", "::1":
+		return true
+	}
+	return strings.HasPrefix(host, "127.")
+}
+
 func validateSettings(s *Settings) error {
 	googleParts := 0
 	if strings.TrimSpace(s.PublicOrigin) != "" {
@@ -355,6 +399,20 @@ func validateSettings(s *Settings) error {
 	}
 	if len(s.SecretKey) < MinProductionSecretKeyLen {
 		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be at least %d bytes when BOOKSTORAGE_ENV=production", MinProductionSecretKeyLen)
+	}
+	if isWeakSuperadminPassword(s.SuperadminPassword) {
+		return fmt.Errorf("BOOKSTORAGE_SUPERADMIN_PASSWORD must be a strong non-default password (>= %d chars, upper, digit, symbol) when BOOKSTORAGE_ENV=production", MinProductionSuperadminPasswordLen)
+	}
+	if strings.TrimSpace(s.PostgresURL) != "" {
+		u, err := url.Parse(s.PostgresURL)
+		if err == nil && u.Host != "" {
+			mode := strings.ToLower(strings.TrimSpace(u.Query().Get("sslmode")))
+			if mode == "" || mode == "disable" {
+				if !isPostgresHostLocal(u.Hostname()) {
+					return fmt.Errorf("BOOKSTORAGE_POSTGRES_URL must use sslmode=require (or verify-ca/verify-full) for non-local hosts when BOOKSTORAGE_ENV=production")
+				}
+			}
+		}
 	}
 	if s.GoogleOAuthConfigured() {
 		u, err := url.Parse(s.PublicOrigin)
