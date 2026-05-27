@@ -55,7 +55,7 @@ bsctl start
 |----------|----------------|
 | `BOOKSTORAGE_ENABLE_HSTS` | `true` behind HTTPS |
 | `BOOKSTORAGE_TRUST_PROXY` | `true` when behind a trusted reverse proxy |
-| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` when the database is remote |
+| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` if the DB is on the public Internet; `disable` OK on private LAN IPs |
 
 Post-install: rotate the superadmin password if needed, enable HSTS, run `./scripts/ci/security_smoke.sh` against the instance.
 

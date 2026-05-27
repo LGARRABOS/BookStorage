@@ -80,29 +80,61 @@ func TestValidateSettingsProductionRequiresStrongSuperadminPassword(t *testing.T
 	}
 }
 
-func TestValidateSettingsProductionPostgresRequiresTLSForRemoteHost(t *testing.T) {
-	err := validateSettings(&Settings{
+func TestValidateSettingsProductionPostgresTLS(t *testing.T) {
+	base := &Settings{
 		Environment:        "production",
 		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
 		SuperadminPassword: "TestAdmin!99",
+	}
+	err := validateSettings(&Settings{
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
 		PostgresURL:        "postgresql://u:p@192.168.1.10:5432/bookstorage?sslmode=disable",
 	})
-	if err == nil {
-		t.Fatal("expected error for remote postgres with sslmode=disable in production")
+	if err != nil {
+		t.Fatal("expected LAN private IP with sslmode=disable to be allowed in production:", err)
 	}
 	err = validateSettings(&Settings{
-		Environment:        "production",
-		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
-		SuperadminPassword: "TestAdmin!99",
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
+		PostgresURL:        "postgresql://u:p@postgres:5432/bookstorage?sslmode=disable",
+	})
+	if err != nil {
+		t.Fatal("expected single-label LAN hostname with sslmode=disable to be allowed:", err)
+	}
+	err = validateSettings(&Settings{
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
+		PostgresURL:        "postgresql://u:p@db.example.com:5432/bookstorage?sslmode=disable",
+	})
+	if err == nil {
+		t.Fatal("expected public hostname with sslmode=disable to be rejected in production")
+	}
+	err = validateSettings(&Settings{
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
+		PostgresURL:        "postgresql://u:p@8.8.8.8:5432/bookstorage?sslmode=disable",
+	})
+	if err == nil {
+		t.Fatal("expected public IP with sslmode=disable to be rejected in production")
+	}
+	err = validateSettings(&Settings{
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
 		PostgresURL:        "postgresql://u:p@192.168.1.10:5432/bookstorage?sslmode=require",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	err = validateSettings(&Settings{
-		Environment:        "production",
-		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
-		SuperadminPassword: "TestAdmin!99",
+		Environment:        base.Environment,
+		SecretKey:          base.SecretKey,
+		SuperadminPassword: base.SuperadminPassword,
 		PostgresURL:        "postgresql://u:p@127.0.0.1:5432/bookstorage?sslmode=disable",
 	})
 	if err != nil {

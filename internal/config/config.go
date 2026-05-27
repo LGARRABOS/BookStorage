@@ -2,6 +2,7 @@ package config
 
 import (
 	"fmt"
+	"net"
 	"net/url"
 	"os"
 	"path/filepath"
@@ -351,7 +352,7 @@ func isWeakSuperadminPassword(password string) bool {
 	return !hasUpper || !hasDigit || !hasSymbol
 }
 
-func isPostgresHostLocal(host string) bool {
+func isPostgresHostLANSafe(host string) bool {
 	host = strings.TrimSpace(strings.ToLower(host))
 	if host == "" {
 		return true
@@ -359,11 +360,18 @@ func isPostgresHostLocal(host string) bool {
 	if h, _, ok := strings.Cut(host, ":"); ok {
 		host = h
 	}
-	switch host {
-	case "localhost", "127.0.0.1", "::1":
+	host = strings.Trim(host, "[]")
+	if host == "localhost" {
 		return true
 	}
-	return strings.HasPrefix(host, "127.")
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast()
+	}
+	// Single-label names (e.g. postgres, BookStorageDB via /etc/hosts) are typical on self-hosted LANs.
+	if !strings.Contains(host, ".") {
+		return true
+	}
+	return false
 }
 
 func validateSettings(s *Settings) error {
@@ -408,8 +416,8 @@ func validateSettings(s *Settings) error {
 		if err == nil && u.Host != "" {
 			mode := strings.ToLower(strings.TrimSpace(u.Query().Get("sslmode")))
 			if mode == "" || mode == "disable" {
-				if !isPostgresHostLocal(u.Hostname()) {
-					return fmt.Errorf("BOOKSTORAGE_POSTGRES_URL must use sslmode=require (or verify-ca/verify-full) for non-local hosts when BOOKSTORAGE_ENV=production")
+				if !isPostgresHostLANSafe(u.Hostname()) {
+					return fmt.Errorf("BOOKSTORAGE_POSTGRES_URL must use sslmode=require (or verify-ca/verify-full) for hosts reachable over the public Internet when BOOKSTORAGE_ENV=production")
 				}
 			}
 		}

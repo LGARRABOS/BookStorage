@@ -157,7 +157,7 @@ When `BOOKSTORAGE_ENV=production`:
 | `BOOKSTORAGE_SUPERADMIN_PASSWORD` | Strong, unique; not `SuperAdmin!2023` or `ChangeThisPassword!` |
 | `BOOKSTORAGE_ENABLE_HSTS` | `true` when served over HTTPS |
 | `BOOKSTORAGE_TRUST_PROXY` | `true` behind a trusted reverse proxy (rate limiting uses `X-Forwarded-For`) |
-| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` or `verify-full` for non-loopback hosts |
+| `BOOKSTORAGE_POSTGRES_URL` | `sslmode=require` or `verify-full` if the DB is on the public Internet; `sslmode=disable` is allowed for private LAN IPs and single-label hostnames |
 
 Post-install: rotate the superadmin password if the instance was created with defaults, then run `./scripts/ci/security_smoke.sh` against the live URL.
 
