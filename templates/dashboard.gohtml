@@ -40,7 +40,7 @@
         .works-grid.view-list .work-title-row { margin-bottom: 0; flex: 1; min-width: 120px; }
         .works-grid.view-list .work-chapter { margin-bottom: 0; }
         .works-grid.view-list .work-rating-display { margin-bottom: 0; }
-        .works-grid.view-list .work-meta { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; }
+        .works-grid.view-list .work-meta { margin-top: 0; padding-top: 0; border-top: none; margin-left: auto; flex-shrink: 0; }
         .works-grid.view-list .work-badges { position: static; }
         .view-toggle { display: flex; gap: 0.25rem; }
         .view-toggle button { width: 36px; height: 36px; border: 1px solid var(--border-subtle); border-radius: 0.5rem; background: var(--surface); color: var(--text-secondary); cursor: pointer; font-size: 1rem; padding: 0; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
@@ -73,7 +73,7 @@
         .work-chapter strong { color: var(--primary); font-weight: 700; font-size: 1.1rem; }
         .work-rating-display { display: flex; gap: 0.15rem; color: #fbbf24; font-size: 0.9rem; margin-bottom: 0.75rem; }
         .work-rating-display .empty { opacity: 0.3; }
-        .work-meta { display: flex; justify-content: flex-end; align-items: center; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
+        .work-meta { display: flex; justify-content: space-between; align-items: center; gap: 0.5rem; margin-top: auto; padding-top: 0.75rem; border-top: 1px solid var(--border-subtle); }
         .work-actions { display: flex; gap: 0.5rem; }
         .work-actions a { width: 32px; height: 32px; border-radius: 0.5rem; display: flex; align-items: center; justify-content: center; font-size: 0.9rem; text-decoration: none; transition: background 0.2s ease; }
         .work-actions .edit-btn { background: rgba(56, 189, 248, 0.15); color: #0ea5e9; }
@@ -106,12 +106,7 @@
         [data-theme="dark"] .chapter-value { border-color: rgba(100, 116, 139, 0.4); }
         [data-theme="dark"] .chapter-value:hover { background: rgba(129, 140, 248, 0.2); }
         [data-theme="dark"] .chapter-value-input { background: rgba(15, 23, 42, 0.8); border-color: #818cf8; color: #f1f5f9; }
-        .site-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
-        .site-dot--up { background: #22c55e; }
-        .site-dot--down { background: #ef4444; }
-        .site-dot--degraded { background: #f59e0b; }
-        .site-dot--unknown { background: #94a3b8; }
-        .link-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; margin-left: 0.15rem; }
+        .link-dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; flex-shrink: 0; }
         .link-dot--up { background: #22c55e; }
         .link-dot--down { background: #ef4444; }
         .link-dot--degraded { background: #f59e0b; }
@@ -119,7 +114,8 @@
         .sites-down-badge { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.78rem; font-weight: 600; background: rgba(239, 68, 68, 0.12); color: #dc2626; border: 1px solid rgba(239, 68, 68, 0.25); margin-top: 0.35rem; }
         .bulk-bar { display: none; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1rem; background: var(--primary-muted); border: 1px solid var(--primary); border-radius: 0.75rem; }
         .bulk-bar.active { display: flex; }
-        .work-bulk-check { position: absolute; top: 0.5rem; left: 0.5rem; z-index: 2; width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; }
+        .work-bulk-check-wrap { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none; margin-right: auto; }
+        .work-bulk-check { width: 16px; height: 16px; accent-color: var(--primary); cursor: pointer; margin: 0; flex-shrink: 0; }
         .work-card { position: relative; }
         .modal-overlay { position: fixed; inset: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
         .modal-overlay[aria-hidden="true"] { display: none; }
@@ -291,17 +287,9 @@
                             <input type="checkbox" id="follow-unfollowed-check">
                             {{ t .T "dashboard.filter.unfollowed_only" }}
                         </label>
-                        <label class="filter-check" title="{{ t .T "dashboard.filter.dead_links_only" }}">
-                            <input type="checkbox" id="dead-links-check">
-                            {{ t .T "dashboard.filter.dead_links_only" }}
-                        </label>
                         <label class="filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
                             <input type="checkbox" id="adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
                             +18
-                        </label>
-                        <label class="filter-check" title="{{ t .T "dashboard.bulk.select_visible" }}">
-                            <input type="checkbox" id="bulk-select-visible">
-                            {{ t .T "dashboard.bulk.select" }}
                         </label>
                     </div>
                     <div class="view-toggle" title="{{ t .T "dashboard.view.toggle_title" }}">
@@ -337,8 +325,12 @@
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
                 {{ $linkProbe := "unknown" }}{{ if .LinkProbeStatus.Valid }}{{ $linkProbe = .LinkProbeStatus.String }}{{ end }}
+                {{ $linkDotStatus := $linkProbe }}
+                {{ if and .Link.Valid (or (eq $linkProbe "unknown") (not .LinkProbeStatus.Valid)) .ReadingSiteID.Valid }}
+                    {{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}
+                    {{ if or (eq $rs.ProbeStatus "down") (eq $rs.ProbeStatus "degraded") }}{{ $linkDotStatus = $rs.ProbeStatus }}{{ end }}
+                {{ end }}
                 <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-link-probe-status="{{ $linkProbe }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
-                    <label class="work-bulk-check-wrap" style="position:absolute;top:0.5rem;left:0.5rem;z-index:2;"><input type="checkbox" class="work-bulk-check" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.bulk.select_one" }}"></label>
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
@@ -392,8 +384,7 @@
                     <div class="work-body">
                         <div class="work-title-row">
                             <h3 class="work-card-title">{{ .Title }}</h3>
-                            {{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }}<span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}"></span>{{ end }}{{ end }}
-                            {{ if .Link.Valid }}<span class="link-dot link-dot--{{ $linkProbe }}" title="{{ t $.T "dashboard.link_probe" }}: {{ $linkProbe }}"></span>{{ end }}
+                            {{ if .Link.Valid }}<span class="link-dot link-dot--{{ $linkDotStatus }}" title="{{ t $.T "dashboard.link_probe" }}: {{ $linkDotStatus }}"></span>{{ end }}
                             {{ if .Notes.Valid }}{{ if .Notes.String }}<span class="notes-icon" title="{{ .Notes.String }}">📝</span>{{ end }}{{ end }}
                         </div>
                         <div class="work-chapter">
@@ -413,6 +404,10 @@
                             {{ end }}
                         </div>
                         <div class="work-meta">
+                            <label class="work-bulk-check-wrap">
+                                <input type="checkbox" class="work-bulk-check" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.bulk.select_one" }}">
+                                <span>{{ t $.T "dashboard.bulk.select" }}</span>
+                            </label>
                             <div class="work-actions">
                                 <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
                                 <button type="button" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</button>
@@ -483,8 +478,6 @@
         const followUnfollowedCheck = document.getElementById('follow-unfollowed-check');
         const siteFilter = document.getElementById('site-filter');
         const adultOnlyCheck = document.getElementById('adult-only-check');
-        const deadLinksCheck = document.getElementById('dead-links-check');
-        const bulkSelectVisible = document.getElementById('bulk-select-visible');
         const bulkBar = document.getElementById('bulk-bar');
         const bulkCountEl = document.getElementById('bulk-count');
         const bulkStatus = document.getElementById('bulk-status');
@@ -524,14 +517,6 @@
             if (bulkBar) bulkBar.classList.toggle('active', ids.length > 0);
         }
         document.querySelectorAll('.work-bulk-check').forEach(cb => cb.addEventListener('change', updateBulkBar));
-        if (bulkSelectVisible) bulkSelectVisible.addEventListener('change', function() {
-            cards.forEach(card => {
-                if (card.style.display === 'none') return;
-                const cb = card.querySelector('.work-bulk-check');
-                if (cb) cb.checked = bulkSelectVisible.checked;
-            });
-            updateBulkBar();
-        });
         async function postBulk(body) {
             const resp = await fetch('/api/works/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
             if (resp.status === 401) { window.location.href = '/login?expired=1'; return null; }
@@ -575,24 +560,20 @@
             const type = typeFilter.value;
             const follow = followUnfollowedCheck && followUnfollowedCheck.checked ? 'unfollowed' : '';
             const site = siteFilter ? siteFilter.value : '';
-            const deadOnly = deadLinksCheck && deadLinksCheck.checked;
             
             cards.forEach(card => {
                 const cardStatus = card.dataset.status || '';
                 const cardType = card.dataset.type || '';
                 const notifyVal = card.dataset.notifyNewChapters || '1';
                 const cardSite = card.dataset.readingSiteId || 'none';
-                const linkProbe = card.dataset.linkProbeStatus || 'unknown';
-                
                 const hay = card.dataset.search || '';
                 const matchSearch = !search || hay.includes(search);
                 const matchStatus = !status || cardStatus === status;
                 const matchType = !type || cardType === type;
                 const matchFollow = !follow || (follow === 'unfollowed' && cardStatus === 'En cours' && notifyVal === '0');
                 const matchSite = !site || (site === 'none' ? cardSite === 'none' : cardSite === site);
-                const matchDead = !deadOnly || linkProbe === 'down' || linkProbe === 'degraded';
                 
-                card.style.display = (matchSearch && matchStatus && matchType && matchFollow && matchSite && matchDead) ? '' : 'none';
+                card.style.display = (matchSearch && matchStatus && matchType && matchFollow && matchSite) ? '' : 'none';
             });
             updateBulkBar();
         }
@@ -602,7 +583,6 @@
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
         if (followUnfollowedCheck) followUnfollowedCheck.addEventListener('change', filterWorks);
         if (siteFilter) siteFilter.addEventListener('change', filterWorks);
-        if (deadLinksCheck) deadLinksCheck.addEventListener('change', filterWorks);
         filterWorks();
 
         const gridEl = document.getElementById('works-grid');
