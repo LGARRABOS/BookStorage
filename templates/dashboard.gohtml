@@ -330,13 +330,9 @@
             </div>
             <div class="works-grid" id="works-grid">
                 {{ range .Works }}
-                {{ $linkProbe := "unknown" }}{{ if .LinkProbeStatus.Valid }}{{ $linkProbe = .LinkProbeStatus.String }}{{ end }}
-                {{ $linkDotStatus := $linkProbe }}
-                {{ if and .Link.Valid (or (eq $linkProbe "unknown") (not .LinkProbeStatus.Valid)) .ReadingSiteID.Valid }}
-                    {{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}
-                    {{ if or (eq $rs.ProbeStatus "down") (eq $rs.ProbeStatus "degraded") }}{{ $linkDotStatus = $rs.ProbeStatus }}{{ end }}
-                {{ end }}
-                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-link-dot-status="{{ if .Link.Valid }}{{ $linkDotStatus }}{{ else }}none{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
+                {{ $linkDotStatus := "unknown" }}{{ if index $.LinkDotStatusByWorkID .ID }}{{ $linkDotStatus = index $.LinkDotStatusByWorkID .ID }}{{ end }}
+                {{ $linkDead := or (eq $linkDotStatus "down") (eq $linkDotStatus "degraded") }}
+                <article class="work-card{{ if .ParentWorkID.Valid }} work-series-child{{ end }}" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Manga{{ end }}" data-chapter="{{ .Chapter }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}" data-link-dot-status="{{ if .Link.Valid }}{{ $linkDotStatus }}{{ else }}none{{ end }}" data-link-dead="{{ if $linkDead }}1{{ else }}0{{ end }}" data-notes="{{ if .Notes.Valid }}{{ .Notes.String }}{{ end }}" data-link="{{ if .Link.Valid }}{{ .Link.String }}{{ end }}">
                     {{ if .Link.Valid }}<a href="{{ .Link.String }}" target="_blank" class="work-cover-link">{{ end }}
                     <div class="work-cover">
                         {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
@@ -574,14 +570,14 @@
                 const cardType = card.dataset.type || '';
                 const notifyVal = card.dataset.notifyNewChapters || '1';
                 const cardSite = card.dataset.readingSiteId || 'none';
-                const linkDot = card.dataset.linkDotStatus || 'none';
+                const linkDead = card.dataset.linkDead === '1';
                 const hay = card.dataset.search || '';
                 const matchSearch = !search || hay.includes(search);
-                const matchStatus = !status || cardStatus === status;
+                const matchStatus = deadLinksOnly || !status || cardStatus === status;
                 const matchType = !type || cardType === type;
                 const matchFollow = !follow || (follow === 'unfollowed' && cardStatus === 'En cours' && notifyVal === '0');
                 const matchSite = !site || (site === 'none' ? cardSite === 'none' : cardSite === site);
-                const matchDead = !deadLinksOnly || linkDot === 'down' || linkDot === 'degraded';
+                const matchDead = !deadLinksOnly || linkDead;
                 
                 card.style.display = (matchSearch && matchStatus && matchType && matchFollow && matchSite && matchDead) ? '' : 'none';
             });
@@ -591,6 +587,9 @@
         if (deadLinksToggle) {
             deadLinksToggle.addEventListener('click', function() {
                 deadLinksOnly = !deadLinksOnly;
+                if (deadLinksOnly && statusFilter) {
+                    statusFilter.value = '';
+                }
                 deadLinksToggle.classList.toggle('active', deadLinksOnly);
                 deadLinksToggle.setAttribute('aria-pressed', deadLinksOnly ? 'true' : 'false');
                 filterWorks();

@@ -124,30 +124,37 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	readingSiteStatusMap := a.loadReadingSiteStatusMap(userID)
 
-	var sitesDownCount, linkDeadCount int
+	linkDotStatusByWorkID := make(map[int]string, len(works))
+	linkDeadCount := 0
+	for _, w := range works {
+		st := effectiveLinkDotStatus(w, readingSiteStatusMap)
+		linkDotStatusByWorkID[w.ID] = st
+		if linkStatusIsDead(st) {
+			linkDeadCount++
+		}
+	}
+
+	var sitesDownCount int
 	_ = a.DB.QueryRow(
 		`SELECT COUNT(*) FROM reading_sites WHERE user_id = ? AND probe_status IN ('down', 'degraded')`,
 		userID,
 	).Scan(&sitesDownCount)
-	_ = a.DB.QueryRow(
-		`SELECT COUNT(*) FROM works WHERE user_id = ? AND link IS NOT NULL AND TRIM(link) != '' AND link_probe_status IN ('down', 'degraded')`,
-		userID,
-	).Scan(&linkDeadCount)
 
 	data := map[string]any{
-		"Works":                works,
-		"CatalogCoverByWorkID": catalogCoverByWorkID,
-		"AnilistCoverByWorkID": anilistCoverByWorkID,
-		"ReadingTypes":         readingTypes,
-		"ReadingStatus":        readingStatuses,
-		"IsAdmin":              isAdmin == 1,
-		"SortBy":               sortBy,
-		"AdultFilter":          adultFilter,
-		"SearchQuery":          r.URL.Query().Get("q"),
-		"ReadingSiteMap":       readingSiteStatusMap,
-		"ReadingSites":         a.loadUserReadingSites(userID),
-		"SitesDownCount":       sitesDownCount,
-		"LinkDeadCount":        linkDeadCount,
+		"Works":                 works,
+		"CatalogCoverByWorkID":  catalogCoverByWorkID,
+		"AnilistCoverByWorkID":  anilistCoverByWorkID,
+		"ReadingTypes":          readingTypes,
+		"ReadingStatus":         readingStatuses,
+		"IsAdmin":               isAdmin == 1,
+		"SortBy":                sortBy,
+		"AdultFilter":           adultFilter,
+		"SearchQuery":           r.URL.Query().Get("q"),
+		"ReadingSiteMap":        readingSiteStatusMap,
+		"ReadingSites":          a.loadUserReadingSites(userID),
+		"LinkDotStatusByWorkID": linkDotStatusByWorkID,
+		"SitesDownCount":        sitesDownCount,
+		"LinkDeadCount":         linkDeadCount,
 	}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)

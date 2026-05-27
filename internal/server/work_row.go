@@ -115,3 +115,26 @@ func (a *App) catalogAnilistCoverForUserWork(userID, workID int) (imageURL strin
 	}
 	return strings.TrimSpace(catImg), true
 }
+
+// effectiveLinkDotStatus matches dashboard display: link probe, or reading site status when link probe is still unknown.
+func effectiveLinkDotStatus(w workRow, siteMap map[int]readingSite) string {
+	if !w.Link.Valid || strings.TrimSpace(w.Link.String) == "" {
+		return "none"
+	}
+	probe := "unknown"
+	if w.LinkProbeStatus.Valid && strings.TrimSpace(w.LinkProbeStatus.String) != "" {
+		probe = strings.TrimSpace(w.LinkProbeStatus.String)
+	}
+	if probe == "unknown" && w.ReadingSiteID.Valid {
+		if rs, ok := siteMap[int(w.ReadingSiteID.Int64)]; ok {
+			if rs.ProbeStatus == "down" || rs.ProbeStatus == "degraded" {
+				return rs.ProbeStatus
+			}
+		}
+	}
+	return probe
+}
+
+func linkStatusIsDead(status string) bool {
+	return status == "down" || status == "degraded"
+}
