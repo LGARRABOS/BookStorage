@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"strings"
 	"testing"
+	"time"
 
 	"bookstorage/internal/config"
 	"bookstorage/internal/mail"
@@ -132,6 +133,66 @@ func TestHandleForgotPassword_fullFlow(t *testing.T) {
 	app.HandleLogin(loginRec, loginReq)
 	if loginRec.Code != http.StatusFound || strings.Contains(loginRec.Header().Get("Location"), "error") {
 		t.Fatalf("login failed: %q", loginRec.Header().Get("Location"))
+	}
+}
+
+func TestHandleForgotPassword_emailCooldown(t *testing.T) {
+	db, s := openTestDB(t)
+	enableMailSettings(s)
+	app := &App{Settings: s, DB: db}
+
+	hashed, err := hashPassword("OldPass!99")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO users (username, password, validated, is_admin, email) VALUES ('cooldownuser', ?, 1, 0, ?)`,
+		hashed, "cooldown@example.com",
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	var sent int
+	mail.SetSendHook(func(context.Context, mail.Message) error {
+		sent++
+		return nil
+	})
+	t.Cleanup(func() { mail.SetSendHook(nil) })
+
+	postForgot := func() {
+		t.Helper()
+		form := url.Values{}
+		form.Set("email", "cooldown@example.com")
+		req := httptest.NewRequest(http.MethodPost, "/forgot-password", strings.NewReader(form.Encode()))
+		req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+		rec := httptest.NewRecorder()
+		app.HandleForgotPassword(rec, req)
+		if rec.Code != http.StatusFound {
+			t.Fatalf("status %d", rec.Code)
+		}
+	}
+
+	postForgot()
+	if sent != 1 {
+		t.Fatalf("first request: sent=%d want 1", sent)
+	}
+
+	postForgot()
+	if sent != 1 {
+		t.Fatalf("second request within cooldown: sent=%d want 1", sent)
+	}
+
+	recent := time.Now().UTC().Add(-passwordResetEmailCooldown - time.Minute)
+	if _, err := db.Exec(
+		`UPDATE password_reset_tokens SET created_at = ? WHERE user_id = 2`,
+		recent,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	postForgot()
+	if sent != 2 {
+		t.Fatalf("after cooldown: sent=%d want 2", sent)
 	}
 }
 

@@ -6,7 +6,10 @@ import (
 	"time"
 )
 
-const passwordResetTokenTTL = time.Hour
+const (
+	passwordResetTokenTTL      = time.Hour
+	passwordResetEmailCooldown = 5 * time.Minute
+)
 
 func normalizeEmail(email string) string {
 	return normalizeAccountEmail(email)
@@ -26,6 +29,25 @@ func (a *App) invalidatePasswordResetTokensForUser(userID int) {
 		return
 	}
 	_, _ = a.DB.Exec(`DELETE FROM password_reset_tokens WHERE user_id = ? AND used_at IS NULL`, userID)
+}
+
+// recentPasswordResetEmailSent reports whether a reset email was sent recently for this user.
+// While true, a new token/email is suppressed so the existing link stays valid.
+func (a *App) recentPasswordResetEmailSent(userID int) bool {
+	if userID <= 0 {
+		return false
+	}
+	var createdAt time.Time
+	err := a.DB.QueryRow(
+		`SELECT created_at FROM password_reset_tokens
+		 WHERE user_id = ? AND used_at IS NULL AND expires_at > ?
+		 ORDER BY created_at DESC LIMIT 1`,
+		userID, time.Now().UTC(),
+	).Scan(&createdAt)
+	if err != nil {
+		return false
+	}
+	return time.Since(createdAt) < passwordResetEmailCooldown
 }
 
 func (a *App) createPasswordResetToken(userID int) (rawToken string, err error) {

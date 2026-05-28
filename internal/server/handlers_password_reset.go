@@ -38,6 +38,9 @@ func (a *App) HandleForgotPassword(w http.ResponseWriter, r *http.Request) {
 				}
 				sender := mail.NewSender(a.Settings)
 				for _, u := range users {
+					if a.recentPasswordResetEmailSent(u.ID) {
+						continue
+					}
 					rawToken, err := a.createPasswordResetToken(u.ID)
 					if err != nil {
 						log.Printf("password reset token for user %d: %v", u.ID, err)
