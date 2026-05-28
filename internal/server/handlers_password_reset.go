@@ -184,7 +184,7 @@ func (a *App) sendPasswordResetEmail(ctx context.Context, sender mail.Sender, to
 	branding := mail.PasswordResetBranding{
 		SiteName:   siteName,
 		BrandColor: brandColor,
-		LogoURL:    logoURL,
+		LogoURL:    mail.EmailSafeLogoURL(logoURL),
 	}
 	return sender.Send(ctx, mail.Message{
 		To:       to,

@@ -47,7 +47,9 @@ func TestHandleForgotPassword_fullFlow(t *testing.T) {
 	}
 
 	var capturedToken string
+	var capturedMsg mail.Message
 	mail.SetSendHook(func(_ context.Context, msg mail.Message) error {
+		capturedMsg = msg
 		if msg.To != "reset@example.com" {
 			t.Fatalf("to: %q", msg.To)
 		}
@@ -86,6 +88,12 @@ func TestHandleForgotPassword_fullFlow(t *testing.T) {
 	}
 	if capturedToken == "" {
 		t.Fatal("expected reset token in email")
+	}
+	if strings.TrimSpace(capturedMsg.TextBody) == "" || strings.TrimSpace(capturedMsg.HTMLBody) == "" {
+		t.Fatalf("email bodies must not be empty: text=%q html=%q", capturedMsg.TextBody, capturedMsg.HTMLBody)
+	}
+	if !strings.Contains(capturedMsg.HTMLBody, "Bonjour,") && !strings.Contains(capturedMsg.HTMLBody, "Hello,") {
+		t.Fatalf("html missing greeting: %q", capturedMsg.HTMLBody)
 	}
 	var tokenHash string
 	if err := db.QueryRow(`SELECT token_hash FROM password_reset_tokens`).Scan(&tokenHash); err != nil {
