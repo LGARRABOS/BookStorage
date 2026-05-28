@@ -93,8 +93,8 @@ done
 echo ""
 echo "=== Method not allowed ==="
 
-# DELETE on /login should not be accepted
-status=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "${BASE_URL}/login")
+# DELETE on /login should not be accepted (same-origin so CSRF does not mask 405)
+status=$(curl -s -o /dev/null -w '%{http_code}' -X DELETE "${BASE_URL}/login" -H "Origin: ${BASE_URL}")
 if [ "$status" = "405" ]; then
   log_pass "DELETE /login => 405"
 else
@@ -102,7 +102,7 @@ else
 fi
 
 # PUT on /register
-status=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "${BASE_URL}/register")
+status=$(curl -s -o /dev/null -w '%{http_code}' -X PUT "${BASE_URL}/register" -H "Origin: ${BASE_URL}")
 if [ "$status" = "405" ]; then
   log_pass "PUT /register => 405"
 else
