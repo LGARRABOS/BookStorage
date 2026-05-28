@@ -7,12 +7,13 @@ import (
 
 func TestBuildPasswordResetHTML_usesBranding(t *testing.T) {
 	htmlBody := BuildPasswordResetHTML(PasswordResetContent{
-		Greeting: "Hello,",
-		Body:     "Reset your password.",
-		Button:   "Reset",
-		Expiry:   "Expires in 1h.",
-		Ignore:   "Ignore if not you.",
-		Footer:   "Support: admin@example.com",
+		Greeting:    "Hello,",
+		Body:        "Reset your password.",
+		Button:      "Reset",
+		RequestedAt: "Request sent on 28.05.2026 14:21 (UTC).",
+		Expiry:      "Expires in 1h.",
+		Ignore:      "Ignore if not you.",
+		Footer:      "Support: admin@example.com",
 	}, PasswordResetBranding{
 		SiteName:   "My Library",
 		BrandColor: "#ff0000",
@@ -30,6 +31,9 @@ func TestBuildPasswordResetHTML_usesBranding(t *testing.T) {
 	}
 	if !strings.Contains(htmlBody, "admin@example.com") {
 		t.Fatal("expected footer")
+	}
+	if !strings.Contains(htmlBody, "28.05.2026 14:21") {
+		t.Fatal("expected requested-at timestamp")
 	}
 	if strings.Contains(htmlBody, "<head>") {
 		t.Fatal("expected no head tag for email client compatibility")

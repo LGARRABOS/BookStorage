@@ -100,6 +100,7 @@
   "mail.password_reset.greeting": "Bonjour,",
   "mail.password_reset.body": "Vous avez demandé à réinitialiser votre mot de passe sur %s. Cliquez sur le bouton ci-dessous pour en choisir un nouveau.",
   "mail.password_reset.button": "Réinitialiser mon mot de passe",
+  "mail.password_reset.requested_at": "Demande envoyée le %s (UTC).",
   "mail.password_reset.expiry": "Ce lien expire dans une heure.",
   "mail.password_reset.ignore": "Si vous n'êtes pas à l'origine de cette demande, ignorez cet e-mail.",
   "register.confirm": "Confirmer le mot de passe",

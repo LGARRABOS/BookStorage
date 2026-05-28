@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/http"
 	"strings"
+	"time"
 
 	"bookstorage/internal/i18n"
 	"bookstorage/internal/mail"
@@ -172,17 +173,23 @@ func (a *App) sendPasswordResetEmail(ctx context.Context, sender mail.Sender, to
 		bodyKey = def["mail.password_reset.body"]
 		button, expiry, ignore = def["mail.password_reset.button"], def["mail.password_reset.expiry"], def["mail.password_reset.ignore"]
 	}
-	subject := fmt.Sprintf(subjectKey, siteName)
+	subject := fmt.Sprintf("%s — %s", fmt.Sprintf(subjectKey, siteName), time.Now().UTC().Format("02.01.2006 15:04"))
 	body := fmt.Sprintf(bodyKey, siteName)
+	requestedAtKey := tr["mail.password_reset.requested_at"]
+	if requestedAtKey == "" {
+		requestedAtKey = i18n.T(i18n.DefaultLang)["mail.password_reset.requested_at"]
+	}
+	requestedAt := fmt.Sprintf(requestedAtKey, time.Now().UTC().Format("02.01.2006 15:04"))
 	resetLink := passwordResetURL(a.Settings.PublicOrigin, rawToken)
 	content := mail.PasswordResetContent{
-		Subject:  subject,
-		Greeting: greeting,
-		Body:     body,
-		Button:   button,
-		Expiry:   expiry,
-		Ignore:   ignore,
-		Footer:   mailFooter,
+		Subject:     subject,
+		Greeting:    greeting,
+		Body:        body,
+		Button:      button,
+		RequestedAt: requestedAt,
+		Expiry:      expiry,
+		Ignore:      ignore,
+		Footer:      mailFooter,
 	}
 	branding := mail.PasswordResetBranding{
 		SiteName:   siteName,
@@ -194,5 +201,6 @@ func (a *App) sendPasswordResetEmail(ctx context.Context, sender mail.Sender, to
 		Subject:  subject,
 		TextBody: mail.BuildPasswordResetText(content, resetLink),
 		HTMLBody: mail.BuildPasswordResetHTML(content, branding, resetLink),
+		CustomID: "password-reset-" + hashSessionToken(rawToken)[:12],
 	})
 }

@@ -96,6 +96,7 @@
   "mail.password_reset.greeting": "Hallo,",
   "mail.password_reset.body": "Sie haben angefordert, Ihr Passwort auf %s zurückzusetzen. Klicken Sie auf die Schaltfläche unten, um ein neues zu wählen.",
   "mail.password_reset.button": "Passwort zurücksetzen",
+  "mail.password_reset.requested_at": "Anfrage gesendet am %s (UTC).",
   "mail.password_reset.expiry": "Dieser Link läuft in einer Stunde ab.",
   "mail.password_reset.ignore": "Wenn Sie dies nicht angefordert haben, ignorieren Sie diese E-Mail.",
   "register.confirm": "Passwort bestätigen",

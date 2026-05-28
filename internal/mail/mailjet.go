@@ -40,6 +40,7 @@ type mailjetMessage struct {
 	Subject  string           `json:"Subject"`
 	TextPart string           `json:"TextPart,omitempty"`
 	HTMLPart string           `json:"HTMLPart,omitempty"`
+	CustomID string           `json:"CustomID,omitempty"`
 }
 
 type mailjetSendRequest struct {
@@ -64,6 +65,7 @@ func (c *mailjetClient) Send(ctx context.Context, msg Message) error {
 			Subject:  msg.Subject,
 			TextPart: msg.TextBody,
 			HTMLPart: msg.HTMLBody,
+			CustomID: strings.TrimSpace(msg.CustomID),
 		}},
 	}
 	body, err := json.Marshal(payload)

@@ -96,6 +96,7 @@
   "mail.password_reset.greeting": "Ciao,",
   "mail.password_reset.body": "Hai richiesto di reimpostare la password su %s. Clicca il pulsante qui sotto per sceglierne una nuova.",
   "mail.password_reset.button": "Reimposta password",
+  "mail.password_reset.requested_at": "Richiesta inviata il %s (UTC).",
   "mail.password_reset.expiry": "Questo link scade tra un'ora.",
   "mail.password_reset.ignore": "Se non hai richiesto questa operazione, ignora questa e-mail.",
   "register.confirm": "Conferma password",

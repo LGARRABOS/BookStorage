@@ -96,6 +96,7 @@
   "mail.password_reset.greeting": "Hola,",
   "mail.password_reset.body": "Ha solicitado restablecer su contraseña en %s. Haga clic en el botón siguiente para elegir una nueva.",
   "mail.password_reset.button": "Restablecer contraseña",
+  "mail.password_reset.requested_at": "Solicitud enviada el %s (UTC).",
   "mail.password_reset.expiry": "Este enlace caduca en una hora.",
   "mail.password_reset.ignore": "Si no solicitó esto, ignore este correo.",
   "register.confirm": "Confirmar contraseña",

@@ -96,6 +96,7 @@
   "mail.password_reset.greeting": "Olá,",
   "mail.password_reset.body": "Pediu para redefinir a palavra-passe em %s. Clique no botão abaixo para escolher uma nova.",
   "mail.password_reset.button": "Redefinir palavra-passe",
+  "mail.password_reset.requested_at": "Pedido enviado em %s (UTC).",
   "mail.password_reset.expiry": "Esta ligação expira dentro de uma hora.",
   "mail.password_reset.ignore": "Se não fez este pedido, ignore este e-mail.",
   "register.confirm": "Confirmar senha",

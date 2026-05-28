@@ -10,13 +10,14 @@ const defaultMailBrandColor = "#4f46e5"
 
 // PasswordResetContent holds localized strings for a password reset email.
 type PasswordResetContent struct {
-	Subject  string
-	Greeting string
-	Body     string
-	Button   string
-	Expiry   string
-	Ignore   string
-	Footer   string
+	Subject     string
+	Greeting    string
+	Body        string
+	Button      string
+	RequestedAt string
+	Expiry      string
+	Ignore      string
+	Footer      string
 }
 
 // PasswordResetBranding holds visual customization for password reset emails.
@@ -48,18 +49,18 @@ func BuildPasswordResetText(content PasswordResetContent, resetLink string) stri
 		"",
 		resetLink,
 		content.Button,
-		"",
-		content.Expiry,
-		"",
-		content.Ignore,
 	}
+	if f := strings.TrimSpace(content.RequestedAt); f != "" {
+		parts = append(parts, "", f)
+	}
+	parts = append(parts, "", content.Expiry, "", content.Ignore)
 	if f := strings.TrimSpace(content.Footer); f != "" {
 		parts = append(parts, "", f)
 	}
 	return strings.Join(parts, "\n")
 }
 
-// BuildPasswordResetHTML renders a simple HTML password reset email compatible with Gmail.
+// BuildPasswordResetHTML renders a minimal HTML password reset email compatible with Gmail.
 func BuildPasswordResetHTML(content PasswordResetContent, branding PasswordResetBranding, resetLink string) string {
 	siteName := html.EscapeString(strings.TrimSpace(branding.SiteName))
 	if siteName == "" {
@@ -69,25 +70,24 @@ func BuildPasswordResetHTML(content PasswordResetContent, branding PasswordReset
 	logo := html.EscapeString(EmailSafeLogoURL(branding.LogoURL))
 
 	var b strings.Builder
-	b.WriteString(`<!DOCTYPE html><html><body style="margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;line-height:1.6;color:#111;background:#f4f4f5;">`)
-	b.WriteString(`<div style="max-width:520px;margin:0 auto;padding:1.5rem 1rem;">`)
-	b.WriteString(`<div style="background:#fff;border-radius:0.75rem;padding:1.5rem;border:1px solid #e4e4e7;">`)
-
+	b.WriteString(`<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5;color:#111;">`)
 	if logo != "" {
-		fmt.Fprintf(&b, `<p style="margin:0 0 1rem 0;text-align:center;"><img src="%s" alt="%s" width="48" height="48" style="border-radius:0.5rem;"></p>`, logo, siteName)
+		fmt.Fprintf(&b, `<p style="text-align:center;"><img src="%s" alt="%s" width="48" height="48"></p>`, logo, siteName)
 	}
-	fmt.Fprintf(&b, `<p style="margin:0 0 1rem 0;font-size:1.1rem;font-weight:700;text-align:center;color:%s;">%s</p>`, color, siteName)
-	fmt.Fprintf(&b, `<p style="margin:0 0 1rem 0;">%s</p>`, html.EscapeString(content.Greeting))
-	fmt.Fprintf(&b, `<p style="margin:0 0 1.5rem 0;">%s</p>`, html.EscapeString(content.Body))
-	fmt.Fprintf(&b, `<p style="margin:0 0 1.5rem 0;text-align:center;"><a href="%s" style="display:inline-block;padding:0.85rem 1.5rem;background:%s;color:#fff;text-decoration:none;border-radius:0.5rem;font-weight:600;">%s</a></p>`,
+	fmt.Fprintf(&b, `<p style="text-align:center;font-weight:bold;color:%s;">%s</p>`, color, siteName)
+	fmt.Fprintf(&b, `<p>%s</p>`, html.EscapeString(content.Greeting))
+	fmt.Fprintf(&b, `<p>%s</p>`, html.EscapeString(content.Body))
+	fmt.Fprintf(&b, `<p style="text-align:center;"><a href="%s" style="display:inline-block;padding:0.75rem 1.25rem;background:%s;color:#fff;text-decoration:none;border-radius:0.5rem;">%s</a></p>`,
 		html.EscapeString(resetLink), color, html.EscapeString(content.Button))
-	fmt.Fprintf(&b, `<p style="margin:0;font-size:0.9rem;color:#555;">%s</p>`, html.EscapeString(content.Expiry))
-	fmt.Fprintf(&b, `<p style="margin:0.75rem 0 0 0;font-size:0.85rem;color:#777;">%s</p>`, html.EscapeString(content.Ignore))
-	if f := strings.TrimSpace(content.Footer); f != "" {
-		fmt.Fprintf(&b, `<p style="margin:1rem 0 0 0;font-size:0.85rem;color:#777;">%s</p>`, html.EscapeString(f))
+	if f := strings.TrimSpace(content.RequestedAt); f != "" {
+		fmt.Fprintf(&b, `<p style="font-size:0.85rem;color:#777;">%s</p>`, html.EscapeString(f))
 	}
-
-	b.WriteString(`</div></div></body></html>`)
+	fmt.Fprintf(&b, `<p style="font-size:0.9rem;color:#555;">%s</p>`, html.EscapeString(content.Expiry))
+	fmt.Fprintf(&b, `<p style="font-size:0.85rem;color:#777;">%s</p>`, html.EscapeString(content.Ignore))
+	if f := strings.TrimSpace(content.Footer); f != "" {
+		fmt.Fprintf(&b, `<p style="font-size:0.85rem;color:#777;">%s</p>`, html.EscapeString(f))
+	}
+	b.WriteString(`</body></html>`)
 	return b.String()
 }
 

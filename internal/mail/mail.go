@@ -9,6 +9,7 @@ import (
 // Message is a single outbound email.
 type Message struct {
 	To, Subject, TextBody, HTMLBody string
+	CustomID                        string
 }
 
 // Sender delivers transactional email.
