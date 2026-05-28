@@ -40,4 +40,43 @@
     radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.12), transparent 45%),
     var(--surface);
 }
+
+.flash-messages-sub {
+  margin-top: 0.65rem !important;
+  font-size: 0.88rem;
+  font-weight: 500;
+  opacity: 0.92;
+  line-height: 1.45;
+}
+
+.auth-email-input-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.auth-email-input-wrap .auth-email-icon {
+  position: absolute;
+  left: 0.9rem;
+  color: var(--text-muted);
+  pointer-events: none;
+  font-size: 1.05rem;
+  line-height: 1;
+}
+
+.auth-email-input-wrap input[type="email"] {
+  width: 100%;
+  padding-left: 2.55rem;
+}
+
+.auth-card .form-hint {
+  margin: 0.15rem 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.auth-forgot-form .form-field {
+  gap: 0.55rem;
+}
   
