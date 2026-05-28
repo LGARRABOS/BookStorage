@@ -49,17 +49,6 @@ type webhookEndpointRow struct {
 	CreatedAt time.Time
 }
 
-type webhookDeliveryRow struct {
-	ID          int
-	EndpointID  int
-	Event       string
-	Payload     string
-	Status      string
-	Attempts    int
-	NextRetryAt sql.NullTime
-	CreatedAt   time.Time
-}
-
 func newWebhookSecret() (string, error) {
 	var b [32]byte
 	if _, err := rand.Read(b[:]); err != nil {
@@ -379,6 +368,19 @@ func (a *App) deliverWebhook(ctx context.Context, deliveryID int) {
 	a.scheduleWebhookRetry(deliveryID, resp.StatusCode)
 }
 
+func webhookRetryDelay(attempts int) time.Duration {
+	switch {
+	case attempts <= 1:
+		return time.Minute
+	case attempts == 2:
+		return 2 * time.Minute
+	case attempts == 3:
+		return 4 * time.Minute
+	default:
+		return 8 * time.Minute
+	}
+}
+
 func (a *App) scheduleWebhookRetry(deliveryID, httpStatus int) {
 	var attempts int
 	_ = a.DB.QueryRow(`SELECT attempts FROM webhook_deliveries WHERE id = ?`, deliveryID).Scan(&attempts)
@@ -391,7 +393,7 @@ func (a *App) scheduleWebhookRetry(deliveryID, httpStatus int) {
 		log.Printf("[webhooks] delivery %d failed permanently (http=%d)", deliveryID, httpStatus)
 		return
 	}
-	delay := time.Duration(1<<uint(attempts-1)) * time.Minute
+	delay := webhookRetryDelay(attempts)
 	if delay > 30*time.Minute {
 		delay = 30 * time.Minute
 	}

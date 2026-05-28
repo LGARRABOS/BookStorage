@@ -2,7 +2,6 @@ package server
 
 import (
 	"database/sql"
-	"encoding/binary"
 	"fmt"
 	"net/url"
 	"strings"
@@ -17,10 +16,20 @@ type webAuthnUser struct {
 	credentials []webauthn.Credential
 }
 
-func (u webAuthnUser) WebAuthnID() []byte {
+func encodeUserIDBE(id int) []byte {
 	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(u.id))
+	if id < 0 {
+		return b
+	}
+	for i := 7; i >= 0; i-- {
+		b[i] = byte(id & 0xff)
+		id >>= 8
+	}
 	return b
+}
+
+func (u webAuthnUser) WebAuthnID() []byte {
+	return encodeUserIDBE(u.id)
 }
 
 func (u webAuthnUser) WebAuthnName() string {
