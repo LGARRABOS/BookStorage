@@ -141,32 +141,55 @@ func (a *App) sendPasswordResetEmail(ctx context.Context, sender mail.Sender, to
 	if a.Settings == nil {
 		return fmt.Errorf("settings unavailable")
 	}
+	siteName := "BookStorage"
+	var brandColor, mailFooter string
+	if a.SiteConfig != nil {
+		if n := strings.TrimSpace(a.SiteConfig.SiteName); n != "" {
+			siteName = n
+		}
+		brandColor = a.SiteConfig.Mail.BrandColor
+		mailFooter = a.SiteConfig.Mail.Footer
+	}
+	logoURL := ""
+	if a.SiteConfig != nil {
+		logoURL = a.SiteConfig.MailLogoURL(a.Settings.PublicOrigin)
+	}
+
 	tr := i18n.T(lang)
-	subject := tr["mail.password_reset.subject"]
+	subjectKey := tr["mail.password_reset.subject"]
 	greeting := tr["mail.password_reset.greeting"]
-	body := tr["mail.password_reset.body"]
+	bodyKey := tr["mail.password_reset.body"]
 	button := tr["mail.password_reset.button"]
 	expiry := tr["mail.password_reset.expiry"]
 	ignore := tr["mail.password_reset.ignore"]
-	if subject == "" {
+	if subjectKey == "" {
 		def := i18n.T(i18n.DefaultLang)
-		subject, greeting, body = def["mail.password_reset.subject"], def["mail.password_reset.greeting"], def["mail.password_reset.body"]
+		subjectKey = def["mail.password_reset.subject"]
+		greeting = def["mail.password_reset.greeting"]
+		bodyKey = def["mail.password_reset.body"]
 		button, expiry, ignore = def["mail.password_reset.button"], def["mail.password_reset.expiry"], def["mail.password_reset.ignore"]
 	}
+	subject := fmt.Sprintf(subjectKey, siteName)
+	body := fmt.Sprintf(bodyKey, siteName)
 	resetLink := passwordResetURL(a.Settings.PublicOrigin, rawToken)
-	textBody := fmt.Sprintf("%s\n\n%s\n\n%s\n%s\n\n%s\n\n%s",
-		greeting, body, resetLink, button, expiry, ignore)
-	htmlBody := fmt.Sprintf(`<!DOCTYPE html><html><body style="font-family:sans-serif;line-height:1.5;color:#111;">
-<p>%s</p>
-<p>%s</p>
-<p><a href="%s" style="display:inline-block;padding:0.75rem 1.25rem;background:#4f46e5;color:#fff;text-decoration:none;border-radius:0.5rem;">%s</a></p>
-<p style="font-size:0.9rem;color:#555;">%s</p>
-<p style="font-size:0.85rem;color:#777;">%s</p>
-</body></html>`, greeting, body, resetLink, button, expiry, ignore)
+	content := mail.PasswordResetContent{
+		Subject:  subject,
+		Greeting: greeting,
+		Body:     body,
+		Button:   button,
+		Expiry:   expiry,
+		Ignore:   ignore,
+		Footer:   mailFooter,
+	}
+	branding := mail.PasswordResetBranding{
+		SiteName:   siteName,
+		BrandColor: brandColor,
+		LogoURL:    logoURL,
+	}
 	return sender.Send(ctx, mail.Message{
 		To:       to,
 		Subject:  subject,
-		TextBody: textBody,
-		HTMLBody: htmlBody,
+		TextBody: mail.BuildPasswordResetText(content, resetLink),
+		HTMLBody: mail.BuildPasswordResetHTML(content, branding, resetLink),
 	})
 }

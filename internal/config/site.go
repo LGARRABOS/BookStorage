@@ -4,13 +4,25 @@ import (
 	"encoding/json"
 	"os"
 	"path/filepath"
+	"strings"
 )
 
 // SiteConfig holds the site configuration loaded from config/site.json
 type SiteConfig struct {
 	SiteName string      `json:"site_name"`
 	SiteURL  string      `json:"site_url"`
+	Mail     MailConfig  `json:"mail"`
 	Legal    LegalConfig `json:"legal"`
+}
+
+// MailConfig customizes transactional email appearance (password reset, etc.).
+type MailConfig struct {
+	// BrandColor is the primary button/header accent (CSS hex, e.g. "#4f46e5").
+	BrandColor string `json:"brand_color"`
+	// LogoURL is an absolute URL to a logo image shown in HTML emails. Empty uses {PublicOrigin}/static/icons/favicon.svg when sending.
+	LogoURL string `json:"logo_url"`
+	// Footer is optional extra text appended at the bottom of emails (e.g. support contact).
+	Footer string `json:"footer"`
 }
 
 // LegalConfig holds legal notice information
@@ -66,4 +78,22 @@ func LoadSiteConfig(rootPath string) *SiteConfig {
 	}
 
 	return &cfg
+}
+
+// MailLogoURL returns the logo URL for HTML emails. Uses mail.logo_url when set,
+// otherwise {publicOrigin}/static/icons/favicon.svg when publicOrigin is non-empty.
+func (c *SiteConfig) MailLogoURL(publicOrigin string) string {
+	if c != nil {
+		if u := strings.TrimSpace(c.Mail.LogoURL); u != "" {
+			return u
+		}
+	}
+	origin := strings.TrimRight(strings.TrimSpace(publicOrigin), "/")
+	if origin == "" && c != nil {
+		origin = strings.TrimRight(strings.TrimSpace(c.SiteURL), "/")
+	}
+	if origin == "" {
+		return ""
+	}
+	return origin + "/static/icons/favicon.svg"
 }

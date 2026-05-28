@@ -1,6 +1,12 @@
 {
   "site_name": "BookStorage",
   "site_url": "https://example.com",
+
+  "mail": {
+    "brand_color": "#4f46e5",
+    "logo_url": "",
+    "footer": "Des questions ? Contactez-nous à contact@example.com"
+  },
   
   "legal": {
     "owner_name": "Votre Nom / Your Name",
