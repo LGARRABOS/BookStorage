@@ -552,6 +552,7 @@
   "admin.database.search_clear": "Cancella",
   "admin.database.copy": "Copia",
   "admin.database.copied": "Copiato",
+  "admin.database.help_summary": "Guida · navigazione tabella",
   "admin.database.scroll_hint": "Scorrimento orizzontale: barra sotto la tabella, pulsanti ← → o Maiusc + rotella. Ridimensiona trascinando il bordo dell’intestazione; doppio clic per adattare. Clic su una riga per tutti i valori.",
   "admin.database.scroll_left": "Scorri a sinistra",
   "admin.database.scroll_right": "Scorri a destra",

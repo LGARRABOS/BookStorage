@@ -1,5 +1,17 @@
 /* Admin database overview (/admin/database) */
 
+/* Évite que la grille étire le panneau à la largeur du tableau (sinon pas de scroll interne). */
+body.admin-database-page .page-section {
+  min-width: 0;
+}
+
+body.admin-database-page .content-card,
+body.admin-database-page .db-panels,
+body.admin-database-page .db-panel {
+  min-width: 0;
+  max-width: 100%;
+}
+
 .db-intro {
   margin: 0 0 1.25rem 0;
   padding: 0.85rem 1rem;
@@ -183,64 +195,112 @@
   color: var(--text-primary);
 }
 
-.db-scroll-hint {
-  margin: 0;
-  padding: 0.35rem 1rem 0.5rem;
-  font-size: 0.78rem;
-  color: var(--text-muted);
+.db-table-help {
   border-top: 1px solid var(--border-subtle);
   background: rgba(15, 23, 42, 0.02);
+  font-size: 0.78rem;
+  color: var(--text-muted);
 }
 
-/* Zone de défilement (horizontal + vertical) */
+.db-table-help summary {
+  padding: 0.4rem 1rem;
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--text-secondary);
+  list-style: none;
+}
+
+.db-table-help summary::-webkit-details-marker {
+  display: none;
+}
+
+.db-table-help summary::before {
+  content: "▸ ";
+  color: var(--text-muted);
+}
+
+.db-table-help[open] summary::before {
+  content: "▾ ";
+}
+
+.db-scroll-hint {
+  margin: 0;
+  padding: 0 1rem 0.55rem;
+  font-size: 0.78rem;
+  line-height: 1.45;
+}
+
+/* Zone de défilement : largeur bornée (min-width:0) pour forcer le scroll interne */
 .db-table-scroll-zone {
   position: relative;
-  max-height: min(72vh, 36rem);
-  overflow: auto;
-  overflow-x: auto;
-  overflow-y: auto;
+  display: block;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  min-height: 14rem;
+  max-height: min(65vh, 34rem);
+  overflow: scroll;
+  overflow-x: scroll;
+  overflow-y: scroll;
   border-top: 1px solid var(--border-subtle);
   border-bottom-left-radius: 0.85rem;
   border-bottom-right-radius: 0.85rem;
   -webkit-overflow-scrolling: touch;
-  scrollbar-width: auto;
-  scrollbar-color: rgba(79, 70, 229, 0.45) rgba(15, 23, 42, 0.06);
+  scrollbar-width: auto !important;
+  scrollbar-color: rgba(79, 70, 229, 0.55) rgba(15, 23, 42, 0.08) !important;
 }
 
 .db-table-scroll-zone::-webkit-scrollbar {
-  width: 12px;
-  height: 12px;
+  width: 14px !important;
+  height: 14px !important;
+  display: block !important;
 }
 
 .db-table-scroll-zone::-webkit-scrollbar-thumb {
-  background: rgba(79, 70, 229, 0.35);
+  background: rgba(79, 70, 229, 0.45) !important;
   border-radius: 8px;
-  border: 2px solid transparent;
+  border: 3px solid transparent;
   background-clip: padding-box;
 }
 
 .db-table-scroll-zone::-webkit-scrollbar-track {
-  background: rgba(15, 23, 42, 0.05);
+  background: rgba(15, 23, 42, 0.08) !important;
 }
 
-.db-table-scroll-zone.db-scroll-left {
-  box-shadow: inset 10px 0 10px -8px rgba(79, 70, 229, 0.1);
+.db-table-scroll-zone:focus {
+  outline: 2px solid rgba(79, 70, 229, 0.35);
+  outline-offset: -2px;
 }
 
-.db-table-scroll-zone.db-scroll-right {
-  box-shadow: inset -10px 0 10px -8px rgba(79, 70, 229, 0.1);
+.db-table-scroll-zone.db-scroll-right::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 2.5rem;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(270deg, var(--surface) 15%, transparent);
+  z-index: 2;
 }
 
-.db-table-scroll-zone.db-scroll-left.db-scroll-right {
-  box-shadow:
-    inset 10px 0 10px -8px rgba(79, 70, 229, 0.1),
-    inset -10px 0 10px -8px rgba(79, 70, 229, 0.1);
+.db-table-scroll-zone.db-scroll-left::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 2.5rem;
+  height: 100%;
+  pointer-events: none;
+  background: linear-gradient(90deg, var(--surface) 15%, transparent);
+  z-index: 2;
 }
 
 .db-panel .db-data-table {
   width: max-content;
   min-width: 100%;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
   table-layout: auto;
   font-size: 0.8rem;
 }
@@ -274,6 +334,7 @@
   font-size: 0.75rem;
   white-space: nowrap;
   user-select: none;
+  box-shadow: 0 1px 0 var(--border-subtle);
 }
 
 .db-panel .db-data-table th.db-th {
@@ -281,10 +342,6 @@
   top: 0;
   padding-right: 0.5rem;
   padding-left: 0.75rem;
-}
-
-.db-panel .db-data-table th.db-th:has(.db-col-resize) {
-  position: sticky;
 }
 
 .db-th-inner {
@@ -315,6 +372,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 28rem;
+  background: var(--surface);
 }
 
 .db-panel .db-data-table td.db-cell-wrap {

@@ -13,7 +13,7 @@
     <link rel="stylesheet" href="/static/css/admin-database.css">
     <script src="/static/js/appearance-init.js"></script>
 </head>
-<body>
+<body class="admin-database-page">
     {{ if not .IsMobileView }}
     <header class="topbar">
         <div class="container nav-layout">
@@ -118,8 +118,11 @@
                                 <button type="button" class="db-reset-cols">{{ t $.T "admin.database.reset_columns" }}</button>
                             </div>
                         </div>
-                        <p class="db-scroll-hint">{{ t $.T "admin.database.scroll_hint" }}</p>
-                        <div class="db-table-scroll-zone" data-db-scroll="{{ $table }}">
+                        <details class="db-table-help">
+                            <summary>{{ t $.T "admin.database.help_summary" }}</summary>
+                            <p class="db-scroll-hint">{{ t $.T "admin.database.scroll_hint" }}</p>
+                        </details>
+                        <div class="db-table-scroll-zone" data-db-scroll="{{ $table }}" tabindex="0">
                             <table class="db-data-table" data-db-table="{{ $table }}">
                                 <colgroup>
                                     {{ range $sec.Columns }}<col class="{{ template "db_column_class" . }}">{{ end }}

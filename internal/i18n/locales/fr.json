@@ -580,6 +580,7 @@
   "admin.database.search_clear": "Effacer",
   "admin.database.copy": "Copier",
   "admin.database.copied": "Copié",
+  "admin.database.help_summary": "Aide · navigation du tableau",
   "admin.database.scroll_hint": "Défilement horizontal : barre sous le tableau, boutons ← →, ou Maj + molette. Redimensionnez une colonne en glissant le bord de son en-tête ; double-clic pour l’ajuster au contenu. Cliquez une ligne pour afficher toutes les valeurs.",
   "admin.database.scroll_left": "Défiler à gauche",
   "admin.database.scroll_right": "Défiler à droite",

@@ -580,6 +580,7 @@
   "admin.database.search_clear": "Clear",
   "admin.database.copy": "Copy",
   "admin.database.copied": "Copied",
+  "admin.database.help_summary": "Help · table navigation",
   "admin.database.scroll_hint": "Scroll horizontally: scrollbar below, ← → buttons, or Shift + mouse wheel. Resize a column by dragging the header edge; double-click to fit content. Click a row to see all field values.",
   "admin.database.scroll_left": "Scroll left",
   "admin.database.scroll_right": "Scroll right",

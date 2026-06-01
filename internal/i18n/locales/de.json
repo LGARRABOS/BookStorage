@@ -552,6 +552,7 @@
   "admin.database.search_clear": "Löschen",
   "admin.database.copy": "Kopieren",
   "admin.database.copied": "Kopiert",
+  "admin.database.help_summary": "Hilfe · Tabellennavigation",
   "admin.database.scroll_hint": "Horizontal scrollen: Leiste unten, ← → Tasten oder Umschalt + Mausrad. Spaltenbreite am Kopfrand ziehen; Doppelklick passt an. Zeile anklicken für alle Werte.",
   "admin.database.scroll_left": "Nach links scrollen",
   "admin.database.scroll_right": "Nach rechts scrollen",

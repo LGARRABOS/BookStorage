@@ -552,6 +552,7 @@
   "admin.database.search_clear": "Borrar",
   "admin.database.copy": "Copiar",
   "admin.database.copied": "Copiado",
+  "admin.database.help_summary": "Ayuda · navegación de la tabla",
   "admin.database.scroll_hint": "Desplazamiento horizontal: barra inferior, botones ← → o Mayús + rueda. Redimensione arrastrando el borde del encabezado; doble clic para ajustar. Clic en una fila para ver todos los valores.",
   "admin.database.scroll_left": "Desplazar a la izquierda",
   "admin.database.scroll_right": "Desplazar a la derecha",

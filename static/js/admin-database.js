@@ -321,9 +321,17 @@
       panel.querySelectorAll(".db-scroll-btn").forEach(function (btn) {
         btn.addEventListener("click", function () {
           var dir = btn.getAttribute("data-dir") === "right" ? 1 : -1;
-          zone.scrollBy({ left: dir * Math.max(200, zone.clientWidth * 0.55), behavior: "smooth" });
+          var step = Math.max(280, zone.clientWidth * 0.72);
+          zone.scrollBy({ left: dir * step, behavior: "smooth" });
+          setTimeout(function () {
+            updateScrollShadows(zone);
+          }, 320);
         });
       });
+
+      setTimeout(function () {
+        updateScrollShadows(zone);
+      }, 0);
 
       var resetBtn = panel.querySelector(".db-reset-cols");
       if (resetBtn) {
