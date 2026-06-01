@@ -122,73 +122,66 @@
   border-top: 1px solid var(--border-subtle);
   max-height: min(70vh, 32rem);
   overflow: auto;
-  overflow-x: auto;
   -webkit-overflow-scrolling: touch;
 }
 
-/* Largeur au contenu : pas de min-width 100% (évite l’étirement et les en-têtes éparpillés). */
-.db-panel .table-wrapper > table.data-table {
-  width: max-content;
-  max-width: none;
+/*
+ * table-layout: fixed + width 100% : colonnes alignées (thead/tbody).
+ * Pas de flex dans les cellules : le min-width:auto des flex items
+ * forçait la largeur sur le texte complet (chemin avatar, etc.).
+ */
+.db-panel .table-wrapper > table.db-data-table {
+  width: 100% !important;
+  table-layout: fixed;
   border-collapse: collapse;
-  table-layout: auto;
   font-size: 0.8rem;
 }
 
-.db-panel .data-table thead {
-  display: table-header-group;
-}
-
-.db-panel .data-table tbody {
-  display: table-row-group;
-}
-
-.db-panel .data-table tr {
-  display: table-row;
-}
-
-.db-panel .data-table th,
-.db-panel .data-table td {
-  display: table-cell;
+.db-panel .db-data-table th,
+.db-panel .db-data-table td {
   padding: 0.5rem 0.65rem;
   text-align: left;
-  vertical-align: middle;
+  vertical-align: top;
   border-bottom: 1px solid var(--border-subtle);
-  word-break: break-word;
-  overflow-wrap: break-word;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
-.db-panel .data-table th {
+.db-panel .db-data-table th {
   white-space: nowrap;
   position: sticky;
   top: 0;
   z-index: 1;
   font-weight: 600;
   color: var(--text-secondary);
-  /* Annule le dégradé global admin.css sur cet en-tête */
   background: var(--surface) !important;
   text-transform: none;
   letter-spacing: normal;
-  font-size: 0.8rem;
+  font-size: 0.75rem;
 }
 
-.db-panel .data-table td {
-  max-width: 24rem;
+.db-panel .db-data-table td {
+  white-space: nowrap;
 }
 
-.db-panel .data-table td.db-cell-long,
-.db-panel .data-table th.db-col-long {
-  max-width: 16rem;
+.db-panel .db-data-table td.db-cell-wrap {
+  white-space: normal;
+  word-break: break-word;
 }
 
-.db-panel .data-table tbody tr:hover td {
+.db-panel .db-data-table td.db-cell-long,
+.db-panel .db-data-table th.db-col-long {
+  width: 11%;
+}
+
+.db-panel .db-data-table tbody tr:hover td {
   background: rgba(79, 70, 229, 0.04);
 }
 
-.db-panel .data-table th.db-actions-col,
-.db-panel .data-table td.db-actions-col {
+.db-panel .db-data-table th.db-actions-col,
+.db-panel .db-data-table td.db-actions-col {
+  width: 5%;
   white-space: nowrap;
-  width: 1%;
   text-align: right;
 }
 
@@ -247,27 +240,23 @@
   display: none !important;
 }
 
-/* Long / path cells */
-.db-cell-long-wrap {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
+/* Long / path cells (block, pas flex — évite l’élargissement des colonnes) */
+.db-cell-long-block {
+  overflow: hidden;
   max-width: 100%;
-  min-width: 0;
 }
 
 .db-cell-truncate {
-  flex: 1 1 auto;
-  min-width: 0;
+  display: block;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  display: inline-block;
-  max-width: 14rem;
+  max-width: 100%;
 }
 
 .db-cell-copy {
-  flex: 0 0 auto;
+  display: inline-block;
+  margin-top: 0.25rem;
   font-size: 0.72rem;
   padding: 0.2rem 0.45rem;
   border-radius: 0.4rem;
@@ -317,7 +306,7 @@
   color: #fdba74;
 }
 
-[data-theme="dark"] .db-panel .data-table tbody tr:hover td {
+[data-theme="dark"] .db-panel .db-data-table tbody tr:hover td {
   background: rgba(129, 140, 248, 0.08);
 }
 

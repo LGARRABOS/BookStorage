@@ -108,12 +108,12 @@
                             <button type="button" class="db-search-clear" hidden>{{ t $.T "admin.database.search_clear" }}</button>
                         </div>
                         <div class="table-wrapper">
-                            <table class="data-table" data-db-table="{{ $table }}">
+                            <table class="db-data-table" data-db-table="{{ $table }}">
                                 <thead>
                                     <tr>
                                         {{ range $sec.Columns }}
                                         {{ $colU := upper . }}
-                                        {{ $colLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") }}
+                                        {{ $colLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (hasPrefix $colU "GOOGLE_") }}
                                         <th{{ if $colLong }} class="db-col-long"{{ end }}>{{ . }}</th>
                                         {{ end }}
                                         {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
@@ -127,8 +127,8 @@
                                         {{ $val := index $row $colIdx }}
                                         {{ $colU := upper $col }}
                                         {{ $isBool := or (eq $colU "VALIDATED") (and (hasPrefix $colU "IS_") (or (eq $val "0") (eq $val "1") (eq $val "true") (eq $val "false"))) }}
-                                        {{ $isLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (gt (len $val) 80) }}
-                                        <td{{ if $isLong }} class="db-cell-long"{{ end }} data-col="{{ $col }}">
+                                        {{ $isLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (hasPrefix $colU "GOOGLE_") (gt (len $val) 80) }}
+                                        <td{{ if $isLong }} class="db-cell-long"{{ else if eq $colU "BIO" }} class="db-cell-wrap"{{ end }} data-col="{{ $col }}">
                                             {{ if eq $val "" }}
                                             <span class="db-cell-empty">—</span>
                                             {{ else if $isBool }}
@@ -150,8 +150,8 @@
                                                     {{ end }}
                                                 {{ end }}
                                             {{ else if $isLong }}
-                                            <div class="db-cell-long-wrap">
-                                                <span class="db-cell-truncate" title="{{ $val }}">{{ $val }}</span>
+                                            <div class="db-cell-long-block">
+                                                {{ if gt (len $val) 48 }}<span class="db-cell-truncate" title="{{ $val }}">{{ printf "%.48s" $val }}…</span>{{ else }}<span class="db-cell-truncate" title="{{ $val }}">{{ $val }}</span>{{ end }}
                                                 <button type="button" class="db-cell-copy" aria-label="{{ t $.T "admin.database.copy" }}">{{ t $.T "admin.database.copy" }}</button>
                                             </div>
                                             {{ else }}
