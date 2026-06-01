@@ -4,6 +4,8 @@
   var i18n = document.getElementById("admin-db-i18n");
   if (!i18n) return;
 
+  var COL_STORAGE_PREFIX = "bookstorage-admin-db-cols-v1:";
+
   function dbAttr(k, fb) {
     return i18n.getAttribute("data-" + k) || fb;
   }
@@ -13,9 +15,9 @@
   var filterCountTpl = dbAttr("filter-count", "{shown} / {total}");
   var copyLabel = dbAttr("copy", "Copy");
   var copiedLabel = dbAttr("copied", "Copied");
-  var truncatedLabel = dbAttr("truncated", "limited");
-  var rowsLabel = dbAttr("rows-label", "rows");
   var kpiTruncatedNone = dbAttr("kpi-truncated-none", "None");
+  var rowDetailTitleTpl = dbAttr("row-detail-title", "Row detail");
+  var rowDetailClose = dbAttr("row-detail-close", "Close");
 
   function dbConfirmDelete() {
     if (typeof window.showConfirm !== "function") {
@@ -67,19 +69,14 @@
   }
 
   function showPanel(tableName) {
-    var slug = slugTable(tableName);
     var panels = document.querySelectorAll(".db-panel");
     var pills = document.querySelectorAll(".db-table-pill");
     var found = false;
 
     panels.forEach(function (panel) {
       var match = panel.getAttribute("data-table") === tableName;
-      if (match) {
-        panel.hidden = false;
-        found = true;
-      } else {
-        panel.hidden = true;
-      }
+      panel.hidden = !match;
+      if (match) found = true;
     });
 
     pills.forEach(function (pill) {
@@ -89,9 +86,14 @@
     });
 
     if (found) {
-      var hash = "#" + slug;
+      var hash = "#" + slugTable(tableName);
       if (window.location.hash !== hash) {
         history.replaceState(null, "", hash);
+      }
+      var panel = document.getElementById("db-panel-" + tableName);
+      if (panel) {
+        var zone = panel.querySelector(".db-table-scroll-zone");
+        if (zone) updateScrollShadows(zone);
       }
     }
     return found;
@@ -140,12 +142,8 @@
       if (visible) shown++;
     });
 
-    if (countEl) {
-      countEl.textContent = formatFilterCount(shown, rows.length);
-    }
-    if (clearBtn) {
-      clearBtn.hidden = !q;
-    }
+    if (countEl) countEl.textContent = formatFilterCount(shown, rows.length);
+    if (clearBtn) clearBtn.hidden = !q;
   }
 
   function initFilters() {
@@ -167,6 +165,185 @@
       }
 
       applyFilter(panel);
+    });
+  }
+
+  function updateScrollShadows(zone) {
+    if (!zone) return;
+    var max = zone.scrollWidth - zone.clientWidth;
+    var sl = zone.scrollLeft;
+    zone.classList.toggle("db-scroll-left", sl > 4);
+    zone.classList.toggle("db-scroll-right", max > 4 && sl < max - 4);
+  }
+
+  function setColumnWidth(table, colIndex, widthPx) {
+    var w = Math.max(48, Math.round(widthPx));
+    var cols = table.querySelectorAll("colgroup col");
+    if (cols[colIndex]) cols[colIndex].style.width = w + "px";
+    table.querySelectorAll("tr").forEach(function (tr) {
+      var cell = tr.children[colIndex];
+      if (!cell) return;
+      cell.style.width = w + "px";
+      cell.style.minWidth = w + "px";
+      cell.style.maxWidth = w + "px";
+    });
+  }
+
+  function clearColumnWidths(table) {
+    table.querySelectorAll("colgroup col").forEach(function (col) {
+      col.style.width = "";
+    });
+    table.querySelectorAll("th, td").forEach(function (cell) {
+      cell.style.width = "";
+      cell.style.minWidth = "";
+      cell.style.maxWidth = "";
+    });
+  }
+
+  function loadColumnWidths(table) {
+    var tableName = table.getAttribute("data-db-table");
+    if (!tableName) return;
+    try {
+      var raw = localStorage.getItem(COL_STORAGE_PREFIX + tableName);
+      if (!raw) return;
+      var widths = JSON.parse(raw);
+      if (!Array.isArray(widths)) return;
+      widths.forEach(function (w, i) {
+        if (typeof w === "number" && w > 0) setColumnWidth(table, i, w);
+      });
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function saveColumnWidths(table) {
+    var tableName = table.getAttribute("data-db-table");
+    if (!tableName) return;
+    var header = table.querySelector("thead tr");
+    if (!header) return;
+    var widths = [];
+    for (var i = 0; i < header.children.length; i++) {
+      var cell = header.children[i];
+      var w = cell.offsetWidth;
+      widths.push(w > 0 ? w : null);
+    }
+    try {
+      localStorage.setItem(COL_STORAGE_PREFIX + tableName, JSON.stringify(widths));
+    } catch (e) {
+      /* ignore */
+    }
+  }
+
+  function autoFitColumn(table, colIndex) {
+    var max = 80;
+    table.querySelectorAll("tr").forEach(function (tr) {
+      var cell = tr.children[colIndex];
+      if (!cell || cell.classList.contains("db-actions-col")) return;
+      cell.style.width = "auto";
+      cell.style.maxWidth = "none";
+      var need = cell.scrollWidth + 16;
+      if (need > max) max = need;
+    });
+    setColumnWidth(table, colIndex, Math.min(max, 480));
+    saveColumnWidths(table);
+  }
+
+  function initColumnResize(table) {
+    var header = table.querySelector("thead tr");
+    if (!header) return;
+
+    header.querySelectorAll(".db-col-resize").forEach(function (handle) {
+      var th = handle.closest("th");
+      if (!th) return;
+      var colIndex = Array.prototype.indexOf.call(header.children, th);
+
+      handle.addEventListener("mousedown", function (e) {
+        e.preventDefault();
+        e.stopPropagation();
+        var startX = e.clientX;
+        var startW = th.offsetWidth;
+        handle.classList.add("db-resizing");
+        document.body.style.cursor = "col-resize";
+        document.body.style.userSelect = "none";
+
+        function onMove(ev) {
+          setColumnWidth(table, colIndex, startW + (ev.clientX - startX));
+        }
+
+        function onUp() {
+          handle.classList.remove("db-resizing");
+          document.body.style.cursor = "";
+          document.body.style.userSelect = "";
+          document.removeEventListener("mousemove", onMove);
+          document.removeEventListener("mouseup", onUp);
+          saveColumnWidths(table);
+          var zone = table.closest(".db-table-scroll-zone");
+          if (zone) updateScrollShadows(zone);
+        }
+
+        document.addEventListener("mousemove", onMove);
+        document.addEventListener("mouseup", onUp);
+      });
+
+      th.querySelector(".db-th-inner").addEventListener("dblclick", function (e) {
+        e.preventDefault();
+        autoFitColumn(table, colIndex);
+        var zone = table.closest(".db-table-scroll-zone");
+        if (zone) updateScrollShadows(zone);
+      });
+    });
+  }
+
+  function initScrollZones() {
+    document.querySelectorAll(".db-table-scroll-zone").forEach(function (zone) {
+      var table = zone.querySelector("table[data-db-table]");
+      if (!table) return;
+
+      loadColumnWidths(table);
+      initColumnResize(table);
+      updateScrollShadows(zone);
+
+      zone.addEventListener("scroll", function () {
+        updateScrollShadows(zone);
+      });
+
+      zone.addEventListener("wheel", function (e) {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) return;
+        if (e.shiftKey && zone.scrollWidth > zone.clientWidth) {
+          zone.scrollLeft += e.deltaY;
+          e.preventDefault();
+        }
+      }, { passive: false });
+
+      var panel = zone.closest(".db-panel");
+      if (!panel) return;
+
+      panel.querySelectorAll(".db-scroll-btn").forEach(function (btn) {
+        btn.addEventListener("click", function () {
+          var dir = btn.getAttribute("data-dir") === "right" ? 1 : -1;
+          zone.scrollBy({ left: dir * Math.max(200, zone.clientWidth * 0.55), behavior: "smooth" });
+        });
+      });
+
+      var resetBtn = panel.querySelector(".db-reset-cols");
+      if (resetBtn) {
+        resetBtn.addEventListener("click", function () {
+          var tableName = table.getAttribute("data-db-table");
+          if (tableName) {
+            try {
+              localStorage.removeItem(COL_STORAGE_PREFIX + tableName);
+            } catch (e) {
+              /* ignore */
+            }
+          }
+          clearColumnWidths(table);
+          updateScrollShadows(zone);
+        });
+      }
+    });
+
+    window.addEventListener("resize", function () {
+      document.querySelectorAll(".db-table-scroll-zone").forEach(updateScrollShadows);
     });
   }
 
@@ -197,14 +374,17 @@
     document.addEventListener("click", function (e) {
       var btn = e.target.closest(".db-cell-copy");
       if (!btn) return;
-      var wrap = btn.closest(".db-cell-long-wrap");
-      var span = wrap && wrap.querySelector(".db-cell-truncate");
-      var text = span ? span.getAttribute("title") || span.textContent : "";
+      e.stopPropagation();
+      var td = btn.closest("td");
+      var text = (td && td.getAttribute("data-full")) || "";
+      if (!text) {
+        var span = btn.closest(".db-cell-long-block") && btn.closest(".db-cell-long-block").querySelector(".db-cell-truncate");
+        text = span ? span.textContent : "";
+      }
       if (!text) return;
 
       copyText(text)
         .then(function () {
-          var prev = btn.textContent;
           btn.textContent = copiedLabel;
           btn.classList.add("copied");
           setTimeout(function () {
@@ -218,9 +398,77 @@
     });
   }
 
+  function initRowDetail() {
+    var overlay = document.getElementById("db-row-detail");
+    var titleEl = document.getElementById("db-row-detail-title");
+    var dl = document.getElementById("db-row-detail-dl");
+    var closeBtn = document.getElementById("db-row-detail-close");
+    if (!overlay || !dl || !titleEl || !closeBtn) return;
+
+    closeBtn.textContent = rowDetailClose;
+
+    function closeDetail() {
+      overlay.hidden = true;
+    }
+
+    function openDetail(tr) {
+      var table = tr.closest("table");
+      var tableName = table && table.getAttribute("data-db-table");
+      titleEl.textContent = rowDetailTitleTpl.replace("{table}", tableName || "").replace("{id}", "");
+      dl.innerHTML = "";
+      tr.querySelectorAll("td[data-col]").forEach(function (td) {
+        if (td.classList.contains("db-actions-col")) return;
+        var col = td.getAttribute("data-col") || "";
+        var full = td.getAttribute("data-full") || "";
+        if (!full) {
+          var badge = td.querySelector(".badge");
+          full = badge ? badge.textContent : (td.textContent || "").trim();
+        }
+        var dt = document.createElement("dt");
+        dt.textContent = col;
+        var dd = document.createElement("dd");
+        dd.textContent = full || "—";
+        dl.appendChild(dt);
+        dl.appendChild(dd);
+        if (col === "id" || col === "ID") {
+          titleEl.textContent = rowDetailTitleTpl
+            .replace("{table}", tableName || "")
+            .replace("{id}", full ? " #" + full : "");
+        }
+      });
+      overlay.hidden = false;
+      closeBtn.focus();
+    }
+
+    closeBtn.addEventListener("click", closeDetail);
+    overlay.addEventListener("click", function (e) {
+      if (e.target === overlay) closeDetail();
+    });
+    document.addEventListener("keydown", function (e) {
+      if (e.key === "Escape" && !overlay.hidden) closeDetail();
+    });
+
+    document.querySelectorAll(".db-data-table tbody").forEach(function (tbody) {
+      tbody.addEventListener("click", function (e) {
+        if (e.target.closest(".db-row-delete, .db-cell-copy")) return;
+        var tr = e.target.closest("tr.db-data-row");
+        if (tr && tr.style.display !== "none") openDetail(tr);
+      });
+      tbody.addEventListener("keydown", function (e) {
+        if (e.key !== "Enter") return;
+        var tr = e.target.closest("tr.db-data-row");
+        if (tr) {
+          e.preventDefault();
+          openDetail(tr);
+        }
+      });
+    });
+  }
+
   function initDeleteButtons() {
     document.querySelectorAll(".db-row-delete").forEach(function (btn) {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
         var table = btn.getAttribute("data-table");
         var id = btn.getAttribute("data-id");
         if (!table || !id) return;
@@ -243,9 +491,9 @@
                   try {
                     var j = JSON.parse(text);
                     if (j && j.error) throw new Error(String(j.error));
-                  } catch (e) {
-                    if (e instanceof SyntaxError) throw new Error(errGeneric);
-                    throw e;
+                  } catch (err) {
+                    if (err instanceof SyntaxError) throw new Error(errGeneric);
+                    throw err;
                   }
                   throw new Error(errGeneric);
                 }
@@ -255,8 +503,8 @@
                 if (panel) applyFilter(panel);
               });
             })
-            .catch(function (e) {
-              dbAlert(e && e.message ? e.message : errGeneric).then(function () {
+            .catch(function (err) {
+              dbAlert(err && err.message ? err.message : errGeneric).then(function () {
                 btn.disabled = false;
               });
             });
@@ -269,7 +517,9 @@
     initKpi();
     initTableSwitcher();
     initFilters();
+    initScrollZones();
     initCopyButtons();
+    initRowDetail();
     initDeleteButtons();
   });
 })();

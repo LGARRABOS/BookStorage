@@ -42,7 +42,13 @@
             data-copied="{{ t .T "admin.database.copied" }}"
             data-truncated="{{ t .T "admin.database.truncated" }}"
             data-rows-label="{{ t .T "admin.database.rows" }}"
-            data-kpi-truncated-none="{{ t .T "admin.database.kpi_truncated_none" }}"></div>
+            data-kpi-truncated-none="{{ t .T "admin.database.kpi_truncated_none" }}"
+            data-scroll-left="{{ t .T "admin.database.scroll_left" }}"
+            data-scroll-right="{{ t .T "admin.database.scroll_right" }}"
+            data-reset-cols="{{ t .T "admin.database.reset_columns" }}"
+            data-row-detail-title="{{ t .T "admin.database.row_detail" }}"
+            data-row-detail-close="{{ t .T "common.close" }}"
+            data-resize-col="{{ t .T "admin.database.resize_column" }}"></div>
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
@@ -106,29 +112,40 @@
                                 aria-label="{{ t $.T "admin.database.search_placeholder" }}">
                             <span class="db-filter-count" aria-live="polite">{{ len $sec.Rows }} / {{ len $sec.Rows }}</span>
                             <button type="button" class="db-search-clear" hidden>{{ t $.T "admin.database.search_clear" }}</button>
+                            <div class="db-table-controls">
+                                <button type="button" class="db-scroll-btn" data-dir="left" aria-label="{{ t $.T "admin.database.scroll_left" }}">←</button>
+                                <button type="button" class="db-scroll-btn" data-dir="right" aria-label="{{ t $.T "admin.database.scroll_right" }}">→</button>
+                                <button type="button" class="db-reset-cols">{{ t $.T "admin.database.reset_columns" }}</button>
+                            </div>
                         </div>
-                        <div class="table-wrapper">
+                        <p class="db-scroll-hint">{{ t $.T "admin.database.scroll_hint" }}</p>
+                        <div class="db-table-scroll-zone" data-db-scroll="{{ $table }}">
                             <table class="db-data-table" data-db-table="{{ $table }}">
+                                <colgroup>
+                                    {{ range $sec.Columns }}<col class="{{ template "db_column_class" . }}">{{ end }}
+                                    {{ if $allowDel }}<col class="db-col-actions">{{ end }}
+                                </colgroup>
                                 <thead>
                                     <tr>
                                         {{ range $sec.Columns }}
-                                        {{ $colU := upper . }}
-                                        {{ $colLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (hasPrefix $colU "GOOGLE_") }}
-                                        <th{{ if $colLong }} class="db-col-long"{{ end }}>{{ . }}</th>
+                                        <th class="db-th {{ template "db_column_class" . }}" data-col="{{ . }}">
+                                            <span class="db-th-inner">{{ . }}</span>
+                                            <span class="db-col-resize" role="separator" aria-orientation="vertical" tabindex="-1" title="{{ t $.T "admin.database.resize_column" }}"></span>
+                                        </th>
                                         {{ end }}
-                                        {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
+                                        {{ if $allowDel }}<th class="db-actions-col db-th">{{ t $.T "admin.database.actions" }}</th>{{ end }}
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {{ range $sec.Rows }}
                                     {{ $row := . }}
-                                    <tr>
+                                    <tr class="db-data-row" tabindex="0">
                                         {{ range $colIdx, $col := $sec.Columns }}
                                         {{ $val := index $row $colIdx }}
                                         {{ $colU := upper $col }}
                                         {{ $isBool := or (eq $colU "VALIDATED") (and (hasPrefix $colU "IS_") (or (eq $val "0") (eq $val "1") (eq $val "true") (eq $val "false"))) }}
-                                        {{ $isLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (hasPrefix $colU "GOOGLE_") (gt (len $val) 80) }}
-                                        <td{{ if $isLong }} class="db-cell-long"{{ else if eq $colU "BIO" }} class="db-cell-wrap"{{ end }} data-col="{{ $col }}">
+                                        {{ $isLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "IMAGE_URL") (eq $colU "LINK") (eq $colU "EXTERNAL_ID") (eq $colU "EMAIL") (hasPrefix $colU "RAW_") (hasPrefix $colU "GOOGLE_") (gt (len $val) 80) }}
+                                        <td class="{{ template "db_column_class" $col }}{{ if $isLong }} db-cell-long{{ else if or (eq $colU "BIO") (eq $colU "SYNOPSIS") (eq $colU "ALT_TITLES") (eq $colU "GENRES") (eq $colU "TAGS") (eq $colU "NOTES") }} db-cell-wrap{{ end }}" data-col="{{ $col }}" data-full="{{ $val }}" title="{{ $val }}">
                                             {{ if eq $val "" }}
                                             <span class="db-cell-empty">—</span>
                                             {{ else if $isBool }}
@@ -151,7 +168,7 @@
                                                 {{ end }}
                                             {{ else if $isLong }}
                                             <div class="db-cell-long-block">
-                                                {{ if gt (len $val) 48 }}<span class="db-cell-truncate" title="{{ $val }}">{{ printf "%.48s" $val }}…</span>{{ else }}<span class="db-cell-truncate" title="{{ $val }}">{{ $val }}</span>{{ end }}
+                                                <span class="db-cell-truncate">{{ $val }}</span>
                                                 <button type="button" class="db-cell-copy" aria-label="{{ t $.T "admin.database.copy" }}">{{ t $.T "admin.database.copy" }}</button>
                                             </div>
                                             {{ else }}
@@ -179,6 +196,15 @@
             </section>
         </div>
     </main>
+    <div id="db-row-detail" class="db-row-detail-overlay" hidden>
+        <div class="db-row-detail-dialog" role="dialog" aria-modal="true" aria-labelledby="db-row-detail-title">
+            <h3 id="db-row-detail-title"></h3>
+            <dl class="db-row-detail-dl" id="db-row-detail-dl"></dl>
+            <div class="db-row-detail-actions">
+                <button type="button" class="btn btn-secondary" id="db-row-detail-close"></button>
+            </div>
+        </div>
+    </div>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
     <script src="/static/js/appearance.js"></script>
@@ -188,3 +214,5 @@
 </body>
 </html>
 {{ end }}
+
+{{ define "db_column_class" }}{{ $u := upper . }}{{ if or (eq $u "ID") (eq $u "USER_ID") (eq $u "CATALOG_ID") (eq $u "PARENT_WORK_ID") (eq $u "READING_SITE_ID") (eq $u "VERSION") }}db-col-id{{ else if or (eq $u "VALIDATED") (hasPrefix $u "IS_") }}db-col-narrow{{ else if or (eq $u "TITLE") (eq $u "DISPLAY_NAME") (eq $u "SYNOPSIS") (eq $u "ALT_TITLES") (eq $u "GENRES") (eq $u "TAGS") (eq $u "NOTES") (eq $u "USERNAME") }}db-col-wide{{ else if or (eq $u "EMAIL") (eq $u "LINK") (eq $u "IMAGE_URL") (eq $u "IMAGE_PATH") (eq $u "AVATAR_PATH") (eq $u "EXTERNAL_ID") (eq $u "SOURCE") (hasPrefix $u "GOOGLE_") (hasPrefix $u "RAW_") }}db-col-long{{ else if or (eq $u "CREATED_AT") (eq $u "UPDATED_AT") (eq $u "FETCHED_AT") (eq $u "CHAPTER") (eq $u "STATUS") (eq $u "READING_TYPE") (eq $u "CATALOG_TYPE") (eq $u "READING_STATUS") }}db-col-medium{{ else }}db-col-default{{ end }}{{ end }}

@@ -15,7 +15,6 @@
   margin-bottom: 1.25rem;
 }
 
-/* Table selector pills */
 .db-table-nav {
   display: flex;
   flex-wrap: nowrap;
@@ -68,10 +67,6 @@
   color: var(--text-muted);
 }
 
-.db-table-pill.active .db-pill-meta {
-  color: var(--text-secondary);
-}
-
 .db-pill-truncated {
   display: inline-block;
   margin-left: 0.25rem;
@@ -83,16 +78,16 @@
   color: #c2410c;
 }
 
-/* Panels */
 .db-panels {
   position: relative;
 }
 
+/* overflow: visible — sinon le défilement horizontal du tableau est bloqué */
 .db-panel {
   border: 1px solid var(--border-subtle);
   border-radius: 0.85rem;
   background: var(--surface);
-  overflow: hidden;
+  overflow: visible;
 }
 
 .db-panel[hidden] {
@@ -116,79 +111,6 @@
   font-size: 0.82rem;
   color: var(--text-muted);
   line-height: 1.45;
-}
-
-.db-panel .table-wrapper {
-  border-top: 1px solid var(--border-subtle);
-  max-height: min(70vh, 32rem);
-  overflow: auto;
-  -webkit-overflow-scrolling: touch;
-}
-
-/*
- * table-layout: fixed + width 100% : colonnes alignées (thead/tbody).
- * Pas de flex dans les cellules : le min-width:auto des flex items
- * forçait la largeur sur le texte complet (chemin avatar, etc.).
- */
-.db-panel .table-wrapper > table.db-data-table {
-  width: 100% !important;
-  table-layout: fixed;
-  border-collapse: collapse;
-  font-size: 0.8rem;
-}
-
-.db-panel .db-data-table th,
-.db-panel .db-data-table td {
-  padding: 0.5rem 0.65rem;
-  text-align: left;
-  vertical-align: top;
-  border-bottom: 1px solid var(--border-subtle);
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.db-panel .db-data-table th {
-  white-space: nowrap;
-  position: sticky;
-  top: 0;
-  z-index: 1;
-  font-weight: 600;
-  color: var(--text-secondary);
-  background: var(--surface) !important;
-  text-transform: none;
-  letter-spacing: normal;
-  font-size: 0.75rem;
-}
-
-.db-panel .db-data-table td {
-  white-space: nowrap;
-}
-
-.db-panel .db-data-table td.db-cell-wrap {
-  white-space: normal;
-  word-break: break-word;
-}
-
-.db-panel .db-data-table td.db-cell-long,
-.db-panel .db-data-table th.db-col-long {
-  width: 11%;
-}
-
-.db-panel .db-data-table tbody tr:hover td {
-  background: rgba(79, 70, 229, 0.04);
-}
-
-.db-panel .db-data-table th.db-actions-col,
-.db-panel .db-data-table td.db-actions-col {
-  width: 5%;
-  white-space: nowrap;
-  text-align: right;
-}
-
-.db-empty {
-  padding: 0.85rem 1rem;
-  color: var(--text-muted);
-  font-size: 0.88rem;
 }
 
 .db-toolbar {
@@ -231,18 +153,218 @@
   font-weight: 600;
 }
 
-.db-search-clear:hover {
-  background: rgba(79, 70, 229, 0.08);
-  color: var(--text-primary);
-}
-
 .db-search-clear[hidden] {
   display: none !important;
 }
 
-/* Long / path cells (block, pas flex — évite l’élargissement des colonnes) */
-.db-cell-long-block {
+.db-table-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.35rem;
+  margin-left: auto;
+}
+
+.db-scroll-btn,
+.db-reset-cols {
+  font-size: 0.8rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.db-scroll-btn:hover,
+.db-reset-cols:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--text-primary);
+}
+
+.db-scroll-hint {
+  margin: 0;
+  padding: 0.35rem 1rem 0.5rem;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+/* Zone de défilement (horizontal + vertical) */
+.db-table-scroll-zone {
+  position: relative;
+  max-height: min(72vh, 36rem);
+  overflow: auto;
+  overflow-x: auto;
+  overflow-y: auto;
+  border-top: 1px solid var(--border-subtle);
+  border-bottom-left-radius: 0.85rem;
+  border-bottom-right-radius: 0.85rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: auto;
+  scrollbar-color: rgba(79, 70, 229, 0.45) rgba(15, 23, 42, 0.06);
+}
+
+.db-table-scroll-zone::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+.db-table-scroll-zone::-webkit-scrollbar-thumb {
+  background: rgba(79, 70, 229, 0.35);
+  border-radius: 8px;
+  border: 2px solid transparent;
+  background-clip: padding-box;
+}
+
+.db-table-scroll-zone::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.05);
+}
+
+.db-table-scroll-zone.db-scroll-left {
+  box-shadow: inset 10px 0 10px -8px rgba(79, 70, 229, 0.1);
+}
+
+.db-table-scroll-zone.db-scroll-right {
+  box-shadow: inset -10px 0 10px -8px rgba(79, 70, 229, 0.1);
+}
+
+.db-table-scroll-zone.db-scroll-left.db-scroll-right {
+  box-shadow:
+    inset 10px 0 10px -8px rgba(79, 70, 229, 0.1),
+    inset -10px 0 10px -8px rgba(79, 70, 229, 0.1);
+}
+
+.db-panel .db-data-table {
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+  font-size: 0.8rem;
+}
+
+.db-panel .db-data-table th,
+.db-panel .db-data-table td {
+  padding: 0.5rem 0.75rem;
+  text-align: left;
+  vertical-align: top;
+  border-bottom: 1px solid var(--border-subtle);
+  box-sizing: border-box;
+}
+
+.db-col-id { min-width: 3.25rem; }
+.db-col-narrow { min-width: 5.5rem; }
+.db-col-medium { min-width: 8.5rem; }
+.db-col-wide { min-width: 12rem; max-width: 22rem; }
+.db-col-long { min-width: 10rem; max-width: 28rem; }
+.db-col-default { min-width: 7rem; }
+.db-col-actions { min-width: 6.75rem; width: 6.75rem; }
+
+.db-panel .db-data-table th {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  font-weight: 600;
+  color: var(--text-secondary);
+  background: var(--surface) !important;
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.db-panel .db-data-table th.db-th {
+  position: sticky;
+  top: 0;
+  padding-right: 0.5rem;
+  padding-left: 0.75rem;
+}
+
+.db-panel .db-data-table th.db-th:has(.db-col-resize) {
+  position: sticky;
+}
+
+.db-th-inner {
+  display: block;
   overflow: hidden;
+  text-overflow: ellipsis;
+  padding-right: 0.35rem;
+}
+
+.db-col-resize {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 8px;
+  height: 100%;
+  cursor: col-resize;
+  touch-action: none;
+  z-index: 4;
+}
+
+.db-col-resize:hover,
+.db-col-resize.db-resizing {
+  background: rgba(79, 70, 229, 0.25);
+}
+
+.db-panel .db-data-table td {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 28rem;
+}
+
+.db-panel .db-data-table td.db-cell-wrap {
+  white-space: normal;
+  word-break: break-word;
+  overflow: visible;
+  text-overflow: unset;
+  max-width: 22rem;
+}
+
+.db-panel .db-data-table tbody tr {
+  cursor: pointer;
+}
+
+.db-panel .db-data-table tbody tr:hover td {
+  background: rgba(79, 70, 229, 0.05);
+}
+
+.db-panel .db-data-table tbody tr.db-row-expanded td {
+  white-space: normal;
+  overflow: visible;
+  text-overflow: unset;
+  word-break: break-word;
+  max-width: none;
+}
+
+.db-panel .db-data-table th.db-actions-col,
+.db-panel .db-data-table td.db-actions-col {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background: var(--surface);
+  box-shadow: -4px 0 8px rgba(15, 23, 42, 0.06);
+  text-align: right;
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.db-panel .db-data-table thead th.db-actions-col {
+  z-index: 5;
+}
+
+.db-panel .db-data-table .db-row-delete {
+  white-space: nowrap;
+  font-size: 0.78rem;
+  padding: 0.35rem 0.65rem;
+}
+
+.db-cell-long-block {
+  display: block;
   max-width: 100%;
 }
 
@@ -251,12 +373,11 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
 }
 
 .db-cell-copy {
   display: inline-block;
-  margin-top: 0.25rem;
+  margin-top: 0.2rem;
   font-size: 0.72rem;
   padding: 0.2rem 0.45rem;
   border-radius: 0.4rem;
@@ -267,49 +388,82 @@
   cursor: pointer;
 }
 
-.db-cell-copy:hover {
-  background: rgba(79, 70, 229, 0.12);
-}
-
-.db-cell-copy.copied {
-  border-color: rgba(34, 197, 94, 0.35);
-  background: rgba(34, 197, 94, 0.1);
-  color: #15803d;
-}
-
 .db-cell-empty {
   color: var(--text-muted);
 }
 
-[data-theme="dark"] .db-intro,
-[data-theme="dark"] .db-panel,
-[data-theme="dark"] .db-table-pill {
+.db-empty {
+  padding: 0.85rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+/* Modal détail ligne */
+.db-row-detail-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.db-row-detail-overlay[hidden] {
+  display: none !important;
+}
+
+.db-row-detail-dialog {
+  width: min(640px, 96vw);
+  max-height: min(80vh, 32rem);
+  overflow: auto;
   background: var(--surface);
+  border-radius: 1rem;
+  border: 1px solid var(--border-subtle);
+  box-shadow: var(--shadow-soft);
+  padding: 1.1rem 1.25rem;
 }
 
-[data-theme="dark"] .db-toolbar {
-  background: rgba(100, 116, 139, 0.08);
+.db-row-detail-dialog h3 {
+  margin: 0 0 0.75rem;
+  font-size: 1.05rem;
 }
 
-[data-theme="dark"] .db-table-pill:hover {
-  background: rgba(129, 140, 248, 0.12);
+.db-row-detail-dl {
+  margin: 0;
+  display: grid;
+  gap: 0.65rem;
 }
 
-[data-theme="dark"] .db-table-pill.active {
-  background: rgba(129, 140, 248, 0.2);
-  border-color: rgba(129, 140, 248, 0.35);
-  color: #e2e8f0;
+.db-row-detail-dl dt {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
 }
 
-[data-theme="dark"] .db-pill-truncated {
-  background: rgba(251, 146, 60, 0.2);
-  color: #fdba74;
+.db-row-detail-dl dd {
+  margin: 0.15rem 0 0;
+  font-size: 0.88rem;
+  word-break: break-word;
+  white-space: pre-wrap;
+  color: var(--text-primary);
 }
 
-[data-theme="dark"] .db-panel .db-data-table tbody tr:hover td {
-  background: rgba(129, 140, 248, 0.08);
+.db-row-detail-actions {
+  margin-top: 1rem;
+  display: flex;
+  justify-content: flex-end;
 }
 
-[data-theme="dark"] .db-cell-copy.copied {
-  color: #86efac;
+[data-theme="dark"] .db-table-scroll-zone {
+  scrollbar-color: rgba(129, 140, 248, 0.5) rgba(100, 116, 139, 0.15);
+}
+
+[data-theme="dark"] .db-panel .db-data-table td.db-actions-col,
+[data-theme="dark"] .db-panel .db-data-table th.db-actions-col {
+  background: var(--surface);
+  box-shadow: -4px 0 8px rgba(0, 0, 0, 0.25);
 }
