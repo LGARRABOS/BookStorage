@@ -1,0 +1,302 @@
+/* Admin database overview (/admin/database) */
+
+.db-intro {
+  margin: 0 0 1.25rem 0;
+  padding: 0.85rem 1rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.db-kpi-section {
+  margin-bottom: 1.25rem;
+}
+
+/* Table selector pills */
+.db-table-nav {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 0.45rem;
+  overflow-x: auto;
+  padding: 0.35rem 0.15rem 0.65rem;
+  margin-bottom: 1rem;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+}
+
+.db-table-pill {
+  flex: 0 0 auto;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.2rem;
+  padding: 0.55rem 0.85rem;
+  border-radius: 0.75rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--text-secondary);
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  text-align: left;
+  max-width: 14rem;
+}
+
+.db-table-pill:hover {
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--text-primary);
+}
+
+.db-table-pill.active {
+  background: var(--primary-muted);
+  border-color: rgba(79, 70, 229, 0.3);
+  color: var(--primary-dark);
+}
+
+.db-table-pill .db-pill-name {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82rem;
+}
+
+.db-table-pill .db-pill-meta {
+  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.db-table-pill.active .db-pill-meta {
+  color: var(--text-secondary);
+}
+
+.db-pill-truncated {
+  display: inline-block;
+  margin-left: 0.25rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: rgba(249, 115, 22, 0.15);
+  color: #c2410c;
+}
+
+/* Panels */
+.db-panels {
+  position: relative;
+}
+
+.db-panel {
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.85rem;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.db-panel[hidden] {
+  display: none !important;
+}
+
+.db-panel-header {
+  padding: 0.85rem 1rem 0.35rem;
+}
+
+.db-panel-header h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.db-panel-header .db-hint {
+  margin: 0.35rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+}
+
+.db-panel .table-wrapper {
+  border-top: 1px solid var(--border-subtle);
+  max-height: min(70vh, 32rem);
+  overflow: auto;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.db-panel .data-table {
+  font-size: 0.8rem;
+  width: max-content;
+  min-width: 100%;
+  border-collapse: collapse;
+  table-layout: auto;
+}
+
+.db-panel .data-table th {
+  white-space: nowrap;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--surface);
+  padding: 0.5rem 0.65rem;
+  text-align: left;
+  border-bottom: 1px solid var(--border-subtle);
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.db-panel .data-table td {
+  padding: 0.45rem 0.65rem;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.db-panel .data-table td.db-cell-long {
+  max-width: 16rem;
+}
+
+.db-panel .data-table tbody tr:hover td {
+  background: rgba(79, 70, 229, 0.04);
+}
+
+.db-panel .data-table th.db-actions-col,
+.db-panel .data-table td.db-actions-col {
+  white-space: nowrap;
+  width: 1%;
+  text-align: right;
+}
+
+.db-empty {
+  padding: 0.85rem 1rem;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.db-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 0.75rem;
+  padding: 0.55rem 1rem;
+  border-top: 1px solid var(--border-subtle);
+  background: rgba(15, 23, 42, 0.02);
+}
+
+.db-toolbar .db-search-input {
+  flex: 1 1 12rem;
+  min-width: 10rem;
+  max-width: 28rem;
+  padding: 0.45rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  font-size: 0.88rem;
+  background: var(--surface);
+  color: var(--text-primary);
+}
+
+.db-filter-count {
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.db-search-clear {
+  font-size: 0.82rem;
+  padding: 0.35rem 0.65rem;
+  border-radius: 0.5rem;
+  border: 1px solid var(--border-subtle);
+  background: var(--surface);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.db-search-clear:hover {
+  background: rgba(79, 70, 229, 0.08);
+  color: var(--text-primary);
+}
+
+.db-search-clear[hidden] {
+  display: none !important;
+}
+
+/* Long / path cells */
+.db-cell-long-wrap {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  max-width: 100%;
+  min-width: 0;
+}
+
+.db-cell-truncate {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: inline-block;
+  max-width: 14rem;
+}
+
+.db-cell-copy {
+  flex: 0 0 auto;
+  font-size: 0.72rem;
+  padding: 0.2rem 0.45rem;
+  border-radius: 0.4rem;
+  border: 1px solid var(--border-subtle);
+  background: rgba(79, 70, 229, 0.06);
+  color: var(--primary);
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.db-cell-copy:hover {
+  background: rgba(79, 70, 229, 0.12);
+}
+
+.db-cell-copy.copied {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.1);
+  color: #15803d;
+}
+
+.db-cell-empty {
+  color: var(--text-muted);
+}
+
+[data-theme="dark"] .db-intro,
+[data-theme="dark"] .db-panel,
+[data-theme="dark"] .db-table-pill {
+  background: var(--surface);
+}
+
+[data-theme="dark"] .db-toolbar {
+  background: rgba(100, 116, 139, 0.08);
+}
+
+[data-theme="dark"] .db-table-pill:hover {
+  background: rgba(129, 140, 248, 0.12);
+}
+
+[data-theme="dark"] .db-table-pill.active {
+  background: rgba(129, 140, 248, 0.2);
+  border-color: rgba(129, 140, 248, 0.35);
+  color: #e2e8f0;
+}
+
+[data-theme="dark"] .db-pill-truncated {
+  background: rgba(251, 146, 60, 0.2);
+  color: #fdba74;
+}
+
+[data-theme="dark"] .db-panel .data-table tbody tr:hover td {
+  background: rgba(129, 140, 248, 0.08);
+}
+
+[data-theme="dark"] .db-cell-copy.copied {
+  color: #86efac;
+}

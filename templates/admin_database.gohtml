@@ -10,50 +10,8 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
     <link rel="stylesheet" href="/static/css/admin.css">
+    <link rel="stylesheet" href="/static/css/admin-database.css">
     <script src="/static/js/appearance-init.js"></script>
-    <style>
-        .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
-        .lang-toggle:hover { background: var(--primary); color: white; }
-        .db-intro { margin: 0 0 1rem 0; padding: 0.85rem 1rem; border-radius: 0.75rem; border: 1px solid var(--border-subtle); background: var(--surface); color: var(--text-secondary); font-size: 0.9rem; line-height: 1.5; }
-        .db-section { margin-bottom: 1rem; border: 1px solid var(--border-subtle); border-radius: 0.85rem; background: var(--surface); overflow: hidden; }
-        .db-section > summary { cursor: pointer; padding: 0.75rem 1rem; font-weight: 600; color: var(--text-primary); list-style: none; display: flex; flex-wrap: wrap; align-items: baseline; gap: 0.5rem 1rem; }
-        .db-section > summary::-webkit-details-marker { display: none; }
-        .db-section > summary::before { content: "▸"; display: inline-block; margin-right: 0.35rem; transition: transform 0.15s; color: var(--text-muted); }
-        .db-section[open] > summary::before { transform: rotate(90deg); }
-        .db-section .db-meta { font-weight: 500; font-size: 0.82rem; color: var(--text-muted); }
-        .db-section .db-hint { margin: 0; padding: 0 1rem 0.65rem; font-size: 0.82rem; color: var(--text-muted); }
-        .db-section .table-wrapper { border-top: 1px solid var(--border-subtle); max-height: min(70vh, 28rem); overflow: auto; overflow-x: auto; -webkit-overflow-scrolling: touch; }
-        /* wide table: horizontal scroll; avoid overflow-wrap:anywhere on headers (causes one letter per line) */
-        .db-section .data-table { font-size: 0.8rem; width: max-content; min-width: 100%; border-collapse: collapse; table-layout: auto; }
-        .db-section .data-table th {
-            white-space: nowrap;
-            position: sticky;
-            top: 0;
-            z-index: 1;
-            background: var(--surface);
-            padding: 0.5rem 0.65rem;
-            text-align: left;
-            border-bottom: 1px solid var(--border-subtle);
-            font-weight: 600;
-            color: var(--text-secondary);
-        }
-        .db-section .data-table td {
-            padding: 0.45rem 0.65rem;
-            vertical-align: top;
-            max-width: 24rem;
-            word-break: break-word;
-            overflow-wrap: break-word;
-            border-bottom: 1px solid var(--border-subtle);
-        }
-        .db-section .data-table tbody tr:hover td { background: rgba(79, 70, 229, 0.04); }
-        .db-empty { padding: 0.75rem 1rem; color: var(--text-muted); font-size: 0.88rem; }
-        .db-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.75rem; padding: 0.5rem 1rem; border-top: 1px solid var(--border-subtle); background: rgba(15, 23, 42, 0.02); }
-        .db-toolbar .db-search-input { flex: 1 1 12rem; min-width: 10rem; max-width: 28rem; padding: 0.45rem 0.65rem; border-radius: 0.5rem; border: 1px solid var(--border-subtle); font-size: 0.88rem; background: var(--surface); color: var(--text-primary); }
-        .db-section .data-table th.db-actions-col, .db-section .data-table td.db-actions-col { white-space: nowrap; width: 1%; text-align: right; }
-        .db-row-delete { font-size: 0.78rem; padding: 0.28rem 0.55rem; border-radius: 0.45rem; border: 1px solid rgba(185, 28, 28, 0.35); background: rgba(185, 28, 28, 0.06); color: #b91c1c; font-weight: 600; cursor: pointer; }
-        .db-row-delete:hover { background: rgba(185, 28, 28, 0.12); }
-        .db-row-delete:disabled { opacity: 0.55; cursor: not-allowed; }
-    </style>
 </head>
 <body>
     {{ if not .IsMobileView }}
@@ -78,7 +36,13 @@
             data-modal-cancel="{{ t .T "common.cancel" }}"
             data-modal-delete-ok="{{ t .T "common.delete" }}"
             data-modal-error-title="{{ t .T "common.error" }}"
-            data-modal-ok="{{ t .T "common.ok" }}"></div>
+            data-modal-ok="{{ t .T "common.ok" }}"
+            data-filter-count="{{ t .T "admin.database.filter_count" }}"
+            data-copy="{{ t .T "admin.database.copy" }}"
+            data-copied="{{ t .T "admin.database.copied" }}"
+            data-truncated="{{ t .T "admin.database.truncated" }}"
+            data-rows-label="{{ t .T "admin.database.rows" }}"
+            data-kpi-truncated-none="{{ t .T "admin.database.kpi_truncated_none" }}"></div>
         <div class="container content-card">
             <section class="page-section">
                 <header class="section-header">
@@ -94,48 +58,119 @@
 
                 <p class="db-intro">{{ t .T "admin.database.intro" }}</p>
 
-                {{ range .DBSections }}
-                {{ $table := .Table }}
-                {{ $allowDel := .AllowRowDelete }}
-                <details class="db-section" open>
-                    <summary>
-                        <span>{{ .Table }}</span>
-                        <span class="db-meta">{{ .Total }} {{ t $.T "admin.database.rows" }}{{ if .Truncated }} · {{ t $.T "admin.database.truncated" }}{{ end }}</span>
-                    </summary>
-                    {{ if ne .HintKey "" }}<p class="db-hint">{{ t $.T .HintKey }}</p>{{ end }}
-                    {{ if eq .Total 0 }}
-                    <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
-                    {{ else if .Rows }}
-                    <div class="db-toolbar">
-                        <input type="search" class="db-search-input" id="db-search-{{ $table }}" autocomplete="off" placeholder="{{ t $.T "admin.database.search_placeholder" }}" aria-label="{{ t $.T "admin.database.search_placeholder" }}">
+                <div class="admin-metrics-grid db-kpi-section" aria-label="{{ t .T "admin.database.title" }}">
+                    <div class="admin-kpi">
+                        <h2>{{ t .T "admin.database.kpi_tables" }}</h2>
+                        <p class="kpi-value">{{ len .DBSections }}</p>
                     </div>
-                    <div class="table-wrapper">
-                        <table class="data-table" data-db-table="{{ $table }}">
-                            <thead>
-                                <tr>
-                                    {{ range .Columns }}<th>{{ . }}</th>{{ end }}
-                                    {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {{ range .Rows }}
-                                {{ $row := . }}
-                                <tr>
-                                    {{ range $row }}<td>{{ . }}</td>{{ end }}
-                                    {{ if $allowDel }}
-                                    <td class="db-actions-col">
-                                        <button type="button" class="db-row-delete" data-table="{{ $table }}" data-id="{{ index $row 0 }}">{{ t $.T "admin.database.delete" }}</button>
-                                    </td>
-                                    {{ end }}
-                                </tr>
-                                {{ end }}
-                            </tbody>
-                        </table>
+                    <div class="admin-kpi">
+                        <h2>{{ t .T "admin.database.kpi_rows" }}</h2>
+                        <p class="kpi-value" id="db-kpi-rows">0</p>
                     </div>
-                    {{ else }}
-                    <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
+                    <div class="admin-kpi">
+                        <h2>{{ t .T "admin.database.kpi_truncated" }}</h2>
+                        <p class="kpi-value" id="db-kpi-truncated">{{ t .T "admin.database.kpi_truncated_none" }}</p>
+                    </div>
+                </div>
+
+                {{ if .DBSections }}
+                <nav id="db-table-nav" class="db-table-nav" role="tablist" aria-label="{{ t .T "admin.database.table_nav" }}">
+                    {{ range $i, $sec := .DBSections }}
+                    <button type="button" class="db-table-pill{{ if eq $i 0 }} active{{ end }}" role="tab"
+                        data-table="{{ $sec.Table }}" data-total="{{ $sec.Total }}"
+                        data-truncated="{{ if $sec.Truncated }}true{{ else }}false{{ end }}"
+                        aria-selected="{{ if eq $i 0 }}true{{ else }}false{{ end }}"
+                        id="db-tab-{{ $sec.Table }}">
+                        <span class="db-pill-name">{{ $sec.Table }}</span>
+                        <span class="db-pill-meta">{{ $sec.Total }} {{ t $.T "admin.database.rows" }}{{ if $sec.Truncated }}<span class="db-pill-truncated">{{ t $.T "admin.database.truncated" }}</span>{{ end }}</span>
+                    </button>
                     {{ end }}
-                </details>
+                </nav>
+
+                <div class="db-panels">
+                    {{ range $i, $sec := .DBSections }}
+                    {{ $table := $sec.Table }}
+                    {{ $allowDel := $sec.AllowRowDelete }}
+                    <div class="db-panel" role="tabpanel" data-table="{{ $table }}" id="db-panel-{{ $table }}"
+                        aria-labelledby="db-tab-{{ $table }}"{{ if ne $i 0 }} hidden{{ end }}>
+                        <div class="db-panel-header">
+                            <h2>{{ $table }}</h2>
+                            {{ if ne $sec.HintKey "" }}<p class="db-hint">{{ t $.T $sec.HintKey }}</p>{{ end }}
+                        </div>
+                        {{ if eq $sec.Total 0 }}
+                        <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
+                        {{ else if $sec.Rows }}
+                        <div class="db-toolbar">
+                            <input type="search" class="db-search-input" id="db-search-{{ $table }}" autocomplete="off"
+                                placeholder="{{ t $.T "admin.database.search_placeholder" }}"
+                                aria-label="{{ t $.T "admin.database.search_placeholder" }}">
+                            <span class="db-filter-count" aria-live="polite">{{ len $sec.Rows }} / {{ len $sec.Rows }}</span>
+                            <button type="button" class="db-search-clear" hidden>{{ t $.T "admin.database.search_clear" }}</button>
+                        </div>
+                        <div class="table-wrapper">
+                            <table class="data-table" data-db-table="{{ $table }}">
+                                <thead>
+                                    <tr>
+                                        {{ range $sec.Columns }}<th>{{ . }}</th>{{ end }}
+                                        {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {{ range $sec.Rows }}
+                                    {{ $row := . }}
+                                    <tr>
+                                        {{ range $colIdx, $col := $sec.Columns }}
+                                        {{ $val := index $row $colIdx }}
+                                        {{ $colU := upper $col }}
+                                        {{ $isBool := or (eq $colU "VALIDATED") (and (hasPrefix $colU "IS_") (or (eq $val "0") (eq $val "1") (eq $val "true") (eq $val "false"))) }}
+                                        {{ $isLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") (gt (len $val) 80) }}
+                                        <td{{ if $isLong }} class="db-cell-long"{{ end }} data-col="{{ $col }}">
+                                            {{ if eq $val "" }}
+                                            <span class="db-cell-empty">—</span>
+                                            {{ else if $isBool }}
+                                                {{ if or (eq $val "1") (eq $val "true") }}
+                                                    {{ if eq $colU "IS_SUPERADMIN" }}
+                                                    <span class="badge info">{{ t $.T "common.yes" }}</span>
+                                                    {{ else if eq $colU "IS_ADMIN" }}
+                                                    <span class="badge success">{{ t $.T "common.yes" }}</span>
+                                                    {{ else }}
+                                                    <span class="badge success">{{ t $.T "common.yes" }}</span>
+                                                    {{ end }}
+                                                {{ else }}
+                                                    {{ if eq $colU "IS_SUPERADMIN" }}
+                                                    {{ t $.T "common.no" }}
+                                                    {{ else if eq $colU "IS_ADMIN" }}
+                                                    {{ t $.T "common.no" }}
+                                                    {{ else }}
+                                                    <span class="badge warning">{{ t $.T "common.no" }}</span>
+                                                    {{ end }}
+                                                {{ end }}
+                                            {{ else if $isLong }}
+                                            <div class="db-cell-long-wrap">
+                                                <span class="db-cell-truncate" title="{{ $val }}">{{ $val }}</span>
+                                                <button type="button" class="db-cell-copy" aria-label="{{ t $.T "admin.database.copy" }}">{{ t $.T "admin.database.copy" }}</button>
+                                            </div>
+                                            {{ else }}
+                                            {{ $val }}
+                                            {{ end }}
+                                        </td>
+                                        {{ end }}
+                                        {{ if $allowDel }}
+                                        <td class="db-actions-col">
+                                            <button type="button" class="btn btn-icon danger db-row-delete" data-table="{{ $table }}" data-id="{{ index $row 0 }}">{{ t $.T "admin.database.delete" }}</button>
+                                        </td>
+                                        {{ end }}
+                                    </tr>
+                                    {{ end }}
+                                </tbody>
+                            </table>
+                        </div>
+                        {{ else }}
+                        <p class="db-empty">{{ t $.T "admin.database.empty_table" }}</p>
+                        {{ end }}
+                    </div>
+                    {{ end }}
+                </div>
                 {{ end }}
             </section>
         </div>
@@ -145,84 +180,7 @@
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
-    <script nonce="{{ .CSPNonce }}">
-(function () {
-  var i18n = document.getElementById("admin-db-i18n");
-  var confirmMsg = i18n && i18n.getAttribute("data-confirm-delete") || "Delete this row?";
-  var errGeneric = i18n && i18n.getAttribute("data-delete-error") || "Delete failed.";
-  function dbAttr(k, fb) { return (i18n && i18n.getAttribute("data-" + k)) || fb; }
-  function dbConfirmDelete() {
-    if (typeof window.showConfirm !== "function") return Promise.resolve(window.confirm(confirmMsg));
-    return window.showConfirm(confirmMsg, {
-      title: dbAttr("modal-confirm-title", "Confirm"),
-      okLabel: dbAttr("modal-delete-ok", "Delete"),
-      cancelLabel: dbAttr("modal-cancel", "Cancel"),
-      okClass: "btn-danger"
-    });
-  }
-  function dbAlert(msg) {
-    if (typeof window.showAlert !== "function") {
-      window.alert(msg);
-      return Promise.resolve();
-    }
-    return window.showAlert(msg, {
-      title: dbAttr("modal-error-title", "Error"),
-      okLabel: dbAttr("modal-ok", "OK")
-    });
-  }
-
-  document.querySelectorAll(".db-search-input").forEach(function (input) {
-    var id = input.id || "";
-    var suffix = id.indexOf("db-search-") === 0 ? id.slice("db-search-".length) : "";
-    var wrap = input.closest(".db-section");
-    if (!wrap || !suffix) return;
-    var table = wrap.querySelector('table[data-db-table="' + suffix + '"]');
-    if (!table) return;
-    input.addEventListener("input", function () {
-      var q = (input.value || "").trim().toLowerCase();
-      table.querySelectorAll("tbody tr").forEach(function (tr) {
-        var text = (tr.textContent || "").toLowerCase();
-        tr.style.display = !q || text.indexOf(q) !== -1 ? "" : "none";
-      });
-    });
-  });
-
-  document.querySelectorAll(".db-row-delete").forEach(function (btn) {
-    btn.addEventListener("click", function () {
-      var table = btn.getAttribute("data-table");
-      var id = btn.getAttribute("data-id");
-      if (!table || !id) return;
-      dbConfirmDelete().then(function (ok) {
-        if (!ok) return;
-        btn.disabled = true;
-        fetch("/api/admin/database/delete", {
-          method: "POST",
-          headers: { "Content-Type": "application/json", Accept: "application/json" },
-          credentials: "same-origin",
-          body: JSON.stringify({ table: table, id: id }),
-        }).then(function (res) {
-          return res.text().then(function (text) {
-            if (!res.ok) {
-              try {
-                var j = JSON.parse(text);
-                if (j && j.error) throw new Error(String(j.error));
-              } catch (e) {
-                if (e instanceof SyntaxError) throw new Error(errGeneric);
-                throw e;
-              }
-              throw new Error(errGeneric);
-            }
-            var row = btn.closest("tr");
-            if (row) row.parentNode.removeChild(row);
-          });
-        }).catch(function (e) {
-          dbAlert(e && e.message ? e.message : errGeneric).then(function () { btn.disabled = false; });
-        });
-      });
-    });
-  });
-})();
-    </script>
+    <script src="/static/js/admin-database.js" defer></script>
 </body>
 </html>
 {{ end }}
