@@ -111,7 +111,11 @@
                             <table class="data-table" data-db-table="{{ $table }}">
                                 <thead>
                                     <tr>
-                                        {{ range $sec.Columns }}<th>{{ . }}</th>{{ end }}
+                                        {{ range $sec.Columns }}
+                                        {{ $colU := upper . }}
+                                        {{ $colLong := or (eq $colU "AVATAR_PATH") (eq $colU "IMAGE_PATH") (eq $colU "LINK") (hasPrefix $colU "RAW_") }}
+                                        <th{{ if $colLong }} class="db-col-long"{{ end }}>{{ . }}</th>
+                                        {{ end }}
                                         {{ if $allowDel }}<th class="db-actions-col">{{ t $.T "admin.database.actions" }}</th>{{ end }}
                                     </tr>
                                 </thead>
