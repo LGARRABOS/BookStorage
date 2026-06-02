@@ -60,6 +60,12 @@
         [data-theme="dark"] .add-site-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
         [data-theme="dark"] .add-site-form .form-group input { background: rgba(15, 23, 42, 0.5); border-color: rgba(100, 116, 139, 0.4); color: #e2e8f0; }
         [data-theme="dark"] .empty-sites { background: rgba(51, 65, 85, 0.4); border-color: rgba(100, 116, 139, 0.3); }
+        .issues-banner { background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.25); color: #b91c1c; padding: 0.65rem 1rem; border-radius: 0.75rem; margin-bottom: 1rem; font-size: 0.88rem; }
+        tr.site-row--issue { background: rgba(239, 68, 68, 0.06); }
+        tr.site-row--issue.site-row--flash { animation: site-issue-flash 1.2s ease; }
+        @keyframes site-issue-flash { 0%, 100% { background: rgba(239, 68, 68, 0.06); } 50% { background: rgba(239, 68, 68, 0.18); } }
+        [data-theme="dark"] .issues-banner { background: rgba(239, 68, 68, 0.15); color: #fca5a5; }
+        [data-theme="dark"] tr.site-row--issue { background: rgba(239, 68, 68, 0.12); }
     </style>
 </head>
 <body>
@@ -92,6 +98,7 @@
 
                 {{ if .Flash }}<p class="flash-msg">{{ .Flash }}</p>{{ end }}
                 {{ if .FlashError }}<p class="flash-msg flash-msg--error">{{ .FlashError }}</p>{{ end }}
+                {{ if .HighlightIssues }}<p class="issues-banner" id="issues-banner">{{ t .T "reading_sites.issues_banner" }}</p>{{ end }}
 
                 <div class="add-site-card">
                     <h2>{{ t .T "reading_sites.add" }}</h2>
@@ -121,7 +128,7 @@
                     </thead>
                     <tbody>
                         {{ range .Sites }}
-                        <tr>
+                        <tr class="site-row{{ if or (eq .ProbeStatus "down") (eq .ProbeStatus "degraded") }} site-row--issue{{ end }}">
                             <td>
                                 <div class="site-status-cell">
                                     <span class="site-dot site-dot--{{ .ProbeStatus }}" title="{{ .ProbeStatus }}"></span>
@@ -132,8 +139,16 @@
                             <td class="site-url"><a href="{{ .BaseURL }}" target="_blank" rel="noopener noreferrer">{{ .BaseURL }}</a></td>
                             <td><span class="local-time" data-utc="{{ probeTimeISO .LastProbeAt }}">{{ fmtProbeTime .LastProbeAt }}</span></td>
                             <td class="site-actions">
-                                <button type="button" class="btn-detail" title="Détails" onclick="showSiteDetail('{{ .Name }}', '{{ .BaseURL }}', '{{ .ProbeStatus }}', '{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}', '{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}', this.closest('tr').querySelector('.local-time').textContent)">ℹ️</button>
-                                <button type="button" class="btn-detail" title="Modifier" onclick="showEditSite({{ .ID }}, '{{ .Name }}', '{{ .BaseURL }}')">✏️</button>
+                                <button type="button" class="btn-detail js-site-info" title="{{ t $.T "reading_sites.action.details" }}"
+                                    data-name="{{ .Name }}"
+                                    data-url="{{ .BaseURL }}"
+                                    data-status="{{ .ProbeStatus }}"
+                                    data-http="{{ if .ProbeHTTPStatus.Valid }}{{ .ProbeHTTPStatus.Int64 }}{{ else }}—{{ end }}"
+                                    data-detail="{{ if .ProbeDetail.Valid }}{{ .ProbeDetail.String }}{{ else }}—{{ end }}">ℹ️</button>
+                                <button type="button" class="btn-detail js-site-edit" title="{{ t $.T "reading_sites.action.edit" }}"
+                                    data-id="{{ .ID }}"
+                                    data-name="{{ .Name }}"
+                                    data-url="{{ .BaseURL }}">✏️</button>
                                 <form method="POST" action="/reading-sites/probe">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
@@ -159,9 +174,9 @@
             </section>
         </div>
     </main>
-    <div class="detail-modal-overlay" id="siteDetailModal" onclick="closeSiteDetail(event)">
-        <div class="detail-modal">
-            <h3 id="detailTitle">Détails</h3>
+    <div class="detail-modal-overlay" id="siteDetailModal">
+        <div class="detail-modal" role="dialog" aria-modal="true">
+            <h3 id="detailTitle">{{ t .T "reading_sites.modal.details_title" }}</h3>
             <table>
                 <tr><td>Site</td><td id="detailName"></td></tr>
                 <tr><td>URL</td><td id="detailURL"></td></tr>
@@ -170,12 +185,12 @@
                 <tr><td>Détail</td><td id="detailInfo"></td></tr>
                 <tr><td>Dernière vérif.</td><td id="detailTime"></td></tr>
             </table>
-            <button class="btn btn-secondary btn-close-modal" onclick="document.getElementById('siteDetailModal').classList.remove('open')">Fermer</button>
+            <button type="button" class="btn btn-secondary btn-close-modal js-close-site-detail">{{ t .T "common.close" }}</button>
         </div>
     </div>
-    <div class="detail-modal-overlay" id="siteEditModal" onclick="closeEditSite(event)">
-        <div class="detail-modal">
-            <h3>Modifier le site</h3>
+    <div class="detail-modal-overlay" id="siteEditModal">
+        <div class="detail-modal" role="dialog" aria-modal="true">
+            <h3>{{ t .T "reading_sites.modal.edit_title" }}</h3>
             <form method="POST" action="/reading-sites/edit" id="editSiteForm">
                 <input type="hidden" name="id" id="editSiteId">
                 <div class="form-group" style="margin-bottom:0.75rem;">
@@ -188,39 +203,90 @@
                 </div>
                 <div style="display:flex;gap:0.5rem;">
                     <button type="submit" class="btn btn-primary">Enregistrer</button>
-                    <button type="button" class="btn btn-secondary" onclick="document.getElementById('siteEditModal').classList.remove('open')">Annuler</button>
+                    <button type="button" class="btn btn-secondary js-close-site-edit">{{ t .T "common.cancel" }}</button>
                 </div>
             </form>
         </div>
     </div>
     <script nonce="{{ .CSPNonce }}">
-    function showSiteDetail(name, url, status, httpCode, detail, lastCheck) {
-        document.getElementById('detailTitle').textContent = name + ' — Diagnostic';
-        document.getElementById('detailName').textContent = name;
-        document.getElementById('detailURL').textContent = url;
-        var statusLabels = {up: '✅ En ligne', down: '❌ Hors ligne', degraded: '⚠️ Dégradé', unknown: '❓ Inconnu'};
-        document.getElementById('detailStatus').textContent = statusLabels[status] || status;
-        document.getElementById('detailHTTP').textContent = httpCode;
-        document.getElementById('detailInfo').textContent = detail;
-        document.getElementById('detailTime').textContent = lastCheck;
-        document.getElementById('siteDetailModal').classList.add('open');
-    }
-    function closeSiteDetail(e) {
-        if (e.target === document.getElementById('siteDetailModal')) {
-            document.getElementById('siteDetailModal').classList.remove('open');
+    (function () {
+        var statusLabels = {
+            up: {{ jsstr (t .T "reading_sites.status.up") }},
+            down: {{ jsstr (t .T "reading_sites.status.down") }},
+            degraded: {{ jsstr (t .T "reading_sites.status.degraded") }},
+            unknown: {{ jsstr (t .T "reading_sites.status.unknown") }}
+        };
+        var detailSuffix = {{ jsstr (t .T "reading_sites.modal.details_suffix") }};
+
+        function showSiteDetail(btn) {
+            var tr = btn.closest("tr");
+            var lastCheck = tr ? (tr.querySelector(".local-time") || {}).textContent || "—" : "—";
+            var name = btn.getAttribute("data-name") || "";
+            var url = btn.getAttribute("data-url") || "";
+            var status = btn.getAttribute("data-status") || "";
+            document.getElementById("detailTitle").textContent = name + detailSuffix;
+            document.getElementById("detailName").textContent = name;
+            document.getElementById("detailURL").textContent = url;
+            document.getElementById("detailStatus").textContent = statusLabels[status] || status;
+            document.getElementById("detailHTTP").textContent = btn.getAttribute("data-http") || "—";
+            document.getElementById("detailInfo").textContent = btn.getAttribute("data-detail") || "—";
+            document.getElementById("detailTime").textContent = lastCheck;
+            document.getElementById("siteDetailModal").classList.add("open");
         }
-    }
-    function showEditSite(id, name, url) {
-        document.getElementById('editSiteId').value = id;
-        document.getElementById('editSiteName').value = name;
-        document.getElementById('editSiteURL').value = url;
-        document.getElementById('siteEditModal').classList.add('open');
-    }
-    function closeEditSite(e) {
-        if (e.target === document.getElementById('siteEditModal')) {
-            document.getElementById('siteEditModal').classList.remove('open');
+
+        function showEditSite(btn) {
+            document.getElementById("editSiteId").value = btn.getAttribute("data-id") || "";
+            document.getElementById("editSiteName").value = btn.getAttribute("data-name") || "";
+            document.getElementById("editSiteURL").value = btn.getAttribute("data-url") || "";
+            document.getElementById("siteEditModal").classList.add("open");
         }
-    }
+
+        document.addEventListener("click", function (e) {
+            var info = e.target.closest(".js-site-info");
+            if (info) {
+                e.preventDefault();
+                showSiteDetail(info);
+                return;
+            }
+            var edit = e.target.closest(".js-site-edit");
+            if (edit) {
+                e.preventDefault();
+                showEditSite(edit);
+                return;
+            }
+            if (e.target.closest(".js-close-site-detail")) {
+                document.getElementById("siteDetailModal").classList.remove("open");
+                return;
+            }
+            if (e.target.closest(".js-close-site-edit")) {
+                document.getElementById("siteEditModal").classList.remove("open");
+                return;
+            }
+            if (e.target.id === "siteDetailModal") {
+                document.getElementById("siteDetailModal").classList.remove("open");
+            }
+            if (e.target.id === "siteEditModal") {
+                document.getElementById("siteEditModal").classList.remove("open");
+            }
+        });
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key !== "Escape") return;
+            document.getElementById("siteDetailModal").classList.remove("open");
+            document.getElementById("siteEditModal").classList.remove("open");
+        });
+
+        {{ if .HighlightIssues }}
+        var firstIssue = document.querySelector("tr.site-row--issue");
+        if (firstIssue) {
+            firstIssue.classList.add("site-row--flash");
+            setTimeout(function () {
+                firstIssue.scrollIntoView({ behavior: "smooth", block: "center" });
+            }, 150);
+        }
+        {{ end }}
+    })();
+
     document.querySelectorAll('.local-time[data-utc]').forEach(function(el) {
         var iso = el.getAttribute('data-utc');
         if (!iso) return;

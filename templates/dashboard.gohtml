@@ -117,7 +117,9 @@
         .sites-down-badge--clickable.active { box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.45); font-weight: 700; }
         .sites-down-badge--dead { background: rgba(245,158,11,0.12); color: #b45309; border-color: rgba(245,158,11,0.25); }
         .sites-down-badge--dead.active { background: rgba(245,158,11,0.22); border-color: rgba(245,158,11,0.55); box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35); }
-        button.sites-down-badge { font: inherit; margin-top: 0.35rem; }
+        button.sites-down-badge, a.sites-down-badge { font: inherit; margin-top: 0.35rem; }
+        a.sites-down-badge { text-decoration: none; color: inherit; }
+        a.sites-down-badge.sites-down-badge--clickable:hover { filter: brightness(0.97); }
         .bulk-bar { display: none; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding: 0.75rem 1rem; margin-bottom: 1rem; background: var(--primary-muted); border: 1px solid var(--primary); border-radius: 0.75rem; }
         .bulk-bar.active { display: flex; }
         .work-bulk-check-wrap { display: inline-flex; align-items: center; gap: 0.35rem; font-size: 0.75rem; color: var(--text-muted); cursor: pointer; user-select: none; margin-right: auto; }
@@ -250,7 +252,7 @@
             <div class="dashboard-header">
                 <div class="dashboard-title">
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
-                    {{ if gt .SitesDownCount 0 }}<div class="sites-down-badge" title="{{ t .T "dashboard.sites_down.title" }}">⚠ {{ t .T "dashboard.sites_down" }} ({{ .SitesDownCount }})</div>{{ end }}
+                    {{ if gt .SitesDownCount 0 }}<a href="/reading-sites?issues=1" class="sites-down-badge sites-down-badge--clickable" title="{{ t .T "dashboard.sites_down.title" }}">⚠ {{ t .T "dashboard.sites_down" }} ({{ .SitesDownCount }})</a>{{ end }}
                     {{ if gt .LinkDeadCount 0 }}<button type="button" id="dead-links-toggle" class="sites-down-badge sites-down-badge--clickable sites-down-badge--dead" title="{{ t .T "dashboard.links_dead.title" }}" aria-pressed="false">🔗 {{ t .T "dashboard.links_dead" }} ({{ .LinkDeadCount }})</button>{{ end }}
                 </div>
             </div>

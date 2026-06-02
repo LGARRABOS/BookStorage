@@ -741,6 +741,12 @@
   "reading_sites.status.unknown": "Sconosciuto",
   "reading_sites.action.probe": "Verifica",
   "reading_sites.action.probe_all": "Verifica tutti",
+  "reading_sites.action.details": "Dettagli",
+  "reading_sites.action.edit": "Modifica",
   "reading_sites.confirm_delete": "Eliminare questo sito?",
-  "reading_sites.empty": "Nessun sito di lettura registrato."
+  "reading_sites.empty": "Nessun sito di lettura registrato.",
+  "reading_sites.issues_banner": "Siti segnalati offline o degradati — usa ℹ️ per la diagnosi o ✏️ per correggere l’URL.",
+  "reading_sites.modal.details_title": "Dettagli",
+  "reading_sites.modal.details_suffix": " — Diagnosi",
+  "reading_sites.modal.edit_title": "Modifica sito"
 }

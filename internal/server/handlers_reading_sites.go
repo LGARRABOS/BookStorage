@@ -19,7 +19,8 @@ func (a *App) HandleReadingSites(w http.ResponseWriter, r *http.Request) {
 
 	sites := a.loadUserReadingSites(userID)
 	data := map[string]any{
-		"Sites": sites,
+		"Sites":            sites,
+		"HighlightIssues":  strings.TrimSpace(r.URL.Query().Get("issues")) == "1",
 	}
 	if msg := r.URL.Query().Get("msg"); msg != "" {
 		data["Flash"] = msg

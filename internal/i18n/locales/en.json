@@ -785,6 +785,12 @@
   "reading_sites.status.unknown": "Unknown",
   "reading_sites.action.probe": "Check",
   "reading_sites.action.probe_all": "Check all",
+  "reading_sites.action.details": "Details",
+  "reading_sites.action.edit": "Edit",
   "reading_sites.confirm_delete": "Delete this site?",
-  "reading_sites.empty": "No reading sites registered."
+  "reading_sites.empty": "No reading sites registered.",
+  "reading_sites.issues_banner": "Sites reported offline or degraded — use ℹ️ for diagnostics or ✏️ to fix the URL.",
+  "reading_sites.modal.details_title": "Details",
+  "reading_sites.modal.details_suffix": " — Diagnostics",
+  "reading_sites.modal.edit_title": "Edit site"
 }

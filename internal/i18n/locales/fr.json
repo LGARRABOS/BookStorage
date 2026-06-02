@@ -785,6 +785,12 @@
   "reading_sites.status.unknown": "Inconnu",
   "reading_sites.action.probe": "Vérifier",
   "reading_sites.action.probe_all": "Tout vérifier",
+  "reading_sites.action.details": "Détails",
+  "reading_sites.action.edit": "Modifier",
   "reading_sites.confirm_delete": "Supprimer ce site ?",
-  "reading_sites.empty": "Aucun site de lecture enregistré."
+  "reading_sites.empty": "Aucun site de lecture enregistré.",
+  "reading_sites.issues_banner": "Sites signalés hors ligne ou dégradés — utilisez ℹ️ pour le diagnostic ou ✏️ pour corriger l’URL.",
+  "reading_sites.modal.details_title": "Détails",
+  "reading_sites.modal.details_suffix": " — Diagnostic",
+  "reading_sites.modal.edit_title": "Modifier le site"
 }
