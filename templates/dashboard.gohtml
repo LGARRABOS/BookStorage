@@ -59,7 +59,8 @@
         .work-cover-overlay .date-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.03em; }
         .work-cover-overlay .date-value { font-weight: 600; font-size: 0.85rem; }
         .work-cover-overlay .no-dates { opacity: 0.5; font-style: italic; }
-        .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.35rem; }
+        .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; z-index: 2; display: flex; justify-content: space-between; align-items: center; gap: 0.35rem; pointer-events: none; }
+        .work-badges .work-status-badge { pointer-events: auto; }
         .work-body { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
         .work-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; }
         .work-card-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
