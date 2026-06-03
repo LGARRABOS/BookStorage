@@ -13,6 +13,7 @@
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
+    {{ if .Works }}<link rel="stylesheet" href="/static/css/work-status-picker.css">{{ end }}
     <script src="/static/js/appearance-init.js"></script>
     <script src="/static/js/modals.js?v=3"></script>
     <style>
@@ -58,26 +59,7 @@
         .work-cover-overlay .date-label { font-size: 0.7rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.03em; }
         .work-cover-overlay .date-value { font-weight: 600; font-size: 0.85rem; }
         .work-cover-overlay .no-dates { opacity: 0.5; font-style: italic; }
-        .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
-        .work-status-badge { padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px); }
-        button.work-status-badge { border: none; font: inherit; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease; pointer-events: auto; }
-        button.work-status-badge:hover, button.work-status-badge:focus-visible { transform: scale(1.04); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); outline: none; }
-        button.work-status-badge[aria-busy="true"] { opacity: 0.65; cursor: wait; }
-        button.work-status-badge.work-status-picker--error { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.8); }
-        .work-status-menu { min-width: 9.5rem; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 0.75rem; box-shadow: var(--shadow-lg); padding: 0.35rem; display: flex; flex-direction: column; gap: 0.15rem; }
-        .work-status-menu[hidden] { display: none !important; }
-        .work-status-menu-item { display: flex; align-items: center; gap: 0.4rem; width: 100%; padding: 0.45rem 0.65rem; border: none; border-radius: 0.5rem; background: transparent; font: inherit; font-size: 0.82rem; font-weight: 500; color: var(--text-primary); cursor: pointer; text-align: left; transition: background 0.12s ease; }
-        .work-status-menu-item:hover, .work-status-menu-item:focus-visible { background: var(--primary-muted); outline: none; }
-        .work-status-menu-item.is-active { background: var(--primary-muted); color: var(--primary); font-weight: 600; }
-        .work-status-menu-item.is-active::before { content: "✓"; font-size: 0.75rem; width: 0.85rem; flex-shrink: 0; }
-        .work-status-menu-item:not(.is-active)::before { content: ""; width: 0.85rem; flex-shrink: 0; }
-        [data-theme="dark"] .work-status-menu { background: #1e293b; border-color: rgba(100, 116, 139, 0.4); }
-        .work-status-badge[data-status="En cours"], .work-status-badge[data-status="Reading"] { background: rgba(129, 140, 248, 0.9); color: white; }
-        .work-status-badge[data-status="Terminé"], .work-status-badge[data-status="Completed"] { background: rgba(34, 197, 94, 0.9); color: white; }
-        .work-status-badge[data-status="En pause"], .work-status-badge[data-status="On Hold"] { background: rgba(56, 189, 248, 0.9); color: white; }
-        .work-status-badge[data-status="Abandonné"], .work-status-badge[data-status="Dropped"] { background: rgba(239, 68, 68, 0.9); color: white; }
-        .work-status-badge[data-status="À lire"], .work-status-badge[data-status="Plan to Read"] { background: rgba(250, 204, 21, 0.9); color: #1f2937; }
-        .work-type-badge { padding: 0.35rem 0.65rem; border-radius: 2rem; font-size: 0.7rem; font-weight: 500; background: rgba(0, 0, 0, 0.5); color: white; backdrop-filter: blur(8px); }
+        .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: center; gap: 0.35rem; }
         .work-body { padding: 1rem 1.25rem; flex: 1; display: flex; flex-direction: column; }
         .work-title-row { display: flex; justify-content: space-between; align-items: flex-start; gap: 0.5rem; margin-bottom: 0.5rem; }
         .work-card-title { font-size: 1rem; font-weight: 600; color: var(--text-primary); line-height: 1.3; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

@@ -10,7 +10,8 @@
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css?v=7">
     <link rel="stylesheet" href="/static/css/mobile.css?v=7">
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=9">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=10">
+    {{ if .Works }}<link rel="stylesheet" href="/static/css/work-status-picker.css">{{ end }}
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
