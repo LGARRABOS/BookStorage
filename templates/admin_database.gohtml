@@ -27,7 +27,7 @@
         </div>
     </header>
     {{ end }}
-
+    {{ template "admin_update_banner" . }}
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div id="admin-db-i18n" hidden
             data-confirm-delete="{{ t .T "admin.database.confirm_delete" }}"

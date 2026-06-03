@@ -254,3 +254,54 @@ tbody tr:nth-child(even) {
 [data-theme="dark"] .btn-icon.danger:hover {
   background: rgba(248, 113, 113, 0.3);
 }
+
+/* Update available banner (admin pages) */
+.admin-update-banner {
+  background: rgba(245, 158, 11, 0.12);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.admin-update-banner__inner {
+  padding: 0.65rem 1rem;
+}
+
+.admin-update-banner__text {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.45;
+  color: #b45309;
+}
+
+.admin-update-banner__icon {
+  margin-right: 0.35rem;
+}
+
+.admin-update-banner__versions {
+  display: inline;
+  margin-left: 0.35rem;
+}
+
+.admin-update-banner__link {
+  margin-left: 0.5rem;
+  color: inherit;
+  font-weight: 600;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.admin-update-banner__link:hover {
+  color: #92400e;
+}
+
+[data-theme="dark"] .admin-update-banner {
+  background: rgba(245, 158, 11, 0.15);
+  border-bottom-color: rgba(245, 158, 11, 0.35);
+}
+
+[data-theme="dark"] .admin-update-banner__text {
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .admin-update-banner__link:hover {
+  color: #fde68a;
+}

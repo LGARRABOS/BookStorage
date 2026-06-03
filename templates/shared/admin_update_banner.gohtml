@@ -1,0 +1,20 @@
+{{ define "admin_update_banner" }}
+{{ if .UpdateAvailable }}
+<div class="admin-update-banner" role="status">
+    <div class="container admin-update-banner__inner">
+        <p class="admin-update-banner__text">
+            <span class="admin-update-banner__icon" aria-hidden="true">⬆️</span>
+            {{ t .T "update.banner.message" }}
+            <span class="admin-update-banner__versions">
+                {{ t .T "update.current_version" }}: <strong>{{ .AppVersion }}</strong>
+                ·
+                {{ t .T "update.banner.latest_label" }}: <strong>{{ .LatestVersion }}</strong>
+            </span>
+            {{ if .ReleaseURL }}
+            <a class="admin-update-banner__link" href="{{ .ReleaseURL }}" target="_blank" rel="noopener noreferrer">{{ t .T "update.banner.release_link" }}</a>
+            {{ end }}
+        </p>
+    </div>
+</div>
+{{ end }}
+{{ end }}
