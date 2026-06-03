@@ -10,7 +10,7 @@
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css?v=7">
     <link rel="stylesheet" href="/static/css/mobile.css?v=7">
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=8">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=9">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
@@ -53,7 +53,7 @@
             <section class="works-mobile-list" id="works-mobile-list">
                 {{ range .Works }}
                 {{ $work := . }}
-                <article class="work-mobile-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}">
+                <article class="work-mobile-card" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}">
                     <div class="work-mobile-top">
                         <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}{{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }} <span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}" style="width:8px;height:8px;border-radius:50%;display:inline-block;vertical-align:middle;"></span>{{ end }}{{ end }}</h2>
                         {{ if gt .Rating 0 }}
@@ -62,7 +62,7 @@
                     </div>
 
                     <div class="work-mobile-meta">
-                        {{ if .Status.Valid }}<span class="work-mobile-tag">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                        <button type="button" class="work-mobile-tag work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
                         {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
                         {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
                     </div>
@@ -99,10 +99,21 @@
         </div>
     </main>
 
+    {{ if .Works }}
+    <template id="work-status-menu-tpl">
+        <div class="work-status-menu" role="menu" hidden>
+            {{ range .ReadingStatus }}
+            <button type="button" role="menuitemradio" class="work-status-menu-item" data-status="{{ . }}" data-label="{{ translateStatus . $.T }}">{{ translateStatus . $.T }}</button>
+            {{ end }}
+        </div>
+    </template>
+    {{ end }}
+
     {{ template "mobile_bottom_nav" . }}
     <script src="/static/js/modals.js"></script>
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-nav.js"></script>
+    {{ if .Works }}<script src="/static/js/work-status-picker.js"></script>{{ end }}
     <script nonce="{{ .CSPNonce }}">
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/pwa/sw.js').catch(function(){});
@@ -183,6 +194,7 @@
       if (status) status.addEventListener("change", applyFilters);
       if (followCheck) followCheck.addEventListener("change", applyFilters);
       if (site) site.addEventListener("change", applyFilters);
+      document.addEventListener("workstatuschanged", applyFilters);
       if (adultOnlyCheck) adultOnlyCheck.addEventListener("change", applyServerFilters);
       if (sortSel) sortSel.addEventListener("change", applyServerFilters);
     })();

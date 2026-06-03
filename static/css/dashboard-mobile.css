@@ -158,6 +158,122 @@
   color: var(--primary);
 }
 
+button.work-mobile-tag.work-status-picker {
+  border: none;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease, box-shadow 0.15s ease;
+}
+
+button.work-mobile-tag.work-status-picker:hover,
+button.work-mobile-tag.work-status-picker:focus-visible {
+  opacity: 0.9;
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.35);
+}
+
+button.work-mobile-tag.work-status-picker[aria-busy="true"] {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+button.work-mobile-tag.work-status-picker.work-status-picker--error {
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.7);
+}
+
+.work-mobile-tag.work-status-picker[data-status="En cours"],
+.work-mobile-tag.work-status-picker[data-status="Reading"] {
+  background: rgba(129, 140, 248, 0.2);
+  color: #6366f1;
+}
+
+.work-mobile-tag.work-status-picker[data-status="Terminé"],
+.work-mobile-tag.work-status-picker[data-status="Completed"] {
+  background: rgba(34, 197, 94, 0.15);
+  color: #16a34a;
+}
+
+.work-mobile-tag.work-status-picker[data-status="En pause"],
+.work-mobile-tag.work-status-picker[data-status="On Hold"] {
+  background: rgba(56, 189, 248, 0.15);
+  color: #0284c7;
+}
+
+.work-mobile-tag.work-status-picker[data-status="Abandonné"],
+.work-mobile-tag.work-status-picker[data-status="Dropped"] {
+  background: rgba(239, 68, 68, 0.12);
+  color: #dc2626;
+}
+
+.work-mobile-tag.work-status-picker[data-status="À lire"],
+.work-mobile-tag.work-status-picker[data-status="Plan to Read"] {
+  background: rgba(250, 204, 21, 0.2);
+  color: #ca8a04;
+}
+
+.work-status-menu {
+  min-width: 9.5rem;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.75rem;
+  box-shadow: var(--shadow-lg);
+  padding: 0.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.work-status-menu[hidden] {
+  display: none !important;
+}
+
+.work-status-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: none;
+  border-radius: 0.5rem;
+  background: transparent;
+  font: inherit;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.work-status-menu-item:hover,
+.work-status-menu-item:focus-visible {
+  background: var(--primary-muted);
+  outline: none;
+}
+
+.work-status-menu-item.is-active {
+  background: var(--primary-muted);
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.work-status-menu-item.is-active::before {
+  content: "✓";
+  font-size: 0.75rem;
+  width: 0.85rem;
+  flex-shrink: 0;
+}
+
+.work-status-menu-item:not(.is-active)::before {
+  content: "";
+  width: 0.85rem;
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .work-status-menu {
+  background: #1e293b;
+  border-color: rgba(100, 116, 139, 0.4);
+}
+
 .work-mobile-tag--type {
   background: rgba(14, 165, 233, 0.12);
   color: #0ea5e9;

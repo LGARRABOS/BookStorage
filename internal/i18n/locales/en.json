@@ -173,6 +173,8 @@
   "dashboard.bulk.link_from": "Replace in link (from)",
   "dashboard.bulk.link_to": "Replace with (to)",
   "dashboard.bulk.apply_link": "Replace domain",
+  "dashboard.status.change": "Change status",
+  "dashboard.status.updating": "Updating…",
   "catalog.title": "Catalog",
   "catalog.intro": "Discover works to add to your library",
   "catalog.explore.title": "Browse by genre",

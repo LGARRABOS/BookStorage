@@ -60,6 +60,18 @@
         .work-cover-overlay .no-dates { opacity: 0.5; font-style: italic; }
         .work-badges { position: absolute; top: 0.75rem; left: 0.75rem; right: 0.75rem; display: flex; justify-content: space-between; align-items: flex-start; }
         .work-status-badge { padding: 0.35rem 0.75rem; border-radius: 2rem; font-size: 0.75rem; font-weight: 600; backdrop-filter: blur(8px); }
+        button.work-status-badge { border: none; font: inherit; cursor: pointer; transition: transform 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease; pointer-events: auto; }
+        button.work-status-badge:hover, button.work-status-badge:focus-visible { transform: scale(1.04); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); outline: none; }
+        button.work-status-badge[aria-busy="true"] { opacity: 0.65; cursor: wait; }
+        button.work-status-badge.work-status-picker--error { box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.8); }
+        .work-status-menu { min-width: 9.5rem; background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 0.75rem; box-shadow: var(--shadow-lg); padding: 0.35rem; display: flex; flex-direction: column; gap: 0.15rem; }
+        .work-status-menu[hidden] { display: none !important; }
+        .work-status-menu-item { display: flex; align-items: center; gap: 0.4rem; width: 100%; padding: 0.45rem 0.65rem; border: none; border-radius: 0.5rem; background: transparent; font: inherit; font-size: 0.82rem; font-weight: 500; color: var(--text-primary); cursor: pointer; text-align: left; transition: background 0.12s ease; }
+        .work-status-menu-item:hover, .work-status-menu-item:focus-visible { background: var(--primary-muted); outline: none; }
+        .work-status-menu-item.is-active { background: var(--primary-muted); color: var(--primary); font-weight: 600; }
+        .work-status-menu-item.is-active::before { content: "✓"; font-size: 0.75rem; width: 0.85rem; flex-shrink: 0; }
+        .work-status-menu-item:not(.is-active)::before { content: ""; width: 0.85rem; flex-shrink: 0; }
+        [data-theme="dark"] .work-status-menu { background: #1e293b; border-color: rgba(100, 116, 139, 0.4); }
         .work-status-badge[data-status="En cours"], .work-status-badge[data-status="Reading"] { background: rgba(129, 140, 248, 0.9); color: white; }
         .work-status-badge[data-status="Terminé"], .work-status-badge[data-status="Completed"] { background: rgba(34, 197, 94, 0.9); color: white; }
         .work-status-badge[data-status="En pause"], .work-status-badge[data-status="On Hold"] { background: rgba(56, 189, 248, 0.9); color: white; }
@@ -364,7 +376,7 @@
                             {{ end }}
                         {{ end }}
                         <div class="work-badges">
-                            {{ if .Status.Valid }}<span class="work-status-badge" data-status="{{ .Status.String }}">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                            <button type="button" class="work-status-badge work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
                             <span class="work-type-badge">
                                 {{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}
                                 {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }} · 18+{{ end }}
@@ -433,6 +445,16 @@
     </main>
     {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
 
+    {{ if .Works }}
+    <template id="work-status-menu-tpl">
+        <div class="work-status-menu" role="menu" hidden>
+            {{ range .ReadingStatus }}
+            <button type="button" role="menuitemradio" class="work-status-menu-item" data-status="{{ . }}" data-label="{{ translateStatus . $.T }}">{{ translateStatus . $.T }}</button>
+            {{ end }}
+        </div>
+    </template>
+    {{ end }}
+
     <footer class="page-footer">
         <div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a> · <span id="help-trigger" style="cursor:pointer; text-decoration:underline; text-underline-offset:2px;" role="button" tabindex="0">⌨️ {{ t .T "dashboard.shortcuts.label" }}</span></p></div>
     </footer>
@@ -472,6 +494,7 @@
 
     <script src="/static/js/datepicker.js"></script>
     <script src="/static/js/appearance.js"></script>
+    {{ if .Works }}<script src="/static/js/work-status-picker.js"></script>{{ end }}
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     <script nonce="{{ .CSPNonce }}">
     document.addEventListener('DOMContentLoaded', function() {
@@ -603,6 +626,7 @@
         if (typeFilter) typeFilter.addEventListener('change', filterWorks);
         if (followUnfollowedCheck) followUnfollowedCheck.addEventListener('change', filterWorks);
         if (siteFilter) siteFilter.addEventListener('change', filterWorks);
+        document.addEventListener('workstatuschanged', filterWorks);
         filterWorks();
 
         const gridEl = document.getElementById('works-grid');
