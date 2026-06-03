@@ -16,5 +16,23 @@
         </p>
     </div>
 </div>
+{{ else if .UpdateCheckDevBuild }}
+<div class="admin-update-banner admin-update-banner--info" role="status">
+    <div class="container admin-update-banner__inner">
+        <p class="admin-update-banner__text">{{ t .T "update.banner.dev_build" }}</p>
+    </div>
+</div>
+{{ else if .UpdateCheckInvalidVersion }}
+<div class="admin-update-banner admin-update-banner--info" role="status">
+    <div class="container admin-update-banner__inner">
+        <p class="admin-update-banner__text">{{ t .T "update.banner.invalid_version" }}</p>
+    </div>
+</div>
+{{ else if .UpdateCheckUnreachable }}
+<div class="admin-update-banner admin-update-banner--info" role="status">
+    <div class="container admin-update-banner__inner">
+        <p class="admin-update-banner__text">{{ t .T "update.banner.github_unreachable" }}</p>
+    </div>
+</div>
 {{ end }}
 {{ end }}

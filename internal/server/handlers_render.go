@@ -125,7 +125,7 @@ func (a *App) mergeData(r *http.Request, extra map[string]any) map[string]any {
 		if _, ok := data["ShowPostgresMigrate"]; !ok {
 			data["ShowPostgresMigrate"] = a.showPostgresMigrateTab(r)
 		}
-		for k, v := range a.adminUpdateData() {
+		for k, v := range a.adminUpdateData(r) {
 			if _, ok := data[k]; !ok {
 				data[k] = v
 			}

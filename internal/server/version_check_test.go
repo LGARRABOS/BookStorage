@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"testing"
 )
 
@@ -44,7 +45,17 @@ func TestSemverCompare(t *testing.T) {
 	}
 }
 
+func TestRunningVersionEnvFallback(t *testing.T) {
+	t.Setenv("BOOKSTORAGE_APP_VERSION", "6.1.2")
+	app := &App{Version: "dev"}
+	if got := app.runningVersion(); got != "6.1.2" {
+		t.Fatalf("runningVersion()=%q", got)
+	}
+}
+
 func TestCheckUpdateAvailable(t *testing.T) {
+	releaseCheckCache = versionCheckCache{}
+
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("User-Agent") == "" {
 			t.Error("missing User-Agent")
@@ -56,32 +67,44 @@ func TestCheckUpdateAvailable(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	origURL := githubReleasesLatestURL
+	origLatest := githubReleasesLatestURL
+	origList := githubReleasesListURL
 	githubReleasesLatestURL = srv.URL
-	t.Cleanup(func() { githubReleasesLatestURL = origURL })
+	githubReleasesListURL = srv.URL
+	t.Cleanup(func() {
+		githubReleasesLatestURL = origLatest
+		githubReleasesListURL = origList
+		releaseCheckCache = versionCheckCache{}
+	})
 
 	app := &App{Version: "6.1.1"}
-	available, latest, url := app.checkUpdateAvailable()
-	if !available {
+	res := app.checkUpdateAvailable()
+	if !res.available {
 		t.Fatal("expected update available")
 	}
-	if latest != "v6.9.0" {
-		t.Fatalf("latest=%q", latest)
+	if res.latestVersion != "v6.9.0" {
+		t.Fatalf("latest=%q", res.latestVersion)
 	}
-	if url == "" {
+	if res.releaseURL == "" {
 		t.Fatal("expected release URL")
 	}
 
 	app.Version = "6.9.0"
-	available, _, _ = app.checkUpdateAvailable()
-	if available {
+	res = app.checkUpdateAvailable()
+	if res.available {
 		t.Fatal("expected no update when current equals latest")
 	}
 
 	app.Version = "dev"
-	available, _, _ = app.checkUpdateAvailable()
-	if available {
-		t.Fatal("expected no update for dev builds")
+	res = app.checkUpdateAvailable()
+	if res.available || res.skippedReason != "dev" {
+		t.Fatalf("expected dev skip, got %+v", res)
+	}
+
+	t.Setenv("BOOKSTORAGE_APP_VERSION", "6.1.0")
+	res = app.checkUpdateAvailable()
+	if !res.available {
+		t.Fatal("expected update available via env version fallback")
 	}
 }
 
@@ -91,9 +114,14 @@ func TestFetchLatestReleaseNotFound(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	origURL := githubReleasesLatestURL
+	origLatest := githubReleasesLatestURL
+	origList := githubReleasesListURL
 	githubReleasesLatestURL = srv.URL
-	t.Cleanup(func() { githubReleasesLatestURL = origURL })
+	githubReleasesListURL = srv.URL
+	t.Cleanup(func() {
+		githubReleasesLatestURL = origLatest
+		githubReleasesListURL = origList
+	})
 
 	tag, url, ok := fetchLatestRelease(nil)
 	if ok || tag != "" || url != "" {
@@ -101,10 +129,49 @@ func TestFetchLatestReleaseNotFound(t *testing.T) {
 	}
 }
 
+func TestFetchLatestReleaseListPicksHighest(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/releases/latest" {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		_ = json.NewEncoder(w).Encode([]githubRelease{
+			{TagName: "v6.1.0", HTMLURL: "https://example.com/610"},
+			{TagName: "v6.2.0", HTMLURL: "https://example.com/620", Draft: false},
+			{TagName: "v6.1.5", HTMLURL: "https://example.com/615"},
+		})
+	}))
+	defer srv.Close()
+
+	origLatest := githubReleasesLatestURL
+	origList := githubReleasesListURL
+	githubReleasesLatestURL = srv.URL + "/releases/latest"
+	githubReleasesListURL = srv.URL + "/releases?per_page=10"
+	t.Cleanup(func() {
+		githubReleasesLatestURL = origLatest
+		githubReleasesListURL = origList
+	})
+
+	tag, url, ok := fetchLatestRelease(nil)
+	if !ok {
+		t.Fatal("expected list fallback success")
+	}
+	if tag != "v6.2.0" {
+		t.Fatalf("tag=%q", tag)
+	}
+	if url != "https://example.com/620" {
+		t.Fatalf("url=%q", url)
+	}
+}
+
 func TestAdminUpdateData(t *testing.T) {
+	releaseCheckCache = versionCheckCache{}
 	app := &App{Version: "dev"}
-	data := app.adminUpdateData()
+	data := app.adminUpdateData(nil)
 	if data["UpdateAvailable"] != false {
 		t.Fatalf("UpdateAvailable=%v", data["UpdateAvailable"])
 	}
+
+	t.Setenv("BOOKSTORAGE_APP_VERSION", "")
+	_ = os.Unsetenv("BOOKSTORAGE_APP_VERSION")
 }

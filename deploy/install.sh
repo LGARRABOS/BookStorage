@@ -9,7 +9,7 @@
 set -e
 
 APP_NAME="bookstorage"
-APP_VERSION="6.2.0"
+APP_VERSION="6.2.1"
 APP_DIR="/opt/bookstorage"
 APP_USER="nobody"
 APP_GROUP="nobody"
@@ -188,6 +188,7 @@ BOOKSTORAGE_HOST=0.0.0.0
 BOOKSTORAGE_PORT=5000
 BOOKSTORAGE_SECRET_KEY=$SECRET
 BOOKSTORAGE_SUPERADMIN_PASSWORD=$ADMIN_PASS
+BOOKSTORAGE_APP_VERSION=${APP_VERSION}
 # Set BOOKSTORAGE_ENABLE_HSTS=true when served over HTTPS via a reverse proxy
 EOF
     print_success "Fichier .env créé avec clé secrète et mot de passe superadmin générés"

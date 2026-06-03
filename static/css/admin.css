@@ -305,3 +305,22 @@ tbody tr:nth-child(even) {
 [data-theme="dark"] .admin-update-banner__link:hover {
   color: #fde68a;
 }
+
+.admin-update-banner--info {
+  background: rgba(100, 116, 139, 0.12);
+  border-bottom-color: rgba(100, 116, 139, 0.3);
+}
+
+.admin-update-banner--info .admin-update-banner__text {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+}
+
+[data-theme="dark"] .admin-update-banner--info {
+  background: rgba(100, 116, 139, 0.18);
+  border-bottom-color: rgba(100, 116, 139, 0.35);
+}
+
+[data-theme="dark"] .admin-update-banner--info .admin-update-banner__text {
+  color: #cbd5e1;
+}
