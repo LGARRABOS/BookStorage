@@ -1,36 +1,55 @@
-/* Badge statut + menu — alignés sur les pastilles couverture et nav-dropdown */
+/* Badge statut + menu — pastilles couverture et chips de statut */
 
 .work-status-badge,
 .work-type-badge {
-  padding: 0.35rem 0.65rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  height: 1.45rem;
+  padding: 0 0.55rem;
   border-radius: 2rem;
-  font-size: 0.7rem;
+  font-family: inherit;
+  font-size: 0.68rem;
   font-weight: 500;
-  line-height: 1.25;
+  line-height: 1;
+  letter-spacing: 0.02em;
   backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   white-space: nowrap;
   max-width: calc(50% - 0.2rem);
   overflow: hidden;
   text-overflow: ellipsis;
+  vertical-align: middle;
 }
 
 button.work-status-badge {
+  -webkit-appearance: none;
+  appearance: none;
   border: none;
-  font: inherit;
+  margin: 0;
   cursor: pointer;
-  transition: filter 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
   pointer-events: auto;
+}
+
+button.work-status-badge::after {
+  content: "▾";
+  margin-left: 0.2rem;
+  font-size: 0.48rem;
+  opacity: 0.72;
+  line-height: 1;
 }
 
 button.work-status-badge:hover,
 button.work-status-badge:focus-visible {
-  filter: brightness(1.08);
+  filter: brightness(1.06);
   outline: none;
 }
 
 button.work-status-badge[aria-expanded="true"] {
-  filter: brightness(1.12);
-  box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+  filter: brightness(1.1);
+  box-shadow: 0 0 0 1.5px rgba(255, 255, 255, 0.55);
 }
 
 button.work-status-badge[aria-busy="true"] {
@@ -83,18 +102,20 @@ button.work-status-badge.work-status-picker--error {
   color: white;
 }
 
-/* Menu flottant — même esprit que .nav-dropdown-panel */
+/* Menu — panneau verre + chips identiques aux pastilles couverture */
 .work-status-menu {
-  min-width: 10.5rem;
-  padding: 0.4rem;
-  background: var(--surface);
-  border: 1px solid rgba(15, 23, 42, 0.12);
-  border-radius: 0.75rem;
-  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.18);
+  min-width: 8.75rem;
+  padding: 0.45rem;
+  background: rgba(255, 255, 255, 0.94);
+  border: 1px solid rgba(255, 255, 255, 0.65);
+  border-radius: 1rem;
+  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.22), 0 0 0 1px rgba(15, 23, 42, 0.06);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
   display: flex;
   flex-direction: column;
-  gap: 0.1rem;
-  animation: workStatusMenuIn 0.14s ease;
+  gap: 0.3rem;
+  animation: workStatusMenuIn 0.16s ease;
 }
 
 .work-status-menu[hidden] {
@@ -104,114 +125,137 @@ button.work-status-badge.work-status-picker--error {
 @keyframes workStatusMenuIn {
   from {
     opacity: 0;
-    transform: translateY(-4px);
+    transform: translateY(-6px) scale(0.97);
   }
   to {
     opacity: 1;
-    transform: translateY(0);
+    transform: translateY(0) scale(1);
   }
 }
 
 .work-status-menu-item {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-  gap: 0.55rem;
+  justify-content: center;
+  gap: 0.35rem;
   width: 100%;
-  padding: 0.55rem 0.75rem;
-  border: none;
-  border-radius: 0.5rem;
-  background: transparent;
-  color: var(--text-primary);
-  font: inherit;
-  font-size: 0.85rem;
+  height: 1.45rem;
+  padding: 0 0.55rem;
+  border: 1.5px solid transparent;
+  border-radius: 2rem;
+  background: rgba(148, 163, 184, 0.18);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.68rem;
   font-weight: 500;
+  line-height: 1;
+  letter-spacing: 0.02em;
   cursor: pointer;
-  text-align: left;
-  transition: background 0.15s ease, color 0.15s ease;
+  text-align: center;
+  transition: filter 0.15s ease, transform 0.12s ease, box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
-.work-status-menu-item::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  flex-shrink: 0;
+.work-status-menu-item::before,
+.work-status-menu-item::after {
+  display: none;
 }
 
-.work-status-menu-item[data-status="En cours"]::before,
-.work-status-menu-item[data-status="Reading"]::before {
-  background: #818cf8;
+.work-status-menu-item[data-status="En cours"],
+.work-status-menu-item[data-status="Reading"] {
+  background: rgba(129, 140, 248, 0.9);
+  color: white;
 }
 
-.work-status-menu-item[data-status="Terminé"]::before,
-.work-status-menu-item[data-status="Completed"]::before {
-  background: #22c55e;
+.work-status-menu-item[data-status="Terminé"],
+.work-status-menu-item[data-status="Completed"] {
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
 }
 
-.work-status-menu-item[data-status="En pause"]::before,
-.work-status-menu-item[data-status="On Hold"]::before {
-  background: #38bdf8;
+.work-status-menu-item[data-status="En pause"],
+.work-status-menu-item[data-status="On Hold"] {
+  background: rgba(56, 189, 248, 0.9);
+  color: white;
 }
 
-.work-status-menu-item[data-status="Abandonné"]::before,
-.work-status-menu-item[data-status="Dropped"]::before {
-  background: #ef4444;
+.work-status-menu-item[data-status="Abandonné"],
+.work-status-menu-item[data-status="Dropped"] {
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
 }
 
-.work-status-menu-item[data-status="À lire"]::before,
-.work-status-menu-item[data-status="Plan to Read"]::before {
-  background: #facc15;
+.work-status-menu-item[data-status="À lire"],
+.work-status-menu-item[data-status="Plan to Read"] {
+  background: rgba(250, 204, 21, 0.9);
+  color: #1f2937;
 }
 
 .work-status-menu-item:hover,
 .work-status-menu-item:focus-visible {
-  background: rgba(79, 70, 229, 0.1);
+  filter: brightness(1.07);
+  transform: translateY(-1px);
   outline: none;
 }
 
+.work-status-menu-item:active {
+  transform: translateY(0);
+  filter: brightness(0.96);
+}
+
 .work-status-menu-item.is-active {
-  background: rgba(79, 70, 229, 0.08);
+  border-color: rgba(255, 255, 255, 0.85);
+  box-shadow: 0 0 0 2px rgba(79, 70, 229, 0.45), 0 4px 12px rgba(15, 23, 42, 0.18);
   font-weight: 600;
 }
 
 .work-status-menu-item.is-active::after {
+  display: inline;
   content: "✓";
-  margin-left: auto;
-  font-size: 0.72rem;
-  color: var(--primary);
+  margin-left: 0.15rem;
+  font-size: 0.62rem;
   font-weight: 700;
+  opacity: 0.95;
+}
+
+.work-status-menu-item[data-status="À lire"].is-active::after,
+.work-status-menu-item[data-status="Plan to Read"].is-active::after {
+  color: #1f2937;
 }
 
 [data-theme="dark"] .work-status-menu {
-  background: #1e293b;
-  border-color: rgba(100, 116, 139, 0.4);
-  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.45);
-}
-
-[data-theme="dark"] .work-status-menu-item {
-  color: #e2e8f0;
-}
-
-[data-theme="dark"] .work-status-menu-item:hover,
-[data-theme="dark"] .work-status-menu-item:focus-visible {
-  background: rgba(129, 140, 248, 0.15);
+  background: rgba(30, 41, 59, 0.94);
+  border-color: rgba(100, 116, 139, 0.45);
+  box-shadow: 0 18px 42px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(100, 116, 139, 0.25);
 }
 
 [data-theme="dark"] .work-status-menu-item.is-active {
-  background: rgba(129, 140, 248, 0.12);
+  box-shadow: 0 0 0 2px rgba(129, 140, 248, 0.55), 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
-/* Mobile — tag statut harmonisé avec les autres tags */
+/* Mobile — tag statut harmonisé */
 button.work-mobile-tag.work-status-picker {
-  padding: 0.15rem 0.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 1.35rem;
+  padding: 0 0.5rem;
   border-radius: 1rem;
+  font-family: inherit;
   font-size: 0.68rem;
   font-weight: 600;
+  line-height: 1;
   letter-spacing: 0.01em;
   border: none;
-  font-family: inherit;
+  margin: 0;
   cursor: pointer;
-  transition: filter 0.15s ease, opacity 0.15s ease;
+  transition: filter 0.15s ease, box-shadow 0.15s ease, opacity 0.15s ease;
+}
+
+button.work-mobile-tag.work-status-picker::after {
+  content: "▾";
+  margin-left: 0.18rem;
+  font-size: 0.46rem;
+  opacity: 0.7;
 }
 
 button.work-mobile-tag.work-status-picker:hover,
@@ -241,30 +285,30 @@ button.work-mobile-tag.work-status-picker.work-status-picker--error {
 
 .work-mobile-tag.work-status-picker[data-status="En cours"],
 .work-mobile-tag.work-status-picker[data-status="Reading"] {
-  background: rgba(129, 140, 248, 0.2);
-  color: #6366f1;
+  background: rgba(129, 140, 248, 0.9);
+  color: white;
 }
 
 .work-mobile-tag.work-status-picker[data-status="Terminé"],
 .work-mobile-tag.work-status-picker[data-status="Completed"] {
-  background: rgba(34, 197, 94, 0.15);
-  color: #16a34a;
+  background: rgba(34, 197, 94, 0.9);
+  color: white;
 }
 
 .work-mobile-tag.work-status-picker[data-status="En pause"],
 .work-mobile-tag.work-status-picker[data-status="On Hold"] {
-  background: rgba(56, 189, 248, 0.15);
-  color: #0284c7;
+  background: rgba(56, 189, 248, 0.9);
+  color: white;
 }
 
 .work-mobile-tag.work-status-picker[data-status="Abandonné"],
 .work-mobile-tag.work-status-picker[data-status="Dropped"] {
-  background: rgba(239, 68, 68, 0.12);
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.9);
+  color: white;
 }
 
 .work-mobile-tag.work-status-picker[data-status="À lire"],
 .work-mobile-tag.work-status-picker[data-status="Plan to Read"] {
-  background: rgba(250, 204, 21, 0.2);
-  color: #ca8a04;
+  background: rgba(250, 204, 21, 0.9);
+  color: #1f2937;
 }
