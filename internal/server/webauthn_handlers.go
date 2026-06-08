@@ -64,7 +64,9 @@ func (a *App) HandleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Request
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
 	}
-	options, sessionData, err := wa.BeginRegistration(user)
+	options, sessionData, err := wa.BeginRegistration(user,
+		webauthn.WithExclusions(webauthn.Credentials(user.WebAuthnCredentials()).CredentialDescriptors()),
+	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "begin_failed")
 		return
@@ -115,13 +117,18 @@ func (a *App) HandleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Reques
 		a.apiWriteError(w, http.StatusBadRequest, "finish_failed")
 		return
 	}
-	name := strings.TrimSpace(r.URL.Query().Get("name"))
-	if name == "" {
-		name = "Passkey"
+	name := sanitizePasskeyName(r.URL.Query().Get("name"))
+	backupEligible := 0
+	backupState := 0
+	if credential.Flags.BackupEligible {
+		backupEligible = 1
+	}
+	if credential.Flags.BackupState {
+		backupState = 1
 	}
 	_, err = a.DB.Exec(
-		`INSERT INTO webauthn_credentials (user_id, credential_id, public_key, sign_count, name) VALUES (?, ?, ?, ?, ?)`,
-		userID, credential.ID, credential.PublicKey, credential.Authenticator.SignCount, name,
+		`INSERT INTO webauthn_credentials (user_id, credential_id, public_key, sign_count, name, backup_eligible, backup_state) VALUES (?, ?, ?, ?, ?, ?, ?)`,
+		userID, credential.ID, credential.PublicKey, credential.Authenticator.SignCount, name, backupEligible, backupState,
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "store_failed")
@@ -199,9 +206,13 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 		a.apiWriteError(w, http.StatusBadRequest, "finish_failed")
 		return
 	}
+	backupState := 0
+	if credential.Flags.BackupState {
+		backupState = 1
+	}
 	_, _ = a.DB.Exec(
-		`UPDATE webauthn_credentials SET sign_count = ?, last_used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND credential_id = ?`,
-		credential.Authenticator.SignCount, userID, credential.ID,
+		`UPDATE webauthn_credentials SET sign_count = ?, backup_state = ?, last_used_at = CURRENT_TIMESTAMP WHERE user_id = ? AND credential_id = ?`,
+		credential.Authenticator.SignCount, backupState, userID, credential.ID,
 	)
 
 	var validated, isAdmin int

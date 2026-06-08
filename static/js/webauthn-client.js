@@ -66,8 +66,21 @@
         return out;
     }
 
+    function suggestPasskeyLabel(cred) {
+        const attachment = cred && cred.authenticatorAttachment;
+        const ua = navigator.userAgent || '';
+        if (/Macintosh|Mac OS X/i.test(ua) && attachment === 'platform') return 'Mac (Touch ID)';
+        if (/Windows/i.test(ua) && attachment === 'platform') return 'Windows (code PIN)';
+        if (/iPhone|iPad|iPod/i.test(ua) && attachment === 'platform') return 'iPhone / iPad';
+        if (/Android/i.test(ua) && attachment === 'platform') return 'Android';
+        if (attachment === 'cross-platform') return 'Clé de sécurité';
+        if (attachment === 'platform') return 'Cet appareil';
+        return 'Passkey';
+    }
+
     global.WebAuthnClient = {
         decodeRequestOptions: decodeRequestOptions,
-        credentialToJSON: credentialToJSON
+        credentialToJSON: credentialToJSON,
+        suggestPasskeyLabel: suggestPasskeyLabel
     };
 })(typeof window !== 'undefined' ? window : globalThis);

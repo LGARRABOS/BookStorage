@@ -228,10 +228,14 @@ CREATE TABLE IF NOT EXISTS webauthn_challenges (
 );
 CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expires_at ON webauthn_challenges(expires_at);
 `},
+	{Version: 24, Name: "webauthn_credential_flags", Up: `
+ALTER TABLE webauthn_credentials ADD COLUMN backup_eligible INTEGER NOT NULL DEFAULT 0;
+ALTER TABLE webauthn_credentials ADD COLUMN backup_state INTEGER NOT NULL DEFAULT 0;
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 23
+const LatestSchemaMigrationVersion = 24
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

@@ -327,7 +327,10 @@
                                 <ul style="list-style:none;padding:0;margin:0.75rem 0;">
                                 {{ range .WebAuthnPasskeys }}
                                     <li style="display:flex;justify-content:space-between;align-items:center;gap:0.5rem;padding:0.45rem 0;border-top:1px solid var(--border-subtle);">
-                                        <span><strong>{{ if .Name }}{{ .Name }}{{ else }}Passkey{{ end }}</strong> <span style="color:var(--text-muted);font-size:0.82rem;">#{{ .ID }}</span></span>
+                                        <span>
+                                            <strong>{{ if .Name }}{{ .Name }}{{ else }}{{ t $.T "profile.passkey.unnamed" }}{{ end }}</strong>
+                                            <span style="display:block;color:var(--text-muted);font-size:0.82rem;">{{ t $.T "profile.passkey.added" }} {{ .CreatedAt }}{{ if .LastUsedAt.Valid }} · {{ t $.T "profile.passkey.last_used" }} {{ .LastUsedAt.String }}{{ end }}</span>
+                                        </span>
                                         <form method="POST" action="/profile/webauthn/delete/{{ .ID }}"><button type="submit" class="btn btn-secondary">{{ t $.T "profile.passkey.delete" }}</button></form>
                                     </li>
                                 {{ end }}
@@ -533,7 +536,8 @@
         modalCancel: {{ jsstr (t .T "common.cancel") }},
         modalOk: {{ jsstr (t .T "common.ok") }},
         deleteModalOk: {{ jsstr (t .T "profile.delete.action") }},
-        statsResetConfirm: {{ jsstr (t .T "profile.stats_reset.confirm") }}
+        statsResetConfirm: {{ jsstr (t .T "profile.stats_reset.confirm") }},
+        passkeyNamePrompt: {{ jsstr (t .T "profile.passkey.name_prompt") }}
     };
     document.addEventListener('DOMContentLoaded', function() {
         var logoutForm = document.getElementById('profile-logout-all-form');
@@ -632,7 +636,11 @@
                 const creation = WebAuthnClient.decodeRequestOptions(await begin.json());
                 if (!creation) { window.location.href = '/profile?webauthn_error=server'; return; }
                 const cred = await navigator.credentials.create(creation);
-                const finish = await fetch('/auth/webauthn/register/finish', {
+                const suggested = WebAuthnClient.suggestPasskeyLabel(cred);
+                const entered = window.prompt(PROFILE_I18N.passkeyNamePrompt, suggested);
+                if (entered === null) return;
+                const name = (entered.trim() || suggested || 'Passkey').trim();
+                const finish = await fetch('/auth/webauthn/register/finish?name=' + encodeURIComponent(name), {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },

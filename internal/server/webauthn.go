@@ -120,7 +120,7 @@ func (a *App) loadWebAuthnUserByUsername(username string) (webAuthnUser, int, er
 
 func (a *App) loadWebAuthnCredentials(userID int) ([]webauthn.Credential, error) {
 	rows, err := a.DB.Query(
-		`SELECT credential_id, public_key, sign_count FROM webauthn_credentials WHERE user_id = ?`,
+		`SELECT credential_id, public_key, sign_count, backup_eligible, backup_state FROM webauthn_credentials WHERE user_id = ?`,
 		userID,
 	)
 	if err != nil {
@@ -131,7 +131,8 @@ func (a *App) loadWebAuthnCredentials(userID int) ([]webauthn.Credential, error)
 	for rows.Next() {
 		var credID, pubKey []byte
 		var signCount uint32
-		if err := rows.Scan(&credID, &pubKey, &signCount); err != nil {
+		var backupEligible, backupState int
+		if err := rows.Scan(&credID, &pubKey, &signCount, &backupEligible, &backupState); err != nil {
 			continue
 		}
 		out = append(out, webauthn.Credential{
@@ -140,8 +141,8 @@ func (a *App) loadWebAuthnCredentials(userID int) ([]webauthn.Credential, error)
 			Flags: webauthn.CredentialFlags{
 				UserPresent:    true,
 				UserVerified:   true,
-				BackupEligible: false,
-				BackupState:    false,
+				BackupEligible: backupEligible != 0,
+				BackupState:    backupState != 0,
 			},
 			Authenticator: webauthn.Authenticator{
 				SignCount: signCount,
@@ -149,6 +150,17 @@ func (a *App) loadWebAuthnCredentials(userID int) ([]webauthn.Credential, error)
 		})
 	}
 	return out, rows.Err()
+}
+
+func sanitizePasskeyName(name string) string {
+	name = strings.TrimSpace(name)
+	if name == "" {
+		return "Passkey"
+	}
+	if len(name) > 64 {
+		name = name[:64]
+	}
+	return name
 }
 
 type webAuthnCredentialRow struct {

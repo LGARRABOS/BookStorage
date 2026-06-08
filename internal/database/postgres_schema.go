@@ -173,6 +173,8 @@ var postgresSchemaStatements = []string{
 		public_key BYTEA NOT NULL,
 		sign_count INTEGER NOT NULL DEFAULT 0,
 		name TEXT NOT NULL DEFAULT '',
+		backup_eligible INTEGER NOT NULL DEFAULT 0,
+		backup_state INTEGER NOT NULL DEFAULT 0,
 		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		last_used_at TIMESTAMPTZ
 	)`,
@@ -228,6 +230,8 @@ var postgresSchemaStatements = []string{
 // on columns that may not exist on upgraded DBs must live here (not in postgresSchemaStatements).
 var postgresSchemaAfterExtraColumns = []string{
 	`CREATE INDEX IF NOT EXISTS idx_works_reading_site_id ON works(reading_site_id)`,
+	`ALTER TABLE webauthn_credentials ADD COLUMN IF NOT EXISTS backup_eligible INTEGER NOT NULL DEFAULT 0`,
+	`ALTER TABLE webauthn_credentials ADD COLUMN IF NOT EXISTS backup_state INTEGER NOT NULL DEFAULT 0`,
 }
 
 var postgresFTSStatements = []string{
