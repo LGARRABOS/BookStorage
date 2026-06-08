@@ -183,6 +183,12 @@ var postgresSchemaStatements = []string{
 		expires_at TIMESTAMPTZ NOT NULL,
 		used_at TIMESTAMPTZ
 	)`,
+	`CREATE TABLE IF NOT EXISTS webauthn_challenges (
+		challenge_key TEXT PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		session_data TEXT NOT NULL,
+		expires_at TIMESTAMPTZ NOT NULL
+	)`,
 	`CREATE TABLE IF NOT EXISTS schema_migrations (
 		version INTEGER PRIMARY KEY,
 		applied_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -215,6 +221,7 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_webauthn_credentials_user_id ON webauthn_credentials(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at)`,
+	`CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expires_at ON webauthn_challenges(expires_at)`,
 }
 
 // postgresSchemaAfterExtraColumns runs after ALTER TABLE ... ADD COLUMN for works, so indexes

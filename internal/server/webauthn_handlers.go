@@ -69,7 +69,7 @@ func (a *App) HandleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Request
 		a.apiWriteError(w, http.StatusBadRequest, "begin_failed")
 		return
 	}
-	key, err := a.webAuthnChallenges.put(sessionData, userID)
+	key, err := a.putWebAuthnChallenge(sessionData, userID)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
@@ -99,7 +99,7 @@ func (a *App) HandleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Reques
 		a.apiWriteError(w, http.StatusBadRequest, "missing_challenge")
 		return
 	}
-	sessionData, challengeUserID, ok := a.webAuthnChallenges.take(key)
+	sessionData, challengeUserID, ok := a.takeWebAuthnChallenge(key)
 	clearWebAuthnChallengeCookie(w, a.Settings.Environment)
 	if !ok || challengeUserID != userID {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_challenge")
@@ -158,7 +158,7 @@ func (a *App) HandleWebAuthnLoginBegin(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusBadRequest, "begin_failed")
 		return
 	}
-	key, err := a.webAuthnChallenges.put(sessionData, userID)
+	key, err := a.putWebAuthnChallenge(sessionData, userID)
 	if err != nil {
 		a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
 		return
@@ -183,7 +183,7 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 		a.apiWriteError(w, http.StatusBadRequest, "missing_challenge")
 		return
 	}
-	sessionData, userID, ok := a.webAuthnChallenges.take(key)
+	sessionData, userID, ok := a.takeWebAuthnChallenge(key)
 	clearWebAuthnChallengeCookie(w, a.Settings.Environment)
 	if !ok || userID <= 0 {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_challenge")

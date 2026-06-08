@@ -218,10 +218,20 @@ CREATE TABLE IF NOT EXISTS password_reset_tokens (
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens(user_id);
 CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens(expires_at);
 `},
+	{Version: 23, Name: "webauthn_challenges", Up: `
+CREATE TABLE IF NOT EXISTS webauthn_challenges (
+	challenge_key TEXT PRIMARY KEY,
+	user_id INTEGER NOT NULL,
+	session_data TEXT NOT NULL,
+	expires_at DATETIME NOT NULL,
+	FOREIGN KEY (user_id) REFERENCES users(id)
+);
+CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expires_at ON webauthn_challenges(expires_at);
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 22
+const LatestSchemaMigrationVersion = 23
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

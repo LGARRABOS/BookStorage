@@ -16,15 +16,14 @@ import (
 )
 
 type App struct {
-	Settings           *config.Settings
-	SiteConfig         *config.SiteConfig
-	DB                 *database.Conn
-	TemplatesWeb       *template.Template
-	TemplatesMobile    *template.Template
-	Version            string
-	ProcessStartedAt   time.Time
-	webAuthnChallenges *webauthnChallengeStore
-	dbProbe            dbAvailabilityProbe
+	Settings         *config.Settings
+	SiteConfig       *config.SiteConfig
+	DB               *database.Conn
+	TemplatesWeb     *template.Template
+	TemplatesMobile  *template.Template
+	Version          string
+	ProcessStartedAt time.Time
+	dbProbe          dbAvailabilityProbe
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *database.Conn, version string) *App {
@@ -168,13 +167,12 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 		filepath.Join("templates", "mobile"),
 	})
 	return &App{
-		Settings:           settings,
-		SiteConfig:         siteConfig,
-		DB:                 db,
-		TemplatesWeb:       webTpl,
-		TemplatesMobile:    mobileTpl,
-		Version:            strings.TrimSpace(version),
-		webAuthnChallenges: newWebAuthnChallengeStore(),
+		Settings:        settings,
+		SiteConfig:      siteConfig,
+		DB:              db,
+		TemplatesWeb:    webTpl,
+		TemplatesMobile: mobileTpl,
+		Version:         strings.TrimSpace(version),
 	}
 }
 

@@ -319,6 +319,10 @@
                                 {{ if .WebAuthnDeleted }}<p style="font-size:0.9rem;color:#15803d;">{{ t .T "profile.passkey.deleted" }}</p>{{ end }}
                                 {{ if eq .WebAuthnError "last_credential" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.last_credential" }}</p>{{ end }}
                                 {{ if eq .WebAuthnError "server" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.server" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "missing_challenge" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.missing_challenge" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "invalid_challenge" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.invalid_challenge" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "finish_failed" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.finish_failed" }}</p>{{ end }}
+                                {{ if eq .WebAuthnError "store_failed" }}<p style="font-size:0.85rem;color:#dc2626;">{{ t .T "profile.passkey_error.store_failed" }}</p>{{ end }}
                                 {{ if .WebAuthnPasskeys }}
                                 <ul style="list-style:none;padding:0;margin:0.75rem 0;">
                                 {{ range .WebAuthnPasskeys }}
@@ -517,6 +521,7 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/webauthn-client.js"></script>
     <script src="/static/js/modals.js"></script>
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
@@ -604,7 +609,8 @@
             });
         }
         const params = new URLSearchParams(window.location.search);
-        if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0') {
+        if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0'
+            || params.get('webauthn_error') || params.get('webauthn_registered') === '1' || params.get('webauthn_deleted') === '1') {
             const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
             if (securityBtn) securityBtn.click();
         }
@@ -617,26 +623,28 @@
             });
         });
         document.getElementById('passkey-register-btn')?.addEventListener('click', async function() {
+            const btn = this;
+            if (btn.disabled) return;
+            btn.disabled = true;
             try {
                 const begin = await fetch('/auth/webauthn/register/begin', { method: 'POST', credentials: 'same-origin' });
                 if (!begin.ok) { window.location.href = '/profile?webauthn_error=server'; return; }
-                const creation = await begin.json();
-                const options = creation.publicKey;
-                if (!options) { window.location.href = '/profile?webauthn_error=server'; return; }
-                options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-                options.user.id = Uint8Array.from(atob(options.user.id.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
-                if (options.excludeCredentials) options.excludeCredentials = options.excludeCredentials.map(c => ({ ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), ch => ch.charCodeAt(0)) }));
+                const creation = WebAuthnClient.decodeRequestOptions(await begin.json());
+                if (!creation) { window.location.href = '/profile?webauthn_error=server'; return; }
                 const cred = await navigator.credentials.create(creation);
                 const finish = await fetch('/auth/webauthn/register/finish', {
                     method: 'POST',
                     credentials: 'same-origin',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(cred.toJSON ? cred.toJSON() : cred)
+                    body: JSON.stringify(WebAuthnClient.credentialToJSON(cred))
                 });
                 if (finish.ok) { window.location.href = '/profile?webauthn_registered=1'; return; }
-                window.location.href = '/profile?webauthn_error=server';
+                const errBody = await finish.json().catch(function () { return {}; });
+                window.location.href = '/profile?webauthn_error=' + encodeURIComponent(errBody.error || 'server');
             } catch (e) {
                 window.location.href = '/profile?webauthn_error=server';
+            } finally {
+                btn.disabled = false;
             }
         });
     });

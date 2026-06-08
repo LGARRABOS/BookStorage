@@ -2,63 +2,70 @@ package server
 
 import (
 	"crypto/rand"
+	"database/sql"
 	"encoding/base64"
-	"sync"
+	"encoding/json"
+	"fmt"
 	"time"
 
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
-type webauthnChallengeEntry struct {
-	Data      webauthn.SessionData
-	UserID    int
-	ExpiresAt time.Time
+func (a *App) purgeExpiredWebAuthnChallenges() {
+	if a == nil || a.DB == nil {
+		return
+	}
+	_, _ = a.DB.Exec(`DELETE FROM webauthn_challenges WHERE expires_at < CURRENT_TIMESTAMP`)
 }
 
-type webauthnChallengeStore struct {
-	mu      sync.Mutex
-	entries map[string]webauthnChallengeEntry
-}
+func (a *App) putWebAuthnChallenge(data *webauthn.SessionData, userID int) (key string, err error) {
+	if a == nil || a.DB == nil || data == nil {
+		return "", fmt.Errorf("webauthn challenge: invalid state")
+	}
+	a.purgeExpiredWebAuthnChallenges()
 
-func newWebAuthnChallengeStore() *webauthnChallengeStore {
-	return &webauthnChallengeStore{entries: map[string]webauthnChallengeEntry{}}
-}
-
-func (s *webauthnChallengeStore) put(data *webauthn.SessionData, userID int) (key string, err error) {
 	var b [24]byte
 	if _, err := rand.Read(b[:]); err != nil {
 		return "", err
 	}
 	key = base64.RawURLEncoding.EncodeToString(b[:])
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.purgeLocked()
-	s.entries[key] = webauthnChallengeEntry{
-		Data:      *data,
-		UserID:    userID,
-		ExpiresAt: time.Now().Add(5 * time.Minute),
+
+	raw, err := json.Marshal(data)
+	if err != nil {
+		return "", err
 	}
-	return key, nil
+	expires := time.Now().Add(5 * time.Minute)
+	_, err = a.DB.Exec(
+		`INSERT INTO webauthn_challenges (challenge_key, user_id, session_data, expires_at) VALUES (?, ?, ?, ?)`,
+		key, userID, string(raw), expires,
+	)
+	return key, err
 }
 
-func (s *webauthnChallengeStore) take(key string) (webauthn.SessionData, int, bool) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-	s.purgeLocked()
-	ent, ok := s.entries[key]
-	if !ok || time.Now().After(ent.ExpiresAt) {
-		delete(s.entries, key)
+func (a *App) takeWebAuthnChallenge(key string) (webauthn.SessionData, int, bool) {
+	if a == nil || a.DB == nil || key == "" {
 		return webauthn.SessionData{}, 0, false
 	}
-	delete(s.entries, key)
-	return ent.Data, ent.UserID, true
-}
-
-func (s *webauthnChallengeStore) purgeLocked() {
-	now := time.Now()
-	for k, v := range s.entries {
-		if now.After(v.ExpiresAt) {
-			delete(s.entries, k)
+	var userID int
+	var raw string
+	var expires time.Time
+	err := a.DB.QueryRow(
+		`SELECT user_id, session_data, expires_at FROM webauthn_challenges WHERE challenge_key = ?`,
+		key,
+	).Scan(&userID, &raw, &expires)
+	if err != nil {
+		if err != sql.ErrNoRows {
+			_, _ = a.DB.Exec(`DELETE FROM webauthn_challenges WHERE challenge_key = ?`, key)
 		}
+		return webauthn.SessionData{}, 0, false
 	}
+	_, _ = a.DB.Exec(`DELETE FROM webauthn_challenges WHERE challenge_key = ?`, key)
+	if time.Now().After(expires) {
+		return webauthn.SessionData{}, 0, false
+	}
+	var data webauthn.SessionData
+	if json.Unmarshal([]byte(raw), &data) != nil {
+		return webauthn.SessionData{}, 0, false
+	}
+	return data, userID, true
 }
