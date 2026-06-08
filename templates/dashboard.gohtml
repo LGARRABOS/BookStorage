@@ -13,6 +13,7 @@
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/works-grid.css">
     {{ if .Works }}<link rel="stylesheet" href="/static/css/work-status-picker.css?v=2">{{ end }}
     <script src="/static/js/appearance-init.js"></script>
     <script src="/static/js/modals.js?v=3"></script>
@@ -32,7 +33,6 @@
         .filter-checks { display: flex; gap: 0.55rem; align-items: center; flex-shrink: 0; }
         .filter-check { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; white-space: nowrap; user-select: none; line-height: 1; }
         .filter-check input[type="checkbox"] { width: 14px; height: 14px; margin: 0; cursor: pointer; accent-color: var(--primary); flex-shrink: 0; }
-        .works-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 1.25rem; }
         .works-grid.view-list { display: flex; flex-direction: column; gap: 0.5rem; }
         .works-grid.view-list .work-card { flex-direction: row; height: auto; min-height: 80px; }
         .works-grid.view-list .work-cover { width: 60px; min-width: 60px; height: 80px; aspect-ratio: auto; flex-shrink: 0; }
@@ -221,7 +221,6 @@
             .search-box { width: 100%; }
             .filter-group { flex-wrap: wrap; }
             .filter-group select { flex: 1; }
-            .works-grid { grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); }
         }
     </style>
 </head>

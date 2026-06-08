@@ -11,7 +11,7 @@
         .reco-scroll-btn:hover:not(:disabled) { background: var(--primary-muted); color: var(--primary); border-color: var(--primary); }
         .reco-scroll-btn:disabled { opacity: 0.35; cursor: not-allowed; }
         .reco-scroll-btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-        .reco-card { flex: 0 0 140px; scroll-snap-align: start; background: var(--background); border: 1px solid var(--border-subtle); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
+        .reco-card { flex: 0 0 var(--reco-card-width); scroll-snap-align: start; background: var(--background); border: 1px solid var(--border-subtle); border-radius: 0.75rem; overflow: hidden; display: flex; flex-direction: column; }
         .reco-card-cover { height: 100px; background: var(--primary-muted); position: relative; }
         .reco-card-cover--btn { cursor: pointer; border: none; padding: 0; width: 100%; display: block; text-align: left; }
         .reco-card-cover--btn:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
