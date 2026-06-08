@@ -620,11 +620,13 @@
             try {
                 const begin = await fetch('/auth/webauthn/register/begin', { method: 'POST', credentials: 'same-origin' });
                 if (!begin.ok) { window.location.href = '/profile?webauthn_error=server'; return; }
-                const options = await begin.json();
+                const creation = await begin.json();
+                const options = creation.publicKey;
+                if (!options) { window.location.href = '/profile?webauthn_error=server'; return; }
                 options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
                 options.user.id = Uint8Array.from(atob(options.user.id.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
                 if (options.excludeCredentials) options.excludeCredentials = options.excludeCredentials.map(c => ({ ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), ch => ch.charCodeAt(0)) }));
-                const cred = await navigator.credentials.create({ publicKey: options });
+                const cred = await navigator.credentials.create(creation);
                 const finish = await fetch('/auth/webauthn/register/finish', {
                     method: 'POST',
                     credentials: 'same-origin',

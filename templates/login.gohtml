@@ -111,10 +111,12 @@
                 body: JSON.stringify({ username: username })
             });
             if (!begin.ok) { window.location.href = '/login?webauthn_error=failed'; return; }
-            const options = await begin.json();
+            const assertion = await begin.json();
+            const options = assertion.publicKey;
+            if (!options) { window.location.href = '/login?webauthn_error=failed'; return; }
             options.challenge = Uint8Array.from(atob(options.challenge.replace(/-/g,'+').replace(/_/g,'/')), c => c.charCodeAt(0));
             if (options.allowCredentials) options.allowCredentials = options.allowCredentials.map(c => ({ ...c, id: Uint8Array.from(atob(c.id.replace(/-/g,'+').replace(/_/g,'/')), ch => ch.charCodeAt(0)) }));
-            const cred = await navigator.credentials.get({ publicKey: options });
+            const cred = await navigator.credentials.get(assertion);
             const finish = await fetch('/auth/webauthn/login/finish' + ({{ jsstr .LoginNext }} ? ('?next=' + encodeURIComponent({{ jsstr .LoginNext }})) : ''), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
