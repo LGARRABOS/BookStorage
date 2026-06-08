@@ -22,7 +22,7 @@
   --topbar-bg: rgba(15, 23, 42, 0.9);
   --radius: 18px;
   --container-max: 1040px;
-  --works-col-min: 210px;
+  --works-col-min: 220px;
   --catalog-col-min: 140px;
   --reco-card-width: 140px;
   font-family: "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
@@ -30,8 +30,8 @@
 
 @media (min-width: 1280px) {
   :root {
-    --container-max: 1280px;
-    --works-col-min: 195px;
+    --container-max: 1200px;
+    --works-col-min: 245px;
     --catalog-col-min: 130px;
     --reco-card-width: 150px;
   }
@@ -39,8 +39,8 @@
 
 @media (min-width: 1600px) {
   :root {
-    --container-max: 1480px;
-    --works-col-min: 180px;
+    --container-max: 1320px;
+    --works-col-min: 275px;
     --catalog-col-min: 120px;
     --reco-card-width: 155px;
   }
@@ -48,8 +48,8 @@
 
 @media (min-width: 1920px) {
   :root {
-    --container-max: 1680px;
-    --works-col-min: 170px;
+    --container-max: 1480px;
+    --works-col-min: 255px;
     --catalog-col-min: 115px;
     --reco-card-width: 160px;
   }
@@ -57,41 +57,41 @@
 
 @media (min-width: 2560px) {
   :root {
-    --container-max: 1920px;
-    --works-col-min: 160px;
+    --container-max: 1760px;
+    --works-col-min: 200px;
     --catalog-col-min: 110px;
   }
 }
 
 html[data-text-size="lg"] {
-  --works-col-min: 220px;
+  --works-col-min: 230px;
   --catalog-col-min: 150px;
 }
 
 @media (min-width: 1280px) {
   html[data-text-size="lg"] {
-    --works-col-min: 205px;
+    --works-col-min: 255px;
     --catalog-col-min: 140px;
   }
 }
 
 @media (min-width: 1600px) {
   html[data-text-size="lg"] {
-    --works-col-min: 190px;
+    --works-col-min: 285px;
     --catalog-col-min: 130px;
   }
 }
 
 @media (min-width: 1920px) {
   html[data-text-size="lg"] {
-    --works-col-min: 180px;
+    --works-col-min: 265px;
     --catalog-col-min: 125px;
   }
 }
 
 @media (min-width: 2560px) {
   html[data-text-size="lg"] {
-    --works-col-min: 170px;
+    --works-col-min: 210px;
     --catalog-col-min: 120px;
   }
 }
