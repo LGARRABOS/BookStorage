@@ -82,6 +82,17 @@
         if (!inner) return;
         var emptyMsg = {{ jsstr (t .T "dashboard.recommendations.empty") }};
         var errMsg = {{ jsstr (t .T "dashboard.recommendations.error") }};
+        var rateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
+        function pickApiErrMsg(code, fallback) {
+            return code === 'rate_limit' ? rateLimitMsg : fallback;
+        }
+        function parseApiJson(r) {
+            if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+            return r.json().catch(function() { return {}; }).then(function(d) {
+                if (!r.ok) return Promise.reject({ apiError: (d && d.error) || 'upstream' });
+                return d;
+            });
+        }
         var addLabel = {{ jsstr (t .T "dashboard.recommendations.add") }};
         var detailLoading = {{ jsstr (t .T "dashboard.recommendations.detail.loading") }};
         var detailErr = {{ jsstr (t .T "dashboard.recommendations.detail.error") }};
@@ -141,11 +152,7 @@
             var dismissable = options.dismissable !== false && item.source !== 'browse';
             var dismissIdx = typeof options.idx === 'number' ? options.idx : -1;
             fetch('/api/recommendations/media?anilist_id=' + encodeURIComponent(item.anilist_id))
-                .then(function(r) {
-                    if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
-                    if (!r.ok) return Promise.reject();
-                    return r.json();
-                })
+                .then(parseApiJson)
                 .then(function(d) {
                     recoLoadEl.style.display = 'none';
                     recoBody.style.display = 'block';
@@ -211,10 +218,11 @@
                         });
                     }
                 })
-                .catch(function() {
+                .catch(function(e) {
                     recoLoadEl.style.display = 'none';
                     recoBody.style.display = 'block';
-                    recoBody.innerHTML = '<p class="reco-msg">' + detailErr + '</p><div class="reco-detail-actions"><a class="btn btn-secondary" href="#" id="reco-detail-retry-close">' + strClose + '</a></div>';
+                    var msg = pickApiErrMsg(e && e.apiError, detailErr);
+                    recoBody.innerHTML = '<p class="reco-msg">' + msg + '</p><div class="reco-detail-actions"><a class="btn btn-secondary" href="#" id="reco-detail-retry-close">' + strClose + '</a></div>';
                     var rb = document.getElementById('reco-detail-retry-close');
                     if (rb) rb.addEventListener('click', function(e) { e.preventDefault(); closeRecoDetailModal(); });
                 });
@@ -275,11 +283,7 @@
             requestAnimationFrame(function() { requestAnimationFrame(onScrollOrResize); });
         }
         fetch('/api/recommendations')
-            .then(function(r) {
-                if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
-                if (!r.ok) return Promise.reject();
-                return r.json();
-            })
+            .then(parseApiJson)
             .then(function(data) {
                 if (loading) loading.remove();
                 recoProfile = (data && data.profile) ? data.profile : {};
@@ -335,9 +339,9 @@
                 if (hint) hint.style.display = 'none';
                 setupRecoScroll();
             })
-            .catch(function() {
+            .catch(function(e) {
                 if (loading) loading.remove();
-                inner.innerHTML = '<p class="reco-msg">' + errMsg + '</p>';
+                inner.innerHTML = '<p class="reco-msg">' + pickApiErrMsg(e && e.apiError, errMsg) + '</p>';
                 hideRecoScrollButtons();
             });
     })();

@@ -28,10 +28,7 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 	}
 	res, err := recommend.ForUser(a.DB, int64(userID), recommend.DefaultOptions())
 	if err != nil {
-		log.Printf("recommendations: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream", "results": []any{}, "profile": map[string]any{}})
+		writeAnilistUpstreamJSON(w, "recommendations", err, map[string]any{"results": []any{}, "profile": map[string]any{}})
 		return
 	}
 	if res == nil {
@@ -71,10 +68,7 @@ func (a *App) HandleRecommendationMedia(w http.ResponseWriter, r *http.Request) 
 	}
 	d, err := catalog.GetMediaByID(id)
 	if err != nil {
-		log.Printf("recommendation media: %v", err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream"})
+		writeAnilistUpstreamJSON(w, "recommendation media", err, nil)
 		return
 	}
 	if d == nil || d.Title == "" {

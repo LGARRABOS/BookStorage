@@ -3,7 +3,6 @@ package catalog
 import (
 	"bytes"
 	"encoding/json"
-	"fmt"
 	"net/http"
 	"strings"
 )
@@ -58,9 +57,7 @@ type mediaByIDResponse struct {
 			} `json:"recommendations"`
 		} `json:"Media"`
 	} `json:"data"`
-	Errors []struct {
-		Message string `json:"message"`
-	} `json:"errors"`
+	Errors []anilistGraphQLErrorItem `json:"errors"`
 }
 
 type mediaTagJSON struct {
@@ -79,9 +76,7 @@ type browsePageResponse struct {
 			Media []anilistMedia `json:"media"`
 		} `json:"Page"`
 	} `json:"data"`
-	Errors []struct {
-		Message string `json:"message"`
-	} `json:"errors"`
+	Errors []anilistGraphQLErrorItem `json:"errors"`
 }
 
 func anilistPost(body []byte) (*http.Response, error) {
@@ -144,15 +139,14 @@ func GetMediaByID(id int) (*MediaDetail, error) {
 	}
 	resp, err := anilistPost(raw)
 	if err != nil {
-		return nil, err
+		return nil, wrapAnilistTransport(err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 	var out mediaByIDResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := decodeAnilistResponse(resp, &out); err != nil {
 		return nil, err
 	}
-	if len(out.Errors) > 0 {
-		return nil, fmt.Errorf("anilist: %s", out.Errors[0].Message)
+	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {
+		return nil, err
 	}
 	if out.Data.Media == nil {
 		return nil, nil
@@ -297,15 +291,14 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 	}
 	resp, err := anilistPost(raw)
 	if err != nil {
-		return nil, 0, err
+		return nil, 0, wrapAnilistTransport(err)
 	}
-	defer func() { _ = resp.Body.Close() }()
 	var out browsePageResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := decodeAnilistResponse(resp, &out); err != nil {
 		return nil, 0, err
 	}
-	if len(out.Errors) > 0 {
-		return nil, 0, fmt.Errorf("anilist: %s", out.Errors[0].Message)
+	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {
+		return nil, 0, err
 	}
 	sourceCount := len(out.Data.Page.Media)
 	typeFilter := make(map[string]struct{}, len(p.ReadingTypesIn))

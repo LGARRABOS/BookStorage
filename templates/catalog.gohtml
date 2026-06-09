@@ -130,7 +130,19 @@
         var openLbl = {{ jsstr (t .T "dashboard.recommendations.detail.open") }};
         var emptyMsg = {{ jsstr (t .T "catalog.explore.empty") }};
         var errMsg = {{ jsstr (t .T "catalog.explore.error") }};
+        var rateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
         var loadingMsg = {{ jsstr (t .T "catalog.explore.loading") }};
+        function pickApiErrMsg(code, fallback) {
+            return code === 'rate_limit' ? rateLimitMsg : fallback;
+        }
+        function parseApiJson(r) {
+            if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+            if (r.status === 400) return r.json().then(function(d) { throw new Error(d.error || 'bad_request'); });
+            return r.json().catch(function() { return {}; }).then(function(d) {
+                if (!r.ok) return Promise.reject({ apiError: (d && d.error) || 'upstream' });
+                return d;
+            });
+        }
         var currentPage = 1;
         var hasNext = false;
         var browseItemsById = {};
@@ -237,12 +249,7 @@
             if (adultOnlyCheck && adultOnlyCheck.checked) params.set('adult', 'only');
 
             fetch('/api/catalog/browse?' + params.toString())
-                .then(function(r) {
-                    if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
-                    if (r.status === 400) return r.json().then(function(d) { throw new Error(d.error || 'bad_request'); });
-                    if (!r.ok) return Promise.reject();
-                    return r.json();
-                })
+                .then(parseApiJson)
                 .then(function(data) {
                     var list = (data && data.results) ? data.results : [];
                     hasNext = !!(data && data.has_next);
@@ -260,8 +267,9 @@
                     if (prevBtn) prevBtn.disabled = currentPage <= 1;
                     if (nextBtn) nextBtn.disabled = !hasNext;
                 })
-                .catch(function() {
-                    grid.innerHTML = '<p class="catalog-browse-msg">' + errMsg + '</p>';
+                .catch(function(e) {
+                    var msg = (e && e.apiError) ? pickApiErrMsg(e.apiError, errMsg) : errMsg;
+                    grid.innerHTML = '<p class="catalog-browse-msg">' + msg + '</p>';
                     pagination.hidden = true;
                 })
                 .finally(function() { btn.disabled = false; });

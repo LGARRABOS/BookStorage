@@ -2,7 +2,6 @@ package server
 
 import (
 	"encoding/json"
-	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -190,10 +189,7 @@ func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		log.Printf("catalog browse (%s): %v", source, err)
-		w.Header().Set("Content-Type", "application/json")
-		w.WriteHeader(http.StatusBadGateway)
-		_ = json.NewEncoder(w).Encode(map[string]any{"error": "upstream", "results": []any{}})
+		writeAnilistUpstreamJSON(w, "catalog browse ("+source+")", err, map[string]any{"results": []any{}})
 		return
 	}
 
@@ -274,6 +270,7 @@ func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 	filter := catalog.MergeBlocklistFilter(blocklist, catalog.AdultOrientationFilter{})
 
 	var results []catalogSearchResult
+	var anilistSearchErr error
 
 	if database.CatalogFTSEnabled(a.DB) {
 		matchExpr := ""
@@ -356,7 +353,11 @@ func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 			}
 		default:
 			anilistResults, err := catalog.SearchAnilist(q, remaining)
-			if err == nil {
+			if err != nil {
+				if anilistSearchErr == nil {
+					anilistSearchErr = err
+				}
+			} else {
 				for _, m := range anilistResults {
 					if filter.MatchMedia != nil && !filter.MatchMedia(m.Genres, m.Tags) {
 						continue
@@ -378,6 +379,10 @@ func (a *App) HandleCatalogSearch(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	resp := map[string]any{"results": results, "source": source}
+	if anilistSearchErr != nil {
+		resp["anilist_error"] = catalog.AnilistErrorCode(anilistSearchErr)
+	}
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{"results": results, "source": source})
+	_ = json.NewEncoder(w).Encode(resp)
 }

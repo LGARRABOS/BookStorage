@@ -337,6 +337,9 @@
     {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
     {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
     <script nonce="{{ .CSPNonce }}">
+        var catalogSearchEmptyMsg = {{ jsstr (t .T "work.form.catalog_search.empty") }};
+        var catalogSearchErrMsg = {{ jsstr (t .T "work.form.catalog_search.error") }};
+        var catalogSearchRateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
         function previewImage(input) {
             const preview = document.getElementById('image-preview');
             if (input.files && input.files[0]) {
@@ -389,7 +392,13 @@
                             .then(function(data) {
                                 var list = data.results || [];
                                 if (list.length === 0) {
-                                    resultsEl.innerHTML = '<div class="catalog-result-item" style="cursor:default;color:var(--text-muted);">' + (document.documentElement.lang === 'fr' ? 'Aucun résultat. Vous pourrez ajouter à la main ci-dessous.' : 'No results. You can add manually below.') + '</div>';
+                                    var emptyMsg = catalogSearchEmptyMsg;
+                                    if (data.anilist_error === 'rate_limit') {
+                                        emptyMsg = catalogSearchRateLimitMsg;
+                                    } else if (data.anilist_error === 'upstream') {
+                                        emptyMsg = catalogSearchErrMsg;
+                                    }
+                                    resultsEl.innerHTML = '<div class="catalog-result-item" style="cursor:default;color:var(--text-muted);">' + emptyMsg + '</div>';
                                 } else {
                                     resultsEl.innerHTML = list.map(function(item) {
                                         var img = item.image_url

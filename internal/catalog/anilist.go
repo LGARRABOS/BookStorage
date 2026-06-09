@@ -1,10 +1,7 @@
 package catalog
 
 import (
-	"bytes"
 	"encoding/json"
-	"fmt"
-	"net/http"
 	"strings"
 	"time"
 )
@@ -51,6 +48,7 @@ type anilistResponse struct {
 			Media []anilistMedia `json:"media"`
 		} `json:"Page"`
 	} `json:"data"`
+	Errors []anilistGraphQLErrorItem `json:"errors"`
 }
 
 // isWebtoonKeyword returns true if s (lowercase) indicates webtoon/manhwa/manhua.
@@ -136,22 +134,15 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
 		},
 	}
 	body, _ := json.Marshal(payload)
-	req, err := http.NewRequest(http.MethodPost, anilistURL, bytes.NewReader(body))
+	resp, err := anilistPost(body)
 	if err != nil {
-		return nil, err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: anilistTimeout}
-	resp, err := client.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return nil, fmt.Errorf("anilist_http_%d", resp.StatusCode)
+		return nil, wrapAnilistTransport(err)
 	}
 	var out anilistResponse
-	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+	if err := decodeAnilistResponse(resp, &out); err != nil {
+		return nil, err
+	}
+	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {
 		return nil, err
 	}
 	var results []AnilistResult
