@@ -150,6 +150,21 @@ bs_pg_default_host_for_url() {
 BS_PG_DB="${BS_PG_DB:-bookstorage}"
 BS_PG_USER="${BS_PG_USER:-bookstorage}"
 BS_PG_PORT="${BS_PG_PORT:-5432}"
+
+bs_pg_validate_identifier() {
+	local value="$1" label="$2"
+	if [[ ! "${value}" =~ ^[a-zA-Z_][a-zA-Z0-9_]*$ ]]; then
+		echo "Invalid ${label}: must match ^[a-zA-Z_][a-zA-Z0-9_]*$ (got: ${value})" >&2
+		exit 1
+	fi
+	if [[ ${#value} -gt 63 ]]; then
+		echo "Invalid ${label}: PostgreSQL identifier length must be <= 63 (got: ${#value})" >&2
+		exit 1
+	fi
+}
+
+bs_pg_validate_identifier "${BS_PG_USER}" "BS_PG_USER"
+bs_pg_validate_identifier "${BS_PG_DB}" "BS_PG_DB"
 BS_PG_SSLMODE="${BS_PG_SSLMODE:-disable}"
 BS_PG_HOST="${BS_PG_HOST:-}"
 if [[ -z "${BS_PG_HOST}" ]]; then

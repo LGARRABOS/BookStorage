@@ -4,7 +4,8 @@ info:
   version: 1.0.0
   description: |
     REST API for managing reading works in BookStorage.
-    Authenticate with a session cookie (browser) or `Authorization: Bearer <api_token>`.
+    Authenticate with a session cookie (browser) or `Authorization: Bearer <api_token>` on the documented REST endpoints only.
+    API tokens are not accepted on web UI, import/export, catalog, recommendations, or admin routes.
 servers:
   - url: /
 security:
@@ -214,7 +215,9 @@ components:
     bearerAuth:
       type: http
       scheme: bearer
-      description: API token from Profile → API tokens. Scopes `works:read`, `works:write`.
+      description: |
+        API token from Profile → API tokens. Scopes `works:read`, `works:write`.
+        Tokens are only honored on `/api/works*`, `/api/stats`, and chapter mutation endpoints in this spec.
     cookieAuth:
       type: apiKey
       in: cookie

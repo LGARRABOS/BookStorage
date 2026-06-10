@@ -128,7 +128,13 @@ var postgresSchemaStatements = []string{
 		scopes TEXT NOT NULL DEFAULT '[]',
 		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
 		last_used_at TIMESTAMPTZ,
-		revoked_at TIMESTAMPTZ
+		revoked_at TIMESTAMPTZ,
+		expires_at TIMESTAMPTZ
+	)`,
+	`CREATE TABLE IF NOT EXISTS login_attempts (
+		username TEXT PRIMARY KEY,
+		fail_count INTEGER NOT NULL DEFAULT 0,
+		locked_until TIMESTAMPTZ
 	)`,
 	`CREATE TABLE IF NOT EXISTS webhook_endpoints (
 		id BIGSERIAL PRIMARY KEY,
@@ -232,6 +238,10 @@ var postgresSchemaAfterExtraColumns = []string{
 	`CREATE INDEX IF NOT EXISTS idx_works_reading_site_id ON works(reading_site_id)`,
 	`ALTER TABLE webauthn_credentials ADD COLUMN IF NOT EXISTS backup_eligible INTEGER NOT NULL DEFAULT 0`,
 	`ALTER TABLE webauthn_credentials ADD COLUMN IF NOT EXISTS backup_state INTEGER NOT NULL DEFAULT 0`,
+	// Migration 25 parity (SQLite): api_tokens.expires_at + login_attempts table.
+	`ALTER TABLE api_tokens ADD COLUMN IF NOT EXISTS expires_at TIMESTAMPTZ`,
+	`UPDATE api_tokens SET expires_at = created_at + INTERVAL '90 days'
+		WHERE expires_at IS NULL AND revoked_at IS NULL`,
 }
 
 var postgresFTSStatements = []string{

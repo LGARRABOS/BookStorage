@@ -35,7 +35,7 @@
                     <h1>{{ t .T "register.title" }}</h1>
                     <p>{{ t .T "register.subtitle" }}</p>
                 </header>
-                {{ if or .RegisterErrorEmpty .RegisterErrorExists .RegisterErrorWeak .RegisterErrorEmail }}
+                {{ if or .RegisterErrorEmpty .RegisterError .RegisterErrorWeak .RegisterErrorEmail }}
                 <div class="flash-messages">
                     {{ if .RegisterErrorEmpty }}
                         <p>
@@ -48,8 +48,8 @@
                     {{ if .RegisterErrorWeak }}
                         <p>{{ t .T "register.error.weak" }}</p>
                     {{ end }}
-                    {{ if .RegisterErrorExists }}
-                        <p>{{ t .T "register.error.exists" }}</p>
+                    {{ if .RegisterError }}
+                        <p>{{ t .T "register.error.failed" }}</p>
                     {{ end }}
                 </div>
                 {{ end }}

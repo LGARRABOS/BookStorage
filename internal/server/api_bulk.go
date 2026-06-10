@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"strings"
@@ -40,7 +39,7 @@ func (a *App) HandleAPIWorksBulk(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 
 	var req bulkWorksRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}

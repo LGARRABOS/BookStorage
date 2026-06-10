@@ -59,6 +59,8 @@ bsctl start
 
 Post-install: rotate the superadmin password if needed, enable HSTS, run `./scripts/ci/security_smoke.sh` against the instance.
 
+**Git history (`database.db`)** — if `database.db` was ever committed, purging it from history is a **manual operator action** (e.g. `git filter-repo` or BFG). Do not rewrite history from CI or install scripts; rotate secrets and restrict file permissions (`chmod 600`) on deployed hosts instead.
+
 ---
 
 ## Documentation

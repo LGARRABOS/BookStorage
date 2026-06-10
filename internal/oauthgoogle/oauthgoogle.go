@@ -68,8 +68,9 @@ func Exchange(ctx context.Context, conf *oauth2.Config, code, codeVerifier strin
 
 // UserInfo holds stable Google identity fields from userinfo.
 type UserInfo struct {
-	Sub   string
-	Email string
+	Sub           string
+	Email         string
+	EmailVerified bool
 }
 
 // TestUserInfoHook, if non-nil, replaces the real userinfo HTTP call (tests only).
@@ -79,7 +80,14 @@ var TestUserInfoHook func(ctx context.Context, accessToken string) (UserInfo, er
 func FetchUserInfo(ctx context.Context, accessToken string) (UserInfo, error) {
 	var out UserInfo
 	if TestUserInfoHook != nil {
-		return TestUserInfoHook(ctx, accessToken)
+		out, err := TestUserInfoHook(ctx, accessToken)
+		if err != nil {
+			return out, err
+		}
+		if !out.EmailVerified {
+			return out, fmt.Errorf("oauthgoogle: email not verified")
+		}
+		return out, nil
 	}
 	if strings.TrimSpace(accessToken) == "" {
 		return out, fmt.Errorf("oauthgoogle: empty access token")
@@ -104,16 +112,21 @@ func FetchUserInfo(ctx context.Context, accessToken string) (UserInfo, error) {
 		return out, fmt.Errorf("oauthgoogle: userinfo status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
 	}
 	var parsed struct {
-		Sub   string `json:"sub"`
-		Email string `json:"email"`
+		Sub           string `json:"sub"`
+		Email         string `json:"email"`
+		EmailVerified bool   `json:"email_verified"`
 	}
 	if err := json.Unmarshal(body, &parsed); err != nil {
 		return out, err
 	}
 	out.Sub = strings.TrimSpace(parsed.Sub)
 	out.Email = strings.TrimSpace(parsed.Email)
+	out.EmailVerified = parsed.EmailVerified
 	if out.Sub == "" {
 		return out, fmt.Errorf("oauthgoogle: missing sub in userinfo")
+	}
+	if !out.EmailVerified {
+		return out, fmt.Errorf("oauthgoogle: email not verified")
 	}
 	return out, nil
 }

@@ -26,5 +26,6 @@ func NewSender(s *config.Settings) Sender {
 		publicKey:  s.MailjetAPIKeyPublic,
 		privateKey: s.MailjetAPIKeyPrivate,
 		from:       s.MailFrom,
+		httpClient: defaultMailjetHTTPClient,
 	}
 }

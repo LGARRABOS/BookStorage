@@ -1,8 +1,9 @@
 #!/bin/bash
 set -euo pipefail
 
-REQ="/var/lib/bookstorage/update/request.json"
-STATUS="/var/lib/bookstorage/update/status.json"
+UPDATE_DIR="/var/lib/bookstorage/update"
+REQ="${UPDATE_DIR}/request.json"
+STATUS="${UPDATE_DIR}/status.json"
 
 ts() { date +%s; }
 
@@ -31,9 +32,30 @@ write_status() {
 }
 EOF
   mv "${STATUS}.tmp" "$STATUS"
+  chmod 600 "$STATUS" 2>/dev/null || true
+  chown root:root "$STATUS" 2>/dev/null || true
 }
 
+# Enforce root-only update queue (defense in depth if install/ops regressed permissions).
+ensure_secure_update_dir() {
+  if [[ ! -d "$UPDATE_DIR" ]]; then
+    mkdir -p "$UPDATE_DIR"
+  fi
+  chown root:root "$UPDATE_DIR"
+  chmod 700 "$UPDATE_DIR"
+}
+
+ensure_secure_update_dir
+
 if [[ ! -f "$REQ" ]]; then
+  exit 0
+fi
+
+# Reject requests not owned by root (prevents non-root queue injection if perms slip).
+req_owner="$(stat -c '%u' "$REQ" 2>/dev/null || echo "")"
+if [[ -n "$req_owner" && "$req_owner" != "0" ]]; then
+  write_status false false "unknown" "" "invalid_request" "" "request.json must be owned by root"
+  rm -f "$REQ" || true
   exit 0
 fi
 
@@ -61,4 +83,3 @@ else
 fi
 
 rm -f "$REQ" || true
-

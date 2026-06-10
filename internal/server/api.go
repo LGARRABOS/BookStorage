@@ -83,6 +83,12 @@ func (a *App) apiWriteError(w http.ResponseWriter, status int, errMsg string) {
 	a.apiWriteJSON(w, status, map[string]string{"error": errMsg})
 }
 
+const maxAPIJSONBodyBytes = 4 << 20
+
+func decodeAPIJSONBody(w http.ResponseWriter, r *http.Request, dst any) error {
+	return json.NewDecoder(http.MaxBytesReader(w, r.Body, maxAPIJSONBodyBytes)).Decode(dst)
+}
+
 func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
@@ -270,7 +276,7 @@ func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
 		SeriesSort        int    `json:"series_sort"`
 		NotifyNewChapters *int   `json:"notify_new_chapters"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
@@ -351,7 +357,7 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
 	var req map[string]any
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}

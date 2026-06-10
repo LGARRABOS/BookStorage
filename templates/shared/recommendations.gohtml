@@ -110,27 +110,240 @@
         var whyBrowseProfile = {{ jsstr (t .T "dashboard.recommendations.detail.why_browse_profile") }};
         var recoListData = [];
         var recoProfile = {};
-        function escapeHtml(s) {
-            if (s == null || s === '') return '';
-            var d = document.createElement('div');
-            d.textContent = s;
-            return d.innerHTML;
-        }
-        function buildWhyHtml(item) {
+        function buildWhyText(item) {
             if (item.source === 'recommendation' && item.related_title) {
-                return whyRelated.replace('{title}', escapeHtml(item.related_title));
+                return whyRelated.replace('{title}', item.related_title);
             }
             var parts = [];
             if (item.matched_genres && item.matched_genres.length)
-                parts.push(lblGenres + ': ' + item.matched_genres.map(function(g) { return escapeHtml(g); }).join(', '));
+                parts.push(lblGenres + ': ' + item.matched_genres.join(', '));
             if (item.matched_tags && item.matched_tags.length)
-                parts.push(lblTags + ': ' + item.matched_tags.map(function(tg) { return escapeHtml(tg); }).join(', '));
+                parts.push(lblTags + ': ' + item.matched_tags.join(', '));
             if (parts.length) return whyBrowseMatched.replace('{details}', parts.join(' · '));
             if (item.genres && item.genres.length)
-                return lblGenres + ': ' + item.genres.map(function(g) { return escapeHtml(g); }).join(', ');
+                return lblGenres + ': ' + item.genres.join(', ');
             var g = (recoProfile.top_genres && recoProfile.top_genres.length) ? recoProfile.top_genres.join(', ') : '—';
             var t = (recoProfile.top_tags && recoProfile.top_tags.length) ? recoProfile.top_tags.join(', ') : '—';
-            return whyBrowseProfile.replace('{genres}', escapeHtml(g)).replace('{tags}', escapeHtml(t));
+            return whyBrowseProfile.replace('{genres}', g).replace('{tags}', t);
+        }
+        function showRecoMsg(text) {
+            inner.replaceChildren();
+            var p = document.createElement('p');
+            p.className = 'reco-msg';
+            p.textContent = text;
+            inner.appendChild(p);
+        }
+        function appendRecoCover(parent, imageUrl) {
+            if (imageUrl) {
+                var img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = '';
+                img.loading = 'lazy';
+                var noCoverHidden = document.createElement('span');
+                noCoverHidden.className = 'no-cover';
+                noCoverHidden.style.display = 'none';
+                noCoverHidden.textContent = '📖';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    noCoverHidden.style.display = 'flex';
+                };
+                parent.appendChild(img);
+                parent.appendChild(noCoverHidden);
+            } else {
+                var noCover = document.createElement('span');
+                noCover.className = 'no-cover';
+                noCover.textContent = '📖';
+                parent.appendChild(noCover);
+            }
+        }
+        function buildRecoCard(item, idx) {
+            var dismissLbl = document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested';
+            var article = document.createElement('article');
+            article.className = 'reco-card';
+            article.setAttribute('role', 'listitem');
+            article.setAttribute('data-reco-idx', String(idx));
+
+            var coverBtn = document.createElement('button');
+            coverBtn.type = 'button';
+            coverBtn.className = 'reco-card-cover reco-card-cover--btn';
+            coverBtn.setAttribute('data-reco-idx', String(idx));
+            coverBtn.setAttribute('aria-label', openLbl);
+            appendRecoCover(coverBtn, item.image_url);
+
+            var body = document.createElement('div');
+            body.className = 'reco-card-body';
+
+            var titleEl = document.createElement('div');
+            titleEl.className = 'reco-card-title';
+            titleEl.textContent = item.title || '';
+
+            var metaEl = document.createElement('div');
+            metaEl.className = 'reco-card-meta';
+            var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
+            metaEl.textContent = meta;
+
+            var actions = document.createElement('div');
+            actions.style.display = 'flex';
+            actions.style.gap = '0.4rem';
+            actions.style.alignItems = 'center';
+
+            var addLink = document.createElement('a');
+            addLink.className = 'btn-reco';
+            addLink.href = '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            addLink.textContent = addLabel;
+
+            var dismissBtn = document.createElement('button');
+            dismissBtn.type = 'button';
+            dismissBtn.className = 'btn-reco btn-reco--dismiss';
+            dismissBtn.setAttribute('data-reco-dismiss', String(idx));
+            dismissBtn.setAttribute('aria-label', dismissLbl);
+            dismissBtn.setAttribute('title', dismissLbl);
+            dismissBtn.textContent = '✕';
+
+            actions.appendChild(addLink);
+            actions.appendChild(dismissBtn);
+            body.appendChild(titleEl);
+            body.appendChild(metaEl);
+            body.appendChild(actions);
+            article.appendChild(coverBtn);
+            article.appendChild(body);
+            return article;
+        }
+        function addDetailSection(parent, heading, text) {
+            var sec = document.createElement('div');
+            sec.className = 'reco-detail-section';
+            var h3 = document.createElement('h3');
+            h3.textContent = heading;
+            var p = document.createElement('p');
+            p.textContent = text || '—';
+            sec.appendChild(h3);
+            sec.appendChild(p);
+            parent.appendChild(sec);
+            return sec;
+        }
+        function renderRecoDetailError(msg) {
+            recoBody.replaceChildren();
+            var p = document.createElement('p');
+            p.className = 'reco-msg';
+            p.textContent = msg;
+            var actions = document.createElement('div');
+            actions.className = 'reco-detail-actions';
+            var closeLink = document.createElement('a');
+            closeLink.className = 'btn btn-secondary';
+            closeLink.href = '#';
+            closeLink.textContent = strClose;
+            closeLink.addEventListener('click', function(e) { e.preventDefault(); closeRecoDetailModal(); });
+            actions.appendChild(closeLink);
+            recoBody.appendChild(p);
+            recoBody.appendChild(actions);
+        }
+        function renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx) {
+            recoBody.replaceChildren();
+
+            var header = document.createElement('div');
+            header.className = 'reco-detail-header';
+            if (d.image_url) {
+                var coverImg = document.createElement('img');
+                coverImg.src = d.image_url;
+                coverImg.alt = '';
+                header.appendChild(coverImg);
+            }
+            var headText = document.createElement('div');
+            var h2 = document.createElement('h2');
+            h2.id = 'reco-detail-title';
+            h2.textContent = d.title || item.title || '';
+            var metaP = document.createElement('p');
+            metaP.className = 'reco-detail-meta';
+            var meta = d.reading_type || item.reading_type || '';
+            if (d.is_adult || item.is_adult) meta += ' · 18+';
+            if (d.format) meta += (meta ? ' · ' : '') + d.format;
+            metaP.textContent = meta;
+            headText.appendChild(h2);
+            headText.appendChild(metaP);
+            header.appendChild(headText);
+            recoBody.appendChild(header);
+
+            if (whyText) addDetailSection(recoBody, lblWhy, whyText);
+
+            var desc = (d.description && String(d.description).trim()) ? String(d.description) : '';
+            var synSec = document.createElement('div');
+            synSec.className = 'reco-detail-section';
+            var synH = document.createElement('h3');
+            synH.textContent = lblSynopsis;
+            var synP = document.createElement('p');
+            synP.textContent = desc || '—';
+            synSec.appendChild(synH);
+            synSec.appendChild(synP);
+            if (d.description_translated) {
+                var machineP = document.createElement('p');
+                machineP.className = 'reco-detail-machine';
+                machineP.textContent = lblMachineTranslated;
+                synSec.appendChild(machineP);
+            }
+            recoBody.appendChild(synSec);
+
+            var genresStr = (d.genres && d.genres.length) ? d.genres.join(', ') : '—';
+            var tagsStr = '—';
+            if (d.tags && d.tags.length) {
+                tagsStr = d.tags.map(function(tg) { return tg.name || ''; }).filter(Boolean).join(', ');
+            }
+            addDetailSection(recoBody, lblGenres + ' / ' + lblTags, genresStr + ' · ' + tagsStr);
+
+            var ms = (d.mean_score != null && d.mean_score > 0) ? String(d.mean_score) : '';
+            var av = (d.average_score != null && d.average_score > 0) ? String(d.average_score) : '';
+            if (ms || av) {
+                var scoreLine = (ms || '—') + ' / ' + (av || '—') + ' / 100';
+                var scoreSec = document.createElement('div');
+                scoreSec.className = 'reco-detail-section reco-detail-scores';
+                var scoreH = document.createElement('h3');
+                scoreH.textContent = lblScore;
+                var scoreP = document.createElement('p');
+                scoreP.textContent = scoreLine;
+                scoreSec.appendChild(scoreH);
+                scoreSec.appendChild(scoreP);
+                recoBody.appendChild(scoreSec);
+            }
+
+            var actions = document.createElement('div');
+            actions.className = 'reco-detail-actions';
+            var addBtn = document.createElement('a');
+            addBtn.className = 'btn btn-primary';
+            addBtn.href = '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            addBtn.textContent = detailAdd;
+            actions.appendChild(addBtn);
+            if (dismissable) {
+                var dismissLbl = document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested';
+                var dismissBtn = document.createElement('button');
+                dismissBtn.type = 'button';
+                dismissBtn.className = 'btn btn-secondary';
+                dismissBtn.textContent = dismissLbl;
+                dismissBtn.addEventListener('click', function() {
+                    fetch('/api/recommendations/dismiss', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
+                    }).then(function(r) {
+                        if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
+                        if (dismissIdx >= 0) {
+                            var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
+                            if (card) card.remove();
+                            recoListData[dismissIdx] = null;
+                            setupRecoScroll();
+                        }
+                        closeRecoDetailModal();
+                    }).catch(function() {
+                        if (dismissIdx >= 0) {
+                            var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
+                            if (card) card.remove();
+                            recoListData[dismissIdx] = null;
+                            setupRecoScroll();
+                        }
+                        closeRecoDetailModal();
+                    });
+                });
+                actions.appendChild(dismissBtn);
+            }
+            recoBody.appendChild(actions);
         }
         var recoModal = document.getElementById('reco-detail-modal');
         var recoBody = document.getElementById('reco-detail-body');
@@ -148,7 +361,7 @@
             recoBody.style.display = 'none';
             recoLoadEl.style.display = 'block';
             recoLoadEl.textContent = detailLoading;
-            var whyHtml = buildWhyHtml(item);
+            var whyText = buildWhyText(item);
             var dismissable = options.dismissable !== false && item.source !== 'browse';
             var dismissIdx = typeof options.idx === 'number' ? options.idx : -1;
             fetch('/api/recommendations/media?anilist_id=' + encodeURIComponent(item.anilist_id))
@@ -156,75 +369,12 @@
                 .then(function(d) {
                     recoLoadEl.style.display = 'none';
                     recoBody.style.display = 'block';
-                    var desc = (d.description && String(d.description).trim()) ? escapeHtml(d.description) : '';
-                    var scoreLine = '';
-                    var ms = (d.mean_score != null && d.mean_score > 0) ? String(d.mean_score) : '';
-                    var av = (d.average_score != null && d.average_score > 0) ? String(d.average_score) : '';
-                    if (ms || av) scoreLine = (ms || '—') + ' / ' + (av || '—') + ' / 100';
-                    var genresStr = (d.genres && d.genres.length) ? d.genres.map(escapeHtml).join(', ') : '—';
-                    var tagsStr = '—';
-                    if (d.tags && d.tags.length) {
-                        tagsStr = d.tags.map(function(tg) { return escapeHtml(tg.name || ''); }).filter(Boolean).join(', ');
-                    }
-                    var whyBlock = whyHtml
-                        ? '<div class="reco-detail-section"><h3>' + lblWhy + '</h3><p>' + whyHtml + '</p></div>'
-                        : '';
-                    var dismissLbl = (document.documentElement.lang === 'fr') ? 'Pas intéressé' : 'Not interested';
-                    var dismissBtnHtml = dismissable
-                        ? '<button type="button" class="btn btn-secondary" id="reco-detail-dismiss-btn">' + dismissLbl + '</button>'
-                        : '';
-                    recoBody.innerHTML =
-                        '<div class="reco-detail-header">' +
-                        (d.image_url ? '<img src="' + String(d.image_url).replace(/"/g, '&quot;') + '" alt="">' : '') +
-                        '<div><h2 id="reco-detail-title">' + escapeHtml(d.title || item.title) + '</h2>' +
-                        '<p class="reco-detail-meta">' + escapeHtml(d.reading_type || item.reading_type || '') +
-                        (d.is_adult || item.is_adult ? ' · 18+' : '') +
-                        (d.format ? ' · ' + escapeHtml(d.format) : '') + '</p></div></div>' +
-                        whyBlock +
-                        '<div class="reco-detail-section"><h3>' + lblSynopsis + '</h3><p>' + (desc || '—') + '</p>' +
-                        (d.description_translated ? '<p class="reco-detail-machine">' + lblMachineTranslated + '</p>' : '') + '</div>' +
-                        '<div class="reco-detail-section"><h3>' + lblGenres + ' / ' + lblTags + '</h3><p>' + genresStr + ' · ' + tagsStr + '</p></div>' +
-                        (scoreLine ? '<div class="reco-detail-section reco-detail-scores"><h3>' + lblScore + '</h3><p>' + escapeHtml(scoreLine) + '</p></div>' : '') +
-                        '<div class="reco-detail-actions">' +
-                        '<a class="btn btn-primary" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + detailAdd + '</a>' +
-                        dismissBtnHtml +
-                        '</div>';
-
-                    var dismissBtn = document.getElementById('reco-detail-dismiss-btn');
-                    if (dismissBtn && dismissable) {
-                        dismissBtn.addEventListener('click', function() {
-                            fetch('/api/recommendations/dismiss', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
-                            }).then(function(r) {
-                                if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
-                                if (dismissIdx >= 0) {
-                                    var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
-                                    if (card) card.remove();
-                                    recoListData[dismissIdx] = null;
-                                    setupRecoScroll();
-                                }
-                                closeRecoDetailModal();
-                            }).catch(function() {
-                                if (dismissIdx >= 0) {
-                                    var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
-                                    if (card) card.remove();
-                                    recoListData[dismissIdx] = null;
-                                    setupRecoScroll();
-                                }
-                                closeRecoDetailModal();
-                            });
-                        });
-                    }
+                    renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx);
                 })
                 .catch(function(e) {
                     recoLoadEl.style.display = 'none';
                     recoBody.style.display = 'block';
-                    var msg = pickApiErrMsg(e && e.apiError, detailErr);
-                    recoBody.innerHTML = '<p class="reco-msg">' + msg + '</p><div class="reco-detail-actions"><a class="btn btn-secondary" href="#" id="reco-detail-retry-close">' + strClose + '</a></div>';
-                    var rb = document.getElementById('reco-detail-retry-close');
-                    if (rb) rb.addEventListener('click', function(e) { e.preventDefault(); closeRecoDetailModal(); });
+                    renderRecoDetailError(pickApiErrMsg(e && e.apiError, detailErr));
                 });
         }
         window.openRecoDetailByItem = openRecoDetailByItem;
@@ -290,18 +440,14 @@
                 var list = (data && data.results) ? data.results : [];
                 recoListData = list;
                 if (!list.length) {
-                    inner.innerHTML = '<p class="reco-msg">' + emptyMsg + '</p>';
+                    showRecoMsg(emptyMsg);
                     hideRecoScrollButtons();
                     return;
                 }
-                inner.innerHTML = list.map(function(item, idx) {
-                    var img = item.image_url
-                        ? '<img src="' + String(item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
-                        : '<span class="no-cover">📖</span>';
-                    var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
-                    var dismissBtn = '<button type="button" class="btn-reco btn-reco--dismiss" data-reco-dismiss="' + idx + '" aria-label="' + (document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested') + '" title="' + (document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested') + '">✕</button>';
-                    return '<article class="reco-card" role="listitem" data-reco-idx="' + idx + '"><button type="button" class="reco-card-cover reco-card-cover--btn" data-reco-idx="' + idx + '" aria-label="' + openLbl + '">' + img + '</button><div class="reco-card-body"><div class="reco-card-title">' + escapeHtml(item.title || '') + '</div><div class="reco-card-meta">' + escapeHtml(meta) + '</div><div style="display:flex; gap:0.4rem; align-items:center;"><a class="btn-reco" href="/add_work?anilist_id=' + encodeURIComponent(item.anilist_id) + '">' + addLabel + '</a>' + dismissBtn + '</div></div></article>';
-                }).join('');
+                inner.replaceChildren();
+                list.forEach(function(item, idx) {
+                    inner.appendChild(buildRecoCard(item, idx));
+                });
                 inner.querySelectorAll('.reco-card-cover--btn').forEach(function(btn) {
                     btn.addEventListener('click', function() {
                         var i = parseInt(btn.getAttribute('data-reco-idx'), 10);
@@ -341,7 +487,7 @@
             })
             .catch(function(e) {
                 if (loading) loading.remove();
-                inner.innerHTML = '<p class="reco-msg">' + pickApiErrMsg(e && e.apiError, errMsg) + '</p>';
+                showRecoMsg(pickApiErrMsg(e && e.apiError, errMsg));
                 hideRecoScrollButtons();
             });
     })();

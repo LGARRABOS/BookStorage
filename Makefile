@@ -7,8 +7,8 @@
 
 APP_NAME    := bookstorage
 APP_VERSION := 6.3.0
-APP_USER    := nobody
-APP_GROUP   := nobody
+APP_USER    := bookstorage
+APP_GROUP   := bookstorage
 BIN_DIR     := /usr/local/bin
 
 .PHONY: all build build-prod run clean test test-race lint ci-local vuln bench-api install uninstall update fix-perms status logs help

@@ -2,9 +2,30 @@ package catalog
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"strings"
+	"sync"
+	"time"
 )
+
+const anilistMaxResponseBytes = 4 << 20
+const anilistMinInterval = 250 * time.Millisecond
+
+var (
+	alMu         sync.Mutex
+	alLastCall   time.Time
+	alHTTPClient = &http.Client{Timeout: anilistTimeout}
+)
+
+func anilistThrottle() {
+	alMu.Lock()
+	defer alMu.Unlock()
+	if elapsed := time.Since(alLastCall); elapsed < anilistMinInterval {
+		time.Sleep(anilistMinInterval - elapsed)
+	}
+	alLastCall = time.Now()
+}
 
 type anilistGraphQLErrorItem struct {
 	Message string `json:"message"`
@@ -29,7 +50,7 @@ func decodeAnilistResponse(resp *http.Response, out any) error {
 	if err := classifyAnilistHTTPStatus(resp.StatusCode); err != nil {
 		return err
 	}
-	if err := json.NewDecoder(resp.Body).Decode(out); err != nil {
+	if err := json.NewDecoder(io.LimitReader(resp.Body, anilistMaxResponseBytes)).Decode(out); err != nil {
 		return wrapAnilistTransport(err)
 	}
 	return nil

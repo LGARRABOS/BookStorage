@@ -9,9 +9,13 @@ import (
 	"io"
 	"net/http"
 	"strings"
+	"time"
 )
 
 const defaultMailjetSendURL = "https://api.mailjet.com/v3.1/send"
+const defaultMailjetHTTPTimeout = 15 * time.Second
+
+var defaultMailjetHTTPClient = &http.Client{Timeout: defaultMailjetHTTPTimeout}
 
 // mailSendHook is set by tests to stub outbound delivery.
 var mailSendHook func(ctx context.Context, msg Message) error
@@ -78,7 +82,7 @@ func (c *mailjetClient) Send(ctx context.Context, msg Message) error {
 	}
 	client := c.httpClient
 	if client == nil {
-		client = http.DefaultClient
+		client = defaultMailjetHTTPClient
 	}
 	req, err := http.NewRequestWithContext(ctx, http.MethodPost, sendURL, bytes.NewReader(body))
 	if err != nil {

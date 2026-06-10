@@ -41,10 +41,10 @@ func (a *App) SecurityHeaders(next http.Handler) http.Handler {
 			return
 		}
 		ctx := context.WithValue(r.Context(), cspNonceKey{}, nonce)
-		scriptSrc := fmt.Sprintf("'self' 'nonce-%s' https://cdn.jsdelivr.net", nonce)
+		scriptSrc := fmt.Sprintf("'self' 'nonce-%s'", nonce)
 		csp := "default-src 'self'; script-src " + scriptSrc + "; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
 		w.Header().Set("Content-Security-Policy", csp)
-		if a.Settings.EnableHSTS {
+		if a.Settings != nil && (a.Settings.EnableHSTS || cookieSecure(a.Settings.Environment, a.Settings.PublicOrigin)) {
 			w.Header().Set("Strict-Transport-Security", "max-age=31536000; includeSubDomains")
 		}
 		next.ServeHTTP(w, r.WithContext(ctx))
@@ -56,4 +56,11 @@ func sessionSameSite(env string) http.SameSite {
 		return http.SameSiteStrictMode
 	}
 	return http.SameSiteLaxMode
+}
+
+func cookieSecure(env, publicOrigin string) bool {
+	if strings.ToLower(strings.TrimSpace(env)) == "production" {
+		return true
+	}
+	return strings.HasPrefix(strings.ToLower(strings.TrimSpace(publicOrigin)), "https://")
 }

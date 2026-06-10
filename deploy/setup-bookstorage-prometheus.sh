@@ -54,26 +54,50 @@ linux_arch_suffix() {
 }
 
 install_prometheus_from_github() {
-	local arch suffix url tmpdir tball extract_dir
+	local arch suffix url tmpdir tball extract_dir tball_name sums_url sums_file expected
 	suffix="$(linux_arch_suffix)"
 	if [ -z "$suffix" ]; then
 		echo "Unsupported machine $(uname -m) for Prometheus upstream tarball." >&2
 		return 1
 	fi
 	arch="linux-${suffix}"
-	url="https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/prometheus-${PROMETHEUS_VERSION}.${arch}.tar.gz"
+	tball_name="prometheus-${PROMETHEUS_VERSION}.${arch}.tar.gz"
+	url="https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/${tball_name}"
+	sums_url="https://github.com/prometheus/prometheus/releases/download/v${PROMETHEUS_VERSION}/sha256sums.txt"
 	tmpdir="$(mktemp -d)"
 	trap 'rm -rf "${tmpdir}"' EXIT
 	tball="${tmpdir}/prometheus.tgz"
+	sums_file="${tmpdir}/sha256sums.txt"
 
 	if command -v curl >/dev/null 2>&1; then
 		curl -fsSL "$url" -o "$tball"
+		curl -fsSL "$sums_url" -o "$sums_file"
 	elif command -v wget >/dev/null 2>&1; then
 		wget -qO "$tball" "$url"
+		wget -qO "$sums_file" "$sums_url"
 	else
 		echo "Need curl or wget to download Prometheus." >&2
 		return 1
 	fi
+
+	expected="$(grep -F "  ${tball_name}" "$sums_file" | awk '{print $1}')"
+	if [ -z "$expected" ]; then
+		echo "No sha256 entry for ${tball_name} in official sha256sums.txt (v${PROMETHEUS_VERSION})." >&2
+		return 1
+	fi
+	if command -v sha256sum >/dev/null 2>&1; then
+		actual="$(sha256sum "$tball" | awk '{print $1}')"
+	elif command -v shasum >/dev/null 2>&1; then
+		actual="$(shasum -a 256 "$tball" | awk '{print $1}')"
+	else
+		echo "Need sha256sum or shasum to verify Prometheus tarball." >&2
+		return 1
+	fi
+	if [ "$actual" != "$expected" ]; then
+		echo "Prometheus tarball sha256 mismatch (expected ${expected}, got ${actual})." >&2
+		return 1
+	fi
+	echo "Prometheus tarball sha256 verified (${tball_name})."
 
 	tar -xzf "$tball" -C "$tmpdir"
 	extract_dir="${tmpdir}/prometheus-${PROMETHEUS_VERSION}.${arch}"

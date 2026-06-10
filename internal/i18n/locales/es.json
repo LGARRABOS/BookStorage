@@ -118,6 +118,7 @@
   "register.username": "Nombre de usuario",
   "register.email": "Correo electrónico",
   "register.error.email": "Introduzca una dirección de correo válida.",
+  "register.error.failed": "No se pudo completar el registro. Compruebe sus datos e inténtelo de nuevo.",
   "error.401.title": "No autorizado",
   "error.401.desc": "Debes iniciar sesión para acceder a esta página.",
   "error.403.title": "Acceso denegado",

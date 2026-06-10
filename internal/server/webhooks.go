@@ -349,7 +349,7 @@ func (a *App) deliverWebhook(ctx context.Context, deliveryID int) {
 	req.Header.Set("X-BookStorage-Event", event)
 	req.Header.Set(webhookSignatureHeader, signWebhookPayload(secret, []byte(payload)))
 
-	client := &http.Client{Timeout: webhookDeliveryTimeout}
+	client := newWebhookHTTPClient(webhookDeliveryTimeout)
 	resp, err := client.Do(req)
 	if err != nil {
 		a.scheduleWebhookRetry(deliveryID, 0)

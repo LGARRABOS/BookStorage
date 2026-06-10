@@ -14,19 +14,39 @@ type rateBucket struct {
 	last   time.Time
 }
 
+const (
+	rateBucketEvictAfter = time.Hour
+	rateBucketEvictEvery = 5 * time.Minute
+)
+
 type rateLimiter struct {
-	mu      sync.Mutex
-	buckets map[string]*rateBucket
+	mu        sync.Mutex
+	buckets   map[string]*rateBucket
+	lastEvict time.Time
 }
 
 func newRateLimiter() *rateLimiter {
 	return &rateLimiter{buckets: map[string]*rateBucket{}}
 }
 
+func (rl *rateLimiter) evictStaleLocked(now time.Time) {
+	if !rl.lastEvict.IsZero() && now.Sub(rl.lastEvict) < rateBucketEvictEvery {
+		return
+	}
+	rl.lastEvict = now
+	for k, b := range rl.buckets {
+		if now.Sub(b.last) > rateBucketEvictAfter {
+			delete(rl.buckets, k)
+		}
+	}
+}
+
 func (rl *rateLimiter) allow(key string, capacity, refillPerSec float64) bool {
 	now := time.Now()
 	rl.mu.Lock()
 	defer rl.mu.Unlock()
+
+	rl.evictStaleLocked(now)
 
 	b, ok := rl.buckets[key]
 	if !ok {
@@ -76,10 +96,20 @@ func isMutatingMethod(method string) bool {
 	}
 }
 
-func isSameOriginRequest(r *http.Request) bool {
+func isSameOriginRequest(r *http.Request, publicOrigin string) bool {
 	host := strings.TrimSpace(r.Host)
 	if host == "" {
 		return false
+	}
+	publicOrigin = strings.TrimSpace(publicOrigin)
+	if publicOrigin != "" {
+		po, err := url.Parse(publicOrigin)
+		if err != nil || strings.TrimSpace(po.Host) == "" {
+			return false
+		}
+		if !strings.EqualFold(po.Host, host) {
+			return false
+		}
 	}
 	if origin := strings.TrimSpace(r.Header.Get("Origin")); origin != "" {
 		u, err := url.Parse(origin)
@@ -150,7 +180,11 @@ func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 			}
 		}
 
-		if isMutatingMethod(r.Method) && !isSameOriginRequest(r) {
+		publicOrigin := ""
+		if a.Settings != nil {
+			publicOrigin = a.Settings.PublicOrigin
+		}
+		if isMutatingMethod(r.Method) && !isSameOriginRequest(r, publicOrigin) {
 			if strings.HasPrefix(r.URL.Path, "/api/") && a.hasValidAPIToken(r) {
 				next.ServeHTTP(w, r)
 				return

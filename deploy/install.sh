@@ -11,8 +11,8 @@ set -e
 APP_NAME="bookstorage"
 APP_VERSION="6.3.0"
 APP_DIR="/opt/bookstorage"
-APP_USER="nobody"
-APP_GROUP="nobody"
+APP_USER="bookstorage"
+APP_GROUP="bookstorage"
 REPO_URL="${1:-https://github.com/LGARRABOS/BookStorage.git}"
 
 # Couleurs
@@ -140,6 +140,23 @@ print_success "Binaires installés dans /usr/local/bin/"
 
 print_step "5/7" "Configuration des répertoires..."
 
+ensure_app_user() {
+    if id -u "$APP_USER" >/dev/null 2>&1; then
+        return 0
+    fi
+    mkdir -p "$APP_DIR"
+    if useradd -r -s /sbin/nologin -d "$APP_DIR" -c "BookStorage application" "$APP_USER" 2>/dev/null; then
+        return 0
+    fi
+    if useradd -r -s /usr/sbin/nologin -d "$APP_DIR" -c "BookStorage application" "$APP_USER" 2>/dev/null; then
+        return 0
+    fi
+    print_error "Impossible de créer l'utilisateur système $APP_USER"
+}
+
+ensure_app_user
+print_success "Utilisateur système $APP_USER prêt"
+
 mkdir -p $APP_DIR/static/avatars
 mkdir -p $APP_DIR/static/images
 
@@ -147,7 +164,7 @@ chown $APP_USER:$APP_GROUP $APP_DIR
 chmod 755 $APP_DIR
 chown -R $APP_USER:$APP_GROUP $APP_DIR/static
 chown $APP_USER:$APP_GROUP $APP_DIR/database.db 2>/dev/null || true
-chmod 664 $APP_DIR/database.db 2>/dev/null || true
+chmod 600 $APP_DIR/database.db 2>/dev/null || true
 print_success "Répertoires configurés"
 
 # ============================================================================
@@ -162,10 +179,11 @@ cp deploy/bookstorage-update.path /etc/systemd/system/
 cp deploy/bookstorage-update-worker.sh /usr/local/bin/bookstorage-update-worker
 chmod +x /usr/local/bin/bookstorage-update-worker
 
-# Update queue directory (used by admin update worker)
+# Update queue directory (root-only; triggers bookstorage-update.path → root worker)
 mkdir -p /var/lib/bookstorage/update
+chown root:root /var/lib/bookstorage /var/lib/bookstorage/update
 chmod 755 /var/lib/bookstorage
-chmod 755 /var/lib/bookstorage/update
+chmod 700 /var/lib/bookstorage/update
 
 systemctl daemon-reload
 systemctl enable $APP_NAME > /dev/null 2>&1
@@ -184,32 +202,46 @@ if [ ! -f "$APP_DIR/.env" ]; then
     cat > $APP_DIR/.env << EOF
 # BookStorage Configuration
 BOOKSTORAGE_ENV=production
-BOOKSTORAGE_HOST=0.0.0.0
+BOOKSTORAGE_HOST=127.0.0.1
 BOOKSTORAGE_PORT=5000
 BOOKSTORAGE_SECRET_KEY=$SECRET
 BOOKSTORAGE_SUPERADMIN_PASSWORD=$ADMIN_PASS
 BOOKSTORAGE_APP_VERSION=${APP_VERSION}
 # Set BOOKSTORAGE_ENABLE_HSTS=true when served over HTTPS via a reverse proxy
 EOF
+    INSTALL_CREDS="/root/bookstorage-install-credentials"
+    umask 077
+    cat > "$INSTALL_CREDS" << EOF
+# BookStorage — identifiants générés à l'installation ($(date -u +%Y-%m-%dT%H:%MZ 2>/dev/null || date -u))
+# Conservez ce fichier hors des journaux, puis supprimez-le après enregistrement sécurisé.
+BOOKSTORAGE_SUPERADMIN_PASSWORD=${ADMIN_PASS}
+EOF
+    chmod 600 "$INSTALL_CREDS"
+    chown root:root "$INSTALL_CREDS"
+    umask 022
     print_success "Fichier .env créé avec clé secrète et mot de passe superadmin générés"
-    print_warn "Mot de passe superadmin (affiché une seule fois) : ${ADMIN_PASS}"
+    print_warn "Mot de passe superadmin : voir ${INSTALL_CREDS} (0600, root uniquement — ne pas logger)"
 else
     print_success "Fichier .env existant conservé"
 fi
 # Service runs as APP_USER (see deploy/bookstorage.service): .env must be writable so Admin → PostgreSQL
 # migration can merge BOOKSTORAGE_POSTGRES_URL without permission denied.
-# chown USER only sets the login primary group (e.g. nobody → nogroup on Debian).
+# chown USER only sets the login primary group (bookstorage user/group created above).
 if [ -f "$APP_DIR/.env" ]; then
     chown "$APP_USER" "$APP_DIR/.env"
     chmod 600 "$APP_DIR/.env"
     print_success ".env → propriétaire $APP_USER (migration PostgreSQL / écriture admin)"
 fi
 
-# Ouvrir le port dans le firewall si firewalld est actif
-if systemctl is-active --quiet firewalld; then
+# Exposition réseau : par défaut l'app écoute sur 127.0.0.1 (reverse proxy recommandé).
+# N'ouvrez firewalld que si vous exposez directement sur 0.0.0.0 (BOOKSTORAGE_HOST).
+# OPEN_FIREWALL_PORT=1 sudo -E ./deploy/install.sh
+if [ "${OPEN_FIREWALL_PORT:-}" = "1" ] && systemctl is-active --quiet firewalld; then
     firewall-cmd --permanent --add-port=5000/tcp > /dev/null 2>&1
     firewall-cmd --reload > /dev/null 2>&1
-    print_success "Port 5000 ouvert dans le firewall"
+    print_success "Port 5000 ouvert dans firewalld (OPEN_FIREWALL_PORT=1)"
+elif systemctl is-active --quiet firewalld; then
+    print_warn "firewalld actif : port 5000 non ouvert (écoute locale par défaut). Reverse proxy ou OPEN_FIREWALL_PORT=1 si exposition directe."
 fi
 
 # ============================================================================
@@ -264,7 +296,7 @@ printf "\n"
 printf "  ${BLUE}bsctl start${NC}\n"
 printf "\n"
 
-printf "L'application sera accessible sur: ${BOLD}http://$(hostname -I | awk '{print $1}'):5000${NC}\n"
+printf "Par défaut (127.0.0.1) : ${BOLD}http://127.0.0.1:5000${NC} — placez un reverse proxy (HTTPS) pour l'accès réseau.\n"
 printf "\n"
 printf "Sauvegardes planifiées (optionnel) : ${BLUE}INSTALL_WITH_BACKUP_TIMER=1 sudo -E ./deploy/install.sh${NC}  (timer 03:15, ${BLUE}bsctl backup${NC})\n"
 printf "Prometheus (optionnel) : ${BLUE}INSTALL_WITH_PROMETHEUS=1 sudo -E ./deploy/install.sh${NC}\n"

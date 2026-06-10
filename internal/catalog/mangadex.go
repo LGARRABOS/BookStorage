@@ -14,6 +14,7 @@ import (
 const mangadexAPIBase = "https://api.mangadex.org"
 const mangadexTimeout = 10 * time.Second
 const mangadexMinInterval = 250 * time.Millisecond
+const mangadexMaxResponseBytes = 4 << 20
 
 var (
 	mdMu         sync.Mutex
@@ -101,7 +102,7 @@ func mangadexGET(path string, query url.Values) ([]byte, error) {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	body, err := io.ReadAll(resp.Body)
+	body, err := io.ReadAll(io.LimitReader(resp.Body, mangadexMaxResponseBytes))
 	if err != nil {
 		return nil, err
 	}

@@ -1,4 +1,4 @@
-// build: 20260413-2
+// build: 20260610-1
 const CACHE_NAME = 'bookstorage-v6';
 const STATIC_ASSETS = [
   '/static/css/base.css',
@@ -27,6 +27,12 @@ self.addEventListener('activate', event => {
   self.clients.claim();
 });
 
+function isCacheableStatic(url) {
+  if (!url.includes('/static/')) return false;
+  if (url.includes('/static/images/') || url.includes('/static/avatars/')) return false;
+  return true;
+}
+
 // Fetch event - network first, fallback to cache
 self.addEventListener('fetch', event => {
   // Skip non-GET requests
@@ -38,8 +44,8 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     fetch(event.request)
       .then(response => {
-        // Cache successful responses for static assets
-        if (response.ok && event.request.url.includes('/static/')) {
+        // Cache successful responses for static assets (exclude user uploads)
+        if (response.ok && isCacheableStatic(event.request.url)) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then(cache => {
             cache.put(event.request, responseClone);

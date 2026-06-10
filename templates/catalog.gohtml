@@ -147,11 +147,74 @@
         var hasNext = false;
         var browseItemsById = {};
 
-        function escapeHtml(s) {
-            if (s == null || s === '') return '';
-            var d = document.createElement('div');
-            d.textContent = s;
-            return d.innerHTML;
+        function showBrowseMsg(text, id) {
+            grid.replaceChildren();
+            var p = document.createElement('p');
+            p.className = 'catalog-browse-msg';
+            if (id) p.id = id;
+            p.textContent = text;
+            grid.appendChild(p);
+        }
+
+        function appendBrowseCover(parent, imageUrl) {
+            if (imageUrl) {
+                var img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = '';
+                img.loading = 'lazy';
+                var noCoverHidden = document.createElement('span');
+                noCoverHidden.className = 'no-cover';
+                noCoverHidden.style.display = 'none';
+                noCoverHidden.textContent = '📖';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    noCoverHidden.style.display = 'flex';
+                };
+                parent.appendChild(img);
+                parent.appendChild(noCoverHidden);
+            } else {
+                var noCover = document.createElement('span');
+                noCover.className = 'no-cover';
+                noCover.textContent = '📖';
+                parent.appendChild(noCover);
+            }
+        }
+
+        function buildBrowseCard(item) {
+            var key = browseItemKey(item);
+            var article = document.createElement('article');
+            article.className = 'reco-card';
+
+            var coverBtn = document.createElement('button');
+            coverBtn.type = 'button';
+            coverBtn.className = 'reco-card-cover reco-card-cover--btn';
+            coverBtn.setAttribute('data-browse-key', key);
+            coverBtn.setAttribute('aria-label', openLbl);
+            appendBrowseCover(coverBtn, item.image_url);
+
+            var body = document.createElement('div');
+            body.className = 'reco-card-body';
+
+            var titleEl = document.createElement('div');
+            titleEl.className = 'reco-card-title';
+            titleEl.textContent = item.title || '';
+
+            var metaEl = document.createElement('div');
+            metaEl.className = 'reco-card-meta';
+            var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
+            metaEl.textContent = meta;
+
+            var addLink = document.createElement('a');
+            addLink.className = 'btn-reco';
+            addLink.href = addWorkHref(item);
+            addLink.textContent = addLabel;
+
+            body.appendChild(titleEl);
+            body.appendChild(metaEl);
+            body.appendChild(addLink);
+            article.appendChild(coverBtn);
+            article.appendChild(body);
+            return article;
         }
 
         function selectedGenres() {
@@ -205,21 +268,6 @@
             return '/add_work?catalog_source=' + encodeURIComponent(src) + '&catalog_external_id=' + encodeURIComponent(ext);
         }
 
-        function renderCard(item) {
-            var img = item.image_url
-                ? '<img src="' + String(item.image_url).replace(/"/g, '&quot;') + '" alt="" loading="lazy" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
-                : '<span class="no-cover">📖</span>';
-            var meta = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
-            var key = browseItemKey(item);
-            return '<article class="reco-card">' +
-                '<button type="button" class="reco-card-cover reco-card-cover--btn" data-browse-key="' + encodeURIComponent(key) + '" aria-label="' + openLbl + '">' + img + '</button>' +
-                '<div class="reco-card-body">' +
-                '<div class="reco-card-title">' + escapeHtml(item.title || '') + '</div>' +
-                '<div class="reco-card-meta">' + escapeHtml(meta) + '</div>' +
-                '<a class="btn-reco" href="' + addWorkHref(item) + '">' + addLabel + '</a>' +
-                '</div></article>';
-        }
-
         function bindBrowseCards() {
             grid.querySelectorAll('.reco-card-cover--btn[data-browse-key]').forEach(function(el) {
                 el.addEventListener('click', function() {
@@ -235,7 +283,7 @@
         function loadBrowse(page) {
             currentPage = page || 1;
             grid.hidden = false;
-            grid.innerHTML = '<p class="catalog-browse-msg" id="catalog-browse-loading">' + loadingMsg + '</p>';
+            showBrowseMsg(loadingMsg, 'catalog-browse-loading');
             pagination.hidden = true;
             btn.disabled = true;
 
@@ -254,14 +302,15 @@
                     var list = (data && data.results) ? data.results : [];
                     hasNext = !!(data && data.has_next);
                     if (!list.length) {
-                        grid.innerHTML = '<p class="catalog-browse-msg">' + emptyMsg + '</p>';
+                        showBrowseMsg(emptyMsg);
                         pagination.hidden = true;
                         browseItemsById = {};
                         return;
                     }
                     browseItemsById = {};
                     list.forEach(function(item) { browseItemsById[browseItemKey(item)] = item; });
-                    grid.innerHTML = list.map(renderCard).join('');
+                    grid.replaceChildren();
+                    list.forEach(function(item) { grid.appendChild(buildBrowseCard(item)); });
                     bindBrowseCards();
                     pagination.hidden = false;
                     if (prevBtn) prevBtn.disabled = currentPage <= 1;
@@ -269,7 +318,7 @@
                 })
                 .catch(function(e) {
                     var msg = (e && e.apiError) ? pickApiErrMsg(e.apiError, errMsg) : errMsg;
-                    grid.innerHTML = '<p class="catalog-browse-msg">' + msg + '</p>';
+                    showBrowseMsg(msg);
                     pagination.hidden = true;
                 })
                 .finally(function() { btn.disabled = false; });

@@ -142,7 +142,7 @@ func (a *App) HandleAPIAdminDatabaseDelete(w http.ResponseWriter, r *http.Reques
 		Table string `json:"table"`
 		ID    string `json:"id"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
@@ -342,8 +342,13 @@ func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	targetID, _ := strconv.Atoi(r.PathValue("id"))
+	actorID, ok := a.currentUserID(r)
+	if !ok {
+		http.Redirect(w, r, "/admin/accounts", http.StatusFound)
+		return
+	}
 
-	var isAdmin, isSuper int
+	var isAdmin, isSuper, actorSuper int
 	err := a.DB.QueryRow(
 		`SELECT is_admin, is_superadmin FROM users WHERE id = ?`,
 		targetID,
@@ -356,6 +361,17 @@ func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 	if isSuper != 0 {
 		http.Redirect(w, r, "/admin/accounts", http.StatusFound)
 		return
+	}
+
+	// Un admin simple ne peut pas supprimer un autre compte admin ; réservé au superadmin.
+	if isAdmin != 0 {
+		if err := a.DB.QueryRow(
+			`SELECT is_superadmin FROM users WHERE id = ?`,
+			actorID,
+		).Scan(&actorSuper); err != nil || actorSuper == 0 {
+			http.Redirect(w, r, "/admin/accounts", http.StatusFound)
+			return
+		}
 	}
 
 	if _, err := a.DB.Exec(`DELETE FROM users WHERE id = ?`, targetID); err != nil {

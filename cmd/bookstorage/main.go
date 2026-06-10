@@ -251,7 +251,7 @@ func main() {
 	mux.HandleFunc("POST /api/admin/database/delete", app.RequireAdmin(app.RequireWebOnly(app.HandleAPIAdminDatabaseDelete)))
 	mux.HandleFunc("POST /admin/approve/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleApproveAccount)))
 	mux.HandleFunc("POST /admin/delete_account/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandleDeleteAccount)))
-	mux.HandleFunc("POST /admin/promote/{id}", app.RequireAdmin(app.MobileRedirectToDashboard(app.HandlePromoteAccount)))
+	mux.HandleFunc("POST /admin/promote/{id}", app.RequireAdmin(app.RequireSuperadmin(app.MobileRedirectToDashboard(app.HandlePromoteAccount))))
 	mux.HandleFunc("/admin/backups", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminBackups)))
 	mux.HandleFunc("/admin/audit", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminAuditLog)))
 	mux.HandleFunc("GET /api/admin/instance-stats", app.RequireAdmin(app.HandleAPIAdminInstanceStats))
@@ -269,7 +269,7 @@ func main() {
 
 	addr := settings.Host + ":" + strconv.Itoa(settings.Port)
 	log.Printf("%s v%s listening on %s (%s)", appName, Version, addr, settings.Environment)
-	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithDatabaseUnavailable(app.WithRequestPolicies(app.WithAPITokenContext(mux)))))))
+	handler := app.WithAccessLog(app.WithRequestID(app.SecurityHeaders(app.WithErrorPages(app.WithDatabaseUnavailable(app.WithRequestPolicies(app.WithAPITokenContext(app.WithAPITokenRoutePolicy(mux))))))))
 	readTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC", 15)
 	writeTO := httpTimeoutSeconds("BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC", 120)
 	srv := &http.Server{

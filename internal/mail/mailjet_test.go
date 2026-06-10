@@ -83,3 +83,9 @@ func TestNoopSender(t *testing.T) {
 		t.Fatal(err)
 	}
 }
+
+func TestDefaultMailjetHTTPClientHasTimeout(t *testing.T) {
+	if defaultMailjetHTTPClient.Timeout != defaultMailjetHTTPTimeout {
+		t.Fatalf("timeout %v, want %v", defaultMailjetHTTPClient.Timeout, defaultMailjetHTTPTimeout)
+	}
+}

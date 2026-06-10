@@ -122,6 +122,7 @@
   "register.username": "Username",
   "register.email": "Email address",
   "register.error.email": "Please enter a valid email address.",
+  "register.error.failed": "Registration failed. Please check your information and try again.",
   "error.401.title": "Unauthorized",
   "error.401.desc": "You must be signed in to access this page.",
   "error.403.title": "Access denied",

@@ -20,15 +20,15 @@ func (a *App) setWebAuthnChallengeCookie(w http.ResponseWriter, key string) {
 		HttpOnly: true,
 		SameSite: sessionSameSite(a.Settings.Environment),
 	}
-	if strings.ToLower(a.Settings.Environment) == "production" {
+	if a.Settings != nil && cookieSecure(a.Settings.Environment, a.Settings.PublicOrigin) {
 		c.Secure = true
 	}
 	http.SetCookie(w, c)
 }
 
-func clearWebAuthnChallengeCookie(w http.ResponseWriter, env string) {
+func clearWebAuthnChallengeCookie(w http.ResponseWriter, env, publicOrigin string) {
 	c := &http.Cookie{Name: webauthnChallengeCookie, Path: "/", MaxAge: -1, HttpOnly: true, SameSite: sessionSameSite(env)}
-	if strings.ToLower(env) == "production" {
+	if cookieSecure(env, publicOrigin) {
 		c.Secure = true
 	}
 	http.SetCookie(w, c)
@@ -102,7 +102,7 @@ func (a *App) HandleWebAuthnRegisterFinish(w http.ResponseWriter, r *http.Reques
 		return
 	}
 	sessionData, challengeUserID, ok := a.takeWebAuthnChallenge(key)
-	clearWebAuthnChallengeCookie(w, a.Settings.Environment)
+	clearWebAuthnChallengeCookie(w, a.Settings.Environment, a.Settings.PublicOrigin)
 	if !ok || challengeUserID != userID {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_challenge")
 		return
@@ -191,7 +191,7 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	sessionData, userID, ok := a.takeWebAuthnChallenge(key)
-	clearWebAuthnChallengeCookie(w, a.Settings.Environment)
+	clearWebAuthnChallengeCookie(w, a.Settings.Environment, a.Settings.PublicOrigin)
 	if !ok || userID <= 0 {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_challenge")
 		return

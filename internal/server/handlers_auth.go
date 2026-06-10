@@ -14,10 +14,10 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 		// Messages de feedback via query string
 		q := r.URL.Query()
 		data := a.mergeData(r, map[string]any{
-			"RegisterErrorEmpty":  q.Get("error") == "empty",
-			"RegisterErrorExists": q.Get("error") == "exists",
-			"RegisterErrorWeak":   q.Get("error") == "weak",
-			"RegisterErrorEmail":  q.Get("error") == "email",
+			"RegisterError":      q.Get("error") == "1",
+			"RegisterErrorEmpty": q.Get("error") == "empty",
+			"RegisterErrorWeak":  q.Get("error") == "weak",
+			"RegisterErrorEmail": q.Get("error") == "email",
 		})
 		a.renderTemplate(w, r, "register", data)
 	case http.MethodPost:
@@ -53,8 +53,7 @@ func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
 			username, hashedPassword, validated, normalizeAccountEmail(email),
 		)
 		if err != nil {
-			// conflit de username, etc.
-			http.Redirect(w, r, "/register?error=exists", http.StatusFound)
+			http.Redirect(w, r, "/register?error=1", http.StatusFound)
 			return
 		}
 		// Success: account created.
@@ -105,6 +104,11 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		username := strings.TrimSpace(r.FormValue("username"))
 		password := r.FormValue("password")
 
+		if a.isLoginLocked(username) {
+			http.Redirect(w, r, "/login?error=1", http.StatusFound)
+			return
+		}
+
 		var u userRow
 		err := a.DB.QueryRow(
 			`SELECT id, username, password, google_sub, validated, is_admin, is_superadmin
@@ -112,7 +116,8 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			username,
 		).Scan(&u.ID, &u.Username, &u.Password, &u.GoogleSub, &u.Validated, &u.IsAdmin, &u.IsSuperadmin)
 		if err != nil {
-			// Utilisateur introuvable
+			bcryptCompareDummy(password)
+			a.recordLoginFailure(username)
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
@@ -128,9 +133,11 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 
 		// Verify password (supports bcrypt and Werkzeug pbkdf2)
 		if !u.Password.Valid || !verifyPassword(u.Password.String, password) {
+			a.recordLoginFailure(username)
 			http.Redirect(w, r, "/login?error=1", http.StatusFound)
 			return
 		}
+		a.clearLoginFailures(username)
 		if u.Password.Valid && passwordHashNeedsUpgrade(u.Password.String) {
 			if upgraded, err := hashPassword(password); err == nil {
 				_, _ = a.DB.Exec(`UPDATE users SET password = ? WHERE id = ?`, upgraded, u.ID)

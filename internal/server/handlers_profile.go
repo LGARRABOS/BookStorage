@@ -354,7 +354,12 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		a.renderProfilePage(w, r, userID, map[string]any{"User": u})
 	case http.MethodPost:
-		if err := r.ParseMultipartForm(10 << 20); err != nil {
+		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
+			if err := r.ParseMultipartForm(10 << 20); err != nil {
+				w.WriteHeader(http.StatusBadRequest)
+				return
+			}
+		} else if err := r.ParseForm(); err != nil {
 			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
@@ -462,9 +467,21 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		args = append(args, userID)
 
 		stmt := "UPDATE users SET " + strings.Join(setParts, ", ") + " WHERE id = ?"
+		passwordChanged := false
+		if _, ok := updates["password"]; ok {
+			passwordChanged = true
+		}
+
 		if _, err := a.DB.Exec(stmt, args...); err != nil {
 			http.Redirect(w, r, "/profile", http.StatusFound)
 			return
+		}
+
+		if passwordChanged {
+			a.revokeAllUserSessions(userID)
+			if token, err := a.createSession(r, userID); err == nil {
+				a.setSessionCookie(w, token, sessionSlidingTTL)
+			}
 		}
 
 		if newAvatarPath != "" && previousAvatar != "" && previousAvatar != newAvatarPath {
@@ -491,6 +508,10 @@ func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 	userID, ok := a.currentUserID(r)
 	if !ok {
 		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
+		return
+	}
+	if _, apiOK := apiAuthUserIDFromContext(r.Context()); apiOK {
+		http.Redirect(w, r, "/profile", http.StatusFound)
 		return
 	}
 	currentPassword := r.FormValue("current_password")

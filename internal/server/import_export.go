@@ -255,7 +255,7 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 	notes := truncateNotes(strings.TrimSpace(w.Notes))
 	chapter := clampChapter(w.Chapter)
 	link := strings.TrimSpace(w.Link)
-	imagePath := strings.TrimSpace(w.ImagePath)
+	imagePath := sanitizeImportImagePath(w.ImagePath)
 	catID := a.resolveCatalogIDField(&w)
 	isAdult := 0
 	if w.IsAdult {
@@ -313,6 +313,38 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 		return
 	}
 	report.Imported++
+}
+
+// sanitizeImportImagePath keeps relative upload paths; external URLs must be http(s) only.
+func sanitizeImportImagePath(path string) string {
+	path = strings.TrimSpace(path)
+	if path == "" {
+		return ""
+	}
+	lower := strings.ToLower(path)
+	if strings.HasPrefix(lower, "data:") || strings.HasPrefix(path, "//") {
+		return ""
+	}
+	if strings.HasPrefix(path, "http://") || strings.HasPrefix(path, "https://") {
+		return path
+	}
+	if strings.Contains(path, ":") && !strings.HasPrefix(path, "/") {
+		return ""
+	}
+	return path
+}
+
+// csvSafeCell prefixes spreadsheet formula triggers (= + - @ tab CR) to prevent CSV injection on export.
+func csvSafeCell(s string) string {
+	if s == "" {
+		return s
+	}
+	switch s[0] {
+	case '=', '+', '-', '@', '\t', '\r':
+		return "'" + s
+	default:
+		return s
+	}
 }
 
 func appendImportError(report *ImportReport, line int, code string) {
@@ -762,19 +794,19 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 			adult = "1"
 		}
 		_ = writer.Write([]string{
-			row.Title,
+			csvSafeCell(row.Title),
 			strconv.Itoa(row.Chapter),
-			row.Link,
-			row.Status,
-			row.ReadingType,
+			csvSafeCell(row.Link),
+			csvSafeCell(row.Status),
+			csvSafeCell(row.ReadingType),
 			strconv.Itoa(row.Rating),
-			row.Notes,
+			csvSafeCell(row.Notes),
 			cat,
 			adult,
-			row.ImagePath,
-			row.StartedAt,
-			row.LastChapterAt,
-			row.FinishedAt,
+			csvSafeCell(row.ImagePath),
+			csvSafeCell(row.StartedAt),
+			csvSafeCell(row.LastChapterAt),
+			csvSafeCell(row.FinishedAt),
 		})
 	}
 }

@@ -118,6 +118,7 @@
   "register.username": "Nome de usuário",
   "register.email": "Endereço de e-mail",
   "register.error.email": "Introduza um endereço de e-mail válido.",
+  "register.error.failed": "Não foi possível concluir o registo. Verifique os seus dados e tente novamente.",
   "error.401.title": "Não autorizado",
   "error.401.desc": "Você precisa estar logado para acessar esta página.",
   "error.403.title": "Acesso negado",

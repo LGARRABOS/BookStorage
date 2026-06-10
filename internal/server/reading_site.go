@@ -2,7 +2,6 @@ package server
 
 import (
 	"context"
-	"crypto/tls"
 	"database/sql"
 	"log"
 	"net"
@@ -121,50 +120,13 @@ func normalizePath(p string) string {
 
 // ProbeURL performs an SSRF-safe HTTP probe of rawURL (http/https only).
 func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatus int, detail string) {
-	parsed, err := url.Parse(strings.TrimSpace(rawURL))
-	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") {
-		return ProbeStatusDown, 0, "invalid URL scheme"
+	rawURL = strings.TrimSpace(rawURL)
+	if !isProbeURLSafe(rawURL) {
+		return ProbeStatusDown, 0, "unsafe URL"
 	}
 
-	host := parsed.Hostname()
-	if isPrivateOrLoopback(host) {
-		return ProbeStatusDown, 0, "private/loopback address"
-	}
-
-	// Resolve DNS to check for private IPs (capped at 5s to avoid hanging the prober).
-	dnsCtx, dnsCancel := context.WithTimeout(ctx, 5*time.Second)
-	defer dnsCancel()
-	ips, err := net.DefaultResolver.LookupHost(dnsCtx, host)
-	if err != nil {
-		return ProbeStatusDown, 0, "DNS resolution failed"
-	}
-	for _, ipStr := range ips {
-		ip := net.ParseIP(ipStr)
-		if ip != nil && (ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()) {
-			return ProbeStatusDown, 0, "resolved to private IP"
-		}
-	}
-
-	targetURL := parsed.String()
-	client := &http.Client{
-		Timeout: 8 * time.Second,
-		CheckRedirect: func(req *http.Request, via []*http.Request) error {
-			if len(via) >= 3 {
-				return http.ErrUseLastResponse
-			}
-			rHost := req.URL.Hostname()
-			if isPrivateOrLoopback(rHost) {
-				return http.ErrUseLastResponse
-			}
-			return nil
-		},
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{MinVersion: tls.VersionTLS12},
-			DialContext: (&net.Dialer{
-				Timeout: 5 * time.Second,
-			}).DialContext,
-		},
-	}
+	targetURL := rawURL
+	client := newProbeHTTPClient(8 * time.Second)
 
 	const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
 
@@ -221,14 +183,6 @@ func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatu
 // ProbeReadingSite performs a safe HTTP probe of the given base URL and returns the status.
 func ProbeReadingSite(ctx context.Context, baseURL string) (status ProbeStatus, httpStatus int, detail string) {
 	return ProbeURL(ctx, baseURL)
-}
-
-func isPrivateOrLoopback(host string) bool {
-	ip := net.ParseIP(host)
-	if ip == nil {
-		return false
-	}
-	return ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast()
 }
 
 func isTimeoutError(err error) bool {

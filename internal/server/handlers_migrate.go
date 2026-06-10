@@ -1,7 +1,6 @@
 package server
 
 import (
-	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -34,7 +33,7 @@ func (a *App) HandleAPIAdminMigratePostgresTest(w http.ResponseWriter, r *http.R
 	var req struct {
 		PostgresURL string `json:"postgres_url"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
@@ -76,7 +75,7 @@ func (a *App) HandleAPIAdminMigratePostgresRun(w http.ResponseWriter, r *http.Re
 	var req struct {
 		PostgresURL string `json:"postgres_url"`
 	}
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+	if err := decodeAPIJSONBody(w, r, &req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
@@ -107,8 +106,8 @@ func (a *App) HandleAPIAdminMigratePostgresRun(w http.ResponseWriter, r *http.Re
 		log.Printf("migrate postgres env: %v", err)
 		detail := "update .env: " + err.Error()
 		if strings.Contains(strings.ToLower(detail), "permission denied") {
-			detail += " — fix: the systemd User= must own the .env file (stock unit: nobody). Example: " +
-				"sudo chown nobody " + envPath + " && sudo chmod 600 " + envPath +
+			detail += " — fix: the systemd User= must own the .env file (stock unit: bookstorage). Example: " +
+				"sudo chown bookstorage " + envPath + " && sudo chmod 600 " + envPath +
 				" (use your service user if overridden), then retry migration."
 		}
 		a.apiWriteJSON(w, http.StatusBadRequest, map[string]string{

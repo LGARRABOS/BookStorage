@@ -1,5 +1,8 @@
 [Unit]
 Description=BookStorage - Watch for update requests
+# Security: only root may write /var/lib/bookstorage/update (mode 700, install.sh).
+# request.json here triggers a root oneshot (bookstorage-update.service) — never grant
+# the bookstorage service user write access to this directory.
 
 [Path]
 PathExists=/var/lib/bookstorage/update/request.json

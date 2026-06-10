@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"net/http"
 	"strings"
 	"time"
 )
@@ -9,6 +10,7 @@ import (
 const (
 	passwordResetTokenTTL      = time.Hour
 	passwordResetEmailCooldown = 5 * time.Minute
+	resetTokenCookieName       = "reset_token"
 )
 
 func normalizeEmail(email string) string {
@@ -175,4 +177,55 @@ func (a *App) findUsersByEmailForPasswordReset(email string) ([]struct {
 func passwordResetURL(origin, rawToken string) string {
 	origin = strings.TrimRight(strings.TrimSpace(origin), "/")
 	return origin + "/reset-password?token=" + rawToken
+}
+
+func (a *App) setResetTokenCookie(w http.ResponseWriter, token string) {
+	env, publicOrigin := "", ""
+	if a.Settings != nil {
+		env = a.Settings.Environment
+		publicOrigin = a.Settings.PublicOrigin
+	}
+	c := &http.Cookie{
+		Name:     resetTokenCookieName,
+		Value:    token,
+		Path:     "/reset-password",
+		MaxAge:   int(passwordResetTokenTTL.Seconds()),
+		HttpOnly: true,
+		SameSite: sessionSameSite(env),
+	}
+	if cookieSecure(env, publicOrigin) {
+		c.Secure = true
+	}
+	http.SetCookie(w, c)
+}
+
+func (a *App) clearResetTokenCookie(w http.ResponseWriter) {
+	env, publicOrigin := "", ""
+	if a.Settings != nil {
+		env = a.Settings.Environment
+		publicOrigin = a.Settings.PublicOrigin
+	}
+	c := &http.Cookie{
+		Name:     resetTokenCookieName,
+		Value:    "",
+		Path:     "/reset-password",
+		MaxAge:   -1,
+		HttpOnly: true,
+		SameSite: sessionSameSite(env),
+	}
+	if cookieSecure(env, publicOrigin) {
+		c.Secure = true
+	}
+	http.SetCookie(w, c)
+}
+
+func (a *App) resetTokenFromCookie(r *http.Request) string {
+	if r == nil {
+		return ""
+	}
+	c, err := r.Cookie(resetTokenCookieName)
+	if err != nil {
+		return ""
+	}
+	return strings.TrimSpace(c.Value)
 }

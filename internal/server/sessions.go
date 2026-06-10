@@ -54,7 +54,7 @@ func (a *App) setSessionCookie(w http.ResponseWriter, token string, maxAge time.
 		HttpOnly: true,
 		SameSite: sessionSameSite(a.Settings.Environment),
 	}
-	if strings.ToLower(a.Settings.Environment) == "production" {
+	if a.Settings != nil && cookieSecure(a.Settings.Environment, a.Settings.PublicOrigin) {
 		c.Secure = true
 	}
 	http.SetCookie(w, c)

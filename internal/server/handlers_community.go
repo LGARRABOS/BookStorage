@@ -125,11 +125,15 @@ func (a *App) HandleUserDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	rows, err := a.DB.Query(
-		`SELECT `+sqlWorkRowFull+`
-         FROM works WHERE user_id = ? ORDER BY LOWER(title)`,
-		targetID,
-	)
+	// Profil communautaire : les visiteurs (non propriétaires) ne voient pas les œuvres
+	// marquées adultes — filtre SQL côté serveur plutôt que masquage template seul.
+	workSQL := `SELECT ` + sqlWorkRowFull + ` FROM works WHERE user_id = ?`
+	workArgs := []any{targetID}
+	if viewerID != targetID {
+		workSQL += ` AND COALESCE(is_adult, 0) = 0`
+	}
+	workSQL += ` ORDER BY LOWER(title)`
+	rows, err := a.DB.Query(workSQL, workArgs...)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
@@ -202,7 +206,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	var src workRow
 	err = scanFullWorkRow(&src, a.DB.QueryRow(
 		`SELECT `+sqlWorkRowFull+`
-         FROM works WHERE id = ? AND user_id = ?`,
+         FROM works WHERE id = ? AND user_id = ? AND COALESCE(is_adult, 0) = 0`,
 		workID, targetID,
 	))
 	if err != nil {

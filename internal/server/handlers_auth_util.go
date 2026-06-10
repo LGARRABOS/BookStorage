@@ -3,18 +3,112 @@ package server
 import (
 	"crypto/sha256"
 	"crypto/subtle"
+	"database/sql"
 	"encoding/hex"
+	"errors"
 	"net/http"
 	"net/mail"
 	"net/url"
 	"strconv"
 	"strings"
+	"time"
 
 	"golang.org/x/crypto/bcrypt"
 	"golang.org/x/crypto/pbkdf2"
 )
 
 const minPasswordLen = 8
+
+const (
+	loginMaxFailuresBeforeLock = 5
+	loginLockoutBaseDuration   = 15 * time.Minute
+	loginLockoutMaxDuration    = 24 * time.Hour
+)
+
+// timingDummyBcryptHash is a pre-generated bcrypt hash (cost 10) used to equalize login timing when the username is unknown.
+const timingDummyBcryptHash = "$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy"
+
+func bcryptCompareDummy(password string) {
+	_ = bcrypt.CompareHashAndPassword([]byte(timingDummyBcryptHash), []byte(password))
+}
+
+func loginLockoutDuration(failCount int) time.Duration {
+	if failCount < loginMaxFailuresBeforeLock {
+		return 0
+	}
+	extra := failCount - loginMaxFailuresBeforeLock
+	d := loginLockoutBaseDuration
+	for i := 0; i < extra && d < loginLockoutMaxDuration; i++ {
+		d *= 2
+		if d > loginLockoutMaxDuration {
+			d = loginLockoutMaxDuration
+		}
+	}
+	return d
+}
+
+func (a *App) isLoginLocked(username string) bool {
+	if a == nil || a.DB == nil {
+		return false
+	}
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return false
+	}
+	var lockedUntil sql.NullTime
+	err := a.DB.QueryRow(
+		`SELECT locked_until FROM login_attempts WHERE username = ?`,
+		username,
+	).Scan(&lockedUntil)
+	if err != nil || !lockedUntil.Valid {
+		return false
+	}
+	return time.Now().UTC().Before(lockedUntil.Time)
+}
+
+func (a *App) recordLoginFailure(username string) {
+	if a == nil || a.DB == nil {
+		return
+	}
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return
+	}
+	var failCount int
+	err := a.DB.QueryRow(
+		`SELECT fail_count FROM login_attempts WHERE username = ?`,
+		username,
+	).Scan(&failCount)
+	now := time.Now().UTC()
+	failCount++
+	lockDur := loginLockoutDuration(failCount)
+	var lockedUntil any
+	if lockDur > 0 {
+		lockedUntil = now.Add(lockDur)
+	}
+	if errors.Is(err, sql.ErrNoRows) {
+		_, _ = a.DB.Exec(
+			`INSERT INTO login_attempts (username, fail_count, locked_until) VALUES (?, ?, ?)`,
+			username, failCount, lockedUntil,
+		)
+		return
+	}
+	_, _ = a.DB.Exec(
+		`UPDATE login_attempts SET fail_count = ?, locked_until = ? WHERE username = ?`,
+		failCount, lockedUntil, username,
+	)
+}
+
+func (a *App) clearLoginFailures(username string) {
+	if a == nil || a.DB == nil {
+		return
+	}
+	username = strings.TrimSpace(username)
+	if username == "" {
+		return
+	}
+	_, _ = a.DB.Exec(`DELETE FROM login_attempts WHERE username = ?`, username)
+}
 
 func normalizeAccountEmail(email string) string {
 	return strings.ToLower(strings.TrimSpace(email))

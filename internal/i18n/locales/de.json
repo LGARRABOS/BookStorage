@@ -118,6 +118,7 @@
   "register.username": "Benutzername",
   "register.email": "E-Mail-Adresse",
   "register.error.email": "Bitte geben Sie eine gültige E-Mail-Adresse ein.",
+  "register.error.failed": "Registrierung fehlgeschlagen. Bitte überprüfen Sie Ihre Angaben und versuchen Sie es erneut.",
   "error.401.title": "Nicht autorisiert",
   "error.401.desc": "Du musst angemeldet sein, um auf diese Seite zuzugreifen.",
   "error.403.title": "Zugriff verweigert",

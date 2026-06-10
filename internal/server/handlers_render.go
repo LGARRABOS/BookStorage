@@ -26,14 +26,18 @@ func (a *App) currentLang(r *http.Request) string {
 }
 
 func (a *App) setLang(w http.ResponseWriter, lang string) {
-	http.SetCookie(w, &http.Cookie{
+	c := &http.Cookie{
 		Name:     "lang",
 		Value:    lang,
 		Path:     "/",
 		MaxAge:   365 * 24 * 60 * 60, // 1 year
 		HttpOnly: true,
 		SameSite: sessionSameSite(a.Settings.Environment),
-	})
+	}
+	if a.Settings != nil && cookieSecure(a.Settings.Environment, a.Settings.PublicOrigin) {
+		c.Secure = true
+	}
+	http.SetCookie(w, c)
 }
 
 func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
@@ -176,7 +180,7 @@ func (a *App) resolveViewMode(w http.ResponseWriter, r *http.Request) string {
 			HttpOnly: true,
 			SameSite: sessionSameSite(a.Settings.Environment),
 		}
-		if strings.ToLower(a.Settings.Environment) == "production" {
+		if a.Settings != nil && cookieSecure(a.Settings.Environment, a.Settings.PublicOrigin) {
 			cookie.Secure = true
 		}
 		http.SetCookie(w, cookie)
@@ -226,6 +230,13 @@ func isMobileRequest(r *http.Request) bool {
 func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if userID, ok := apiAuthUserIDFromContext(r.Context()); ok && userID > 0 {
+			if !apiTokenPathAllowed(r.Method, r.URL.Path) {
+				a.rejectAPITokenAuth(w, r)
+				return
+			}
+			if !strings.HasPrefix(r.URL.Path, "/api/") {
+				w.Header().Set("Cache-Control", "no-store")
+			}
 			next(w, r)
 			return
 		}
@@ -244,6 +255,9 @@ func (a *App) RequireLogin(next http.HandlerFunc) http.HandlerFunc {
 		// Sliding expiration (DB + cookie)
 		a.touchSession(r, token)
 		a.setSessionCookie(w, token, sessionSlidingTTL)
+		if !strings.HasPrefix(r.URL.Path, "/api/") {
+			w.Header().Set("Cache-Control", "no-store")
+		}
 		next(w, r)
 	}
 }
@@ -276,11 +290,15 @@ func workImageURL(s *config.Settings, storedPath string) string {
 	}
 	normalized := strings.ReplaceAll(storedPath, "\\", "/")
 
-	if strings.HasPrefix(normalized, "http://") ||
-		strings.HasPrefix(normalized, "https://") ||
-		strings.HasPrefix(normalized, "//") ||
-		strings.HasPrefix(normalized, "data:") {
+	if strings.HasPrefix(normalized, "http://") || strings.HasPrefix(normalized, "https://") {
 		return normalized
+	}
+	// Reject data:, protocol-relative, and other non-http(s) schemes at render time.
+	if strings.HasPrefix(normalized, "//") {
+		return ""
+	}
+	if strings.Contains(normalized, ":") && !strings.HasPrefix(normalized, "/") {
+		return ""
 	}
 
 	if strings.HasPrefix(normalized, "/static/") {
@@ -310,6 +328,10 @@ func workImageURL(s *config.Settings, storedPath string) string {
 
 func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if _, apiOK := apiAuthUserIDFromContext(r.Context()); apiOK {
+			a.rejectAPITokenAuth(w, r)
+			return
+		}
 		userID, ok := a.currentUserID(r)
 		if !ok {
 			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
@@ -347,6 +369,10 @@ func (a *App) RequireAdmin(next http.HandlerFunc) http.HandlerFunc {
 // RequireSuperadmin allows only users with is_superadmin set (in addition to admin).
 func (a *App) RequireSuperadmin(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		if _, apiOK := apiAuthUserIDFromContext(r.Context()); apiOK {
+			a.rejectAPITokenAuth(w, r)
+			return
+		}
 		userID, ok := a.currentUserID(r)
 		if !ok {
 			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)

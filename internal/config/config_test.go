@@ -35,6 +35,45 @@ func TestValidateSettingsDevelopmentAllowsDefaultSecret(t *testing.T) {
 	err := validateSettings(&Settings{
 		Environment: "development",
 		SecretKey:   defaultSecretKey,
+		Host:        "127.0.0.1",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestValidateSettingsNonLoopbackRequiresStrongSecret(t *testing.T) {
+	err := validateSettings(&Settings{
+		Environment: "development",
+		SecretKey:   defaultSecretKey,
+		Host:        "0.0.0.0",
+	})
+	if err == nil {
+		t.Fatal("expected error for default secret on non-loopback host")
+	}
+	err = validateSettings(&Settings{
+		Environment:        "development",
+		SecretKey:            strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword:   defaultSuperadminPass,
+		Host:                 "0.0.0.0",
+	})
+	if err == nil {
+		t.Fatal("expected error for weak superadmin on non-loopback host")
+	}
+	err = validateSettings(&Settings{
+		Environment:        "development",
+		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword: "TestAdmin!99",
+		Host:               "0.0.0.0",
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = validateSettings(&Settings{
+		Environment:        "development",
+		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword: "TestAdmin!99",
+		Host:               "localhost",
 	})
 	if err != nil {
 		t.Fatal(err)

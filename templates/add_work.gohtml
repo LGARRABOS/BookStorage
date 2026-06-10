@@ -340,6 +340,55 @@
         var catalogSearchEmptyMsg = {{ jsstr (t .T "work.form.catalog_search.empty") }};
         var catalogSearchErrMsg = {{ jsstr (t .T "work.form.catalog_search.error") }};
         var catalogSearchRateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
+
+        function buildCatalogResultItem(item) {
+            var el = document.createElement('div');
+            el.className = 'catalog-result-item';
+            el.dataset.source = item.source || '';
+            el.dataset.catalogId = item.catalog_id || '';
+            el.dataset.externalId = item.external_id || '';
+            el.dataset.title = item.title || '';
+            el.dataset.type = item.reading_type || '';
+            el.dataset.image = item.image_url || '';
+            el.dataset.adult = item.is_adult ? '1' : '0';
+            if (item.image_url) {
+                var img = document.createElement('img');
+                img.src = item.image_url;
+                img.alt = '';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    if (this.nextElementSibling) this.nextElementSibling.style.display = 'flex';
+                };
+                el.appendChild(img);
+                var noCoverHidden = document.createElement('span');
+                noCoverHidden.className = 'no-cover';
+                noCoverHidden.style.display = 'none';
+                noCoverHidden.textContent = '📖';
+                el.appendChild(noCoverHidden);
+            } else {
+                var noCover = document.createElement('span');
+                noCover.className = 'no-cover';
+                noCover.textContent = '📖';
+                el.appendChild(noCover);
+            }
+            var info = document.createElement('div');
+            info.className = 'info';
+            var titleEl = document.createElement('strong');
+            titleEl.textContent = item.title || '';
+            var metaEl = document.createElement('span');
+            var meta = item.reading_type || '';
+            if (item.is_adult) meta = meta ? (meta + ' · 18+') : '18+';
+            metaEl.textContent = meta;
+            info.appendChild(titleEl);
+            info.appendChild(metaEl);
+            el.appendChild(info);
+            var badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = item.source === 'anilist' ? 'AniList' : 'Catalogue';
+            el.appendChild(badge);
+            return el;
+        }
+
         function previewImage(input) {
             const preview = document.getElementById('image-preview');
             if (input.files && input.files[0]) {
@@ -400,19 +449,10 @@
                                     }
                                     resultsEl.innerHTML = '<div class="catalog-result-item" style="cursor:default;color:var(--text-muted);">' + emptyMsg + '</div>';
                                 } else {
-                                    resultsEl.innerHTML = list.map(function(item) {
-                                        var img = item.image_url
-                                            ? '<img src="' + item.image_url.replace(/"/g, '&quot;') + '" alt="" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\';"><span class="no-cover" style="display:none;">📖</span>'
-                                            : '<span class="no-cover">📖</span>';
-                                        var badge = item.source === 'anilist' ? '<span class="badge">AniList</span>' : '<span class="badge">Catalogue</span>';
-                                        var meta = (item.reading_type || '');
-                                        if (item.is_adult) {
-                                            meta = meta ? (meta + ' · 18+') : '18+';
-                                        }
-                                        return '<div class="catalog-result-item" data-source="' + item.source + '" data-catalog-id="' + (item.catalog_id || '') + '" data-external-id="' + (item.external_id || '') + '" data-title="' + (item.title || '').replace(/"/g, '&quot;') + '" data-type="' + (item.reading_type || '').replace(/"/g, '&quot;') + '" data-image="' + (item.image_url || '').replace(/"/g, '&quot;') + '" data-adult=\"' + (item.is_adult ? '1' : '0') + '\">' + img + '<div class="info"><strong>' + (item.title || '') + '</strong><span>' + meta + '</span></div>' + badge + '</div>';
-                                    }).join('');
-                                    resultsEl.querySelectorAll('.catalog-result-item[data-title]').forEach(function(el) {
-                                        el.addEventListener('click', function() {
+                                    resultsEl.innerHTML = '';
+                                    list.forEach(function(item) {
+                                        var row = buildCatalogResultItem(item);
+                                        row.addEventListener('click', function() {
                                             var t = this.dataset.title || '';
                                             var ty = this.dataset.type || '';
                                             var img = this.dataset.image || '';
@@ -429,6 +469,7 @@
                                             searchInput.value = '';
                                             document.getElementById('link').focus();
                                         });
+                                        resultsEl.appendChild(row);
                                     });
                                 }
                                 resultsEl.classList.add('visible');

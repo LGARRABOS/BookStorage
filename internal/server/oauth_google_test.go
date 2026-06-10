@@ -60,7 +60,7 @@ func TestHandleGoogleOAuthCallback_newUserPendingValidation(t *testing.T) {
 		return &oauth2.Token{AccessToken: "mock-token"}, nil
 	}
 	oauthgoogle.TestUserInfoHook = func(ctx context.Context, accessToken string) (oauthgoogle.UserInfo, error) {
-		return oauthgoogle.UserInfo{Sub: "sub-pending-1", Email: "newpending@example.com"}, nil
+		return oauthgoogle.UserInfo{Sub: "sub-pending-1", Email: "newpending@example.com", EmailVerified: true}, nil
 	}
 
 	dir := t.TempDir()
@@ -112,7 +112,7 @@ func TestHandleGoogleOAuthLink_subTaken(t *testing.T) {
 		return &oauth2.Token{AccessToken: "mock-token"}, nil
 	}
 	oauthgoogle.TestUserInfoHook = func(ctx context.Context, accessToken string) (oauthgoogle.UserInfo, error) {
-		return oauthgoogle.UserInfo{Sub: "shared-sub", Email: "x@y.z"}, nil
+		return oauthgoogle.UserInfo{Sub: "shared-sub", Email: "x@y.z", EmailVerified: true}, nil
 	}
 
 	dir := t.TempDir()
@@ -185,6 +185,50 @@ func TestHandleGoogleOAuthStart_notConfigured(t *testing.T) {
 	}
 }
 
+func TestHandleGoogleOAuthCallback_rejectsUnverifiedEmail(t *testing.T) {
+	oldEx := googleOAuthExchangeHook
+	oldUI := oauthgoogle.TestUserInfoHook
+	defer func() {
+		googleOAuthExchangeHook = oldEx
+		oauthgoogle.TestUserInfoHook = oldUI
+	}()
+	googleOAuthExchangeHook = func(ctx context.Context, cfg *oauth2.Config, code, codeVerifier string) (*oauth2.Token, error) {
+		return &oauth2.Token{AccessToken: "mock-token"}, nil
+	}
+	oauthgoogle.TestUserInfoHook = func(ctx context.Context, accessToken string) (oauthgoogle.UserInfo, error) {
+		return oauthgoogle.UserInfo{Sub: "sub-unverified", Email: "unverified@example.com", EmailVerified: false}, nil
+	}
+
+	dir := t.TempDir()
+	s := testSettingsWithGoogle(t, dir)
+	db, err := database.Open(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = db.Close() })
+	if err := database.EnsureSchema(db, s); err != nil {
+		t.Fatal(err)
+	}
+	app := &App{Settings: s, DB: db}
+
+	statePlain := "state-unverified"
+	verifier := "verifier-unverified"
+	if err := database.InsertOAuthState(db, statePlain, database.OAuthPurposeLogin, sql.NullInt64{}, "", verifier); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/auth/google/callback?code=abc&state="+statePlain, nil)
+	rec := httptest.NewRecorder()
+	app.HandleGoogleOAuthCallback(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.Contains(loc, "google_error=token") {
+		t.Fatalf("expected token error redirect, got %s", loc)
+	}
+}
+
 func TestHandleGoogleOAuthCallback_createsSessionWhenValidated(t *testing.T) {
 	oldEx := googleOAuthExchangeHook
 	oldUI := oauthgoogle.TestUserInfoHook
@@ -196,7 +240,7 @@ func TestHandleGoogleOAuthCallback_createsSessionWhenValidated(t *testing.T) {
 		return &oauth2.Token{AccessToken: "mock-token"}, nil
 	}
 	oauthgoogle.TestUserInfoHook = func(ctx context.Context, accessToken string) (oauthgoogle.UserInfo, error) {
-		return oauthgoogle.UserInfo{Sub: "sub-ok-1", Email: "ok@example.com"}, nil
+		return oauthgoogle.UserInfo{Sub: "sub-ok-1", Email: "ok@example.com", EmailVerified: true}, nil
 	}
 
 	dir := t.TempDir()

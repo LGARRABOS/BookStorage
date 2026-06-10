@@ -345,6 +345,24 @@ func detectTimezoneFromSystem() string {
 	return ""
 }
 
+func isLoopbackListenHost(host string) bool {
+	host = strings.TrimSpace(host)
+	if host == "" {
+		return true
+	}
+	if h, _, err := net.SplitHostPort(host); err == nil {
+		host = h
+	}
+	host = strings.Trim(host, "[]")
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	if ip := net.ParseIP(host); ip != nil {
+		return ip.IsLoopback()
+	}
+	return false
+}
+
 func isWeakSuperadminPassword(password string) bool {
 	password = strings.TrimSpace(password)
 	if password == "" {
@@ -434,17 +452,26 @@ func validateSettings(s *Settings) error {
 		}
 	}
 
-	if strings.ToLower(s.Environment) != "production" {
+	isProduction := strings.ToLower(s.Environment) == "production"
+	enforceSecrets := isProduction || !isLoopbackListenHost(s.Host)
+	if enforceSecrets {
+		secretCtx := "when BOOKSTORAGE_ENV=production"
+		if !isProduction {
+			secretCtx = "when BOOKSTORAGE_HOST is not loopback (127.0.0.1 or localhost)"
+		}
+		if s.SecretKey == "" || s.SecretKey == defaultSecretKey {
+			return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be set to a non-default value %s", secretCtx)
+		}
+		if len(s.SecretKey) < MinProductionSecretKeyLen {
+			return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be at least %d bytes %s", MinProductionSecretKeyLen, secretCtx)
+		}
+		if isWeakSuperadminPassword(s.SuperadminPassword) {
+			return fmt.Errorf("BOOKSTORAGE_SUPERADMIN_PASSWORD must be a strong non-default password (>= %d chars, upper, digit, symbol) %s", MinProductionSuperadminPasswordLen, secretCtx)
+		}
+	}
+
+	if !isProduction {
 		return nil
-	}
-	if s.SecretKey == "" || s.SecretKey == defaultSecretKey {
-		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be set to a non-default value when BOOKSTORAGE_ENV=production")
-	}
-	if len(s.SecretKey) < MinProductionSecretKeyLen {
-		return fmt.Errorf("BOOKSTORAGE_SECRET_KEY must be at least %d bytes when BOOKSTORAGE_ENV=production", MinProductionSecretKeyLen)
-	}
-	if isWeakSuperadminPassword(s.SuperadminPassword) {
-		return fmt.Errorf("BOOKSTORAGE_SUPERADMIN_PASSWORD must be a strong non-default password (>= %d chars, upper, digit, symbol) when BOOKSTORAGE_ENV=production", MinProductionSuperadminPasswordLen)
 	}
 	if strings.TrimSpace(s.PostgresURL) != "" {
 		u, err := url.Parse(s.PostgresURL)

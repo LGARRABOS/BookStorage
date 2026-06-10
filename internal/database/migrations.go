@@ -232,10 +232,19 @@ CREATE INDEX IF NOT EXISTS idx_webauthn_challenges_expires_at ON webauthn_challe
 ALTER TABLE webauthn_credentials ADD COLUMN backup_eligible INTEGER NOT NULL DEFAULT 0;
 ALTER TABLE webauthn_credentials ADD COLUMN backup_state INTEGER NOT NULL DEFAULT 0;
 `},
+	{Version: 25, Name: "api_token_expiry_login_attempts", Up: `
+ALTER TABLE api_tokens ADD COLUMN expires_at DATETIME;
+UPDATE api_tokens SET expires_at = datetime(created_at, '+90 days') WHERE expires_at IS NULL AND revoked_at IS NULL;
+CREATE TABLE IF NOT EXISTS login_attempts (
+	username TEXT PRIMARY KEY,
+	fail_count INTEGER NOT NULL DEFAULT 0,
+	locked_until DATETIME
+);
+`},
 }
 
 // LatestSchemaMigrationVersion is the highest numbered migration (SQLite and Postgres logical version).
-const LatestSchemaMigrationVersion = 24
+const LatestSchemaMigrationVersion = 25
 
 // ApplyMigrations runs dialect-specific migration bookkeeping.
 func ApplyMigrations(c *Conn) error {

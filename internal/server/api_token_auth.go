@@ -9,6 +9,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"net/http"
+	"os"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -16,7 +18,19 @@ import (
 const (
 	ScopeWorksRead  = "works:read"
 	ScopeWorksWrite = "works:write"
+
+	defaultAPITokenTTL = 90 * 24 * time.Hour
 )
+
+// apiTokenTTL returns API token lifetime (override via BOOKSTORAGE_API_TOKEN_TTL_DAYS).
+func apiTokenTTL() time.Duration {
+	if v := strings.TrimSpace(os.Getenv("BOOKSTORAGE_API_TOKEN_TTL_DAYS")); v != "" {
+		if days, err := strconv.Atoi(v); err == nil && days > 0 {
+			return time.Duration(days) * 24 * time.Hour
+		}
+	}
+	return defaultAPITokenTTL
+}
 
 var validAPIScopes = map[string]bool{
 	ScopeWorksRead:  true,
@@ -32,6 +46,7 @@ type apiTokenRow struct {
 	Name       string
 	Scopes     []string
 	CreatedAt  time.Time
+	ExpiresAt  sql.NullTime
 	LastUsedAt sql.NullTime
 	RevokedAt  sql.NullTime
 }
@@ -109,6 +124,59 @@ func apiAuthScopesFromContext(ctx context.Context) ([]string, bool) {
 	return scopes, ok
 }
 
+// apiTokenPathAllowed reports whether a bearer API token may access method+path.
+// All other routes require an interactive browser session.
+func apiTokenPathAllowed(method, path string) bool {
+	switch {
+	case path == "/api/works" && (method == http.MethodGet || method == http.MethodPost):
+		return true
+	case path == "/api/works/bulk" && method == http.MethodPost:
+		return true
+	case path == "/api/stats" && method == http.MethodGet:
+		return true
+	case strings.HasPrefix(path, "/api/works/") && len(path) > len("/api/works/"):
+		switch method {
+		case http.MethodGet, http.MethodPatch, http.MethodDelete:
+			return true
+		}
+	case strings.HasPrefix(path, "/api/increment/") && method == http.MethodPost:
+		return true
+	case strings.HasPrefix(path, "/api/decrement/") && method == http.MethodPost:
+		return true
+	case strings.HasPrefix(path, "/api/set-chapter/") && method == http.MethodPost:
+		return true
+	case strings.HasPrefix(path, "/api/delete/") && method == http.MethodPost:
+		return true
+	}
+	return false
+}
+
+func (a *App) rejectAPITokenAuth(w http.ResponseWriter, r *http.Request) {
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		a.apiWriteError(w, http.StatusForbidden, "forbidden")
+		return
+	}
+	w.WriteHeader(http.StatusForbidden)
+	if a.TemplatesWeb != nil {
+		a.renderTemplate(w, r, "403", a.mergeData(r, map[string]any{
+			"RequestedPath": r.URL.Path,
+		}))
+	}
+}
+
+// WithAPITokenRoutePolicy rejects bearer tokens on routes outside apiTokenPathAllowed.
+func (a *App) WithAPITokenRoutePolicy(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if _, ok := apiAuthUserIDFromContext(r.Context()); ok {
+			if !apiTokenPathAllowed(r.Method, r.URL.Path) {
+				a.rejectAPITokenAuth(w, r)
+				return
+			}
+		}
+		next.ServeHTTP(w, r)
+	})
+}
+
 func (a *App) WithAPITokenContext(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if userID, scopes, ok := a.resolveAPIToken(r); ok {
@@ -131,12 +199,17 @@ func (a *App) resolveAPIToken(r *http.Request) (userID int, scopes []string, ok 
 
 	var uid int
 	var scopesRaw string
+	var expiresAt sql.NullTime
 	var revokedAt sql.NullTime
 	err := a.DB.QueryRow(
-		`SELECT user_id, scopes, revoked_at FROM api_tokens WHERE token_hash = ?`,
+		`SELECT user_id, scopes, expires_at, revoked_at FROM api_tokens WHERE token_hash = ?`,
 		hashAPIToken(token),
-	).Scan(&uid, &scopesRaw, &revokedAt)
+	).Scan(&uid, &scopesRaw, &expiresAt, &revokedAt)
 	if err != nil || revokedAt.Valid || uid <= 0 {
+		return 0, nil, false
+	}
+	now := time.Now().UTC()
+	if expiresAt.Valid && now.After(expiresAt.Time) {
 		return 0, nil, false
 	}
 
@@ -145,7 +218,6 @@ func (a *App) resolveAPIToken(r *http.Request) (userID int, scopes []string, ok 
 		return 0, nil, false
 	}
 
-	now := time.Now().UTC()
 	_, _ = a.DB.Exec(
 		`UPDATE api_tokens SET last_used_at = ? WHERE token_hash = ? AND revoked_at IS NULL`,
 		now, hashAPIToken(token),
@@ -179,10 +251,11 @@ func (a *App) createAPIToken(userID int, name string, scopes []string) (token st
 		return "", apiTokenRow{}, err
 	}
 	now := time.Now().UTC()
+	expires := now.Add(apiTokenTTL())
 	res, err := a.DB.Exec(
-		`INSERT INTO api_tokens (user_id, name, token_hash, scopes, created_at)
-		 VALUES (?, ?, ?, ?, ?)`,
-		userID, name, hashAPIToken(token), encodeAPIScopes(scopes), now,
+		`INSERT INTO api_tokens (user_id, name, token_hash, scopes, created_at, expires_at)
+		 VALUES (?, ?, ?, ?, ?, ?)`,
+		userID, name, hashAPIToken(token), encodeAPIScopes(scopes), now, expires,
 	)
 	if err != nil {
 		return "", apiTokenRow{}, err
@@ -194,6 +267,7 @@ func (a *App) createAPIToken(userID int, name string, scopes []string) (token st
 		Name:      name,
 		Scopes:    scopes,
 		CreatedAt: now,
+		ExpiresAt: sql.NullTime{Time: expires, Valid: true},
 	}
 	return token, row, nil
 }

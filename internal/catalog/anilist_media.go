@@ -80,13 +80,13 @@ type browsePageResponse struct {
 }
 
 func anilistPost(body []byte) (*http.Response, error) {
+	anilistThrottle()
 	req, err := http.NewRequest(http.MethodPost, anilistURL, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	client := &http.Client{Timeout: anilistTimeout}
-	return client.Do(req)
+	return alHTTPClient.Do(req)
 }
 
 // GetMediaByID loads one Media with genres, tags, and recommendation edges.

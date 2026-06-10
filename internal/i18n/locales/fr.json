@@ -122,6 +122,7 @@
   "register.username": "Nom d'utilisateur",
   "register.email": "Adresse e-mail",
   "register.error.email": "Veuillez entrer une adresse e-mail valide.",
+  "register.error.failed": "Inscription impossible. Vérifiez vos informations et réessayez.",
   "error.401.title": "Non autorisé",
   "error.401.desc": "Vous devez être connecté pour accéder à cette page.",
   "error.403.title": "Accès interdit",

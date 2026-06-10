@@ -92,6 +92,60 @@ normalize_tag() {
     printf '%s' "$t"
 }
 
+# Root-only queue for admin-triggered updates (see deploy/bookstorage-update.path).
+BSCTL_UPDATE_QUEUE_DIR="${BSCTL_UPDATE_QUEUE_DIR:-/var/lib/bookstorage/update}"
+
+bsctl_update_secure_queue_dir() {
+    local dir="${BSCTL_UPDATE_QUEUE_DIR:-/var/lib/bookstorage/update}"
+    if [[ "$(id -u 2>/dev/null || echo 1)" -ne 0 ]]; then
+        return 0
+    fi
+    mkdir -p "$dir"
+    chown root:root "$dir"
+    chmod 700 "$dir"
+}
+
+# Release tag verification before checkout/build (root update chain).
+# BSCTL_RELEASE_GPG_KEY (or BOOKSTORAGE_RELEASE_GPG_KEY): trusted GPG key ID/fingerprint.
+# When unset, tag updates are refused unless BSCTL_UPDATE_SKIP_VERIFY=1 (unsafe override).
+bsctl_update_verify_release_tag() {
+    local tag="$1"
+    if [[ "${BSCTL_UPDATE_SKIP_VERIFY:-}" == "1" ]]; then
+        print_warn "BSCTL_UPDATE_SKIP_VERIFY=1 — release tag signature verification skipped."
+        return 0
+    fi
+
+    local gpg_key="${BSCTL_RELEASE_GPG_KEY:-${BOOKSTORAGE_RELEASE_GPG_KEY:-}}"
+    if [[ -z "$gpg_key" ]]; then
+        print_error "Refusing tag update: no release signing key configured."
+        printf "Set ${BOLD}BSCTL_RELEASE_GPG_KEY${NC} to a trusted GPG key ID/fingerprint (import the public key first),\n"
+        printf "or ${BOLD}BSCTL_UPDATE_SKIP_VERIFY=1${NC} to override (unsafe; not for production).\n"
+        return 1
+    fi
+
+    if ! command -v gpg >/dev/null 2>&1; then
+        print_error "gpg is required to verify signed release tags."
+        return 1
+    fi
+
+    local verify_out verify_ec=0
+    verify_out="$(bsctl_git verify-tag "$tag" 2>&1)" || verify_ec=$?
+    if [[ $verify_ec -ne 0 ]]; then
+        print_error "GPG verification failed for tag ${tag}."
+        printf '%s\n' "$verify_out"
+        return 1
+    fi
+
+    if ! printf '%s\n' "$verify_out" | grep -qiF "$gpg_key"; then
+        print_error "Tag ${tag} is not signed by configured key ${gpg_key}."
+        printf '%s\n' "$verify_out"
+        return 1
+    fi
+
+    print_success "Release tag ${tag} signed by trusted key."
+    return 0
+}
+
 latest_major_release_tag() {
     git tag -l 'v*' 2>/dev/null | grep -E '^v[0-9]+\.0\.0$' | sort -V | tail -n 1
 }
@@ -289,7 +343,7 @@ cmd_update_finish() {
     local repo
     repo="$(bsctl_repo_dir)" || { print_error "Repository not found."; printf "Expected at ${BOLD}${INSTALL_DIR:-/opt/bookstorage}${NC}\n"; exit 1; }
 
-    print_step "4/8" "Compiling..."
+    print_step "5/9" "Compiling..."
     if [[ -z "$build_version" && -f "${repo}/scripts/bsctl" ]]; then
         build_version="$(sed -n 's/^APP_VERSION="\([^"]\+\)".*/\1/p' "${repo}/scripts/bsctl" | head -n 1 || true)"
     fi
@@ -304,14 +358,14 @@ cmd_update_finish() {
     fi
     printf "\n"
 
-    print_step "5/8" "Installing binary..."
+    print_step "6/9" "Installing binary..."
     if ! cp "${repo}/${APP_NAME}" "${BIN_DIR}/"; then
         bsctl_update_rollback_and_exit "Could not install binary to ${BIN_DIR}/."
     fi
     print_success "Binary installed to ${BIN_DIR}/"
     printf "\n"
 
-    print_step "6/8" "Updating bsctl script..."
+    print_step "7/9" "Updating bsctl script..."
     if ! bsctl_install_script_strip_cr "${repo}/scripts/bsctl" "${BIN_DIR}/bsctl" 755; then
         bsctl_update_rollback_and_exit "Could not install bsctl to ${BIN_DIR}/."
     fi
@@ -322,11 +376,11 @@ cmd_update_finish() {
     install_bsctl_bash_completion "$repo" || true
     printf "\n"
 
-    print_step "7/8" "Fixing permissions..."
+    print_step "8/9" "Fixing permissions..."
     cmd_fix_perms
     printf "\n"
 
-    print_step "8/8" "Restarting service..."
+    print_step "9/9" "Restarting service..."
     if ! systemctl restart ${APP_NAME}; then
         printf "\n"
         print_error "systemctl restart failed."
@@ -403,7 +457,7 @@ cmd_update_at_tag() {
 
     bsctl_require_repo
 
-    print_step "1/8" "Fetching from origin..."
+    print_step "1/9" "Fetching from origin..."
     bsctl_git fetch -q origin
     bsctl_git fetch -q origin --tags 2>/dev/null || bsctl_git fetch -q --tags origin 2>/dev/null || true
     printf "\n"
@@ -414,15 +468,21 @@ cmd_update_at_tag() {
         exit 1
     fi
 
+    print_step "2/9" "Verifying release signature for ${tag}..."
+    if ! bsctl_update_verify_release_tag "$tag"; then
+        exit 1
+    fi
+    printf "\n"
+
     bsctl_update_save_rollback_state || exit 1
 
-    print_step "2/8" "Checking out release ${tag}..."
+    print_step "3/9" "Checking out release ${tag}..."
     if ! bsctl_git -c advice.detachedHead=false checkout -f -q "$tag"; then
         bsctl_update_rollback_and_exit "Git checkout of ${tag} failed."
     fi
     printf "\n"
 
-    print_step "3/8" "Aligning on release ${tag}..."
+    print_step "4/9" "Aligning on release ${tag}..."
     if ! bsctl_git reset --hard -q "$tag"; then
         bsctl_update_rollback_and_exit "Git reset to ${tag} failed."
     fi
@@ -511,6 +571,9 @@ cmd_help() {
     printf "    ${GREEN}update${NC}         Interactive release menu or ${GREEN}BSCTL_UPDATE_TAG${NC}\n"
     printf "    ${GREEN}update main${NC}    Update from origin/main\n"
     printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch>\n"
+    printf "                      Tag updates verify a GPG-signed release when ${GREEN}BSCTL_RELEASE_GPG_KEY${NC} is set;\n"
+    printf "                      otherwise refused unless ${GREEN}BSCTL_UPDATE_SKIP_VERIFY=1${NC} (unsafe).\n"
+    printf "                      Queue dir ${GREEN}/var/lib/bookstorage/update${NC} must be root-only (mode 700).\n"
     printf "                      After checkout, a failed build/install/restart rolls back git + binaries\n"
     printf "                      and restarts ${APP_NAME}. Set ${GREEN}BSCTL_UPDATE_NO_ROLLBACK=1${NC} to disable.\n"
     printf "    ${GREEN}fix-perms${NC}    Fix file permissions\n"
@@ -546,6 +609,8 @@ cmd_help() {
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "    - BOOKSTORAGE_METRICS_TOKEN (optional) secures GET /metrics for Prometheus scrapers\n"
     printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v4.0.1 — non-interactive ${GREEN}bsctl update${NC}\n"
+    printf "    - ${GREEN}BSCTL_RELEASE_GPG_KEY${NC}   trusted GPG key ID/fingerprint for signed release tags\n"
+    printf "    - ${GREEN}BSCTL_UPDATE_SKIP_VERIFY${NC} set to 1 to skip tag signature check (unsafe)\n"
     printf "    Prometheus sidecar (not run by ${GREEN}bsctl update${NC}): ${BLUE}INSTALL_APP_DIR=/opt/bookstorage bash /opt/bookstorage/deploy/setup-bookstorage-prometheus.sh${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
@@ -675,6 +740,7 @@ cmd_uninstall() {
 
 cmd_update() {
     local arg="${1:-}"
+    bsctl_update_secure_queue_dir
     if [[ -n "$arg" ]]; then
         cmd_update_branch "$arg"
         return
@@ -709,7 +775,7 @@ cmd_fix_perms() {
     chown ${APP_USER}:${APP_GROUP} . 2>/dev/null || true
     chmod 755 . 2>/dev/null || true
     chown ${APP_USER}:${APP_GROUP} database.db 2>/dev/null || true
-    chmod 664 database.db 2>/dev/null || true
+    chmod 600 database.db 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} static/avatars/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} static/images/ 2>/dev/null || true
     chown -R ${APP_USER}:${APP_GROUP} templates/ 2>/dev/null || true

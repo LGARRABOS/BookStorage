@@ -59,82 +59,103 @@ func (a *App) HandleForgotPassword(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *App) resetPasswordPageData(token, formError, resetError string) map[string]any {
+	data := map[string]any{}
+	if formError != "" {
+		data["FormError"] = formError
+	}
+	if resetError != "" {
+		data["ResetError"] = resetError
+		return data
+	}
+	if token == "" {
+		data["ResetError"] = "missing"
+		return data
+	}
+	if _, ok := a.lookupPasswordResetToken(token); !ok {
+		data["ResetError"] = "invalid"
+		return data
+	}
+	data["ShowResetForm"] = true
+	return data
+}
+
+func (a *App) resetPasswordTokenFromRequest(r *http.Request) string {
+	if r.Method == http.MethodPost {
+		if token := strings.TrimSpace(r.FormValue("token")); token != "" {
+			return token
+		}
+	}
+	if token := strings.TrimSpace(r.URL.Query().Get("token")); token != "" {
+		return token
+	}
+	return a.resetTokenFromCookie(r)
+}
+
 func (a *App) HandleResetPassword(w http.ResponseWriter, r *http.Request) {
 	if !a.passwordResetEnabled() {
 		http.NotFound(w, r)
 		return
 	}
-	token := strings.TrimSpace(r.URL.Query().Get("token"))
-	if r.Method == http.MethodPost {
-		token = strings.TrimSpace(r.FormValue("token"))
-	}
 	switch r.Method {
 	case http.MethodGet:
-		data := map[string]any{"Token": token}
-		if token == "" {
-			data["ResetError"] = "missing"
-		} else if _, ok := a.lookupPasswordResetToken(token); !ok {
-			data["ResetError"] = "invalid"
+		if queryToken := strings.TrimSpace(r.URL.Query().Get("token")); queryToken != "" {
+			if _, ok := a.lookupPasswordResetToken(queryToken); ok {
+				a.setResetTokenCookie(w, queryToken)
+				http.Redirect(w, r, "/reset-password", http.StatusFound)
+				return
+			}
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData("", "", "invalid")))
+			return
+		}
+		token := a.resetTokenFromCookie(r)
+		data := a.resetPasswordPageData(token, "", "")
+		if token != "" && data["ResetError"] == "invalid" {
+			a.clearResetTokenCookie(w)
 		}
 		a.renderTemplate(w, r, "reset_password", a.mergeData(r, data))
 	case http.MethodPost:
+		token := a.resetPasswordTokenFromRequest(r)
 		newPassword := r.FormValue("new_password")
 		confirmPassword := r.FormValue("confirm_password")
 		row, ok := a.lookupPasswordResetToken(token)
 		if !ok {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":      token,
-				"ResetError": "invalid",
-				"FormError":  "invalid",
-			}))
+			a.clearResetTokenCookie(w)
+			data := a.resetPasswordPageData("", "invalid", "invalid")
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, data))
 			return
 		}
 		var storedPassword sql.NullString
 		if err := a.DB.QueryRow(`SELECT password FROM users WHERE id = ?`, row.UserID).Scan(&storedPassword); err != nil {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":      token,
-				"ResetError": "invalid",
-			}))
+			a.clearResetTokenCookie(w)
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData("", "", "invalid")))
 			return
 		}
 		if !a.userEligibleForPasswordReset(row.UserID, storedPassword) {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":      token,
-				"ResetError": "invalid",
-			}))
+			a.clearResetTokenCookie(w)
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData("", "", "invalid")))
 			return
 		}
 		if newPassword != confirmPassword {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":     token,
-				"FormError": "mismatch",
-			}))
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData(token, "mismatch", "")))
 			return
 		}
 		if len(newPassword) < minPasswordLen {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":     token,
-				"FormError": "weak",
-			}))
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData(token, "weak", "")))
 			return
 		}
 		hashedPassword, err := hashPassword(newPassword)
 		if err != nil {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":     token,
-				"FormError": "server",
-			}))
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData(token, "server", "")))
 			return
 		}
 		if _, err := a.DB.Exec(`UPDATE users SET password = ? WHERE id = ?`, hashedPassword, row.UserID); err != nil {
-			a.renderTemplate(w, r, "reset_password", a.mergeData(r, map[string]any{
-				"Token":     token,
-				"FormError": "server",
-			}))
+			a.renderTemplate(w, r, "reset_password", a.mergeData(r, a.resetPasswordPageData(token, "server", "")))
 			return
 		}
 		a.markPasswordResetTokenUsed(token)
 		a.revokeAllUserSessions(row.UserID)
+		a.clearResetTokenCookie(w)
 		http.Redirect(w, r, "/login?reset=1", http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)

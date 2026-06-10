@@ -26,6 +26,65 @@ func resetPasswordRenderApp(t *testing.T, db *database.Conn, s *config.Settings)
 	}
 }
 
+func TestHandleResetPassword_getStripsTokenFromURL(t *testing.T) {
+	db, s := openTestDB(t)
+	enableMailSettings(s)
+	app := resetPasswordRenderApp(t, db, s)
+
+	hashed, err := hashPassword("OldPass!99")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := db.Exec(
+		`INSERT INTO users (username, password, validated, is_admin, email) VALUES ('cookieuser', ?, 1, 0, ?)`,
+		hashed, "cookie@example.com",
+	); err != nil {
+		t.Fatal(err)
+	}
+	rawToken, err := app.createPasswordResetToken(2)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/reset-password?token="+rawToken, nil)
+	rec := httptest.NewRecorder()
+	app.HandleResetPassword(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d, want redirect", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if loc != "/reset-password" {
+		t.Fatalf("location %q, want /reset-password without token", loc)
+	}
+	if strings.Contains(loc, "token=") {
+		t.Fatalf("token must not remain in redirect URL: %q", loc)
+	}
+	var cookie *http.Cookie
+	for _, c := range rec.Result().Cookies() {
+		if c.Name == resetTokenCookieName {
+			cookie = c
+			break
+		}
+	}
+	if cookie == nil || cookie.Value != rawToken {
+		t.Fatalf("expected HttpOnly reset cookie, got %#v", cookie)
+	}
+	if !cookie.HttpOnly {
+		t.Fatal("reset token cookie must be HttpOnly")
+	}
+
+	follow := httptest.NewRequest(http.MethodGet, "/reset-password", nil)
+	follow.AddCookie(cookie)
+	followRec := httptest.NewRecorder()
+	app.HandleResetPassword(followRec, follow)
+	if followRec.Code != http.StatusOK {
+		t.Fatalf("follow-up status %d", followRec.Code)
+	}
+	if strings.Contains(followRec.Body.String(), "err=invalid") {
+		t.Fatalf("cookie-backed GET should show reset form, body %q", followRec.Body.String())
+	}
+}
+
 func TestHandleResetPassword_rejectsExpiredToken(t *testing.T) {
 	db, s := openTestDB(t)
 	enableMailSettings(s)
