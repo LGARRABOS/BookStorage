@@ -4,7 +4,6 @@ import (
 	"context"
 	"crypto/tls"
 	"errors"
-	"fmt"
 	"net"
 	"net/http"
 	"time"
@@ -21,7 +20,20 @@ func safeTransportDialContext(dialTimeout time.Duration) func(ctx context.Contex
 		}
 		ip := net.ParseIP(host)
 		if ip == nil {
-			return nil, fmt.Errorf("safehttp: expected resolved IP, got %q", host)
+			// net/http may pass hostname:port; resolve at dial time and pin a public IP.
+			addrs, err := net.DefaultResolver.LookupIPAddr(ctx, host)
+			if err != nil {
+				return nil, err
+			}
+			for _, ipa := range addrs {
+				if isPublicIP(ipa.IP) {
+					ip = ipa.IP
+					break
+				}
+			}
+			if ip == nil {
+				return nil, errBlockedIP
+			}
 		}
 		if !isPublicIP(ip) {
 			return nil, errBlockedIP

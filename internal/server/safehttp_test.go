@@ -50,6 +50,19 @@ func TestSafeHTTP_dialContext_blocksPrivateIP(t *testing.T) {
 	}
 }
 
+func TestSafeHTTP_dialContext_resolvesPublicHostname(t *testing.T) {
+	if testing.Short() {
+		t.Skip("network")
+	}
+	t.Parallel()
+	dial := safeTransportDialContext(8 * time.Second)
+	conn, err := dial(context.Background(), "tcp", "example.com:443")
+	if err != nil {
+		t.Fatalf("dial example.com: %v", err)
+	}
+	_ = conn.Close()
+}
+
 func TestSafeHTTP_dialContext_blocksPrivateRange(t *testing.T) {
 	t.Parallel()
 	dial := safeTransportDialContext(2 * time.Second)
