@@ -69,6 +69,80 @@
     );
   }
 
+  function isStandalonePWA() {
+    return (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: minimal-ui)").matches ||
+      window.navigator.standalone === true
+    );
+  }
+
+  function isExternalHttpLink(anchor) {
+    try {
+      var href = anchor.getAttribute("href");
+      if (!href || href.charAt(0) === "#") return false;
+      if (/^(mailto:|tel:|sms:)/i.test(href)) return false;
+      var url = new URL(href, window.location.href);
+      if (url.protocol !== "http:" && url.protocol !== "https:") return false;
+      return url.origin !== window.location.origin;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function openInSystemBrowser(url) {
+    var ua = navigator.userAgent || "";
+    var isAndroid = /android/i.test(ua);
+
+    if (isAndroid) {
+      try {
+        var parsed = new URL(url);
+        var scheme = parsed.protocol.replace(":", "");
+        var intent =
+          "intent://" +
+          parsed.host +
+          parsed.pathname +
+          parsed.search +
+          parsed.hash +
+          "#Intent;scheme=" +
+          scheme +
+          ";action=android.intent.action.VIEW;category=android.intent.category.BROWSABLE;S.browser_fallback_url=" +
+          encodeURIComponent(url) +
+          ";end";
+        window.location.assign(intent);
+        return;
+      } catch (e) {
+        /* fallback below */
+      }
+    }
+
+    var link = document.createElement("a");
+    link.href = url;
+    link.target = "_blank";
+    link.rel = "noopener noreferrer";
+    link.referrerPolicy = "no-referrer";
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  }
+
+  function initExternalLinks() {
+    if (!isStandalonePWA()) return;
+
+    document.addEventListener(
+      "click",
+      function (e) {
+        var anchor = e.target.closest("a[href]");
+        if (!anchor || anchor.hasAttribute("download")) return;
+        if (!isExternalHttpLink(anchor)) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openInSystemBrowser(anchor.href);
+      },
+      true
+    );
+  }
+
   function initInstallBanner() {
     var banner = document.getElementById("mobile-install-banner");
     var dismiss = document.getElementById("mobile-install-dismiss");
@@ -105,6 +179,7 @@
   function init() {
     initSearchToggle();
     initSettingsSheet();
+    initExternalLinks();
     initInstallBanner();
   }
 
@@ -117,5 +192,7 @@
   window.MobileShell = {
     openSheet: openSheet,
     closeSheet: closeSheet,
+    openInSystemBrowser: openInSystemBrowser,
+    isStandalonePWA: isStandalonePWA,
   };
 })();

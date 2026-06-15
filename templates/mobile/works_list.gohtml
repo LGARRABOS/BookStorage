@@ -6,7 +6,7 @@
     <article class="work-mobile-card" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}"{{ if and .Link.Valid .Link.String }} data-link="{{ .Link.String }}"{{ end }}>
         <div class="work-mobile-row-top">
             <h2 class="work-mobile-title">
-                {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}
+                {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link mobile-external-link" target="_blank" rel="noopener noreferrer external">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}
                 {{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }}<span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}"></span>{{ end }}{{ end }}
             </h2>
             <button type="button" class="work-mobile-tag work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
@@ -30,7 +30,7 @@
                 <button type="button" class="work-mobile-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "mobile.actions.menu" }}">⋯</button>
                 <div class="work-mobile-menu" role="menu" hidden>
                     <a href="/edit/{{ .ID }}" class="work-mobile-menu-item" role="menuitem">{{ t $.T "mobile.actions.edit" }}</a>
-                    {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-menu-item" role="menuitem" target="_blank" rel="noopener noreferrer">{{ t $.T "mobile.actions.open_link" }}</a>{{ end }}
+                    {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-menu-item mobile-external-link" role="menuitem" target="_blank" rel="noopener noreferrer external">{{ t $.T "mobile.actions.open_link" }}</a>{{ end }}
                     <button type="button" class="work-mobile-menu-item work-mobile-menu-item--danger js-confirm-delete" role="menuitem" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">{{ t $.T "mobile.actions.delete" }}</button>
                 </div>
             </div>
