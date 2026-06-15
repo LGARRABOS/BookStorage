@@ -489,3 +489,57 @@
   flex-direction: column;
   gap: 0.65rem;
 }
+
+/* --- Paysage : barre du bas compacte, contenu dégagé --- */
+@media (orientation: landscape) {
+  :root {
+    --mobile-bottom-nav-height: 44px;
+  }
+
+  .mobile-bottom-nav {
+    height: var(--mobile-bottom-nav-height);
+  }
+
+  .mobile-bottom-link {
+    font-size: 0.55rem;
+    gap: 2px;
+    padding: 0 0.15rem;
+    line-height: 1.1;
+    text-align: center;
+  }
+
+  .mobile-bottom-link span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .mobile-nav-icon {
+    width: 18px;
+    height: 18px;
+  }
+
+  .mobile-bottom-link--add .mobile-nav-icon {
+    width: 20px;
+    height: 20px;
+  }
+
+  .page-body.mobile-page {
+    padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 0.65rem);
+  }
+
+  .mobile-install-banner {
+    display: none !important;
+  }
+
+  .topbar-mobile-v2 .nav-layout-mobile {
+    padding: 0.35rem 0;
+    min-height: 40px;
+  }
+
+  .mobile-icon-btn {
+    min-width: 40px;
+    min-height: 40px;
+  }
+}
