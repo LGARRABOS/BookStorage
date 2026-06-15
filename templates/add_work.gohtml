@@ -2,16 +2,20 @@
 <!DOCTYPE html>
 <html lang="{{ .Lang }}">
 <head>
+    {{ if .IsMobileView }}
+    {{ template "mobile_shell_head" . }}
+    {{ else }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
-    <title>{{ t .T "work.add.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
+    {{ end }}
+    <title>{{ t .T "work.add.title" }} - BookStorage</title>
+    {{ if not .IsMobileView }}<link rel="stylesheet" href="/static/css/mobile.css">{{ end }}
     <style>
         .form-page { max-width: 900px; margin: 0 auto; }
         .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
@@ -181,9 +185,11 @@
         }
     </style>
 </head>
-<body>
-    {{ if .IsMobileView }}{{ template "mobile_topbar" . }}{{ end }}
-    {{ if not .IsMobileView }}
+<body{{ if .IsMobileView }} class="mobile-app-body"{{ end }}>
+    {{ if .IsMobileView }}
+    {{ template "mobile_topbar" . }}
+    {{ template "mobile_settings_sheet" . }}
+    {{ else }}
     <header class="topbar">
         <div class="container nav-layout">
             <a class="brand" href="/dashboard">📚 BookStorage</a>
@@ -206,19 +212,18 @@
                 <a href="/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
-            <div class="form-card catalog-search-card" style="margin-bottom: 1.5rem;">
+            <div class="form-card catalog-search-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}" style="margin-bottom: 1.5rem;">
                 <div class="form-card-header">
                     <div class="icon purple">🔍</div>
-                    <div>
-                        <h2>{{ t .T "work.catalog.title" }}</h2>
-                        <span>{{ t .T "work.catalog.desc" }}</span>
-                    </div>
+                    <div><h2>{{ t .T "work.catalog.title" }}</h2><span>{{ t .T "work.catalog.desc" }}</span></div>
                 </div>
+                <div class="form-card-body">
                 <div class="form-group">
                     <label for="catalog-search">{{ t .T "work.catalog.label" }}</label>
                     <input type="text" id="catalog-search" placeholder="{{ t .T "work.catalog.placeholder" }}" autocomplete="off">
                 </div>
                 <div id="catalog-results" class="catalog-results"></div>
+                </div>
             </div>
 
             <form method="POST" enctype="multipart/form-data" id="add-work-form">
@@ -270,11 +275,12 @@
                     </div>
                 </div>
 
-                <div class="form-card">
+                <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
                     <div class="form-card-header">
                         <div class="icon purple">🔗</div>
                         <div><h2>{{ t .T "work.section.media" }}</h2></div>
                     </div>
+                    {{ if .IsMobileView }}<div class="form-card-body">{{ end }}
                     <div class="form-group">
                         <label for="link">{{ t .T "work.form.link" }}</label>
                         <input id="link" type="url" name="link" placeholder="https://..." oninput="detectReadingSite(this)">
@@ -293,13 +299,15 @@
                         </div>
                         <div class="image-preview" id="image-preview"><img src="" alt="Preview"></div>
                     </div>
+                    {{ if .IsMobileView }}</div>{{ end }}
                 </div>
 
-                <div class="form-card">
+                <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
                     <div class="form-card-header">
                         <div class="icon orange">⭐</div>
                         <div><h2>{{ t .T "work.section.rating" }}</h2></div>
                     </div>
+                    {{ if .IsMobileView }}<div class="form-card-body">{{ end }}
                     <div class="form-group">
                         <label>{{ t .T "work.form.rating" }}</label>
                         <div class="star-rating-picker" id="star-picker">
@@ -318,6 +326,7 @@
                         <label for="notes">{{ t .T "work.form.notes" }}</label>
                         <textarea id="notes" name="notes" placeholder="{{ t .T "work.form.notes.placeholder" }}"></textarea>
                     </div>
+                    {{ if .IsMobileView }}</div>{{ end }}
                 </div>
 
                 <div class="form-actions">
@@ -334,8 +343,12 @@
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
     <script src="/static/js/appearance.js"></script>
-    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
-    {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
+    {{ if .IsMobileView }}
+    {{ template "mobile_shell_scripts" . }}
+    <script src="/static/js/mobile-form.js?v=1"></script>
+    {{ else }}
+    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
+    {{ end }}
     <script nonce="{{ .CSPNonce }}">
         var catalogSearchEmptyMsg = {{ jsstr (t .T "work.form.catalog_search.empty") }};
         var catalogSearchErrMsg = {{ jsstr (t .T "work.form.catalog_search.error") }};

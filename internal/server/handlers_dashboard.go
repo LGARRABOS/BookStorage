@@ -168,5 +168,13 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 	if r.URL.Query().Get("error") == "import" {
 		data["ImportError"] = true
 	}
-	a.renderTemplate(w, r, "dashboard", a.mergeData(r, data))
+	merged := a.mergeData(r, data)
+	if r.URL.Query().Get("partial") == "works" && a.resolveViewMode(w, r) == "mobile" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		if err := a.TemplatesMobile.ExecuteTemplate(w, "mobile_works_list", merged); err != nil {
+			http.Error(w, "template error", http.StatusInternalServerError)
+		}
+		return
+	}
+	a.renderTemplate(w, r, "dashboard", merged)
 }

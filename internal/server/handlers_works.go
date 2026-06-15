@@ -2,6 +2,7 @@ package server
 
 import (
 	"bookstorage/internal/catalog"
+	"bookstorage/internal/i18n"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -39,6 +40,8 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 				data["PrefillCatalogExternalID"] = ext
 			}
 		}
+		lang := a.currentLang(r)
+		data["MobileTopbarTitle"] = i18n.T(lang)["work.add.title"]
 		a.renderTemplate(w, r, "add_work", a.mergeData(r, data))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil { // 10 MB
@@ -175,6 +178,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			}))
 			return
 		}
+		lang := a.currentLang(r)
 		a.renderTemplate(w, r, "edit_work", a.mergeData(r, map[string]any{
 			"Work":                      work,
 			"ReadingTypes":              readingTypes,
@@ -182,6 +186,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			"CatalogPageURL":            catalogPageURL,
 			"CatalogAnilistImageURL":    catalogAnilistImageURL,
 			"CatalogAnilistImageLocked": catalogAnilistImageLocked,
+			"MobileTopbarTitle":         i18n.T(lang)["work.edit.title"],
 		}))
 	case http.MethodPost:
 		if err := r.ParseMultipartForm(10 << 20); err != nil {

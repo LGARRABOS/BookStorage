@@ -112,8 +112,9 @@
         </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
         <div class="form-card-header"><div class="icon blue">📚</div><div><h2>{{ t .T "work.section.series" }}</h2></div></div>
+        <div class="form-card-body">
         <div class="form-row">
             <div class="form-group">
                 <label for="parent_work_id">{{ t .T "work.form.series.parent" }}</label>
@@ -126,10 +127,12 @@
                 <p class="form-hint">{{ t .T "work.form.series.sort.hint" }}</p>
             </div>
         </div>
+        </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
         <div class="form-card-header"><div class="icon purple">🔗</div><div><h2>{{ t .T "work.section.media" }}</h2></div></div>
+        <div class="form-card-body">
         {{ if .CatalogPageURL }}
         <div class="form-group catalog-page-url-block">
             <label for="catalog-page-url">{{ t .T "work.form.catalog_page" }}</label>
@@ -179,10 +182,12 @@
             </div>
             {{ end }}
         </div>
+        </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
         <div class="form-card-header"><div class="icon orange">⭐</div><div><h2>{{ t .T "work.section.rating" }}</h2></div></div>
+        <div class="form-card-body">
         <div class="form-group">
             <label>{{ t .T "work.form.rating" }}</label>
             {{ $rating := .Work.Rating }}
@@ -202,10 +207,12 @@
             <label for="notes">{{ t .T "work.form.notes" }}</label>
             <textarea id="notes" name="notes">{{ if .Work.Notes.Valid }}{{ .Work.Notes.String }}{{ end }}</textarea>
         </div>
+        </div>
     </div>
 
-    <div class="form-card">
+    <div class="form-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}">
         <div class="form-card-header"><div class="icon blue">📅</div><div><h2>{{ t .T "work.section.dates" }}</h2></div></div>
+        <div class="form-card-body">
         <div class="form-row">
             <div class="form-group">
                 <label>{{ t .T "work.form.started_at" }}</label>
@@ -231,6 +238,7 @@
                 </div>
                 <p class="form-hint">{{ t .T "work.form.finished_at.hint" }}</p>
             </div>
+        </div>
         </div>
     </div>
 

@@ -2,103 +2,90 @@
 <!DOCTYPE html>
 <html lang="{{ .Lang }}">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#4f46e5">
-    <link rel="manifest" href="/static/pwa/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    {{ template "mobile_shell_head" . }}
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
-    <link rel="stylesheet" href="/static/css/base.css?v=7">
-    <link rel="stylesheet" href="/static/css/mobile.css?v=7">
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=10">
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=11">
     {{ if .Works }}<link rel="stylesheet" href="/static/css/work-status-picker.css?v=2">{{ end }}
-    <script src="/static/js/appearance-init.js"></script>
 </head>
-<body>
+<body class="mobile-app-body">
     {{ template "mobile_topbar" . }}
+    {{ template "mobile_search_bar" . }}
 
     <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
             {{ template "import_notice" . }}
 
-            <div class="mobile-filters">
-                <select id="mobile-filter-status" autocomplete="off">
-                    <option value="">{{ t .T "dashboard.filter.all" }}</option>
-                    {{ range .ReadingStatus }}
-                    <option value="{{ . }}">{{ translateStatus . $.T }}</option>
-                    {{ end }}
-                </select>
-                <select id="mobile-sort" autocomplete="off">
-                    <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>A→Z</option>
-                    <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
-                    <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.recent_short" }}</option>
-                </select>
-                <select id="mobile-filter-site" autocomplete="off" aria-label="{{ t .T "dashboard.filter.site" }}">
-                    <option value="">{{ t .T "dashboard.filter.site_all" }}</option>
-                    <option value="none">{{ t .T "dashboard.filter.no_site" }}</option>
-                    {{ range .ReadingSites }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
-                </select>
-            </div>
-            <div class="mobile-filter-checks">
-                <label class="mobile-filter-check" title="{{ t .T "dashboard.filter.unfollowed_only" }}">
-                    <input type="checkbox" id="mobile-follow-unfollowed-check">
-                    {{ t .T "dashboard.filter.unfollowed_only" }}
-                </label>
-                <label class="mobile-filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
-                    <input type="checkbox" id="mobile-adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
-                    +18
-                </label>
+            <div class="mobile-toolbar">
+                <div class="mobile-quick-filters" id="mobile-quick-filters" role="tablist">
+                    <button type="button" class="mobile-filter-chip is-active" data-status="" role="tab" aria-selected="true">{{ t .T "dashboard.filter.all" }}</button>
+                    <button type="button" class="mobile-filter-chip" data-status="En cours" role="tab" aria-selected="false">{{ translateStatus "En cours" .T }}</button>
+                    <button type="button" class="mobile-filter-chip" data-status="À lire" role="tab" aria-selected="false">{{ translateStatus "À lire" .T }}</button>
+                    <button type="button" class="mobile-filter-chip" data-status="Terminé" role="tab" aria-selected="false">{{ translateStatus "Terminé" .T }}</button>
+                </div>
+                <button type="button" class="mobile-filters-btn" id="mobile-filters-open" aria-haspopup="dialog">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
+                    <span>{{ t .T "mobile.filters.button" }}</span>
+                    <span class="mobile-filters-badge" id="mobile-filters-badge" hidden>0</span>
+                </button>
             </div>
 
+            <div id="mobile-works-container">
             {{ if .Works }}
-            <section class="works-mobile-list" id="works-mobile-list">
-                {{ range .Works }}
-                {{ $work := . }}
-                <article class="work-mobile-card" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}">
-                    <div class="work-mobile-top">
-                        <h2 class="work-mobile-title">{{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link" target="_blank" rel="noopener noreferrer">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}{{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }} <span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}" style="width:8px;height:8px;border-radius:50%;display:inline-block;vertical-align:middle;"></span>{{ end }}{{ end }}</h2>
-                        {{ if gt .Rating 0 }}
-                        <span class="work-mobile-rating">{{ range seq 5 }}{{ if le . $work.Rating }}★{{ else }}☆{{ end }}{{ end }}</span>
-                        {{ end }}
-                    </div>
-
-                    <div class="work-mobile-meta">
-                        <button type="button" class="work-mobile-tag work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
-                        {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
-                        {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
-                    </div>
-
-                    <div class="work-mobile-chapter-row">
-                        <span class="work-mobile-chapter-label">{{ t $.T "dashboard.chapter" }}</span>
-                        <div class="work-mobile-chapter-controls">
-                            <button type="button" class="btn-chapter btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
-                            <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
-                            <button type="button" class="btn-chapter btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
-                        </div>
-                    </div>
-
-                    <div class="work-mobile-actions">
-                        <a href="/edit/{{ .ID }}" class="btn-mobile btn-mobile--edit">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                            {{ t $.T "dashboard.edit" }}
-                        </a>
-                        <button type="button" class="btn-mobile btn-mobile--delete js-confirm-delete" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
-                            {{ t $.T "dashboard.delete" }}
-                        </button>
-                    </div>
-                </article>
-                {{ end }}
-            </section>
+            {{ template "mobile_works_list" . }}
             {{ else }}
             <section class="mobile-panel mobile-empty-state">
                 <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="mobile-empty-icon"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
                 <h2>{{ t .T "dashboard.empty" }}</h2>
                 <p>{{ t .T "dashboard.empty.start" }}</p>
+                <a href="/add_work" class="btn btn-primary mobile-empty-cta">{{ t .T "dashboard.add_work" }}</a>
             </section>
             {{ end }}
+            </div>
         </div>
     </main>
+
+    <div class="mobile-sheet-overlay" id="mobile-filters-overlay" hidden></div>
+    <div class="mobile-sheet mobile-filters-sheet" id="mobile-filters-sheet" role="dialog" aria-labelledby="mobile-filters-title" hidden>
+        <div class="mobile-sheet-handle" aria-hidden="true"></div>
+        <h2 class="mobile-sheet-title" id="mobile-filters-title">{{ t .T "mobile.filters.title" }}</h2>
+        <div class="mobile-sheet-section">
+            <label class="mobile-sheet-label" for="mobile-filter-status">{{ t .T "dashboard.filter.status" }}</label>
+            <select id="mobile-filter-status" class="mobile-sheet-select" autocomplete="off">
+                <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                {{ range .ReadingStatus }}
+                <option value="{{ . }}">{{ translateStatus . $.T }}</option>
+                {{ end }}
+            </select>
+        </div>
+        <div class="mobile-sheet-section">
+            <label class="mobile-sheet-label" for="mobile-sort">{{ t .T "dashboard.sort" }}</label>
+            <select id="mobile-sort" class="mobile-sheet-select" autocomplete="off">
+                <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>A→Z</option>
+                <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>Z→A</option>
+                <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.recent_short" }}</option>
+            </select>
+        </div>
+        <div class="mobile-sheet-section">
+            <label class="mobile-sheet-label" for="mobile-filter-site">{{ t .T "dashboard.filter.site" }}</label>
+            <select id="mobile-filter-site" class="mobile-sheet-select" autocomplete="off">
+                <option value="">{{ t .T "dashboard.filter.site_all" }}</option>
+                <option value="none">{{ t .T "dashboard.filter.no_site" }}</option>
+                {{ range .ReadingSites }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
+            </select>
+        </div>
+        <div class="mobile-sheet-section mobile-sheet-checks">
+            <label class="mobile-filter-check">
+                <input type="checkbox" id="mobile-follow-unfollowed-check">
+                <span>{{ t .T "dashboard.filter.unfollowed_only" }}</span>
+            </label>
+            <label class="mobile-filter-check">
+                <input type="checkbox" id="mobile-adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
+                <span>{{ t .T "dashboard.filter.only_adult" }}</span>
+            </label>
+        </div>
+        <button type="button" class="btn btn-primary mobile-sheet-apply" id="mobile-filters-apply">{{ t .T "mobile.filters.apply" }}</button>
+        <button type="button" class="mobile-sheet-close" id="mobile-filters-close">{{ t .T "common.close" }}</button>
+    </div>
 
     {{ if .Works }}
     <template id="work-status-menu-tpl">
@@ -110,130 +97,13 @@
     </template>
     {{ end }}
 
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_install_banner" . }}
     {{ template "mobile_bottom_nav" . }}
-    <script src="/static/js/modals.js"></script>
-    <script src="/static/js/appearance.js"></script>
-    <script src="/static/js/mobile-nav.js"></script>
+    {{ template "mobile_shell_scripts" . }}
     {{ if .Works }}<script src="/static/js/work-status-picker.js"></script>{{ end }}
-    <script nonce="{{ .CSPNonce }}">
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('/static/pwa/sw.js').catch(function(){});
-    }
-    </script>
-    <script nonce="{{ .CSPNonce }}">
-    (function () {
-      document.addEventListener("click", function (e) {
-        var del = e.target.closest(".js-confirm-delete");
-        if (!del) return;
-        e.preventDefault();
-        var deleteId = del.getAttribute("data-delete-id");
-        var msg = del.getAttribute("data-confirm") || "Confirm?";
-        showConfirm(msg).then(function (ok) {
-          if (!ok || !deleteId) return;
-          fetch("/api/delete/" + deleteId, { method: "POST", credentials: "same-origin", headers: { "X-Requested-With": "XMLHttpRequest" } })
-            .then(function (r) {
-              if (r.status === 401) { window.location.href = "/login?expired=1"; return null; }
-              return r.json();
-            })
-            .then(function (data) {
-              if (data && data.ok) {
-                var card = del.closest(".work-mobile-card");
-                if (card) card.remove();
-                else window.location.reload();
-              }
-            });
-        });
-      });
-    })();
-
-    (function () {
-      var search = document.getElementById("mobile-search");
-      var status = document.getElementById("mobile-filter-status");
-      var followCheck = document.getElementById("mobile-follow-unfollowed-check");
-      var adultOnlyCheck = document.getElementById("mobile-adult-only-check");
-      var site = document.getElementById("mobile-filter-site");
-      var cards = Array.prototype.slice.call(document.querySelectorAll("#works-mobile-list .work-mobile-card"));
-      var sortSel = document.getElementById("mobile-sort");
-
-      function normalize(v) { return (v || "").toLowerCase(); }
-
-      function applyFilters() {
-        if (!cards.length) return;
-        var q = normalize(search ? search.value : "");
-        var s = status ? normalize(status.value) : "";
-        var fl = followCheck && followCheck.checked ? "unfollowed" : "";
-        var siteVal = site ? site.value : "";
-        cards.forEach(function (card) {
-          var title = normalize(card.getAttribute("data-title"));
-          var cs = normalize(card.getAttribute("data-status"));
-          var rawStatus = card.getAttribute("data-status") || "";
-          var notifyVal = card.getAttribute("data-notify-new-chapters") || "1";
-          var cardSite = card.getAttribute("data-reading-site-id") || "none";
-          var matchFollow = !fl || (fl === "unfollowed" && rawStatus === "En cours" && notifyVal === "0");
-          var matchSite = !siteVal || (siteVal === "none" ? cardSite === "none" : cardSite === siteVal);
-          var visible = (!q || title.indexOf(q) !== -1) && (!s || cs === s) && matchFollow && matchSite;
-          card.style.display = visible ? "" : "none";
-        });
-      }
-
-      function applyServerFilters() {
-        var u = new URL(window.location.href);
-        if (sortSel && sortSel.value && sortSel.value !== "title") {
-          u.searchParams.set("sort", sortSel.value);
-        } else {
-          u.searchParams.delete("sort");
-        }
-        if (adultOnlyCheck && adultOnlyCheck.checked) {
-          u.searchParams.set("adult", "only");
-        } else {
-          u.searchParams.delete("adult");
-        }
-        window.location.href = u.toString();
-      }
-
-      if (search) search.addEventListener("input", applyFilters);
-      if (status) status.addEventListener("change", applyFilters);
-      if (followCheck) followCheck.addEventListener("change", applyFilters);
-      if (site) site.addEventListener("change", applyFilters);
-      document.addEventListener("workstatuschanged", applyFilters);
-      if (adultOnlyCheck) adultOnlyCheck.addEventListener("change", applyServerFilters);
-      if (sortSel) sortSel.addEventListener("change", applyServerFilters);
-    })();
-
-    (function () {
-      document.addEventListener("click", function (e) {
-        var btn = e.target.closest(".btn-chapter-inc, .btn-chapter-dec");
-        if (!btn) return;
-        e.preventDefault();
-        var id = btn.getAttribute("data-work-id");
-        var isInc = btn.classList.contains("btn-chapter-inc");
-        var url = "/api/" + (isInc ? "increment" : "decrement") + "/" + id;
-        var counter = document.getElementById("chapter-count-" + id);
-        btn.disabled = true;
-        fetch(url, { method: "POST", credentials: "same-origin" })
-          .then(function (r) {
-            if (!r.ok) throw new Error(r.status);
-            var cur = parseInt(counter.textContent, 10) || 0;
-            counter.textContent = isInc ? cur + 1 : Math.max(0, cur - 1);
-          })
-          .catch(function () { counter.classList.add("chapter-error"); })
-          .finally(function () { btn.disabled = false; });
-      });
-    })();
-
-    (function () {
-      var lastLoad = Date.now();
-      var STALE_MS = 5000;
-      document.addEventListener("visibilitychange", function () {
-        if (document.visibilityState === "visible" && Date.now() - lastLoad > STALE_MS) {
-          window.location.reload();
-        }
-      });
-      window.addEventListener("pageshow", function (e) {
-        if (e.persisted) window.location.reload();
-      });
-    })();
-    </script>
+    <script src="/static/js/mobile-filters.js?v=1"></script>
+    <script src="/static/js/mobile-dashboard.js?v=1"></script>
 </body>
 </html>
 {{ end }}

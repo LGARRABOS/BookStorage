@@ -1,4 +1,5 @@
-/* SVG safety net */
+/* Mobile dashboard — cards, filters, search */
+
 .mobile-dashboard-page svg,
 .mobile-bottom-nav svg {
   max-width: 100%;
@@ -8,18 +9,18 @@
 /* --- Search bar --- */
 .mobile-search-bar {
   position: relative;
-  margin-bottom: 0.6rem;
 }
 
 .mobile-search-bar input {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--mobile-touch-min, 44px);
   padding: 0.55rem 0.75rem 0.55rem 2.4rem;
   border: 1px solid var(--border-subtle);
   border-radius: 0.75rem;
   background: var(--surface);
   color: var(--text-primary);
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  box-sizing: border-box;
 }
 
 .mobile-search-bar input:focus {
@@ -33,79 +34,106 @@
   left: 0.7rem;
   top: 50%;
   transform: translateY(-50%);
-  width: 18px;
-  height: 18px;
   color: var(--text-muted);
   pointer-events: none;
 }
 
-/* --- Filters --- */
-.mobile-filters {
+/* --- Toolbar: chips + filters btn --- */
+.mobile-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.mobile-quick-filters {
   display: flex;
   gap: 0.35rem;
-  margin-bottom: 0.8rem;
-}
-
-.mobile-filters select {
+  overflow-x: auto;
   flex: 1;
-  min-height: 36px;
-  padding: 0.25rem 0.4rem;
+  min-width: 0;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  padding-bottom: 2px;
+}
+
+.mobile-quick-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.mobile-filter-chip {
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0.3rem 0.75rem;
   border: 1px solid var(--border-subtle);
-  border-radius: 0.6rem;
+  border-radius: 2rem;
   background: var(--surface);
-  color: var(--text-primary);
-  font-size: 0.75rem;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+  touch-action: manipulation;
+  white-space: nowrap;
 }
 
-.mobile-filter-checks {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.55rem 0.75rem;
-  margin-bottom: 0.8rem;
+.mobile-filter-chip.is-active {
+  background: var(--primary-muted);
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
-.mobile-filter-check {
+.mobile-filters-btn {
   display: inline-flex;
   align-items: center;
   gap: 0.3rem;
-  font-size: 0.75rem;
+  flex-shrink: 0;
+  min-height: 34px;
+  padding: 0.3rem 0.65rem;
+  border: 1px solid var(--border-subtle);
+  border-radius: 2rem;
+  background: var(--surface);
   color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-weight: 600;
   cursor: pointer;
-  white-space: nowrap;
-  user-select: none;
+  position: relative;
+  touch-action: manipulation;
 }
 
-.mobile-filter-check input[type="checkbox"] {
-  width: 14px;
-  height: 14px;
-  margin: 0;
-  cursor: pointer;
-  accent-color: var(--primary);
-  flex-shrink: 0;
+.mobile-filters-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--primary);
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+}
+
+.mobile-filters-badge[hidden] {
+  display: none !important;
 }
 
 /* --- Works list --- */
 .works-mobile-list {
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
+  gap: 0.5rem;
 }
 
-/* --- Card --- */
 .work-mobile-card {
   background: var(--surface);
   border: 1px solid var(--border-subtle);
-  border-radius: 1rem;
-  padding: 0.85rem;
-  transition: border-color 0.15s ease;
+  border-radius: 0.85rem;
+  padding: var(--mobile-card-padding, 0.75rem);
 }
 
-.work-mobile-card:active {
-  border-color: var(--primary);
-}
-
-/* Card top row: title + rating */
-.work-mobile-top {
+.work-mobile-row-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
@@ -115,10 +143,12 @@
 
 .work-mobile-title {
   margin: 0;
-  font-size: 0.95rem;
+  font-size: 0.92rem;
   font-weight: 600;
   line-height: 1.35;
   color: var(--text-primary);
+  flex: 1;
+  min-width: 0;
 }
 
 .work-mobile-title-link {
@@ -126,41 +156,41 @@
   text-decoration: none;
 }
 
-.work-mobile-title-link:active {
-  opacity: 0.8;
+.work-mobile-title .site-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  vertical-align: middle;
+  margin-left: 0.25rem;
 }
 
-.work-mobile-rating {
-  color: #f59e0b;
-  font-size: 0.7rem;
-  white-space: nowrap;
-  flex-shrink: 0;
-  line-height: 1;
-  padding-top: 0.15rem;
-}
-
-/* Tags / badges */
-.work-mobile-meta {
+.work-mobile-tags-sub {
   display: flex;
   gap: 0.3rem;
   flex-wrap: wrap;
-  margin-bottom: 0.55rem;
+  margin-bottom: 0.4rem;
 }
 
 .work-mobile-tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
   padding: 0.15rem 0.5rem;
   border-radius: 1rem;
   font-size: 0.68rem;
   font-weight: 600;
-  letter-spacing: 0.01em;
   background: var(--primary-muted);
   color: var(--primary);
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .work-mobile-tag--type {
   background: rgba(14, 165, 233, 0.12);
   color: #0ea5e9;
+  cursor: default;
 }
 
 [data-theme="dark"] .work-mobile-tag--type {
@@ -171,37 +201,39 @@
 .work-mobile-tag--adult {
   background: rgba(239, 68, 68, 0.12);
   color: #ef4444;
+  cursor: default;
 }
 
-/* Chapter row */
-.work-mobile-chapter-row {
+.work-mobile-row-bottom {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0.45rem 0;
+  gap: 0.5rem;
+  padding-top: 0.45rem;
   border-top: 1px solid var(--border-subtle);
-  border-bottom: 1px solid var(--border-subtle);
-  margin-bottom: 0.55rem;
+}
+
+.work-mobile-chapter-block {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .work-mobile-chapter-label {
-  font-size: 0.78rem;
-  font-weight: 500;
+  font-size: 0.72rem;
+  font-weight: 600;
   color: var(--text-muted);
   text-transform: uppercase;
   letter-spacing: 0.04em;
-}
-
-.work-mobile-chapter-controls {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 .work-mobile-chapter-count {
-  font-size: 1.15rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  min-width: 2.2rem;
+  min-width: 1.8rem;
   text-align: center;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
@@ -211,26 +243,35 @@
   color: #ef4444;
 }
 
+.work-mobile-chapter-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
 .btn-chapter {
   -webkit-appearance: none;
   appearance: none;
   border: 0;
   outline: 0;
-  width: 36px;
-  height: 36px;
+  width: var(--mobile-touch-min, 44px);
+  height: var(--mobile-touch-min, 44px);
+  max-width: 44px;
+  max-height: 44px;
   border-radius: 50%;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.15rem;
+  font-size: 1.2rem;
   font-weight: 700;
   line-height: 1;
   cursor: pointer;
   transition: transform 0.1s ease, opacity 0.15s ease;
+  touch-action: manipulation;
 }
 
 .btn-chapter:active {
-  transform: scale(0.88);
+  transform: scale(0.9);
 }
 
 .btn-chapter:disabled {
@@ -249,62 +290,75 @@
   color: var(--text-muted);
 }
 
-.btn-chapter-dec:active {
-  background: var(--primary-muted);
-}
-
-/* Actions */
-.work-mobile-actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0.45rem;
-}
-
-.btn-mobile {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.35rem;
-  min-height: 38px;
-  padding: 0.35rem 0.5rem;
-  border-radius: 0.6rem;
-  font-size: 0.78rem;
-  font-weight: 600;
-  text-decoration: none;
-  transition: background 0.15s ease, transform 0.1s ease;
-}
-
-.btn-mobile:active {
-  transform: scale(0.96);
-}
-
-.btn-mobile svg {
-  width: 15px;
-  height: 15px;
+/* --- Action menu --- */
+.work-mobile-menu-wrap {
+  position: relative;
   flex-shrink: 0;
 }
 
-.btn-mobile--edit {
+.work-mobile-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--mobile-touch-min, 44px);
+  min-height: var(--mobile-touch-min, 44px);
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 1.35rem;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 0.5rem;
+  touch-action: manipulation;
+}
+
+.work-mobile-menu-btn[aria-expanded="true"] {
   background: var(--primary-muted);
   color: var(--primary);
 }
 
-.btn-mobile--edit:active {
-  background: var(--primary);
-  color: #fff;
+.work-mobile-menu {
+  position: absolute;
+  right: 0;
+  bottom: calc(100% + 4px);
+  z-index: 50;
+  min-width: 150px;
+  padding: 0.35rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border-subtle);
+  border-radius: 0.65rem;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
-.btn-mobile--delete {
-  background: rgba(239, 68, 68, 0.1);
+.work-mobile-menu[hidden] {
+  display: none !important;
+}
+
+.work-mobile-menu-item {
+  display: block;
+  width: 100%;
+  padding: 0.6rem 0.85rem;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
+  box-sizing: border-box;
+}
+
+.work-mobile-menu-item:hover,
+.work-mobile-menu-item:focus-visible {
+  background: rgba(129, 140, 248, 0.1);
+}
+
+.work-mobile-menu-item--danger {
   color: #ef4444;
 }
 
-.btn-mobile--delete:active {
-  background: #ef4444;
-  color: #fff;
-}
-
-/* Empty state */
+/* --- Empty state --- */
 .mobile-empty-state {
   text-align: center;
   padding: 2.5rem 1.5rem;
@@ -323,7 +377,13 @@
 }
 
 .mobile-empty-state p {
-  margin: 0;
+  margin: 0 0 1rem;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.mobile-empty-cta {
+  display: inline-flex;
+  min-height: var(--mobile-touch-min, 44px);
+  align-items: center;
 }
