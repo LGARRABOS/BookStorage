@@ -392,3 +392,109 @@
   min-height: var(--mobile-touch-min, 44px);
   align-items: center;
 }
+
+/* --- Cover (masquée en portrait, visible en paysage) --- */
+.work-mobile-cover {
+  display: none;
+  flex-shrink: 0;
+  width: 56px;
+  border-radius: 0.55rem;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--primary-muted), rgba(251, 146, 60, 0.12));
+  align-self: stretch;
+}
+
+.work-mobile-cover img {
+  width: 100%;
+  height: 100%;
+  min-height: 84px;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+}
+
+.work-mobile-cover .no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 84px;
+  width: 100%;
+  font-size: 1.5rem;
+  opacity: 0.35;
+}
+
+.work-mobile-card-body {
+  flex: 1;
+  min-width: 0;
+}
+
+/* --- Paysage : grille + couvertures --- */
+@media (orientation: landscape) {
+  .mobile-dashboard-page .mobile-toolbar {
+    margin-bottom: 0.55rem;
+  }
+
+  .works-mobile-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 0.55rem;
+    align-items: stretch;
+  }
+
+  .work-mobile-card {
+    display: flex;
+    flex-direction: row;
+    gap: 0.6rem;
+    align-items: stretch;
+    padding: 0.6rem;
+  }
+
+  .work-mobile-cover {
+    display: block;
+    width: 64px;
+  }
+
+  .work-mobile-cover img,
+  .work-mobile-cover .no-image {
+    min-height: 96px;
+  }
+
+  .work-mobile-card-body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+  }
+
+  .work-mobile-row-bottom {
+    padding-top: 0.35rem;
+  }
+
+  .btn-chapter {
+    width: 38px;
+    height: 38px;
+    max-width: 38px;
+    max-height: 38px;
+    font-size: 1.1rem;
+  }
+
+  .work-mobile-menu-btn {
+    min-width: 38px;
+    min-height: 38px;
+  }
+}
+
+/* Tablettes / grands écrans en paysage : colonnes plus larges */
+@media (orientation: landscape) and (min-width: 720px) {
+  .works-mobile-list {
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  }
+
+  .work-mobile-cover {
+    width: 72px;
+  }
+
+  .work-mobile-cover img,
+  .work-mobile-cover .no-image {
+    min-height: 108px;
+  }
+}

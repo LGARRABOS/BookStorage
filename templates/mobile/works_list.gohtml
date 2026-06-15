@@ -4,34 +4,64 @@
     {{ range .Works }}
     {{ $work := . }}
     <article class="work-mobile-card" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}"{{ if and .Link.Valid .Link.String }} data-link="{{ .Link.String }}"{{ end }}>
-        <div class="work-mobile-row-top">
-            <h2 class="work-mobile-title">
-                {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link mobile-external-link" target="_blank" rel="noopener noreferrer external">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}
-                {{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }}<span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}"></span>{{ end }}{{ end }}
-            </h2>
-            <button type="button" class="work-mobile-tag work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
+        <div class="work-mobile-cover">
+            {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
+            {{ if $anilistCover }}
+                {{ $imgUrl := work_image_url $anilistCover }}
+                {{ if $imgUrl }}
+                    <img src="{{ $imgUrl }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">📖</span>
+                {{ end }}
+            {{ else if .ImagePath.Valid }}
+                {{ $imgUrl := work_image_url .ImagePath.String }}
+                {{ if $imgUrl }}
+                    <img src="{{ $imgUrl }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">📖</span>
+                {{ end }}
+            {{ else }}
+                {{ $extCover := index $.CatalogCoverByWorkID .ID }}
+                {{ if $extCover }}
+                    <img src="{{ $extCover }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                    <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">📖</span>
+                {{ end }}
+            {{ end }}
         </div>
-        {{ if or (and .ReadingType.Valid .ReadingType.String) (and .IsAdult.Valid (eq .IsAdult.Int64 1)) }}
-        <div class="work-mobile-tags-sub">
-            {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
-            {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
-        </div>
-        {{ end }}
-        <div class="work-mobile-row-bottom">
-            <div class="work-mobile-chapter-block">
-                <span class="work-mobile-chapter-label">{{ t $.T "dashboard.chapter" }}</span>
-                <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
-                <div class="work-mobile-chapter-controls">
-                    <button type="button" class="btn-chapter btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
-                    <button type="button" class="btn-chapter btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
-                </div>
+        <div class="work-mobile-card-body">
+            <div class="work-mobile-row-top">
+                <h2 class="work-mobile-title">
+                    {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-title-link mobile-external-link" target="_blank" rel="noopener noreferrer external">{{ .Title }}</a>{{ else }}{{ .Title }}{{ end }}
+                    {{ if .ReadingSiteID.Valid }}{{ $rs := index $.ReadingSiteMap (int .ReadingSiteID.Int64) }}{{ if $rs.Name }}<span class="site-dot site-dot--{{ $rs.ProbeStatus }}" title="{{ $rs.Name }}"></span>{{ end }}{{ end }}
+                </h2>
+                <button type="button" class="work-mobile-tag work-status-picker" data-work-id="{{ .ID }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "dashboard.status.change" }}">{{ if .Status.Valid }}{{ translateStatus .Status.String $.T }}{{ else }}—{{ end }}</button>
             </div>
-            <div class="work-mobile-menu-wrap">
-                <button type="button" class="work-mobile-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "mobile.actions.menu" }}">⋯</button>
-                <div class="work-mobile-menu" role="menu" hidden>
-                    <a href="/edit/{{ .ID }}" class="work-mobile-menu-item" role="menuitem">{{ t $.T "mobile.actions.edit" }}</a>
-                    {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-menu-item mobile-external-link" role="menuitem" target="_blank" rel="noopener noreferrer external">{{ t $.T "mobile.actions.open_link" }}</a>{{ end }}
-                    <button type="button" class="work-mobile-menu-item work-mobile-menu-item--danger js-confirm-delete" role="menuitem" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">{{ t $.T "mobile.actions.delete" }}</button>
+            {{ if or (and .ReadingType.Valid .ReadingType.String) (and .IsAdult.Valid (eq .IsAdult.Int64 1)) }}
+            <div class="work-mobile-tags-sub">
+                {{ if .ReadingType.Valid }}<span class="work-mobile-tag work-mobile-tag--type">{{ .ReadingType.String }}</span>{{ end }}
+                {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="work-mobile-tag work-mobile-tag--adult">18+</span>{{ end }}
+            </div>
+            {{ end }}
+            <div class="work-mobile-row-bottom">
+                <div class="work-mobile-chapter-block">
+                    <span class="work-mobile-chapter-label">{{ t $.T "dashboard.chapter" }}</span>
+                    <span class="work-mobile-chapter-count" id="chapter-count-{{ .ID }}">{{ .Chapter }}</span>
+                    <div class="work-mobile-chapter-controls">
+                        <button type="button" class="btn-chapter btn-chapter-dec" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} -1">−</button>
+                        <button type="button" class="btn-chapter btn-chapter-inc" data-work-id="{{ .ID }}" aria-label="{{ t $.T "dashboard.chapter" }} +1">+</button>
+                    </div>
+                </div>
+                <div class="work-mobile-menu-wrap">
+                    <button type="button" class="work-mobile-menu-btn" aria-haspopup="menu" aria-expanded="false" aria-label="{{ t $.T "mobile.actions.menu" }}">⋯</button>
+                    <div class="work-mobile-menu" role="menu" hidden>
+                        <a href="/edit/{{ .ID }}" class="work-mobile-menu-item" role="menuitem">{{ t $.T "mobile.actions.edit" }}</a>
+                        {{ if .Link.Valid }}<a href="{{ .Link.String }}" class="work-mobile-menu-item mobile-external-link" role="menuitem" target="_blank" rel="noopener noreferrer external">{{ t $.T "mobile.actions.open_link" }}</a>{{ end }}
+                        <button type="button" class="work-mobile-menu-item work-mobile-menu-item--danger js-confirm-delete" role="menuitem" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">{{ t $.T "mobile.actions.delete" }}</button>
+                    </div>
                 </div>
             </div>
         </div>
