@@ -101,6 +101,11 @@
   touch-action: manipulation;
 }
 
+.mobile-filters-btn svg {
+  stroke: currentColor;
+  flex-shrink: 0;
+}
+
 .mobile-filters-badge {
   display: inline-flex;
   align-items: center;

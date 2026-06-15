@@ -4,6 +4,10 @@
   --mobile-touch-min: 44px;
   --mobile-card-padding: 0.75rem;
   --mobile-bottom-nav-height: 52px;
+  --mobile-chrome-fg: #f1f5f9;
+  --mobile-chrome-fg-muted: #94a3b8;
+  --mobile-chrome-btn-bg: rgba(255, 255, 255, 0.08);
+  --mobile-chrome-btn-border: rgba(148, 163, 184, 0.28);
 }
 
 .mobile-app-body {
@@ -15,6 +19,19 @@
   position: sticky;
   top: 0;
   z-index: 100;
+  color: var(--mobile-chrome-fg);
+}
+
+.topbar-mobile-v2 .mobile-brand {
+  color: #f8fafc;
+}
+
+.topbar-mobile-v2 .mobile-topbar-title {
+  color: #f8fafc;
+}
+
+.topbar-mobile-v2 .mobile-topbar-back {
+  color: var(--mobile-chrome-fg);
 }
 
 .topbar-mobile-v2 .nav-layout-mobile {
@@ -33,6 +50,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  color: inherit;
 }
 
 .mobile-topbar-back {
@@ -71,22 +89,32 @@
   min-width: var(--mobile-touch-min);
   min-height: var(--mobile-touch-min);
   padding: 0;
-  border: none;
-  background: transparent;
-  color: inherit;
+  border: 1px solid var(--mobile-chrome-btn-border);
+  background: var(--mobile-chrome-btn-bg);
+  color: var(--mobile-chrome-fg);
   cursor: pointer;
-  border-radius: 0.5rem;
-  transition: background 0.15s ease;
+  border-radius: 0.55rem;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   touch-action: manipulation;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.mobile-icon-btn svg {
+  stroke: currentColor;
+  flex-shrink: 0;
 }
 
 .mobile-icon-btn:hover,
 .mobile-icon-btn:focus-visible {
-  background: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.14);
+  border-color: rgba(148, 163, 184, 0.45);
 }
 
 .mobile-icon-btn[aria-expanded="true"] {
-  color: var(--primary, #818cf8);
+  color: #c7d2fe;
+  background: rgba(129, 140, 248, 0.22);
+  border-color: rgba(129, 140, 248, 0.45);
 }
 
 /* --- Search panel --- */
@@ -94,6 +122,7 @@
   background: var(--topbar-bg, rgba(15, 23, 42, 0.96));
   border-bottom: 1px solid rgba(148, 163, 184, 0.15);
   padding: 0.35rem 0 0.65rem;
+  color: var(--mobile-chrome-fg);
 }
 
 .mobile-search-panel[hidden] {
@@ -349,7 +378,7 @@
   align-items: center;
   justify-content: center;
   gap: 3px;
-  color: #64748b;
+  color: var(--mobile-chrome-fg-muted);
   font-size: 0.6rem;
   font-weight: 500;
   text-decoration: none;
@@ -357,12 +386,16 @@
   touch-action: manipulation;
 }
 
+.mobile-bottom-link svg {
+  stroke: currentColor;
+}
+
 .mobile-bottom-link.is-active {
-  color: var(--primary, #818cf8);
+  color: #a5b4fc;
 }
 
 .mobile-bottom-link--add {
-  color: var(--primary, #818cf8);
+  color: #a5b4fc;
 }
 
 .mobile-nav-icon {
