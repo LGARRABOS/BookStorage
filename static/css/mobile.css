@@ -12,6 +12,41 @@
 
 .mobile-app-body {
   -webkit-tap-highlight-color: transparent;
+  /* Évite les bandes claires sur les côtés (safe-area du body) */
+  padding-left: 0;
+  padding-right: 0;
+}
+
+/* Topbar / nav du bas pleine largeur + safe-area sur le chrome */
+.topbar-mobile-v2 {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+.mobile-bottom-nav {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+.mobile-search-panel {
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+  box-sizing: border-box;
+}
+
+.topbar-mobile-v2 .container {
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.page-body.mobile-page .container {
+  padding-left: max(0.75rem, env(safe-area-inset-left, 0px));
+  padding-right: max(0.75rem, env(safe-area-inset-right, 0px));
+  box-sizing: border-box;
 }
 
 /* --- Topbar v2 --- */
@@ -36,11 +71,20 @@
 
 .topbar-mobile-v2 .nav-layout-mobile {
   display: flex;
+  flex-direction: row;
   align-items: center;
   justify-content: space-between;
   gap: 0.5rem;
   padding: 0.55rem 0;
   min-height: var(--mobile-touch-min);
+  flex-wrap: nowrap;
+}
+
+/* Priorité sur base.css @media (max-width: 768px) .nav-layout { column } */
+.topbar-mobile-v2 .nav-layout.nav-layout-mobile {
+  flex-direction: row !important;
+  align-items: center !important;
+  gap: 0.5rem !important;
 }
 
 .mobile-brand {
@@ -490,56 +534,28 @@
   gap: 0.65rem;
 }
 
-/* --- Paysage : barre du bas compacte, contenu dégagé --- */
+/* Paysage : topbar sur une ligne, boutons toujours visibles */
 @media (orientation: landscape) {
-  :root {
-    --mobile-bottom-nav-height: 44px;
-  }
-
-  .mobile-bottom-nav {
-    height: var(--mobile-bottom-nav-height);
-  }
-
-  .mobile-bottom-link {
-    font-size: 0.55rem;
-    gap: 2px;
-    padding: 0 0.15rem;
-    line-height: 1.1;
-    text-align: center;
-  }
-
-  .mobile-bottom-link span {
-    max-width: 100%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .mobile-nav-icon {
-    width: 18px;
-    height: 18px;
-  }
-
-  .mobile-bottom-link--add .mobile-nav-icon {
-    width: 20px;
-    height: 20px;
-  }
-
-  .page-body.mobile-page {
-    padding-bottom: calc(var(--mobile-bottom-nav-height) + env(safe-area-inset-bottom) + 0.65rem);
-  }
-
-  .mobile-install-banner {
-    display: none !important;
-  }
-
   .topbar-mobile-v2 .nav-layout-mobile {
-    padding: 0.35rem 0;
+    padding: 0.4rem 0;
     min-height: 40px;
+  }
+
+  .topbar-mobile-v2 .mobile-brand {
+    font-size: 0.95rem;
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+  }
+
+  .mobile-topbar-actions {
+    flex: 0 0 auto;
+    gap: 0.25rem;
   }
 
   .mobile-icon-btn {
     min-width: 40px;
     min-height: 40px;
+    flex-shrink: 0;
   }
 }
