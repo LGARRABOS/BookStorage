@@ -106,8 +106,9 @@ bsctl_update_secure_queue_dir() {
 }
 
 # Release tag verification before checkout/build (root update chain).
-# BSCTL_RELEASE_GPG_KEY (or BOOKSTORAGE_RELEASE_GPG_KEY): trusted GPG key ID/fingerprint.
-# When unset, tag updates are refused unless BSCTL_UPDATE_SKIP_VERIFY=1 (unsafe override).
+# BSCTL_RELEASE_GPG_KEY (or BOOKSTORAGE_RELEASE_GPG_KEY): when set, require a GPG-signed tag
+# from that trusted key ID/fingerprint (import the public key first).
+# When unset, verification is skipped (warn only). BSCTL_UPDATE_SKIP_VERIFY=1 forces skip even if a key is set.
 bsctl_update_verify_release_tag() {
     local tag="$1"
     if [[ "${BSCTL_UPDATE_SKIP_VERIFY:-}" == "1" ]]; then
@@ -117,10 +118,9 @@ bsctl_update_verify_release_tag() {
 
     local gpg_key="${BSCTL_RELEASE_GPG_KEY:-${BOOKSTORAGE_RELEASE_GPG_KEY:-}}"
     if [[ -z "$gpg_key" ]]; then
-        print_error "Refusing tag update: no release signing key configured."
-        printf "Set ${BOLD}BSCTL_RELEASE_GPG_KEY${NC} to a trusted GPG key ID/fingerprint (import the public key first),\n"
-        printf "or ${BOLD}BSCTL_UPDATE_SKIP_VERIFY=1${NC} to override (unsafe; not for production).\n"
-        return 1
+        print_warn "BSCTL_RELEASE_GPG_KEY unset — release tag signature verification skipped."
+        printf "Set ${BOLD}BSCTL_RELEASE_GPG_KEY${NC} to require GPG-signed release tags (import the public key first).\n"
+        return 0
     fi
 
     if ! command -v gpg >/dev/null 2>&1; then
@@ -572,7 +572,7 @@ cmd_help() {
     printf "    ${GREEN}update main${NC}    Update from origin/main\n"
     printf "    ${GREEN}update <branch>${NC}  Update from origin/<branch>\n"
     printf "                      Tag updates verify a GPG-signed release when ${GREEN}BSCTL_RELEASE_GPG_KEY${NC} is set;\n"
-    printf "                      otherwise refused unless ${GREEN}BSCTL_UPDATE_SKIP_VERIFY=1${NC} (unsafe).\n"
+    printf "                      otherwise skipped (warn). ${GREEN}BSCTL_UPDATE_SKIP_VERIFY=1${NC} forces skip.\n"
     printf "                      Queue dir ${GREEN}/var/lib/bookstorage/update${NC} must be root-only (mode 700).\n"
     printf "                      After checkout, a failed build/install/restart rolls back git + binaries\n"
     printf "                      and restarts ${APP_NAME}. Set ${GREEN}BSCTL_UPDATE_NO_ROLLBACK=1${NC} to disable.\n"
@@ -609,8 +609,8 @@ cmd_help() {
     printf "    - BOOKSTORAGE_SECRET_KEY   (default: dev-secret-change-me)\n"
     printf "    - BOOKSTORAGE_METRICS_TOKEN (optional) secures GET /metrics for Prometheus scrapers\n"
     printf "    - ${GREEN}BSCTL_UPDATE_TAG${NC}         (optional) e.g. v4.0.1 — non-interactive ${GREEN}bsctl update${NC}\n"
-    printf "    - ${GREEN}BSCTL_RELEASE_GPG_KEY${NC}   trusted GPG key ID/fingerprint for signed release tags\n"
-    printf "    - ${GREEN}BSCTL_UPDATE_SKIP_VERIFY${NC} set to 1 to skip tag signature check (unsafe)\n"
+    printf "    - ${GREEN}BSCTL_RELEASE_GPG_KEY${NC}   trusted GPG key ID/fingerprint for signed release tags (optional)\n"
+    printf "    - ${GREEN}BSCTL_UPDATE_SKIP_VERIFY${NC} set to 1 to skip tag signature check\n"
     printf "    Prometheus sidecar (not run by ${GREEN}bsctl update${NC}): ${BLUE}INSTALL_APP_DIR=/opt/bookstorage bash /opt/bookstorage/deploy/setup-bookstorage-prometheus.sh${NC}\n"
     printf "\n"
     printf "${BOLD}TAB COMPLETION (bash)${NC}\n"
