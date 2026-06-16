@@ -27,9 +27,10 @@ type apiWork struct {
 	StartedAt         string `json:"started_at,omitempty"`
 	LastChapterAt     string `json:"last_chapter_at,omitempty"`
 	FinishedAt        string `json:"finished_at,omitempty"`
+	LinkStatus        string `json:"link_status,omitempty"`
 }
 
-func workRowToAPIWork(w workRow) apiWork {
+func workRowToAPIWork(w workRow, siteMap map[int]readingSite) apiWork {
 	out := apiWork{
 		ID:                w.ID,
 		Title:             w.Title,
@@ -69,6 +70,11 @@ func workRowToAPIWork(w workRow) apiWork {
 	}
 	if w.FinishedAt.Valid {
 		out.FinishedAt = w.FinishedAt.String
+	}
+	if siteMap != nil {
+		if status := effectiveLinkDotStatus(w, siteMap); status != "none" {
+			out.LinkStatus = status
+		}
 	}
 	return out
 }
@@ -203,13 +209,14 @@ func (a *App) HandleAPIWorksList(w http.ResponseWriter, r *http.Request) {
 	}
 	defer func() { _ = rows.Close() }()
 
+	siteMap := a.loadReadingSiteStatusMap(userID)
 	var works []apiWork
 	for rows.Next() {
 		var wr workRow
 		if err := scanFullWorkRow(&wr, rows); err != nil {
 			continue
 		}
-		works = append(works, workRowToAPIWork(wr))
+		works = append(works, workRowToAPIWork(wr, siteMap))
 	}
 
 	totalPages := 0
@@ -254,7 +261,7 @@ func (a *App) HandleAPIWorksDetail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": workRowToAPIWork(wr)})
+	a.apiWriteJSON(w, http.StatusOK, map[string]any{"data": workRowToAPIWork(wr, a.loadReadingSiteStatusMap(userID))})
 }
 
 func (a *App) HandleAPIWorksCreate(w http.ResponseWriter, r *http.Request) {
@@ -524,7 +531,7 @@ func (a *App) HandleAPIWorksUpdate(w http.ResponseWriter, r *http.Request) {
 	if err := scanFullWorkRow(&wr, a.DB.QueryRow(
 		`SELECT `+sqlWorkRowFull+` FROM works WHERE id = ? AND user_id = ?`, workID, userID,
 	)); err == nil {
-		a.EmitWebhookEvent(userID, webhookEventWorkUpdated, map[string]any{"work": workRowToAPIWork(wr)})
+		a.EmitWebhookEvent(userID, webhookEventWorkUpdated, map[string]any{"work": workRowToAPIWork(wr, nil)})
 		if chapterChanged {
 			a.EmitWebhookEvent(userID, webhookEventWorkChapterChanged, map[string]any{
 				"work_id": workID,

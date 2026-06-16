@@ -215,6 +215,7 @@ func main() {
 	mux.HandleFunc("POST /reading-sites/probe", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteProbe)))
 	mux.HandleFunc("POST /reading-sites/probe-all", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleReadingSiteProbeAll)))
 	mux.HandleFunc("GET /api/reading-sites/match", app.RequireLogin(app.HandleAPIReadingSiteMatch))
+	mux.HandleFunc("GET /api/reading-sites", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksRead)(app.HandleAPIReadingSitesList)))
 	mux.HandleFunc("/tools", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleTools)))
 	mux.HandleFunc("/tools/csv-import", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleToolsCSVImport)))
 	mux.HandleFunc("/tools/duplicates", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleDuplicates)))

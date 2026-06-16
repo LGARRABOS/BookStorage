@@ -134,6 +134,8 @@ func apiTokenPathAllowed(method, path string) bool {
 		return true
 	case path == "/api/stats" && method == http.MethodGet:
 		return true
+	case path == "/api/reading-sites" && method == http.MethodGet:
+		return true
 	case strings.HasPrefix(path, "/api/works/") && len(path) > len("/api/works/"):
 		switch method {
 		case http.MethodGet, http.MethodPatch, http.MethodDelete:

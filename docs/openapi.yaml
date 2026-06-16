@@ -158,6 +158,26 @@ paths:
                       total_chapters: { type: integer }
                       avg_rating: { type: number }
                       rated_count: { type: integer }
+  /api/reading-sites:
+    get:
+      summary: List reading sites with probe status
+      operationId: listReadingSites
+      security:
+        - bearerAuth: [works:read]
+        - cookieAuth: []
+      responses:
+        "200":
+          description: Reading sites
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    type: array
+                    items: { $ref: "#/components/schemas/ReadingSite" }
+        "401": { $ref: "#/components/responses/Unauthorized" }
+        "403": { $ref: "#/components/responses/Forbidden" }
   /api/increment/{id}:
     post:
       summary: Increment chapter by 1
@@ -217,7 +237,7 @@ components:
       scheme: bearer
       description: |
         API token from Profile → API tokens. Scopes `works:read`, `works:write`.
-        Tokens are only honored on `/api/works*`, `/api/stats`, and chapter mutation endpoints in this spec.
+        Tokens are only honored on `/api/works*`, `/api/reading-sites`, `/api/stats`, and chapter mutation endpoints in this spec.
     cookieAuth:
       type: apiKey
       in: cookie
@@ -243,6 +263,19 @@ components:
         started_at: { type: string }
         last_chapter_at: { type: string }
         finished_at: { type: string }
+        link_status:
+          type: string
+          description: Effective link availability for in-progress works (up, down, degraded, unknown)
+    ReadingSite:
+      type: object
+      properties:
+        id: { type: integer }
+        name: { type: string }
+        base_url: { type: string }
+        probe_status: { type: string, enum: [up, down, degraded, unknown] }
+        last_probe_at: { type: string }
+        probe_http_status: { type: integer, nullable: true }
+        probe_detail: { type: string }
     WorkCreate:
       type: object
       required: [title]
