@@ -63,7 +63,10 @@ func TestNewProbeHTTPClient_blocksDialToPrivateIP(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = client.Do(req)
+	resp, err := client.Do(req)
+	if resp != nil {
+		defer func() { _ = resp.Body.Close() }()
+	}
 	if err == nil {
 		t.Fatal("expected dial error to private IP")
 	}

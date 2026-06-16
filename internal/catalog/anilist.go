@@ -134,12 +134,8 @@ func SearchAnilist(query string, limit int) ([]AnilistResult, error) {
 		},
 	}
 	body, _ := json.Marshal(payload)
-	resp, err := anilistPost(body)
-	if err != nil {
-		return nil, wrapAnilistTransport(err)
-	}
 	var out anilistResponse
-	if err := decodeAnilistResponse(resp, &out); err != nil {
+	if err := anilistPostAndDecode(body, &out); err != nil {
 		return nil, err
 	}
 	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {

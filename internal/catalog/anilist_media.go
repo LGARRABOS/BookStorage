@@ -137,12 +137,8 @@ func GetMediaByID(id int) (*MediaDetail, error) {
 	if err != nil {
 		return nil, err
 	}
-	resp, err := anilistPost(raw)
-	if err != nil {
-		return nil, wrapAnilistTransport(err)
-	}
 	var out mediaByIDResponse
-	if err := decodeAnilistResponse(resp, &out); err != nil {
+	if err := anilistPostAndDecode(raw, &out); err != nil {
 		return nil, err
 	}
 	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {
@@ -289,12 +285,8 @@ func BrowseMedia(p BrowseMediaParams) ([]AnilistResult, int, error) {
 	if err != nil {
 		return nil, 0, err
 	}
-	resp, err := anilistPost(raw)
-	if err != nil {
-		return nil, 0, wrapAnilistTransport(err)
-	}
 	var out browsePageResponse
-	if err := decodeAnilistResponse(resp, &out); err != nil {
+	if err := anilistPostAndDecode(raw, &out); err != nil {
 		return nil, 0, err
 	}
 	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {

@@ -45,8 +45,8 @@ func anilistErrorMessages(items []anilistGraphQLErrorItem) []string {
 }
 
 // decodeAnilistResponse checks HTTP status and decodes JSON into out.
+// The caller must close resp.Body (typically via defer right after a successful Do/Post).
 func decodeAnilistResponse(resp *http.Response, out any) error {
-	defer func() { _ = resp.Body.Close() }()
 	if err := classifyAnilistHTTPStatus(resp.StatusCode); err != nil {
 		return err
 	}
@@ -54,6 +54,16 @@ func decodeAnilistResponse(resp *http.Response, out any) error {
 		return wrapAnilistTransport(err)
 	}
 	return nil
+}
+
+// anilistPostAndDecode POSTs to the AniList API and decodes the JSON response.
+func anilistPostAndDecode(body []byte, out any) error {
+	resp, err := anilistPost(body)
+	if err != nil {
+		return wrapAnilistTransport(err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	return decodeAnilistResponse(resp, out)
 }
 
 func firstGraphQLError(messages []string) error {

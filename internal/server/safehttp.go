@@ -70,7 +70,11 @@ func newSafeHTTPClient(cfg safeHTTPClientConfig) *http.Client {
 		DialContext: safeTransportDialContext(cfg.dialTimeout),
 	}
 	if cfg.tlsMinVersion != 0 {
-		transport.TLSClientConfig = &tls.Config{MinVersion: cfg.tlsMinVersion}
+		minVer := cfg.tlsMinVersion
+		if minVer < tls.VersionTLS12 {
+			minVer = tls.VersionTLS12
+		}
+		transport.TLSClientConfig = &tls.Config{MinVersion: minVer} //nolint:gosec // clamped to TLS 1.2+
 	}
 	return &http.Client{
 		Timeout:       cfg.timeout,
