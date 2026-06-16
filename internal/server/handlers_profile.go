@@ -306,6 +306,7 @@ func (a *App) renderProfilePage(w http.ResponseWriter, r *http.Request, userID i
 		"GoogleOAuthError":   strings.TrimSpace(q.Get("google_error")),
 		"ReadingStatsReset":  strings.TrimSpace(q.Get("reading_stats_reset")),
 		"APITokenRevoked":    q.Get("api_token_revoked") == "1",
+		"HasAPIToken":        len(apiTokens) > 0,
 		"WebhookUpdated":     q.Get("webhook_updated") == "1",
 		"WebhookDeleted":     q.Get("webhook_deleted") == "1",
 		"WebhookTestSent":    q.Get("webhook_test") == "1",
@@ -352,7 +353,9 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	switch r.Method {
 	case http.MethodGet:
-		a.renderProfilePage(w, r, userID, map[string]any{"User": u})
+		extra := map[string]any{"User": u}
+		a.applyAPITokenFlashFromRequest(r, userID, extra)
+		a.renderProfilePage(w, r, userID, extra)
 	case http.MethodPost:
 		if strings.HasPrefix(r.Header.Get("Content-Type"), "multipart/form-data") {
 			if err := r.ParseMultipartForm(10 << 20); err != nil {

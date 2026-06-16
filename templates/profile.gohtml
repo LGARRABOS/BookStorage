@@ -77,6 +77,14 @@
         .stats-reset-box h3 { margin: 0 0 0.35rem 0; color: #ca8a04; font-size: 0.95rem; }
         .stats-reset-box p { margin: 0 0 0.75rem 0; font-size: 0.84rem; color: var(--text-secondary); }
         .notice { margin: 0 0 1rem 0; padding: 0.75rem 0.9rem; border-radius: 0.75rem; background: rgba(34, 197, 94, 0.12); border: 1px solid rgba(34, 197, 94, 0.25); color: #15803d; }
+        .profile-modal-overlay { position: fixed; inset: 0; z-index: 2000; display: flex; align-items: center; justify-content: center; padding: 1rem; }
+        .profile-modal-overlay[aria-hidden="true"] { display: none; }
+        .profile-modal-backdrop { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.45); backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); }
+        .profile-modal-dialog { position: relative; width: min(100%, 520px); background: var(--surface); border-radius: 1rem; border: 1px solid var(--border-subtle); box-shadow: var(--shadow-lg); padding: 1.25rem 1.5rem 1.5rem; }
+        .profile-modal-title { margin: 0 0 0.5rem 0; font-size: 1.15rem; color: var(--text-primary); }
+        .profile-modal-hint { margin: 0 0 1rem 0; font-size: 0.88rem; color: var(--text-muted); line-height: 1.45; }
+        .profile-modal-token { display: block; width: 100%; box-sizing: border-box; padding: 0.75rem 0.85rem; margin-bottom: 1rem; border-radius: 0.65rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-family: ui-monospace, monospace; font-size: 0.82rem; word-break: break-all; }
+        .profile-modal-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
     </style>
 </head>
@@ -377,57 +385,24 @@
 
                             <div class="sessions-box">
                                 <h3>{{ t .T "profile.api_tokens.title" }}</h3>
-                                <p>{{ t .T "profile.api_tokens.desc" }}</p>
-                                {{ if .APITokenCreated }}
-                                <div style="margin-bottom:0.8rem;padding:0.75rem;border:1px solid var(--border);border-radius:6px;background:var(--bg-secondary);">
-                                    <strong>{{ t .T "profile.api_tokens.created_title" }}</strong>
-                                    <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.api_tokens.created_hint" }}</p>
-                                    <code style="word-break:break-all;">{{ .NewAPIToken }}</code>
-                                </div>
-                                {{ end }}
+                                <p>{{ t .T "profile.api_tokens.single_desc" }}</p>
                                 {{ if .APITokenRevoked }}
                                 <p style="color:var(--text-secondary);">{{ t .T "profile.api_tokens.revoked_ok" }}</p>
                                 {{ end }}
-                                <form method="POST" action="/profile/api-tokens" style="margin-bottom:1rem;">
-                                    <div class="form-row">
-                                        <div class="form-group">
-                                            <label for="api_token_name">{{ t .T "profile.api_tokens.name" }}</label>
-                                            <input id="api_token_name" name="name" type="text" placeholder="{{ t .T "profile.api_tokens.name_placeholder" }}">
-                                        </div>
-                                    </div>
-                                    <div class="form-group">
-                                        <label>{{ t .T "profile.api_tokens.scopes" }}</label>
-                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="scope_read" value="1" checked> works:read</label>
-                                        <label style="display:block;font-weight:normal;"><input type="checkbox" name="scope_write" value="1"> works:write</label>
-                                    </div>
-                                    <button type="submit" class="btn btn-secondary">{{ t .T "profile.api_tokens.create" }}</button>
+                                {{ if .HasAPIToken }}
+                                <p style="margin:0 0 0.75rem 0;font-size:0.88rem;color:var(--text-secondary);">
+                                    {{ t .T "profile.api_tokens.active" }}
+                                    {{ with index .APITokens 0 }}<code>{{ .CreatedAt }}</code>{{ end }}
+                                </p>
+                                {{ end }}
+                                <form method="POST" action="/profile/api-tokens" style="margin-bottom:0.5rem;">
+                                    <button type="submit" class="btn btn-secondary">
+                                        {{ if .HasAPIToken }}{{ t .T "profile.api_tokens.regenerate" }}{{ else }}{{ t .T "profile.api_tokens.create" }}{{ end }}
+                                    </button>
                                 </form>
-                                <table class="sessions-table">
-                                    <thead>
-                                        <tr>
-                                            <th>{{ t .T "profile.api_tokens.name" }}</th>
-                                            <th>{{ t .T "profile.api_tokens.scopes" }}</th>
-                                            <th>{{ t .T "profile.api_tokens.created" }}</th>
-                                            <th></th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        {{ range .APITokens }}
-                                        <tr>
-                                            <td>{{ .Name }}</td>
-                                            <td><code>{{ join .Scopes ", " }}</code></td>
-                                            <td><code>{{ .CreatedAt }}</code></td>
-                                            <td>
-                                                <form method="POST" action="/profile/api-tokens/revoke/{{ .ID }}" style="display:inline;">
-                                                    <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "profile.api_tokens.revoke" }}</button>
-                                                </form>
-                                            </td>
-                                        </tr>
-                                        {{ else }}
-                                        <tr><td colspan="4" style="color:var(--text-muted)">{{ t .T "profile.api_tokens.empty" }}</td></tr>
-                                        {{ end }}
-                                    </tbody>
-                                </table>
+                                {{ if .HasAPIToken }}
+                                <p style="margin:0;font-size:0.8rem;color:var(--text-muted);">{{ t .T "profile.api_tokens.regenerate_hint" }}</p>
+                                {{ end }}
                             </div>
 
                             <div class="sessions-box">
@@ -523,6 +498,19 @@
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
+    <div id="api-token-modal" class="profile-modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="api-token-modal-title">
+        <div class="profile-modal-backdrop" id="api-token-modal-backdrop"></div>
+        <div class="profile-modal-dialog">
+            <h2 id="api-token-modal-title" class="profile-modal-title">{{ t .T "profile.api_tokens.created_title" }}</h2>
+            <p class="profile-modal-hint">{{ t .T "profile.api_tokens.created_hint" }}</p>
+            <code id="api-token-modal-value" class="profile-modal-token" tabindex="0" aria-live="polite"></code>
+            <div class="profile-modal-actions">
+                <button type="button" class="btn btn-secondary" id="api-token-modal-copy">{{ t .T "profile.api_tokens.copy" }}</button>
+                <button type="button" class="btn btn-primary" id="api-token-modal-close">{{ t .T "common.ok" }}</button>
+            </div>
+        </div>
+    </div>
+
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/webauthn-client.js"></script>
     <script src="/static/js/modals.js"></script>
@@ -537,7 +525,9 @@
         modalOk: {{ jsstr (t .T "common.ok") }},
         deleteModalOk: {{ jsstr (t .T "profile.delete.action") }},
         statsResetConfirm: {{ jsstr (t .T "profile.stats_reset.confirm") }},
-        passkeyNamePrompt: {{ jsstr (t .T "profile.passkey.name_prompt") }}
+        passkeyNamePrompt: {{ jsstr (t .T "profile.passkey.name_prompt") }},
+        apiTokenCopy: {{ jsstr (t .T "profile.api_tokens.copy") }},
+        apiTokenCopied: {{ jsstr (t .T "profile.api_tokens.copied") }}
     };
     document.addEventListener('DOMContentLoaded', function() {
         var logoutForm = document.getElementById('profile-logout-all-form');
@@ -614,10 +604,54 @@
         }
         const params = new URLSearchParams(window.location.search);
         if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0'
-            || params.get('webauthn_error') || params.get('webauthn_registered') === '1' || params.get('webauthn_deleted') === '1') {
+            || params.get('webauthn_error') || params.get('webauthn_registered') === '1' || params.get('webauthn_deleted') === '1'
+            || params.get('api_token_revoked') === '1' || params.get('security') === '1' || params.get('api_token_flash')) {
             const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
             if (securityBtn) securityBtn.click();
         }
+        const apiTokenModal = document.getElementById('api-token-modal');
+        const apiTokenValue = document.getElementById('api-token-modal-value');
+        const apiTokenCopyBtn = document.getElementById('api-token-modal-copy');
+        const apiTokenCloseBtn = document.getElementById('api-token-modal-close');
+        const apiTokenBackdrop = document.getElementById('api-token-modal-backdrop');
+        function closeApiTokenModal() {
+            if (!apiTokenModal) return;
+            apiTokenModal.setAttribute('aria-hidden', 'true');
+            if (apiTokenValue) apiTokenValue.textContent = '';
+            document.body.style.overflow = '';
+            if (window.history && window.history.replaceState) {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('api_token_flash');
+                window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+            }
+        }
+        function openApiTokenModal(token) {
+            if (!apiTokenModal || !apiTokenValue || !token) return;
+            apiTokenValue.textContent = token;
+            apiTokenModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+            (apiTokenCopyBtn || apiTokenCloseBtn)?.focus();
+        }
+        apiTokenCopyBtn?.addEventListener('click', async function () {
+            const token = apiTokenValue?.textContent || '';
+            if (!token) return;
+            try {
+                await navigator.clipboard.writeText(token);
+                this.textContent = PROFILE_I18N.apiTokenCopied;
+                window.setTimeout(() => { this.textContent = PROFILE_I18N.apiTokenCopy; }, 2000);
+            } catch (err) {
+                apiTokenValue?.focus();
+                apiTokenValue?.select?.();
+            }
+        });
+        apiTokenCloseBtn?.addEventListener('click', closeApiTokenModal);
+        apiTokenBackdrop?.addEventListener('click', closeApiTokenModal);
+        apiTokenModal?.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                closeApiTokenModal();
+            }
+        });
         buttons.forEach(btn => {
             btn.addEventListener('click', function() {
                 const target = this.dataset.target;
@@ -655,6 +689,9 @@
                 btn.disabled = false;
             }
         });
+        {{ if .APITokenCreated }}
+        openApiTokenModal({{ jsstr .NewAPIToken }});
+        {{ end }}
     });
     </script>
 </body>
