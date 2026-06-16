@@ -9,7 +9,7 @@ import (
 	"time"
 )
 
-const apiTokenIntegrationName = "Intégration"
+const integrationFeatureName = "Intégration"
 
 func (a *App) revokeAllUserAPITokens(userID int) error {
 	if userID <= 0 {
@@ -55,7 +55,7 @@ func (a *App) HandleCreateAPIToken(w http.ResponseWriter, r *http.Request) {
 	_ = a.revokeAllUserAPITokens(userID)
 
 	scopes := []string{ScopeWorksRead, ScopeWorksWrite}
-	token, _, err := a.createAPIToken(userID, apiTokenIntegrationName, scopes)
+	token, _, err := a.createAPIToken(userID, integrationFeatureName, scopes)
 	if err != nil {
 		http.Redirect(w, r, "/profile?security=1", http.StatusFound)
 		return
