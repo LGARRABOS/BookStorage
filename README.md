@@ -80,6 +80,12 @@ Full documentation is available on the **[Wiki](https://github.com/LGARRABOS/Boo
 
 ---
 
+## Optional integrations
+
+- **[BookStorage-Discord](https://github.com/LGARRABOS/BookStorage-Discord)** — optional Discord bot for quick reading actions (`/reading`, `/stats`, `/chapter`). Not required to install or run BookStorage.
+
+---
+
 ## License
 
 [MIT License](./LICENSE)

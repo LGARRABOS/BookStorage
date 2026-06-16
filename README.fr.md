@@ -78,6 +78,12 @@ La documentation complète est disponible sur le **[Wiki](https://github.com/LGA
 
 ---
 
+## Intégrations optionnelles
+
+- **[BookStorage-Discord](https://github.com/LGARRABOS/BookStorage-Discord)** — bot Discord optionnel pour actions rapides (`/reading`, `/stats`, `/chapter`). Non requis pour installer ou utiliser BookStorage.
+
+---
+
 ## Licence
 
 [MIT License](./LICENSE)
