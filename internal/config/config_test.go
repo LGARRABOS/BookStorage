@@ -53,9 +53,9 @@ func TestValidateSettingsNonLoopbackRequiresStrongSecret(t *testing.T) {
 	}
 	err = validateSettings(&Settings{
 		Environment:        "development",
-		SecretKey:            strings.Repeat("a", MinProductionSecretKeyLen),
-		SuperadminPassword:   defaultSuperadminPass,
-		Host:                 "0.0.0.0",
+		SecretKey:          strings.Repeat("a", MinProductionSecretKeyLen),
+		SuperadminPassword: defaultSuperadminPass,
+		Host:               "0.0.0.0",
 	})
 	if err == nil {
 		t.Fatal("expected error for weak superadmin on non-loopback host")

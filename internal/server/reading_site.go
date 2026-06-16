@@ -118,6 +118,19 @@ func normalizePath(p string) string {
 	return p
 }
 
+const probeBrowserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
+
+// setProbeRequestHeaders applies browser-like headers so anti-bot frontends (e.g. MangaDex)
+// accept the probe instead of returning 400 for "non-navigation" clients.
+func setProbeRequestHeaders(req *http.Request) {
+	req.Header.Set("User-Agent", probeBrowserUA)
+	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	req.Header.Set("Sec-Fetch-Dest", "document")
+	req.Header.Set("Sec-Fetch-Mode", "navigate")
+	req.Header.Set("Sec-Fetch-Site", "none")
+	req.Header.Set("Sec-Fetch-User", "?1")
+}
+
 // ProbeURL performs an SSRF-safe HTTP probe of rawURL (http/https only).
 func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatus int, detail string) {
 	rawURL = strings.TrimSpace(rawURL)
@@ -128,14 +141,11 @@ func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatu
 	targetURL := rawURL
 	client := newProbeHTTPClient(8 * time.Second)
 
-	const browserUA = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36"
-
 	req, err := http.NewRequestWithContext(ctx, http.MethodHead, targetURL, nil)
 	if err != nil {
 		return ProbeStatusDown, 0, "bad request"
 	}
-	req.Header.Set("User-Agent", browserUA)
-	req.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+	setProbeRequestHeaders(req)
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -153,8 +163,7 @@ func ProbeURL(ctx context.Context, rawURL string) (status ProbeStatus, httpStatu
 	// HEAD returned 4xx (blocked or not allowed) — retry with GET
 	if code == http.StatusMethodNotAllowed || (code >= 400 && code < 500) {
 		req2, _ := http.NewRequestWithContext(ctx, http.MethodGet, targetURL, nil)
-		req2.Header.Set("User-Agent", browserUA)
-		req2.Header.Set("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
+		setProbeRequestHeaders(req2)
 		resp2, err2 := client.Do(req2)
 		if err2 != nil {
 			if isTimeoutError(err2) {

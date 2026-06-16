@@ -1,4 +1,4 @@
-﻿package server
+package server
 
 import (
 	"context"
@@ -10,6 +10,17 @@ func TestProbeURL_liveExample(t *testing.T) {
 		t.Skip("network")
 	}
 	status, code, detail := ProbeURL(context.Background(), "https://example.com/")
+	t.Logf("status=%s code=%d detail=%q", status, code, detail)
+	if status != ProbeStatusUp {
+		t.Fatalf("expected up, got status=%s code=%d detail=%q", status, code, detail)
+	}
+}
+
+func TestProbeURL_liveMangaDex(t *testing.T) {
+	if testing.Short() {
+		t.Skip("network")
+	}
+	status, code, detail := ProbeURL(context.Background(), "https://mangadex.org")
 	t.Logf("status=%s code=%d detail=%q", status, code, detail)
 	if status != ProbeStatusUp {
 		t.Fatalf("expected up, got status=%s code=%d detail=%q", status, code, detail)

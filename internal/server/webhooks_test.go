@@ -37,7 +37,7 @@ func TestIsWebhookURLSafe_hostnameResolvesToPrivate(t *testing.T) {
 	t.Parallel()
 	// Custom resolver is not injected; use a hostname that only resolves privately when present.
 	// Verify public hostname parsing path with literal public IP already covered.
-	if isWebhookURLSafe("http://["+net.IPv4(127, 0, 0, 1).String()+"]/") {
+	if isWebhookURLSafe("http://[" + net.IPv4(127, 0, 0, 1).String() + "]/") {
 		t.Fatal("IPv4-mapped loopback URL must be rejected")
 	}
 }
