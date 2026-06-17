@@ -2,7 +2,6 @@
 package recommend
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -453,7 +452,7 @@ func ForUser(db *database.Conn, userID int64, cfg ForUserConfig) (*ForUserResult
 
 	var pool []rankedCandidate
 
-	if len(genreIn) > 0 || len(tagIn) > 0 {
+	appendBrowse := func(sort string) error {
 		browse, _, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
 			GenreIn:    genreIn,
 			TagIn:      tagIn,
@@ -461,12 +460,12 @@ func ForUser(db *database.Conn, userID int64, cfg ForUserConfig) (*ForUserResult
 			MediaMatch: mediaFilter.MatchMedia,
 			Page:       1,
 			PerPage:    browsePerPage,
-			Sort:       "SCORE_DESC",
+			Sort:       sort,
 			NotInIDs:   seen,
 			MaxResults: browsePoolSize,
 		})
 		if err != nil {
-			return nil, fmt.Errorf("browse: %w", err)
+			return err
 		}
 		for _, r := range browse {
 			if _, dup := seen[r.ID]; dup {
@@ -489,6 +488,13 @@ func ForUser(db *database.Conn, userID int64, cfg ForUserConfig) (*ForUserResult
 				},
 				score: candidateScore(overlap, "browse", 0, 0),
 			})
+		}
+		return nil
+	}
+
+	if len(genreIn) > 0 || len(tagIn) > 0 {
+		if err := appendBrowse("SCORE_DESC"); err != nil {
+			_ = appendBrowse("POPULARITY_DESC")
 		}
 	}
 

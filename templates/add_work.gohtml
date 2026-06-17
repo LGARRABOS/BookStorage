@@ -108,6 +108,7 @@
         [data-theme="dark"] .star-rating-picker .star { color: #475569; }
         [data-theme="dark"] .star-rating-picker .star.active { color: #fbbf24; }
         [data-theme="dark"] .image-upload-area { border-color: rgba(100, 116, 139, 0.4); }
+        {{ template "recommendations_css" }}
         /* Ajouter une œuvre — mobile : une colonne, pas de débordement horizontal */
         @media (max-width: 768px) {
             .page-body.mobile-page .form-page.container {
@@ -211,6 +212,8 @@
                 </div>
                 <a href="/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
+
+            {{ template "recommendations_section" . }}
 
             <div class="form-card catalog-search-card{{ if .IsMobileView }} mobile-form-accordion is-collapsed{{ end }}" style="margin-bottom: 1.5rem;">
                 <div class="form-card-header">
@@ -342,6 +345,8 @@
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
+    {{ template "recommendations_modal" . }}
+
     <script src="/static/js/appearance.js"></script>
     {{ if .IsMobileView }}
     {{ template "mobile_shell_scripts" . }}
@@ -350,6 +355,7 @@
     <script src="/static/js/keyboard-shortcuts-nav.js"></script>
     {{ end }}
     <script nonce="{{ .CSPNonce }}">
+    {{ template "recommendations_js_body" . }}
         var catalogSearchEmptyMsg = {{ jsstr (t .T "work.form.catalog_search.empty") }};
         var catalogSearchErrMsg = {{ jsstr (t .T "work.form.catalog_search.error") }};
         var catalogSearchRateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
