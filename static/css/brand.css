@@ -65,22 +65,37 @@
   align-items: stretch;
 }
 
+.page-body:has(.auth-brand-layout) {
+  padding-top: calc(4.75rem + env(safe-area-inset-top, 0px));
+  padding-bottom: 1.5rem;
+}
+
+.content-card.auth-brand-layout {
+  margin-top: 0.75rem;
+  margin-bottom: 1rem;
+  padding: clamp(1.25rem, 2vw, 2rem);
+}
+
 @media (min-width: 900px) {
   .auth-brand-layout {
     grid-template-columns: minmax(0, 1.1fr) minmax(0, 0.9fr);
-    gap: 2.5rem;
-    align-items: center;
+    gap: 2rem;
+    align-items: start;
   }
 
   .auth-brand-layout .brand-hero-banner {
     margin: 0;
     max-width: none;
-    height: 100%;
+    height: auto;
   }
 
   .auth-brand-layout .brand-hero-banner img {
-    height: 100%;
-    min-height: 420px;
+    display: block;
+    width: 100%;
+    height: auto;
+    max-height: min(42vh, 340px);
+    object-fit: cover;
+    object-position: center;
   }
 }
 

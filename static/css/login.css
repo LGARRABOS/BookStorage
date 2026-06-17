@@ -4,7 +4,7 @@
     radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.18), transparent 45%),
     var(--surface);
   border-radius: var(--radius);
-  padding: clamp(2rem, 5vw, 2.75rem);
+  padding: clamp(1.5rem, 3vw, 2.25rem);
   box-shadow: var(--shadow-soft);
 }
 
@@ -18,7 +18,7 @@
 }
 
 .auth-card .form-layout {
-  margin-top: 2rem;
+  margin-top: 1.5rem;
 }
 
 .auth-card .form-actions {
