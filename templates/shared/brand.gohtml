@@ -1,0 +1,32 @@
+{{ define "site_brand_inner" }}
+<img src="/static/brand/logos/wordmark.png" alt="{{ if .SiteName }}{{ .SiteName }}{{ else }}BookStorage{{ end }}" class="brand-logo" width="180" height="36">
+{{ end }}
+
+{{ define "site_brand" }}
+<a class="brand" href="/">{{ template "site_brand_inner" . }}</a>
+{{ end }}
+
+{{ define "site_brand_dashboard" }}
+<a class="brand" href="/dashboard">{{ template "site_brand_inner" . }}</a>
+{{ end }}
+
+{{ define "site_brand_mobile" }}
+<a class="brand mobile-brand" href="/dashboard">{{ template "site_brand_inner" . }}</a>
+{{ end }}
+
+{{ define "site_brand_error" }}
+<a class="error-brand" href="/">{{ template "site_brand_inner" . }}</a>
+{{ end }}
+
+{{ define "site_head_icons" }}
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/favicon/favicon-32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="/static/brand/favicon/favicon-16.png">
+<link rel="icon" href="/static/brand/favicon/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/brand/pwa/icon-192.png">
+{{ end }}
+
+{{ define "brand_hero_banner" }}
+<div class="brand-hero-banner" role="img" aria-label="{{ if .SiteName }}{{ .SiteName }}{{ else }}BookStorage{{ end }}">
+    <img src="/static/brand/banners/hero-webtoon.png" alt="" loading="eager" decoding="async">
+</div>
+{{ end }}

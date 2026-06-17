@@ -4,7 +4,7 @@
 
   "mail": {
     "brand_color": "#4f46e5",
-    "logo_url": "",
+    "logo_url": "/static/brand/logos/logo-email.png",
     "footer": "Des questions ? Contactez-nous à contact@example.com"
   },
   

@@ -5,9 +5,9 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/static/pwa/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
-    <link rel="apple-touch-icon" href="/static/icons/icon-192.png">
-    <link rel="stylesheet" href="/static/css/base.css?v=8">
+    {{template "site_head_icons" .}}
+        <link rel="stylesheet" href="/static/css/base.css?v=8">
+    <link rel="stylesheet" href="/static/css/brand.css?v=1">
     <link rel="stylesheet" href="/static/css/mobile.css?v=11">
     <script src="/static/js/appearance-init.js"></script>
 {{ end }}
@@ -21,16 +21,16 @@
         </a>
         <h1 class="mobile-topbar-title">{{ .MobileTopbarTitle }}</h1>
         {{ else }}
-        <a class="brand mobile-brand" href="/dashboard">📚 BookStorage</a>
+        {{template "site_brand_mobile" .}}
         {{ end }}
         <div class="mobile-topbar-actions">
             {{ if not .MobileTopbarTitle }}
             <button type="button" class="mobile-icon-btn" id="mobile-search-toggle" aria-label="{{ t .T "mobile.search.toggle" }}" aria-expanded="false" aria-controls="mobile-search-panel">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <img src="/static/brand/ui/search.png" alt="" class="brand-ui-icon" width="20" height="20" aria-hidden="true">
             </button>
             {{ end }}
             <button type="button" class="mobile-icon-btn" id="mobile-settings-open" aria-label="{{ t .T "mobile.settings.title" }}" aria-haspopup="dialog">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                <img src="/static/brand/ui/settings.png" alt="" class="brand-ui-icon" width="20" height="20" aria-hidden="true">
             </button>
         </div>
     </div>
@@ -93,7 +93,7 @@
         <span>{{ t .T "nav.dashboard" }}</span>
     </a>
     <a href="/add_work" class="mobile-bottom-link mobile-bottom-link--add" data-nav="/add_work">
-        <svg class="mobile-nav-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <img src="/static/brand/ui/add-book.png" alt="" class="brand-ui-icon mobile-nav-icon" width="24" height="24" aria-hidden="true">
         <span>{{ t .T "dashboard.add_work" }}</span>
     </a>
     <a href="/logout" class="mobile-bottom-link" data-nav="/logout">

@@ -12,21 +12,21 @@
   "orientation": "any",
   "icons": [
     {
-      "src": "/static/icons/icon-192.png",
+      "src": "/static/brand/pwa/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/icons/icon-512.png",
+      "src": "/static/brand/pwa/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any"
     },
     {
-      "src": "/static/icons/favicon.svg",
-      "sizes": "any",
-      "type": "image/svg+xml",
+      "src": "/static/brand/favicon/favicon-32.png",
+      "sizes": "32x32",
+      "type": "image/png",
       "purpose": "any"
     }
   ],
@@ -38,7 +38,7 @@
       "url": "/add_work",
       "icons": [
         {
-          "src": "/static/icons/icon-192.png",
+          "src": "/static/brand/pwa/icon-192.png",
           "sizes": "192x192",
           "type": "image/png",
           "purpose": "any"

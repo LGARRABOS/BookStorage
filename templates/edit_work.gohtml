@@ -11,7 +11,7 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    {{template "site_head_icons" .}}
     <link rel="stylesheet" href="/static/css/base.css">
     <script src="/static/js/modals.js"></script>
     <script src="/static/js/appearance-init.js"></script>
@@ -122,7 +122,7 @@
     {{ else }}
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
                 <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}

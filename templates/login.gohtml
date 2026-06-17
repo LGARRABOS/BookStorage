@@ -7,7 +7,7 @@
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
+    {{template "site_head_icons" .}}
     <title>{{ t .T "login.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/login.css">
@@ -20,7 +20,7 @@
 <body>
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/">📚 BookStorage</a>
+            {{template "site_brand" .}}
             <nav class="nav-links">
                 {{template "nav_settings_dropdown" .}}
                 <a href="/login">{{ t .T "nav.login" }}</a>
@@ -29,7 +29,8 @@
         </div>
     </header>
     <main class="page-body">
-        <div class="container content-card">
+        <div class="container content-card auth-brand-layout">
+            {{template "brand_hero_banner" .}}
             <section class="page-section narrow auth-card">
                 <header class="section-header">
                     <h1>{{ t .T "login.title" }}</h1>

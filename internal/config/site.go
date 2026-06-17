@@ -19,7 +19,7 @@ type SiteConfig struct {
 type MailConfig struct {
 	// BrandColor is the primary button/header accent (CSS hex, e.g. "#4f46e5").
 	BrandColor string `json:"brand_color"`
-	// LogoURL is an absolute URL to a logo image shown in HTML emails. Empty uses {PublicOrigin}/static/icons/favicon.svg when sending.
+	// LogoURL is an absolute URL to a logo image shown in HTML emails. Empty uses {PublicOrigin}/static/brand/logos/logo-email.png when sending.
 	LogoURL string `json:"logo_url"`
 	// Footer is optional extra text appended at the bottom of emails (e.g. support contact).
 	Footer string `json:"footer"`
@@ -81,7 +81,7 @@ func LoadSiteConfig(rootPath string) *SiteConfig {
 }
 
 // MailLogoURL returns the logo URL for HTML emails. Uses mail.logo_url when set,
-// otherwise {publicOrigin}/static/icons/favicon.svg when publicOrigin is non-empty.
+// otherwise {publicOrigin}/static/brand/logos/logo-email.png when publicOrigin is non-empty.
 func (c *SiteConfig) MailLogoURL(publicOrigin string) string {
 	if c != nil {
 		if u := strings.TrimSpace(c.Mail.LogoURL); u != "" {
@@ -95,5 +95,5 @@ func (c *SiteConfig) MailLogoURL(publicOrigin string) string {
 	if origin == "" {
 		return ""
 	}
-	return origin + "/static/icons/favicon.svg"
+	return origin + "/static/brand/logos/logo-email.png"
 }

@@ -76,6 +76,16 @@
   line-height: 1.4;
 }
 
+.auth-brand-layout.content-card {
+  max-width: 1100px;
+}
+
+@media (max-width: 899px) {
+  .auth-brand-layout .brand-hero-banner {
+    margin-bottom: 0;
+  }
+}
+
 .auth-forgot-form .form-field {
   gap: 0.55rem;
 }

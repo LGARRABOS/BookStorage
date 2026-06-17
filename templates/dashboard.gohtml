@@ -8,8 +8,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="manifest" href="/static/pwa/manifest.json">
-    <link rel="icon" type="image/svg+xml" href="/static/icons/favicon.svg">
-    <link rel="apple-touch-icon" href="/static/icons/favicon.svg">
+    {{template "site_head_icons" .}}
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
@@ -230,7 +229,7 @@
     {{ else }}
     <header class="topbar">
         <div class="container nav-layout">
-            <a class="brand" href="/dashboard">📚 BookStorage</a>
+            {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
                 <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
                 {{template "nav_more_menu" .}}
