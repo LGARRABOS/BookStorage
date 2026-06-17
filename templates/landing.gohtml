@@ -26,7 +26,7 @@
         .feature-item .icon { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; }
         .feature-item h3 { font-size: 1.1rem; margin-bottom: 0.5rem; color: var(--text-primary); }
         .feature-item p { font-size: 0.95rem; color: var(--text-muted); margin: 0; line-height: 1.5; }
-        .cta-section { text-align: center; padding: 4rem 1rem; margin-top: 2rem; background: var(--primary-muted); border-radius: var(--radius); }
+        .cta-section { text-align: center; padding: 4rem 1rem; margin-top: 2rem; background: var(--primary-muted); border-radius: var(--radius); position: relative; }
         .cta-section h2 { font-size: 1.8rem; margin-bottom: 1rem; }
         .cta-section p { color: var(--text-secondary); margin-bottom: 1.5rem; }
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
@@ -57,7 +57,9 @@
     <main class="page-body">
         <div class="container">
             {{template "brand_hero_banner" .}}
-            <section class="landing-hero">
+            <div class="landing-hero-stage">
+                {{template "brand_mascot_heroes" .}}
+                <section class="landing-hero">
                 <h1 class="sr-only">{{ t .T "landing.hero.title" }} {{ t .T "landing.hero.highlight" }}</h1>
                 <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
                 <div class="hero-buttons">
@@ -65,6 +67,7 @@
                     <a href="/login" class="btn btn-secondary">{{ t .T "landing.hero.login" }}</a>
                 </div>
             </section>
+            </div>
 
             <section class="features">
                 <h2 class="features-title">{{ t .T "landing.features" }}</h2>
@@ -103,6 +106,7 @@
             </section>
 
             <section class="cta-section">
+                {{template "brand_mascot_heroes_compact" .}}
                 <h2>{{ t .T "landing.cta.title" }}</h2>
                 <p>{{ t .T "landing.cta.subtitle" }}</p>
                 <a href="/register" class="btn btn-primary">{{ t .T "landing.cta.button" }}</a>

@@ -1,5 +1,5 @@
-// build: 20260617-1
-const CACHE_NAME = 'bookstorage-v8';
+// build: 20260617-3
+const CACHE_NAME = 'bookstorage-v10';
 const STATIC_ASSETS = [
   '/static/css/base.css',
   '/static/css/brand.css',
@@ -20,7 +20,8 @@ const STATIC_ASSETS = [
   '/static/brand/pwa/icon-512.png',
   '/static/brand/favicon/favicon-32.png',
   '/static/brand/favicon/favicon-16.png',
-  '/static/brand/logos/wordmark.png'
+  '/static/brand/logos/logo.png',
+  '/static/brand/banners/banners.png',
 ];
 
 self.addEventListener('install', event => {

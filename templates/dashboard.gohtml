@@ -81,8 +81,7 @@
         .chapter-value { min-width: 2rem; text-align: center; font-size: 0.95rem; padding: 0 0.25rem; border-left: 1px solid var(--border-subtle); border-right: 1px solid var(--border-subtle); cursor: pointer; user-select: none; }
         .chapter-value:hover { background: var(--primary-muted); }
         .chapter-value-input { width: 2.5rem; min-width: 2rem; text-align: center; font-size: 0.95rem; font-weight: 600; padding: 0 0.25rem; border: 1px solid var(--primary); border-radius: 0.25rem; background: var(--surface); color: var(--text-primary); }
-        .empty-state { text-align: center; padding: 4rem 2rem; background: var(--surface); border-radius: 1.5rem; border: 2px dashed var(--border-subtle); }
-        .empty-state-icon { font-size: 4rem; margin-bottom: 1rem; opacity: 0.5; }
+        .empty-state { text-align: center; padding: 3rem 1.5rem 4rem; background: var(--surface); border-radius: 1.5rem; border: 2px dashed var(--border-subtle); }
         .empty-state h2 { font-size: 1.25rem; color: var(--text-primary); margin-bottom: 0.5rem; }
         .empty-state p { color: var(--text-muted); margin-bottom: 1.5rem; }
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; transition: background 0.2s ease; }
@@ -416,7 +415,7 @@
             </div>
             {{ else }}
             <div class="empty-state">
-                <div class="empty-state-icon">📚</div>
+                {{template "brand_mascot_heroes_compact" .}}
                 <h2>{{ t .T "dashboard.empty" }}</h2>
                 <p>{{ t .T "dashboard.empty.start" }}</p>
                 <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>

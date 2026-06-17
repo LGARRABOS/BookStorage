@@ -1,5 +1,5 @@
 {{ define "site_brand_inner" }}
-<img src="/static/brand/logos/wordmark.png" alt="{{ if .SiteName }}{{ .SiteName }}{{ else }}BookStorage{{ end }}" class="brand-logo" height="36">
+<img src="/static/brand/logos/logo.png" alt="{{ if .SiteName }}{{ .SiteName }}{{ else }}BookStorage{{ end }}" class="brand-logo" height="40">
 {{ end }}
 
 {{ define "site_brand" }}
@@ -27,6 +27,20 @@
 
 {{ define "brand_hero_banner" }}
 <div class="brand-hero-banner" role="img" aria-label="{{ if .SiteName }}{{ .SiteName }}{{ else }}BookStorage{{ end }}">
-    <img src="/static/brand/banners/hero-webtoon.png" alt="" loading="eager" decoding="async">
+    <img src="/static/brand/banners/banners.png" alt="" loading="eager" decoding="async">
+</div>
+{{ end }}
+
+{{ define "brand_mascot_heroes" }}
+<div class="brand-mascot-heroes" aria-hidden="true">
+    <img src="/static/brand/mascots/hero-female.png" alt="" class="brand-mascot brand-mascot--female" width="248" height="252" loading="lazy" decoding="async">
+    <img src="/static/brand/mascots/hero-male.png" alt="" class="brand-mascot brand-mascot--male" width="248" height="252" loading="lazy" decoding="async">
+</div>
+{{ end }}
+
+{{ define "brand_mascot_heroes_compact" }}
+<div class="brand-mascot-heroes brand-mascot-heroes--compact" aria-hidden="true">
+    <img src="/static/brand/mascots/hero-female.png" alt="" class="brand-mascot brand-mascot--female" width="160" height="162" loading="lazy" decoding="async">
+    <img src="/static/brand/mascots/hero-male.png" alt="" class="brand-mascot brand-mascot--male" width="160" height="162" loading="lazy" decoding="async">
 </div>
 {{ end }}
