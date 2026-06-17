@@ -26,7 +26,7 @@ Après avoir mis à jour vos PNG, exécutez :
 python scripts/prepare_brand_assets.py
 ```
 
-Pour remplacer les portraits hero, déposez d’abord les PNG sources dans `mascots/source/` puis relancez le script (détourage + anti-frange blanc).
+Pour remplacer les portraits hero, déposez les PNG sources (fond noir) dans `mascots/source/` puis relancez le script. Un léger liseré peut rester si l’export IA avait un fond blanc (invisible sur noir, visible sur le site clair) — pour un rendu parfait, exportez en PNG **fond transparent natif**.
 
 Cela crée ou met à jour :
 

@@ -1,20 +1,16 @@
 #!/usr/bin/env python3
-"""Retire le fond noir et les halos blancs en bordure des mascottes / rogne le logo navbar."""
+"""Prépare les mascottes hero : fond noir → transparent, sans érosion destructive."""
 
 from collections import deque
 from pathlib import Path
 
-from PIL import Image, ImageFilter
+from PIL import Image
 
 ROOT = Path(__file__).resolve().parents[1]
 BRAND = ROOT / "static" / "brand"
-MASCOTS = (
+HERO_MASCOTS = (
     "hero-female.png",
     "hero-male.png",
-)
-PROFILE_MASCOTS = (
-    "femmal.png",
-    "male.png",
 )
 LOGO = BRAND / "logos" / "logo.png"
 SOURCE_DIR = BRAND / "mascots" / "source"
@@ -48,50 +44,55 @@ def flood_remove_dark(img: Image.Image, threshold: int = 48) -> Image.Image:
     return img
 
 
-def erode_alpha(img: Image.Image, radius: int) -> Image.Image:
-    if radius <= 0:
-        return img
-    img = img.convert("RGBA")
-    r, g, b, a = img.split()
-    for _ in range(radius):
-        a = a.filter(ImageFilter.MinFilter(3))
-    return Image.merge("RGBA", (r, g, b, a))
-
-
-def dilate_alpha(img: Image.Image, radius: int) -> Image.Image:
-    if radius <= 0:
-        return img
-    img = img.convert("RGBA")
-    r, g, b, a = img.split()
-    for _ in range(radius):
-        a = a.filter(ImageFilter.MaxFilter(3))
-    return Image.merge("RGBA", (r, g, b, a))
-
-
-def strip_white_fringe(img: Image.Image, max_passes: int = 8) -> Image.Image:
-    """Retire les pixels quasi blancs au contact direct du transparent."""
+def unmatte_white_edges(img: Image.Image) -> Image.Image:
+    """Corrige les pixels semi-transparents issus d'un détourage sur fond blanc."""
     img = img.convert("RGBA")
     w, h = img.size
     px = img.load()
+    for y in range(h):
+        for x in range(w):
+            r, g, b, a = px[x, y]
+            if a == 0 or a == 255:
+                continue
+            af = a / 255.0
+            fr = (r - (1.0 - af) * 255.0) / af
+            fg = (g - (1.0 - af) * 255.0) / af
+            fb = (b - (1.0 - af) * 255.0) / af
+            if fr < 8 and fg < 8 and fb < 8:
+                px[x, y] = (0, 0, 0, 0)
+                continue
+            px[x, y] = (
+                max(0, min(255, int(fr))),
+                max(0, min(255, int(fg))),
+                max(0, min(255, int(fb))),
+                a,
+            )
+    return img
+
+
+def peel_opaque_white_border(img: Image.Image, max_passes: int = 8) -> Image.Image:
+    """Retire les pixels quasi blancs opaques au bord (matte d'export IA)."""
+    img = img.convert("RGBA")
+    w, h = img.size
+    px = img.load()
+
+    def near_white(r: int, g: int, b: int) -> bool:
+        lum = (r + g + b) / 3
+        sat = max(r, g, b) - min(r, g, b)
+        return lum >= 212 and sat <= 22
+
     for _ in range(max_passes):
         to_clear: list[tuple[int, int]] = []
         for y in range(h):
             for x in range(w):
                 r, g, b, a = px[x, y]
-                if a == 0:
+                if a == 0 or not near_white(r, g, b):
                     continue
-                lum = (r + g + b) / 3
-                sat = max(r, g, b) - min(r, g, b)
-                if lum < 208 or sat > 24:
-                    continue
-                touches_transparent = False
                 for dx, dy in ((-1, 0), (1, 0), (0, -1), (0, 1)):
                     nx, ny = x + dx, y + dy
                     if nx < 0 or ny < 0 or nx >= w or ny >= h or px[nx, ny][3] == 0:
-                        touches_transparent = True
+                        to_clear.append((x, y))
                         break
-                if touches_transparent:
-                    to_clear.append((x, y))
         if not to_clear:
             break
         for x, y in to_clear:
@@ -120,17 +121,12 @@ def load_mascot_source(name: str) -> Image.Image:
     return Image.open(path).convert("RGBA")
 
 
-def process_mascot(name: str) -> Image.Image:
+def process_hero_mascot(name: str) -> Image.Image:
     path = BRAND / "mascots" / name
     img = load_mascot_source(name)
     img = flood_remove_dark(img)
-    img = strip_white_fringe(img, max_passes=10)
-    if name.startswith("hero-"):
-        img = erode_alpha(img, 2)
-        img = dilate_alpha(img, 1)
-    else:
-        img = erode_alpha(img, 1)
-    img = strip_white_fringe(img, max_passes=6)
+    img = unmatte_white_edges(img)
+    img = peel_opaque_white_border(img, max_passes=10)
     img = trim_alpha(img)
     img.save(path, format="PNG", optimize=True)
     return img
@@ -145,18 +141,12 @@ def trim_logo_nav(path: Path) -> Image.Image:
 
 
 def main() -> None:
-    for name in MASCOTS:
+    for name in HERO_MASCOTS:
         path = BRAND / "mascots" / name
         if not path.exists() and not (SOURCE_DIR / name).exists():
             print(f"skip missing {name}")
             continue
-        out = process_mascot(name)
-        print(f"  mascots/{name}: {out.size[0]}x{out.size[1]}")
-    for name in PROFILE_MASCOTS:
-        source = SOURCE_DIR / name
-        if not source.exists():
-            continue
-        out = process_mascot(name)
+        out = process_hero_mascot(name)
         print(f"  mascots/{name}: {out.size[0]}x{out.size[1]}")
     if LOGO.exists():
         out = trim_logo_nav(LOGO)
