@@ -1,11 +1,15 @@
 /* register.css */
 .auth-card {
-  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.18), transparent 55%),
-    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.16), transparent 45%),
+  background: radial-gradient(circle at top left, rgba(34, 197, 94, 0.14), transparent 52%),
+    radial-gradient(circle at bottom right, rgba(14, 165, 233, 0.12), transparent 48%),
     var(--surface);
   border-radius: var(--radius);
-  padding: clamp(1.5rem, 3vw, 2.25rem);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   box-shadow: var(--shadow-soft);
+}
+
+.auth-brand-layout .auth-card {
+  padding: clamp(1.75rem, 2.5vw, 2.5rem) clamp(1.5rem, 3vw, 2.75rem);
 }
 
 .auth-card .section-header {
@@ -38,6 +42,15 @@
 .auth-card .btn-text:hover,
 .auth-card .btn-text:focus-visible {
   color: #0f9d74;
+}
+
+.auth-card input:-webkit-autofill,
+.auth-card input:-webkit-autofill:hover,
+.auth-card input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
 }
 
 /* Dark Mode */

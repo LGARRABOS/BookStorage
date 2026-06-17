@@ -62,16 +62,16 @@
                 </div>
                 {{ end }}
                 {{ if .WebAuthnEnabled }}
-                <p style="margin-bottom:1rem;">
+                <p class="auth-oauth-block">
                     <button type="button" class="btn btn-secondary" id="passkey-login-btn" style="display:inline-flex;align-items:center;gap:0.5rem;">🔐 {{ t .T "login.passkey.continue" }}</button>
                 </p>
-                <p style="text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">{{ t .T "login.passkey.or" }}</p>
+                <p class="auth-divider">{{ t .T "login.passkey.or" }}</p>
                 {{ end }}
                 {{ if .GoogleOAuthEnabled }}
-                <p style="margin-bottom:1rem;">
+                <p class="auth-oauth-block">
                     <a class="btn btn-secondary" href="{{ .GoogleAuthURL }}" style="display:inline-flex;align-items:center;gap:0.5rem;">{{ t .T "login.google.continue" }}</a>
                 </p>
-                <p style="text-align:center;color:var(--text-muted);font-size:0.85rem;margin-bottom:1rem;">{{ t .T "login.google.or" }}</p>
+                <p class="auth-divider">{{ t .T "login.google.or" }}</p>
                 {{ end }}
                 <form method="POST" class="form-layout">
                     {{ if .LoginNext }}

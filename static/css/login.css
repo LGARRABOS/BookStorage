@@ -1,15 +1,23 @@
 /* login.css */
 .auth-card {
-  background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15), transparent 55%),
-    radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.18), transparent 45%),
+  background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.12), transparent 52%),
+    radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.14), transparent 48%),
     var(--surface);
   border-radius: var(--radius);
-  padding: clamp(1.5rem, 3vw, 2.25rem);
+  padding: clamp(1.5rem, 3vw, 2.5rem);
   box-shadow: var(--shadow-soft);
+}
+
+.auth-brand-layout .auth-card {
+  padding: clamp(1.75rem, 2.5vw, 2.5rem) clamp(1.5rem, 3vw, 2.75rem);
 }
 
 .auth-card .section-header {
   text-align: center;
+}
+
+.auth-card .section-header h1 {
+  margin-bottom: 0.35rem;
 }
 
 .auth-card p {
@@ -18,11 +26,12 @@
 }
 
 .auth-card .form-layout {
-  margin-top: 1.5rem;
+  margin-top: 1.25rem;
 }
 
 .auth-card .form-actions {
   justify-content: center;
+  gap: 0.65rem;
 }
 
 .auth-card .btn-text {
@@ -34,11 +43,43 @@
   color: var(--primary);
 }
 
+.auth-card .btn-secondary {
+  width: 100%;
+  justify-content: center;
+}
+
+.auth-card .auth-divider {
+  text-align: center;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+  margin: 0.65rem 0;
+}
+
+.auth-card .auth-oauth-block {
+  margin-bottom: 0.65rem;
+}
+
+.auth-card input:-webkit-autofill,
+.auth-card input:-webkit-autofill:hover,
+.auth-card input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+  transition: background-color 9999s ease-out 0s;
+}
+
 /* Dark Mode */
 [data-theme="dark"] .auth-card {
-  background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.15), transparent 55%),
-    radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.12), transparent 45%),
+  background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.12), transparent 52%),
+    radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.1), transparent 48%),
     var(--surface);
+}
+
+[data-theme="dark"] .auth-card input:-webkit-autofill,
+[data-theme="dark"] .auth-card input:-webkit-autofill:hover,
+[data-theme="dark"] .auth-card input:-webkit-autofill:focus {
+  -webkit-box-shadow: 0 0 0 1000px var(--surface) inset;
+  -webkit-text-fill-color: var(--text);
 }
 
 .flash-messages-sub {
@@ -76,17 +117,6 @@
   line-height: 1.4;
 }
 
-.auth-brand-layout.content-card {
-  max-width: 1100px;
-}
-
-@media (max-width: 899px) {
-  .auth-brand-layout .brand-hero-banner {
-    margin-bottom: 0;
-  }
-}
-
 .auth-forgot-form .form-field {
   gap: 0.55rem;
 }
-  
