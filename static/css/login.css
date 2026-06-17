@@ -1,23 +1,15 @@
 /* login.css */
 .auth-card {
-  background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.12), transparent 52%),
-    radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.14), transparent 48%),
+  background: radial-gradient(circle at top right, rgba(79, 70, 229, 0.15), transparent 55%),
+    radial-gradient(circle at bottom left, rgba(249, 115, 22, 0.18), transparent 45%),
     var(--surface);
   border-radius: var(--radius);
-  padding: clamp(1.5rem, 3vw, 2.5rem);
+  padding: clamp(2rem, 5vw, 2.75rem);
   box-shadow: var(--shadow-soft);
-}
-
-.auth-brand-layout .auth-card {
-  padding: clamp(1.75rem, 2.5vw, 2.5rem) clamp(1.5rem, 3vw, 2.75rem);
 }
 
 .auth-card .section-header {
   text-align: center;
-}
-
-.auth-card .section-header h1 {
-  margin-bottom: 0.35rem;
 }
 
 .auth-card p {
@@ -26,12 +18,11 @@
 }
 
 .auth-card .form-layout {
-  margin-top: 1.25rem;
+  margin-top: 2rem;
 }
 
 .auth-card .form-actions {
   justify-content: center;
-  gap: 0.65rem;
 }
 
 .auth-card .btn-text {
@@ -70,8 +61,8 @@
 
 /* Dark Mode */
 [data-theme="dark"] .auth-card {
-  background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.12), transparent 52%),
-    radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.1), transparent 48%),
+  background: radial-gradient(circle at top right, rgba(129, 140, 248, 0.15), transparent 55%),
+    radial-gradient(circle at bottom left, rgba(251, 146, 60, 0.12), transparent 45%),
     var(--surface);
 }
 
