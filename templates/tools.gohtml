@@ -13,13 +13,22 @@
     <style>
         .lang-toggle { padding: 0.4rem 0.6rem; border-radius: 0.5rem; font-size: 0.85rem; font-weight: 600; background: var(--primary-muted); color: var(--primary); text-decoration: none; }
         .lang-toggle:hover { background: var(--primary); color: white; }
-        .tools-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
-        .tool-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.1rem; }
+        .tools-grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); }
+        .tool-card { background: var(--surface); border: 1px solid var(--border-subtle); border-radius: 1rem; padding: 1.1rem; display: flex; flex-direction: column; }
         .tool-card h2 { margin: 0 0 0.35rem 0; font-size: 1.05rem; color: var(--text-primary); }
-        .tool-card p { margin: 0 0 0.8rem 0; font-size: 0.9rem; color: var(--text-muted); }
-        .tool-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; }
-        .format-box { margin-top: 1rem; background: var(--primary-muted); border-radius: 0.8rem; padding: 0.9rem; font-size: 0.9rem; }
-        .format-box code { display: block; margin-top: 0.5rem; background: var(--background); border-radius: 0.5rem; padding: 0.6rem; white-space: nowrap; overflow-x: auto; }
+        .tool-card p { margin: 0 0 0.8rem 0; font-size: 0.9rem; color: var(--text-muted); flex: 1; }
+        .tool-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: auto; }
+        .tool-card--import { margin-top: 1rem; }
+        .tool-card--import > p { flex: initial; }
+        .import-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.25rem; align-items: start; }
+        .import-form .form-group { margin-bottom: 0.85rem; }
+        .import-form .form-group label { display: block; font-weight: 500; color: var(--text-secondary); margin-bottom: 0.35rem; font-size: 0.88rem; }
+        .import-form .form-group select,
+        .import-form .form-group input[type="file"] { width: 100%; padding: 0.65rem 0.8rem; border: 1px solid var(--border-subtle); border-radius: 0.65rem; font-size: 0.9rem; background: var(--background); color: var(--text-primary); }
+        .format-box { background: var(--primary-muted); border-radius: 0.8rem; padding: 0.9rem; font-size: 0.9rem; height: 100%; box-sizing: border-box; }
+        .format-box strong { display: block; margin-bottom: 0.5rem; color: var(--text-primary); }
+        .format-box code { display: block; background: var(--background); border-radius: 0.5rem; padding: 0.65rem 0.75rem; font-size: 0.78rem; line-height: 1.45; word-break: break-all; white-space: normal; }
+        @media (max-width: 760px) { .import-layout { grid-template-columns: 1fr; } }
     </style>
 </head>
 <body>
@@ -78,11 +87,13 @@
                             <a href="/tools/csv-import" class="btn btn-secondary">{{ t .T "tools.csv_import.link" }}</a>
                         </div>
                     </article>
+                </div>
 
-                    <article class="tool-card">
-                        <h2>{{ t .T "tools.import.title" }}</h2>
-                        <p>{{ t .T "tools.import.subtitle" }}</p>
-                        <form action="/import" method="POST" enctype="multipart/form-data">
+                <article class="tool-card tool-card--import">
+                    <h2>{{ t .T "tools.import.title" }}</h2>
+                    <p>{{ t .T "tools.import.subtitle" }}</p>
+                    <div class="import-layout">
+                        <form class="import-form" action="/import" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="from" value="tools">
                             <div class="form-group">
                                 <label for="duplicate_mode">{{ t .T "profile.import.duplicate_mode" }}</label>
@@ -92,7 +103,8 @@
                                 </select>
                             </div>
                             <div class="form-group">
-                                <input type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required>
+                                <label for="import_file">{{ t .T "tools.import.file_label" }}</label>
+                                <input id="import_file" type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required>
                             </div>
                             <div class="tool-actions">
                                 <button type="submit" class="btn btn-secondary">{{ t .T "tools.import.action" }}</button>
@@ -102,8 +114,8 @@
                             <strong>{{ t .T "tools.import.format_title" }}</strong>
                             <code>Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath</code>
                         </div>
-                    </article>
-                </div>
+                    </div>
+                </article>
 
                 <article class="tool-card" style="margin-top:1rem;">
                     <h2>{{ t .T "tools.pwa.title" }}</h2>

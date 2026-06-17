@@ -531,7 +531,7 @@
   "tools.export.subtitle": "Descarga tus datos para respaldo o migración.",
   "tools.export.title": "Exportar tus lecturas",
   "tools.import.action": "Importar",
-  "tools.import.format_title": "Formato CSV de referencia",
+  "tools.import.file_label": "Archivo a importar",
   "tools.import.subtitle": "Importa un archivo BookStorage, MyAnimeList o AniList.",
   "tools.import.title": "Importar lecturas",
   "tools.csv_import.title": "Asistente de importación CSV",
