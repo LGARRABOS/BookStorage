@@ -7,28 +7,27 @@ Dossier central pour remplacer visuellement la marque sans modifier le code.
 | Fichier | Usage |
 |---------|--------|
 | `logos/logo.png` | Logo navbar (mascottes + livre + texte) |
-| `banners/banners.png` | Bannière accueil + pages login/register |
+| `banners/banners.png` | Bannière accueil (landing) |
 | `mascots/femmal.png` | Avatar mascotte femme (icône carré) |
 | `mascots/male.png` | Avatar mascotte homme (icône carré) |
 | `mascots/hero-female.png` | Portrait grand format — accueil, CTA, dashboard vide |
 | `mascots/hero-male.png` | Portrait grand format — accueil, CTA, dashboard vide |
-| `mascots/source/hero-*.png` | Sources des portraits hero (copiées telles quelles) |
-| `pwa/app-icon.png` | **Icône PWA** (source 366×366) — écran d'accueil téléphone |
+| `pwa/app-icon.png` | **Icône PWA** — source pour l'écran d'accueil téléphone |
 | `pwa/icon-192.png` | Généré depuis `app-icon.png` |
 | `pwa/icon-512.png` | Généré depuis `app-icon.png` |
 | `favicon/favicon.png` | Optionnel — favicon navigateur (sinon dérivé de `app-icon.png`) |
 
+Placez vos PNG **finis** (transparence, détourage, etc.) directement dans ces chemins. Aucun script ne retouche les mascottes ni l'icône source.
+
 ## Fichiers générés (ne pas éditer à la main)
 
-Après avoir mis à jour vos PNG, exécutez :
+Après avoir mis à jour `app-icon.png` ou `logo.png`, exécutez :
 
 ```bash
 python scripts/prepare_brand_assets.py
 ```
 
-Pour remplacer les portraits hero, copiez vos PNG transparents dans `mascots/source/hero-female.png` et `hero-male.png`, puis recopiez-les vers `mascots/hero-female.png` et `hero-male.png` **sans retraitement** (aucun script ne modifie ces fichiers).
-
-Cela crée ou met à jour :
+Cela crée ou met à jour uniquement les **dérivés redimensionnés** :
 
 | Fichier | Usage |
 |---------|--------|
@@ -44,7 +43,7 @@ Le script redimensionne aussi `banners/banners.png` si sa largeur dépasse 1920 
 
 ## Ancien kit source (découpe auto)
 
-`source/brand-kit.png` + `scripts/crop_brand_kit.py` : conservés pour archive, mais les PNG propres ci-dessus sont prioritaires.
+`source/brand-kit.png` + `scripts/crop_brand_kit.py` : conservés pour archive, non utilisés si vous fournissez les PNG propres.
 
 ## Configuration email
 

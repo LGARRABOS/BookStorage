@@ -41,7 +41,13 @@ def load_pwa_source() -> Image.Image:
 
 
 def square_icon(img: Image.Image, size: int) -> Image.Image:
+    """Redimensionne l'icône source sans détourage ni retouche."""
+    img = img.convert("RGBA")
     w, h = img.size
+    if w == h:
+        if w == size:
+            return img.copy()
+        return img.resize((size, size), Image.Resampling.LANCZOS)
     side = max(w, h)
     canvas = Image.new("RGBA", (side, side), (0, 0, 0, 0))
     canvas.paste(img, ((side - w) // 2, (side - h) // 2))
