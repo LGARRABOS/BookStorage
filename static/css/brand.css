@@ -6,23 +6,31 @@
 }
 
 .brand-logo {
-  height: 2.25rem;
+  height: 4rem;
   width: auto;
-  max-width: min(240px, 55vw);
+  max-width: min(360px, 68vw);
   display: block;
   object-fit: contain;
   border-radius: 0.45rem;
   filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
 }
 
-.topbar .brand,
+.topbar .brand-logo {
+  height: 4rem;
+}
+
+.topbar .brand {
+  max-width: none;
+  flex-shrink: 0;
+}
+
 .topbar-mobile-v2 .mobile-brand {
   min-width: 0;
   max-width: 55%;
 }
 
 .topbar-mobile-v2 .mobile-brand .brand-logo {
-  height: 1.65rem;
+  height: 2.75rem;
 }
 
 .error-brand {

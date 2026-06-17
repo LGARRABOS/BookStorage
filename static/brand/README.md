@@ -12,6 +12,7 @@ Dossier central pour remplacer visuellement la marque sans modifier le code.
 | `mascots/male.png` | Avatar mascotte homme (icône carré) |
 | `mascots/hero-female.png` | Portrait grand format — accueil, CTA, dashboard vide |
 | `mascots/hero-male.png` | Portrait grand format — accueil, CTA, dashboard vide |
+| `mascots/source/hero-*.png` | Sources haute résolution (fond noir) — utilisées par `fix_brand_fringe.py` |
 | `pwa/app-icon.png` | **Icône PWA** (source 366×366) — écran d’accueil téléphone |
 | `pwa/icon-192.png` | Généré depuis `app-icon.png` |
 | `pwa/icon-512.png` | Généré depuis `app-icon.png` |
@@ -24,6 +25,8 @@ Après avoir mis à jour vos PNG, exécutez :
 ```bash
 python scripts/prepare_brand_assets.py
 ```
+
+Pour remplacer les portraits hero, déposez d’abord les PNG sources dans `mascots/source/` puis relancez le script (détourage + anti-frange blanc).
 
 Cela crée ou met à jour :
 

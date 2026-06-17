@@ -1,5 +1,5 @@
 // build: 20260617-3
-const CACHE_NAME = 'bookstorage-v10';
+const CACHE_NAME = 'bookstorage-v11';
 const STATIC_ASSETS = [
   '/static/css/base.css',
   '/static/css/brand.css',
