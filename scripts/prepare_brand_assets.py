@@ -106,23 +106,8 @@ def optimize_banner() -> None:
     save_png(BANNER, banner)
 
 
-def run_fringe_fix() -> None:
-    script = ROOT / "scripts" / "fix_brand_fringe.py"
-    if not script.exists():
-        return
-    import importlib.util
-
-    spec = importlib.util.spec_from_file_location("fix_brand_fringe", script)
-    if spec is None or spec.loader is None:
-        return
-    mod = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(mod)
-    mod.main()
-
-
 def main() -> None:
     print("Preparing brand derivatives...")
-    run_fringe_fix()
     generate_pwa_icons()
     generate_favicons()
     generate_logo_email()

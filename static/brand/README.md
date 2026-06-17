@@ -1,4 +1,4 @@
-# Assets de marque BookStorage
+﻿# Assets de marque BookStorage
 
 Dossier central pour remplacer visuellement la marque sans modifier le code.
 
@@ -12,8 +12,8 @@ Dossier central pour remplacer visuellement la marque sans modifier le code.
 | `mascots/male.png` | Avatar mascotte homme (icône carré) |
 | `mascots/hero-female.png` | Portrait grand format — accueil, CTA, dashboard vide |
 | `mascots/hero-male.png` | Portrait grand format — accueil, CTA, dashboard vide |
-| `mascots/source/hero-*.png` | Sources haute résolution (fond noir) — utilisées par `fix_brand_fringe.py` |
-| `pwa/app-icon.png` | **Icône PWA** (source 366×366) — écran d’accueil téléphone |
+| `mascots/source/hero-*.png` | Sources des portraits hero (copiées telles quelles) |
+| `pwa/app-icon.png` | **Icône PWA** (source 366×366) — écran d'accueil téléphone |
 | `pwa/icon-192.png` | Généré depuis `app-icon.png` |
 | `pwa/icon-512.png` | Généré depuis `app-icon.png` |
 | `favicon/favicon.png` | Optionnel — favicon navigateur (sinon dérivé de `app-icon.png`) |
@@ -26,7 +26,7 @@ Après avoir mis à jour vos PNG, exécutez :
 python scripts/prepare_brand_assets.py
 ```
 
-Pour remplacer les portraits hero, déposez les PNG sources (fond noir) dans `mascots/source/` puis relancez le script. Un léger liseré peut rester si l’export IA avait un fond blanc (invisible sur noir, visible sur le site clair) — pour un rendu parfait, exportez en PNG **fond transparent natif**.
+Pour remplacer les portraits hero, copiez vos PNG transparents dans `mascots/source/hero-female.png` et `hero-male.png`, puis recopiez-les vers `mascots/hero-female.png` et `hero-male.png` **sans retraitement** (aucun script ne modifie ces fichiers).
 
 Cela crée ou met à jour :
 
