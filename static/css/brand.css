@@ -8,8 +8,15 @@
 .brand-logo {
   height: 2rem;
   width: auto;
+  max-width: min(220px, 52vw);
   display: block;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.35));
+  filter: drop-shadow(0 1px 3px rgba(0, 0, 0, 0.45));
+}
+
+.topbar .brand,
+.topbar-mobile-v2 .mobile-brand {
+  min-width: 0;
+  max-width: 55%;
 }
 
 .topbar-mobile-v2 .mobile-brand .brand-logo {
