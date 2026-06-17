@@ -48,7 +48,7 @@ func (a *App) HandleCreateAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, apiOK := apiAuthUserIDFromContext(r.Context()); apiOK {
-		http.Redirect(w, r, "/profile?security=1", http.StatusFound)
+		http.Redirect(w, r, "/profile?tab=integrations", http.StatusFound)
 		return
 	}
 
@@ -57,17 +57,17 @@ func (a *App) HandleCreateAPIToken(w http.ResponseWriter, r *http.Request) {
 	scopes := []string{ScopeWorksRead, ScopeWorksWrite}
 	token, _, err := a.createAPIToken(userID, integrationFeatureName, scopes)
 	if err != nil {
-		http.Redirect(w, r, "/profile?security=1", http.StatusFound)
+		http.Redirect(w, r, "/profile?tab=integrations", http.StatusFound)
 		return
 	}
 
 	nonce, err := a.storeAPITokenFlash(userID, token)
 	if err != nil {
-		http.Redirect(w, r, "/profile?security=1", http.StatusFound)
+		http.Redirect(w, r, "/profile?tab=integrations", http.StatusFound)
 		return
 	}
 
-	redirectURL := fmt.Sprintf("/profile?security=1&api_token_flash=%s", url.QueryEscape(nonce))
+	redirectURL := fmt.Sprintf("/profile?tab=integrations&api_token_flash=%s", url.QueryEscape(nonce))
 	http.Redirect(w, r, redirectURL, http.StatusSeeOther)
 }
 
@@ -92,5 +92,5 @@ func (a *App) HandleRevokeAPIToken(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_ = a.revokeAPIToken(userID, tokenID)
-	http.Redirect(w, r, "/profile?security=1&api_token_revoked=1", http.StatusFound)
+	http.Redirect(w, r, "/profile?tab=integrations&api_token_revoked=1", http.StatusFound)
 }

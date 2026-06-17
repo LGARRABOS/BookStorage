@@ -38,13 +38,21 @@
         .visibility-badge.public { background: rgba(34, 197, 94, 0.15); color: #15803d; }
         .visibility-badge.private { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
         .side-actions { margin-top: 1rem; display: flex; justify-content: center; }
-        .profile-main { background: var(--surface); border-radius: 1rem; border: 1px solid var(--border-subtle); }
-        .tabs-nav { display: flex; flex-wrap: wrap; gap: 0.5rem; padding: 1rem; border-bottom: 1px solid var(--border-subtle); }
-        .tabs-btn { border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); border-radius: 0.7rem; padding: 0.5rem 0.8rem; font-size: 0.86rem; cursor: pointer; }
-        .tabs-btn.active { background: var(--primary-muted); color: var(--primary); border-color: var(--primary); font-weight: 600; }
+        .profile-main { background: var(--surface); border-radius: 1rem; border: 1px solid var(--border-subtle); overflow: hidden; }
+        .profile-settings { display: grid; grid-template-columns: minmax(200px, 240px) 1fr; align-items: start; }
+        .settings-nav { display: flex; flex-direction: column; gap: 0.25rem; padding: 0.85rem; border-right: 1px solid var(--border-subtle); background: var(--background); position: sticky; top: 0; align-self: start; }
+        .settings-nav-btn { display: flex; align-items: center; gap: 0.55rem; width: 100%; border: 1px solid transparent; background: transparent; color: var(--text-secondary); border-radius: 0.7rem; padding: 0.6rem 0.75rem; font-size: 0.86rem; cursor: pointer; text-align: left; line-height: 1.25; }
+        .settings-nav-btn:hover { background: var(--surface); color: var(--text-primary); }
+        .settings-nav-btn.active { background: var(--primary-muted); color: var(--primary); border-color: rgba(79, 70, 229, 0.25); font-weight: 600; }
+        .settings-nav-icon { flex-shrink: 0; width: 1.25rem; text-align: center; font-size: 1rem; }
+        .settings-content { min-width: 0; }
         .tab-panel { display: none; padding: 1.1rem; }
+        .tab-panel.active + .tab-panel.active { padding-top: 0; border-top: 1px solid var(--border-subtle); margin-top: -0.25rem; }
         .tab-panel.active { display: block; }
-        .tab-panel-security-extra { padding: 0 1.1rem 1.1rem; border-top: 1px solid var(--border-subtle); }
+        .settings-card { margin-top: 1rem; border: 1px solid var(--border-subtle); background: var(--background); border-radius: 0.75rem; padding: 0.9rem; }
+        .settings-card:first-child { margin-top: 0; }
+        .settings-card h3 { margin: 0 0 0.35rem 0; color: var(--text-primary); font-size: 0.95rem; }
+        .settings-card > p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
         .panel-title { font-size: 1.05rem; margin: 0 0 0.2rem 0; color: var(--text-primary); }
         .panel-subtitle { margin: 0 0 1rem 0; color: var(--text-muted); font-size: 0.85rem; }
         .form-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.9rem; }
@@ -66,9 +74,8 @@
         .danger-zone h3 { margin: 0 0 0.3rem 0; color: #ef4444; font-size: 0.95rem; }
         .danger-zone p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
         .danger-zone .confirm-inline { font-size: 0.8rem; color: var(--text-muted); margin-top: 0.35rem; }
-        .sessions-box { margin-top: 1rem; border: 1px solid var(--border-subtle); background: var(--background); border-radius: 0.75rem; padding: 0.9rem; }
-        .sessions-box h3 { margin: 0 0 0.35rem 0; color: var(--text-primary); font-size: 0.95rem; }
-        .sessions-box p { margin: 0 0 0.8rem 0; font-size: 0.84rem; color: var(--text-secondary); }
+        .blocklist-list { list-style: none; padding: 0; margin: 0; }
+        .blocklist-item { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.45rem 0; border-top: 1px solid var(--border-subtle); }
         .sessions-table { width: 100%; border-collapse: collapse; }
         .sessions-table th, .sessions-table td { padding: 0.55rem 0.6rem; border-top: 1px solid var(--border-subtle); text-align: left; font-size: 0.85rem; color: var(--text-secondary); vertical-align: top; }
         .sessions-table th { color: var(--text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.03em; }
@@ -86,6 +93,13 @@
         .profile-modal-token { display: block; width: 100%; box-sizing: border-box; padding: 0.75rem 0.85rem; margin-bottom: 1rem; border-radius: 0.65rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-family: ui-monospace, monospace; font-size: 0.82rem; word-break: break-all; }
         .profile-modal-actions { display: flex; flex-wrap: wrap; gap: 0.6rem; justify-content: flex-end; }
         @media (max-width: 900px) { .profile-layout { grid-template-columns: 1fr; } }
+        @media (max-width: 760px) {
+            .profile-settings { grid-template-columns: 1fr; }
+            .settings-nav { flex-direction: row; flex-wrap: nowrap; overflow-x: auto; border-right: none; border-bottom: 1px solid var(--border-subtle); position: static; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+            .settings-nav::-webkit-scrollbar { display: none; }
+            .settings-nav-btn { width: auto; flex-shrink: 0; white-space: nowrap; }
+            .settings-nav-icon { display: none; }
+        }
     </style>
 </head>
 <body>
@@ -151,13 +165,17 @@
                     </aside>
 
                     <div class="profile-main">
-                        <div class="tabs-nav" id="profile-tabs">
-                            <button type="button" class="tabs-btn active" data-target="identity">{{ t .T "profile.tab.identity" }}</button>
-                            <button type="button" class="tabs-btn" data-target="privacy">{{ t .T "profile.tab.privacy" }}</button>
-                            <button type="button" class="tabs-btn" data-target="security">{{ t .T "profile.tab.security" }}</button>
-                            <button type="button" class="tabs-btn" data-target="accessibility">{{ t .T "profile.tab.accessibility" }}</button>
-                        </div>
+                        <div class="profile-settings">
+                            <nav class="settings-nav" id="profile-tabs" aria-label="{{ t .T "profile.nav.label" }}">
+                                <button type="button" class="settings-nav-btn active" data-target="identity"><span class="settings-nav-icon">👤</span>{{ t .T "profile.tab.identity" }}</button>
+                                <button type="button" class="settings-nav-btn" data-target="privacy"><span class="settings-nav-icon">🔒</span>{{ t .T "profile.tab.privacy" }}</button>
+                                <button type="button" class="settings-nav-btn" data-target="auth"><span class="settings-nav-icon">🔑</span>{{ t .T "profile.tab.auth" }}</button>
+                                <button type="button" class="settings-nav-btn" data-target="integrations"><span class="settings-nav-icon">🔌</span>{{ t .T "profile.tab.integrations" }}</button>
+                                <button type="button" class="settings-nav-btn" data-target="accessibility"><span class="settings-nav-icon">♿</span>{{ t .T "profile.tab.accessibility" }}</button>
+                                <button type="button" class="settings-nav-btn" data-target="account"><span class="settings-nav-icon">⚙️</span>{{ t .T "profile.tab.account" }}</button>
+                            </nav>
 
+                            <div class="settings-content">
                         <form id="profile-edit-form" method="POST" action="/profile" enctype="multipart/form-data">
                             <section class="tab-panel active" id="panel-identity">
                                 <h2 class="panel-title">{{ t .T "profile.section.general" }}</h2>
@@ -201,9 +219,9 @@
                                 </div>
                             </section>
 
-                            <section class="tab-panel" id="panel-security">
-                                <h2 class="panel-title">{{ t .T "profile.section.security" }}</h2>
-                                <p class="panel-subtitle">{{ t .T "profile.tab.security.subtitle" }}</p>
+                            <section class="tab-panel" id="panel-auth">
+                                <h2 class="panel-title">{{ t .T "profile.password" }}</h2>
+                                <p class="panel-subtitle">{{ t .T "profile.tab.auth.subtitle" }}</p>
                                 <div class="form-group">
                                     <label for="current_password">{{ t .T "profile.password.current" }}</label>
                                     <input id="current_password" type="password" name="current_password">
@@ -250,9 +268,8 @@
                             </section>
                         </form>
 
-                        <section class="tab-panel tab-panel-security-extra" id="panel-security-extra" aria-labelledby="profile-security-extra-heading">
-                            <h2 class="panel-title sr-only" id="profile-security-extra-heading">{{ t .T "profile.section.security" }}</h2>
-                            <div class="sessions-box" id="blocklist" style="margin-bottom:1rem;">
+                        <section class="tab-panel" id="panel-privacy-extra">
+                            <div class="settings-card" id="blocklist">
                                 <h3>{{ t .T "profile.blocklist.title" }}</h3>
                                 <p>{{ t .T "profile.blocklist.desc" }}</p>
                                 {{ if .BlocklistAdded }}<p class="notice" style="margin-bottom:0.6rem;">{{ t .T "profile.blocklist.added" }}</p>{{ end }}
@@ -275,9 +292,9 @@
                                     </div>
                                 </form>
                                 {{ if or .BlocklistGenres .BlocklistTags }}
-                                <ul style="list-style:none;padding:0;margin:0;">
+                                <ul class="blocklist-list">
                                     {{ range .BlocklistGenres }}
-                                    <li style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-top:1px solid var(--border-subtle);">
+                                    <li class="blocklist-item">
                                         <span><strong>{{ t $.T "profile.blocklist.genre" }}</strong> · {{ . }}</span>
                                         <form method="POST" action="/profile/blocklist/remove">
                                             <input type="hidden" name="label_type" value="genre">
@@ -287,7 +304,7 @@
                                     </li>
                                     {{ end }}
                                     {{ range .BlocklistTags }}
-                                    <li style="display:flex;align-items:center;justify-content:space-between;padding:0.35rem 0;border-top:1px solid var(--border-subtle);">
+                                    <li class="blocklist-item">
                                         <span><strong>{{ t $.T "profile.blocklist.tag" }}</strong> · {{ . }}</span>
                                         <form method="POST" action="/profile/blocklist/remove">
                                             <input type="hidden" name="label_type" value="tag">
@@ -301,8 +318,11 @@
                                 <p style="font-size:0.85rem;color:var(--text-muted);">{{ t .T "profile.blocklist.empty" }}</p>
                                 {{ end }}
                             </div>
+                        </section>
+
+                        <section class="tab-panel" id="panel-auth-extra">
                 {{ if .GoogleOAuthEnabled }}
-                            <div class="sessions-box" style="margin-bottom:1rem;">
+                            <div class="settings-card">
                                 <h3>{{ t .T "profile.google.title" }}</h3>
                                 <p>{{ t .T "profile.google.desc" }}</p>
                                 {{ if and .User.GoogleSub.Valid (ne .User.GoogleSub.String "") }}
@@ -320,7 +340,7 @@
                             </div>
                             {{ end }}
                             {{ if .WebAuthnEnabled }}
-                            <div class="sessions-box" style="margin-bottom:1rem;">
+                            <div class="settings-card">
                                 <h3>{{ t .T "profile.passkey.title" }}</h3>
                                 <p>{{ t .T "profile.passkey.desc" }}</p>
                                 {{ if .WebAuthnRegistered }}<p style="font-size:0.9rem;color:#15803d;">{{ t .T "profile.passkey.registered" }}</p>{{ end }}
@@ -349,7 +369,7 @@
                                 <button type="button" class="btn btn-primary" id="passkey-register-btn">{{ t .T "profile.passkey.register" }}</button>
                             </div>
                             {{ end }}
-                            <div class="sessions-box">
+                            <div class="settings-card">
                                 <h3>{{ t .T "profile.sessions.title" }}</h3>
                                 <p>{{ t .T "profile.sessions.desc" }}</p>
                                 <div style="display:flex; justify-content:flex-end; margin-bottom:0.6rem;">
@@ -382,8 +402,12 @@
                                     </tbody>
                                 </table>
                             </div>
+                        </section>
 
-                            <div class="sessions-box">
+                        <section class="tab-panel" id="panel-integrations">
+                            <h2 class="panel-title">{{ t .T "profile.tab.integrations" }}</h2>
+                            <p class="panel-subtitle">{{ t .T "profile.tab.integrations.subtitle" }}</p>
+                            <div class="settings-card">
                                 <h3>{{ t .T "profile.api_tokens.title" }}</h3>
                                 <p>{{ t .T "profile.api_tokens.single_desc" }}</p>
                                 {{ if .APITokenRevoked }}
@@ -405,7 +429,7 @@
                                 {{ end }}
                             </div>
 
-                            <div class="sessions-box">
+                            <div class="settings-card">
                                 <h3>{{ t .T "profile.webhooks.title" }}</h3>
                                 <p>{{ t .T "profile.webhooks.desc" }}</p>
                                 {{ if .WebhookCreated }}
@@ -456,7 +480,11 @@
                                 <p style="color:var(--text-muted)">{{ t .T "profile.webhooks.empty" }}</p>
                                 {{ end }}
                             </div>
+                        </section>
 
+                        <section class="tab-panel" id="panel-account">
+                            <h2 class="panel-title">{{ t .T "profile.tab.account" }}</h2>
+                            <p class="panel-subtitle">{{ t .T "profile.tab.account.subtitle" }}</p>
                             <div class="stats-reset-box">
                                 <h3>{{ t .T "profile.stats_reset.title" }}</h3>
                                 <p>{{ t .T "profile.stats_reset.desc" }}</p>
@@ -484,8 +512,10 @@
                                 </form>
                             </div>
                         </section>
+                            </div>
+                        </div>
 
-                        <div class="form-actions">
+                        <div class="form-actions" id="profile-form-actions">
                             <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
                             <button type="submit" class="btn btn-primary" form="profile-edit-form">{{ t .T "profile.save" }}</button>
                         </div>
@@ -582,33 +612,61 @@
             });
         }
 
-        const buttons = document.querySelectorAll('#profile-tabs .tabs-btn');
-        const panelSecurityExtra = document.getElementById('panel-security-extra');
+        const buttons = document.querySelectorAll('#profile-tabs .settings-nav-btn');
+        const formActions = document.getElementById('profile-form-actions');
         const panels = {
-            identity: document.getElementById('panel-identity'),
-            privacy: document.getElementById('panel-privacy'),
-            security: [
-                document.getElementById('panel-security'),
-                panelSecurityExtra,
+            identity: [document.getElementById('panel-identity')],
+            privacy: [
+                document.getElementById('panel-privacy'),
+                document.getElementById('panel-privacy-extra'),
             ],
-            accessibility: document.getElementById('panel-accessibility'),
+            auth: [
+                document.getElementById('panel-auth'),
+                document.getElementById('panel-auth-extra'),
+            ],
+            integrations: [document.getElementById('panel-integrations')],
+            accessibility: [document.getElementById('panel-accessibility')],
+            account: [document.getElementById('panel-account')],
         };
+        const formTabs = new Set(['identity', 'privacy', 'auth', 'accessibility']);
         function setActiveProfileTab(target) {
-            Object.entries(panels).forEach(([key, p]) => {
-                const els = Array.isArray(p) ? p : [p];
+            Object.entries(panels).forEach(([key, els]) => {
                 els.forEach(el => {
                     if (!el) return;
                     el.classList.toggle('active', key === target);
                 });
             });
+            if (formActions) {
+                formActions.style.display = formTabs.has(target) ? '' : 'none';
+            }
+            if (window.history && window.history.replaceState) {
+                const url = new URL(window.location.href);
+                if (target === 'identity') {
+                    url.searchParams.delete('tab');
+                } else {
+                    url.searchParams.set('tab', target);
+                }
+                window.history.replaceState({}, '', url.pathname + url.search + url.hash);
+            }
         }
-        const params = new URLSearchParams(window.location.search);
-        if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0'
-            || params.get('webauthn_error') || params.get('webauthn_registered') === '1' || params.get('webauthn_deleted') === '1'
-            || params.get('api_token_revoked') === '1' || params.get('security') === '1' || params.get('api_token_flash')) {
-            const securityBtn = document.querySelector('#profile-tabs .tabs-btn[data-target="security"]');
-            if (securityBtn) securityBtn.click();
+        function resolveProfileTab() {
+            const params = new URLSearchParams(window.location.search);
+            const tab = params.get('tab');
+            if (tab && panels[tab]) return tab;
+            if (params.get('delete_error') === '1' || params.get('reading_stats_reset') === '1' || params.get('reading_stats_reset') === '0') return 'account';
+            if (params.get('api_token_revoked') === '1' || params.get('api_token_flash') || params.get('security') === '1') return 'integrations';
+            if (params.get('webhook_error') || params.get('webhook_updated') === '1' || params.get('webhook_deleted') === '1' || params.get('webhook_test') === '1' || params.get('webhook_created') === '1') return 'integrations';
+            if (params.get('logout_all') === '1' || params.get('google_linked') === '1' || params.get('google_unlinked') === '1' || params.get('google_error')
+                || params.get('webauthn_error') || params.get('webauthn_registered') === '1' || params.get('webauthn_deleted') === '1') return 'auth';
+            if (params.get('blocklist_added') === '1' || params.get('blocklist_removed') === '1' || params.get('blocklist_error') === '1' || window.location.hash === '#blocklist') return 'privacy';
+            if (params.get('profile_error') === 'email') return 'identity';
+            return 'identity';
         }
+        const initialTab = resolveProfileTab(){{ if .WebhookCreated }} || 'integrations'{{ end }};
+        buttons.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.target === initialTab);
+        });
+        setActiveProfileTab(initialTab);
         const apiTokenModal = document.getElementById('api-token-modal');
         const apiTokenValue = document.getElementById('api-token-modal-value');
         const apiTokenCopyBtn = document.getElementById('api-token-modal-copy');
