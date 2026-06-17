@@ -14,8 +14,12 @@ import (
 const (
 	maxMediaFetches   = 8
 	maxTopForRecEdges = 3
-	browsePerPage     = 14
+	browsePerPage     = 25
+	browsePoolSize    = 24
+	graphPoolPerWork  = 12
 	finalCap          = 18
+	profileTopN       = 5
+	browseFilterN     = 3
 )
 
 // Weighted work row from SQL.
@@ -247,6 +251,119 @@ func intersectOrdered(item []string, profileTop []string) []string {
 	return out
 }
 
+// ForUserConfig tunes recommendation generation for one user.
+type ForUserConfig struct {
+	Options      Options
+	DismissedIDs map[int]struct{}
+}
+
+// DefaultForUserConfig returns standard scoring with no extra exclusions.
+func DefaultForUserConfig() ForUserConfig {
+	return ForUserConfig{Options: DefaultOptions()}
+}
+
+type profileMaps struct {
+	genres map[string]float64
+	tags   map[string]float64
+}
+
+func buildProfileMaps(p TasteProfile) profileMaps {
+	gm := make(map[string]float64, len(p.Genres))
+	for _, g := range p.Genres {
+		gm[g.Name] = g.Score
+	}
+	tm := make(map[string]float64, len(p.Tags))
+	for _, t := range p.Tags {
+		tm[t.Name] = t.Score
+	}
+	return profileMaps{genres: gm, tags: tm}
+}
+
+// profileOverlapScore sums taste-profile weights for matching genres and tags on a candidate.
+func profileOverlapScore(m profileMaps, genres, tags []string) float64 {
+	var score float64
+	seenG := make(map[string]struct{})
+	for _, g := range genres {
+		g = strings.TrimSpace(g)
+		if g == "" {
+			continue
+		}
+		if _, dup := seenG[g]; dup {
+			continue
+		}
+		seenG[g] = struct{}{}
+		if w, ok := m.genres[g]; ok {
+			score += w
+		}
+	}
+	seenT := make(map[string]struct{})
+	for _, t := range tags {
+		t = strings.TrimSpace(t)
+		if t == "" {
+			continue
+		}
+		if _, dup := seenT[t]; dup {
+			continue
+		}
+		seenT[t] = struct{}{}
+		if w, ok := m.tags[t]; ok {
+			score += w * 0.85
+		}
+	}
+	return score
+}
+
+type rankedCandidate struct {
+	suggestion Suggestion
+	score      float64
+}
+
+func rankCandidates(cands []rankedCandidate) []Suggestion {
+	sort.Slice(cands, func(i, j int) bool {
+		if cands[i].score != cands[j].score {
+			return cands[i].score > cands[j].score
+		}
+		return cands[i].suggestion.AnilistID < cands[j].suggestion.AnilistID
+	})
+	out := make([]Suggestion, 0, len(cands))
+	for _, c := range cands {
+		out = append(out, c.suggestion)
+	}
+	return out
+}
+
+func candidateScore(overlap float64, source string, edgeRating int, sourceWorkWeight float64) float64 {
+	score := overlap
+	switch source {
+	case "recommendation":
+		edgeBoost := float64(edgeRating) / 100.0
+		if edgeBoost <= 0 {
+			edgeBoost = 0.55
+		}
+		score += edgeBoost * sourceWorkWeight * 1.4
+		score += sourceWorkWeight * 0.25
+	default:
+		score += 0.1
+	}
+	return score
+}
+
+func topGenreNames(p TasteProfile, n int) []string {
+	var out []string
+	for i := 0; i < len(p.Genres) && i < n; i++ {
+		out = append(out, p.Genres[i].Name)
+	}
+	return out
+}
+
+func topTagNames(p TasteProfile, n int) []string {
+	var out []string
+	for i := 0; i < len(p.Tags) && i < n; i++ {
+		out = append(out, p.Tags[i].Name)
+	}
+	return out
+}
+
 // ProfileSummary is a short view of inferred taste for API clients.
 type ProfileSummary struct {
 	TopGenres []string `json:"top_genres"`
@@ -273,8 +390,12 @@ type Suggestion struct {
 	MatchedTags      []string `json:"matched_tags,omitempty"`
 }
 
-// ForUser returns merged browse + graph recommendations, excluding already-owned ids.
-func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error) {
+// ForUser returns ranked browse + graph recommendations, excluding owned and dismissed ids.
+func ForUser(db *database.Conn, userID int64, cfg ForUserConfig) (*ForUserResult, error) {
+	o := cfg.Options
+	if o == (Options{}) {
+		o = DefaultOptions()
+	}
 	blocklist, _ := catalog.LoadUserBlocklist(db, userID)
 	mediaFilter := catalog.MergeBlocklistFilter(blocklist, catalog.AdultOrientationFilter{})
 
@@ -317,30 +438,22 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 		return nil, nil
 	}
 
-	profTop := profileSummary(profile, 5, 5)
-
-	var genreIn []string
-	for i, g := range profile.Genres {
-		if i >= 2 {
-			break
-		}
-		genreIn = append(genreIn, g.Name)
-	}
-	var tagIn []string
-	for i, t := range profile.Tags {
-		if i >= 2 {
-			break
-		}
-		tagIn = append(tagIn, t.Name)
-	}
+	profTop := profileSummary(profile, profileTopN, profileTopN)
+	pmaps := buildProfileMaps(profile)
+	genreIn := topGenreNames(profile, browseFilterN)
+	tagIn := topTagNames(profile, browseFilterN)
 
 	seen := make(map[int]struct{})
 	for id := range known {
 		seen[id] = struct{}{}
 	}
-	var out []Suggestion
+	for id := range cfg.DismissedIDs {
+		seen[id] = struct{}{}
+	}
 
-	if len(genreIn) > 0 {
+	var pool []rankedCandidate
+
+	if len(genreIn) > 0 || len(tagIn) > 0 {
 		browse, _, err := catalog.BrowseMedia(catalog.BrowseMediaParams{
 			GenreIn:    genreIn,
 			TagIn:      tagIn,
@@ -348,9 +461,9 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 			MediaMatch: mediaFilter.MatchMedia,
 			Page:       1,
 			PerPage:    browsePerPage,
-			Sort:       "POPULARITY_DESC",
+			Sort:       "SCORE_DESC",
 			NotInIDs:   seen,
-			MaxResults: browsePerPage / 2,
+			MaxResults: browsePoolSize,
 		})
 		if err != nil {
 			return nil, fmt.Errorf("browse: %w", err)
@@ -362,15 +475,19 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 			seen[r.ID] = struct{}{}
 			mg := intersectOrdered(r.Genres, profTop.TopGenres)
 			mt := intersectOrdered(r.Tags, profTop.TopTags)
-			out = append(out, Suggestion{
-				Source:        "browse",
-				AnilistID:     r.ID,
-				Title:         r.Title,
-				ReadingType:   r.ReadingType,
-				ImageURL:      r.ImageURL,
-				IsAdult:       r.IsAdult,
-				MatchedGenres: mg,
-				MatchedTags:   mt,
+			overlap := profileOverlapScore(pmaps, r.Genres, r.Tags)
+			pool = append(pool, rankedCandidate{
+				suggestion: Suggestion{
+					Source:        "browse",
+					AnilistID:     r.ID,
+					Title:         r.Title,
+					ReadingType:   r.ReadingType,
+					ImageURL:      r.ImageURL,
+					IsAdult:       r.IsAdult,
+					MatchedGenres: mg,
+					MatchedTags:   mt,
+				},
+				score: candidateScore(overlap, "browse", 0, 0),
 			})
 		}
 	}
@@ -380,11 +497,13 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 		nRec = maxTopForRecEdges
 	}
 	for i := 0; i < nRec; i++ {
-		id := list[i].id
-		d := detailsByID[id]
+		src := list[i]
+		d := detailsByID[src.id]
 		if d == nil {
 			continue
 		}
+		relatedTitle := d.Title
+		added := 0
 		for _, r := range d.Recommendations {
 			if _, dup := seen[r.ID]; dup {
 				continue
@@ -393,25 +512,34 @@ func ForUser(db *database.Conn, userID int64, o Options) (*ForUserResult, error)
 				continue
 			}
 			seen[r.ID] = struct{}{}
-			out = append(out, Suggestion{
-				Source:      "recommendation",
-				AnilistID:   r.ID,
-				Title:       r.Title,
-				ReadingType: r.ReadingType,
-				ImageURL:    r.ImageURL,
-				IsAdult:     r.IsAdult,
+			mg := intersectOrdered(r.Genres, profTop.TopGenres)
+			mt := intersectOrdered(r.Tags, profTop.TopTags)
+			overlap := profileOverlapScore(pmaps, r.Genres, r.Tags)
+			pool = append(pool, rankedCandidate{
+				suggestion: Suggestion{
+					Source:           "recommendation",
+					AnilistID:        r.ID,
+					Title:            r.Title,
+					ReadingType:      r.ReadingType,
+					ImageURL:         r.ImageURL,
+					IsAdult:          r.IsAdult,
+					RelatedTitle:     relatedTitle,
+					RelatedAnilistID: src.id,
+					MatchedGenres:    mg,
+					MatchedTags:      mt,
+				},
+				score: candidateScore(overlap, "recommendation", r.RecommendationRating, src.weight),
 			})
-			if len(out) >= finalCap {
+			added++
+			if added >= graphPoolPerWork {
 				break
 			}
 		}
-		if len(out) >= finalCap {
-			break
-		}
 	}
 
-	if len(out) > finalCap {
-		out = out[:finalCap]
+	ranked := rankCandidates(pool)
+	if len(ranked) > finalCap {
+		ranked = ranked[:finalCap]
 	}
-	return &ForUserResult{Results: out, Profile: profTop}, nil
+	return &ForUserResult{Results: ranked, Profile: profTop}, nil
 }

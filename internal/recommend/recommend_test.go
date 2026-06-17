@@ -75,3 +75,36 @@ func TestBuildWeightedListOrdering(t *testing.T) {
 		t.Errorf("order: got [%d,%d] want [1,2]", list[0].id, list[1].id)
 	}
 }
+
+func TestProfileOverlapScore(t *testing.T) {
+	p := TasteProfile{
+		Genres: []scoredGenre{{Name: "Action", Score: 3}, {Name: "Drama", Score: 1}},
+		Tags:   []scoredTag{{Name: "Shounen", Score: 2}},
+	}
+	m := buildProfileMaps(p)
+	got := profileOverlapScore(m, []string{"Action", "Comedy"}, []string{"Shounen"})
+	want := 3.0 + 2.0*0.85
+	if math.Abs(got-want) > 1e-6 {
+		t.Fatalf("overlap: got %v want %v", got, want)
+	}
+}
+
+func TestCandidateScoreRecommendationBeatsBrowse(t *testing.T) {
+	overlap := 2.0
+	browse := candidateScore(overlap, "browse", 0, 0)
+	rec := candidateScore(overlap, "recommendation", 85, 2.0)
+	if rec <= browse {
+		t.Fatalf("recommendation should outrank browse at equal overlap: browse=%v rec=%v", browse, rec)
+	}
+}
+
+func TestRankCandidatesOrdersByScore(t *testing.T) {
+	ranked := rankCandidates([]rankedCandidate{
+		{suggestion: Suggestion{AnilistID: 3}, score: 1.5},
+		{suggestion: Suggestion{AnilistID: 1}, score: 4.0},
+		{suggestion: Suggestion{AnilistID: 2}, score: 4.0},
+	})
+	if len(ranked) != 3 || ranked[0].AnilistID != 1 || ranked[1].AnilistID != 2 || ranked[2].AnilistID != 3 {
+		t.Fatalf("order: %#v", ranked)
+	}
+}

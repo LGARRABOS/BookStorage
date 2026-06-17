@@ -26,7 +26,20 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
-	res, err := recommend.ForUser(a.DB, int64(userID), recommend.DefaultOptions())
+	dismissedIDs := map[int]struct{}{}
+	if dismissed, err := loadDismissedRecommendations(a.DB, userID, "anilist"); err == nil {
+		for idStr := range dismissed {
+			if id, err := strconv.Atoi(strings.TrimSpace(idStr)); err == nil && id > 0 {
+				dismissedIDs[id] = struct{}{}
+			}
+		}
+	} else {
+		log.Printf("dismissed recommendations: %v", err)
+	}
+
+	cfg := recommend.DefaultForUserConfig()
+	cfg.DismissedIDs = dismissedIDs
+	res, err := recommend.ForUser(a.DB, int64(userID), cfg)
 	if err != nil {
 		writeAnilistUpstreamJSON(w, "recommendations", err, map[string]any{"results": []any{}, "profile": map[string]any{}})
 		return
@@ -36,12 +49,6 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 			Results: []recommend.Suggestion{},
 			Profile: recommend.ProfileSummary{},
 		}
-	}
-
-	if dismissed, err := loadDismissedRecommendations(a.DB, userID, "anilist"); err == nil {
-		filterDismissedSuggestions(res, dismissed)
-	} else {
-		log.Printf("dismissed recommendations: %v", err)
 	}
 
 	w.Header().Set("Content-Type", "application/json")

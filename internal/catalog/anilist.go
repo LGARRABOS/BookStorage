@@ -21,6 +21,8 @@ type AnilistResult struct {
 	IsAdult      bool     `json:"is_adult"`
 	Genres       []string `json:"genres,omitempty"`
 	Tags         []string `json:"tags,omitempty"` // tag names only
+	// RecommendationRating is the AniList edge score (0–100) when this row comes from a recommendation link.
+	RecommendationRating int `json:"recommendation_rating,omitempty"`
 }
 
 type anilistMedia struct {

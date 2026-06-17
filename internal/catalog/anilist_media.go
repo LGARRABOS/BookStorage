@@ -187,15 +187,22 @@ func GetMediaByID(id int) (*MediaDetail, error) {
 			}
 			rm := e.Node.MediaRecommendation
 			title := pickTitleFromAnilistTitle(anilistTitle{Romaji: rm.Title.Romaji, English: rm.Title.English})
+			var recTagNames []string
+			for _, tg := range rm.Tags {
+				recTagNames = append(recTagNames, tg.Name)
+			}
 			detail.Recommendations = append(detail.Recommendations, AnilistResult{
-				ID:           rm.ID,
-				Title:        title,
-				TitleRomaji:  strings.TrimSpace(rm.Title.Romaji),
-				TitleEnglish: strings.TrimSpace(rm.Title.English),
-				Type:         rm.Type,
-				ImageURL:     rm.CoverImage.Large,
-				ReadingType:  mapAnilistReadingType(rm),
-				IsAdult:      rm.IsAdult,
+				ID:                   rm.ID,
+				Title:                title,
+				TitleRomaji:          strings.TrimSpace(rm.Title.Romaji),
+				TitleEnglish:         strings.TrimSpace(rm.Title.English),
+				Type:                 rm.Type,
+				ImageURL:             rm.CoverImage.Large,
+				ReadingType:          mapAnilistReadingType(rm),
+				IsAdult:              rm.IsAdult,
+				Genres:               append([]string(nil), rm.Genres...),
+				Tags:                 recTagNames,
+				RecommendationRating: e.Node.Rating,
 			})
 		}
 	}
