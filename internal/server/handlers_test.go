@@ -88,6 +88,74 @@ func TestSessions_CurrentSessionAndExpiry(t *testing.T) {
 	}
 }
 
+func TestHandleAPISessionPing(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	reqNoCookie := httptest.NewRequest(http.MethodGet, "/api/session/ping", nil)
+	recNoCookie := httptest.NewRecorder()
+	app.HandleAPISessionPing(recNoCookie, reqNoCookie)
+	if recNoCookie.Code != http.StatusUnauthorized {
+		t.Fatalf("no cookie status %d", recNoCookie.Code)
+	}
+
+	token := mustCreateSession(t, app, 1)
+	var expiresBefore time.Time
+	if err := db.QueryRow(
+		`SELECT expires_at FROM sessions WHERE token_hash = ?`,
+		hashSessionToken(token),
+	).Scan(&expiresBefore); err != nil {
+		t.Fatal(err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/session/ping", nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: token})
+	rec := httptest.NewRecorder()
+	app.HandleAPISessionPing(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("valid session status %d body=%s", rec.Code, rec.Body.String())
+	}
+	var payload map[string]any
+	if err := json.NewDecoder(rec.Body).Decode(&payload); err != nil {
+		t.Fatal(err)
+	}
+	if payload["ok"] != true {
+		t.Fatalf("ok=%v", payload["ok"])
+	}
+	if payload["expires_at"] == nil || payload["expires_in"] == nil {
+		t.Fatalf("missing expiry fields: %+v", payload)
+	}
+	expiresIn, _ := payload["expires_in"].(float64)
+	if expiresIn <= 0 || expiresIn > float64(sessionSlidingTTL.Seconds())+5 {
+		t.Fatalf("expires_in=%v want ~%v", expiresIn, sessionSlidingTTL.Seconds())
+	}
+	if payload["warn_message"] == nil || payload["warn_message"] == "" {
+		t.Fatalf("missing warn_message")
+	}
+
+	var expiresAfter time.Time
+	if err := db.QueryRow(
+		`SELECT expires_at FROM sessions WHERE token_hash = ?`,
+		hashSessionToken(token),
+	).Scan(&expiresAfter); err != nil {
+		t.Fatal(err)
+	}
+	if !expiresBefore.Equal(expiresAfter) {
+		t.Fatalf("ping extended session: before=%v after=%v", expiresBefore, expiresAfter)
+	}
+
+	_, _ = db.Exec(
+		`UPDATE sessions SET expires_at = ? WHERE token_hash = ?`,
+		time.Now().UTC().Add(-time.Minute),
+		hashSessionToken(token),
+	)
+	recExpired := httptest.NewRecorder()
+	app.HandleAPISessionPing(recExpired, req)
+	if recExpired.Code != http.StatusUnauthorized {
+		t.Fatalf("expired session status %d", recExpired.Code)
+	}
+}
+
 func TestHandleExportJSON(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

@@ -62,6 +62,7 @@
   "landing.github": "Ver en GitHub",
   "login.error": "Credenciales inválidas",
   "login.expired": "Tu sesión ha expirado. Por favor, inicia sesión de nuevo.",
+  "session.expiring_soon": "Tu sesión expirará en %s s por inactividad.",
   "login.no_account": "¿Aún no tienes cuenta?",
   "login.password": "Contraseña",
   "login.pending": "Tu cuenta está pendiente de aprobación por un administrador.",

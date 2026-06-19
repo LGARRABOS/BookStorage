@@ -194,6 +194,7 @@ func main() {
 	mux.HandleFunc("/auth/google/callback", app.HandleGoogleOAuthCallback)
 	mux.HandleFunc("/auth/google/link", app.RequireLogin(app.HandleGoogleOAuthLink))
 	mux.HandleFunc("/logout", app.HandleLogout)
+	mux.HandleFunc("GET /api/session/ping", app.HandleAPISessionPing)
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleStats)))
 	mux.HandleFunc("/profile", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleProfile)))

@@ -1,11 +1,14 @@
 package server
 
 import (
+	"bookstorage/internal/i18n"
 	"database/sql"
+	"encoding/json"
 	"log"
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 func (a *App) HandleRegister(w http.ResponseWriter, r *http.Request) {
@@ -163,6 +166,37 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
+}
+
+// HandleAPISessionPing reports whether the browser session is still valid without
+// extending its sliding expiration (safe for idle-tab polling).
+func (a *App) HandleAPISessionPing(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	_, _, expiresAt, ok := a.currentSessionWithExpiry(r)
+	if !ok {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusUnauthorized)
+		_, _ = w.Write([]byte(`{"error":"session_expired"}`))
+		return
+	}
+	now := time.Now().UTC()
+	expiresIn := int(expiresAt.Sub(now).Seconds())
+	if expiresIn < 0 {
+		expiresIn = 0
+	}
+	tr := i18n.T(a.currentLang(r))
+	payload := map[string]any{
+		"ok":           true,
+		"expires_at":   expiresAt.UTC().Format(time.RFC3339),
+		"expires_in":   expiresIn,
+		"warn_message": tr["session.expiring_soon"],
+	}
+	w.Header().Set("Content-Type", "application/json")
+	w.Header().Set("Cache-Control", "no-store")
+	_ = json.NewEncoder(w).Encode(payload)
 }
 
 func (a *App) HandleLogout(w http.ResponseWriter, r *http.Request) {

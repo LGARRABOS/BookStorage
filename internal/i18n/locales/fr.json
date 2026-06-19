@@ -62,6 +62,7 @@
   "landing.github": "Voir sur GitHub",
   "login.error": "Identifiants invalides",
   "login.expired": "Votre session a expiré. Veuillez vous reconnecter.",
+  "session.expiring_soon": "Votre session expire dans %s s en raison d'inactivité.",
   "login.no_account": "Pas encore de compte ?",
   "login.password": "Mot de passe",
   "login.pending": "Votre compte est en attente de validation par un administrateur.",

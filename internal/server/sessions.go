@@ -88,42 +88,53 @@ func (a *App) createSession(r *http.Request, userID int) (token string, err erro
 	return token, nil
 }
 
+func effectiveSessionExpiry(createdAt, expiresAt time.Time) time.Time {
+	absolute := createdAt.Add(sessionAbsoluteTTL)
+	if absolute.Before(expiresAt) {
+		return absolute
+	}
+	return expiresAt
+}
+
 func (a *App) currentSession(r *http.Request) (userID int, token string, ok bool) {
+	uid, tok, _, ok := a.currentSessionWithExpiry(r)
+	return uid, tok, ok
+}
+
+func (a *App) currentSessionWithExpiry(r *http.Request) (userID int, token string, expiresAt time.Time, ok bool) {
 	if r == nil {
-		return 0, "", false
+		return 0, "", time.Time{}, false
 	}
 	c, err := r.Cookie(sessionCookieName)
 	if err != nil {
-		return 0, "", false
+		return 0, "", time.Time{}, false
 	}
 	token = strings.TrimSpace(c.Value)
 	if token == "" {
-		return 0, "", false
+		return 0, "", time.Time{}, false
 	}
 
 	var uid int
-	var createdAt, expiresAt time.Time
+	var createdAt, slidingExpiresAt time.Time
 	var revokedAt sql.NullTime
 	err = a.DB.QueryRow(
 		`SELECT user_id, created_at, expires_at, revoked_at
 		 FROM sessions
 		 WHERE token_hash = ?`,
 		hashSessionToken(token),
-	).Scan(&uid, &createdAt, &expiresAt, &revokedAt)
+	).Scan(&uid, &createdAt, &slidingExpiresAt, &revokedAt)
 	if err != nil {
-		return 0, "", false
+		return 0, "", time.Time{}, false
 	}
 	if revokedAt.Valid {
-		return 0, "", false
+		return 0, "", time.Time{}, false
 	}
+	expiresAt = effectiveSessionExpiry(createdAt, slidingExpiresAt)
 	now := time.Now().UTC()
-	if now.After(expiresAt) {
-		return 0, "", false
+	if !now.Before(expiresAt) {
+		return 0, "", time.Time{}, false
 	}
-	if now.After(createdAt.Add(sessionAbsoluteTTL)) {
-		return 0, "", false
-	}
-	return uid, token, true
+	return uid, token, expiresAt, true
 }
 
 func (a *App) touchSession(r *http.Request, token string) {
