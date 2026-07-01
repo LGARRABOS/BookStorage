@@ -12,13 +12,31 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
-        .landing-hero { text-align: center; padding: 2rem 1rem 4rem; max-width: 800px; margin: 0 auto; }
-        .landing-hero h1 { font-size: clamp(2.2rem, 6vw, 3.5rem); margin-bottom: 1.25rem; line-height: 1.1; }
-        .landing-hero h1 .highlight { background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        .landing-hero .subtitle { font-size: 1.2rem; color: var(--text-secondary); max-width: 550px; margin: 0 auto 2.5rem; line-height: 1.6; }
+        .landing-hero {
+            text-align: center;
+            padding: clamp(2.5rem, 7vw, 4.5rem) 1rem clamp(2rem, 4vw, 3rem);
+            max-width: 720px;
+            margin: 0 auto;
+        }
+        .landing-hero h1 {
+            font-size: clamp(2.2rem, 6vw, 3.25rem);
+            margin-bottom: 1.25rem;
+            line-height: 1.15;
+            background: linear-gradient(135deg, #4f46e5 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .landing-hero .subtitle {
+            font-size: 1.15rem;
+            color: var(--text-secondary);
+            max-width: 540px;
+            margin: 0 auto 2.25rem;
+            line-height: 1.65;
+        }
         .hero-buttons { display: flex; gap: 1rem; justify-content: center; flex-wrap: wrap; }
         .hero-buttons .btn { padding: 0.9rem 2rem; font-size: 1.05rem; }
-        .features { padding: 3rem 0; }
+        .features { padding: 2.5rem 0 3rem; border-top: 1px solid var(--border-subtle); }
         .features-title { text-align: center; font-size: 1.6rem; margin-bottom: 2.5rem; color: var(--text-primary); }
         .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
         .feature-item { background: var(--surface); border-radius: var(--radius); padding: 1.75rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; }
@@ -40,6 +58,7 @@
         [data-theme="dark"] .cta-section { background: rgba(51, 65, 85, 0.5); }
         [data-theme="dark"] .btn-secondary { background: rgba(148, 163, 184, 0.2); color: #e2e8f0; }
         [data-theme="dark"] .selfhost-banner { border-color: rgba(100, 116, 139, 0.3); }
+        [data-theme="dark"] .features { border-color: rgba(100, 116, 139, 0.3); }
     </style>
 </head>
 <body>
@@ -56,18 +75,14 @@
 
     <main class="page-body">
         <div class="container">
-            {{template "brand_hero_banner" .}}
-            <div class="landing-hero-stage">
-                {{template "brand_mascot_heroes" .}}
-                <section class="landing-hero">
-                <h1 class="sr-only">{{ t .T "landing.hero.title" }} {{ t .T "landing.hero.highlight" }}</h1>
+            <section class="landing-hero">
+                <h1>{{ t .T "landing.hero.title" }}</h1>
                 <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
                 <div class="hero-buttons">
                     <a href="/register" class="btn btn-primary">{{ t .T "landing.hero.cta" }}</a>
                     <a href="/login" class="btn btn-secondary">{{ t .T "landing.hero.login" }}</a>
                 </div>
             </section>
-            </div>
 
             <section class="features">
                 <h2 class="features-title">{{ t .T "landing.features" }}</h2>
