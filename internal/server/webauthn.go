@@ -1,6 +1,7 @@
 package server
 
 import (
+	"bytes"
 	"database/sql"
 	"fmt"
 	"net/url"
@@ -47,6 +48,23 @@ func decodeUserIDBE(b []byte) int {
 }
 
 func (a *App) resolveWebAuthnDiscoverableUser(rawID, userHandle []byte) (webAuthnUser, int, error) {
+	if len(rawID) > 0 {
+		var userID int
+		if err := a.DB.QueryRow(
+			`SELECT user_id FROM webauthn_credentials WHERE credential_id = ?`,
+			rawID,
+		).Scan(&userID); err == nil && userID > 0 {
+			user, err := a.loadWebAuthnUser(userID)
+			if err != nil {
+				return webAuthnUser{}, 0, err
+			}
+			for _, c := range user.credentials {
+				if bytes.Equal(c.ID, rawID) {
+					return user, userID, nil
+				}
+			}
+		}
+	}
 	if len(userHandle) > 0 {
 		if userID := decodeUserIDBE(userHandle); userID > 0 {
 			user, err := a.loadWebAuthnUser(userID)
@@ -55,18 +73,7 @@ func (a *App) resolveWebAuthnDiscoverableUser(rawID, userHandle []byte) (webAuth
 			}
 		}
 	}
-	if len(rawID) == 0 {
-		return webAuthnUser{}, 0, sql.ErrNoRows
-	}
-	var userID int
-	if err := a.DB.QueryRow(
-		`SELECT user_id FROM webauthn_credentials WHERE credential_id = ?`,
-		rawID,
-	).Scan(&userID); err != nil {
-		return webAuthnUser{}, 0, err
-	}
-	user, err := a.loadWebAuthnUser(userID)
-	return user, userID, err
+	return webAuthnUser{}, 0, sql.ErrNoRows
 }
 
 func (u webAuthnUser) WebAuthnID() []byte {

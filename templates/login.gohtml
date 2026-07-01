@@ -58,6 +58,13 @@
                     {{ if eq .GoogleOAuthError "use_google" }}<p>{{ t .T "login.google_error.use_google" }}</p>{{ end }}
                     {{ if eq .WebAuthnError "use_passkey" }}<p>{{ t .T "login.webauthn_error.use_passkey" }}</p>{{ end }}
                     {{ if eq .WebAuthnError "failed" }}<p>{{ t .T "login.webauthn_error.failed" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "finish_failed" }}<p>{{ t .T "login.webauthn_error.finish_failed" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "missing_challenge" }}<p>{{ t .T "login.webauthn_error.missing_challenge" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "invalid_challenge" }}<p>{{ t .T "login.webauthn_error.invalid_challenge" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "begin_failed" }}<p>{{ t .T "login.webauthn_error.begin_failed" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "unknown_user" }}<p>{{ t .T "login.webauthn_error.unknown_user" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "pending_validation" }}<p>{{ t .T "login.webauthn_error.pending_validation" }}</p>{{ end }}
+                    {{ if eq .WebAuthnError "assertion_failed" }}<p>{{ t .T "login.webauthn_error.assertion_failed" }}</p>{{ end }}
                 </div>
                 {{ end }}
                 {{ if .WebAuthnEnabled }}

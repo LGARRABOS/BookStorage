@@ -184,7 +184,7 @@ func (a *App) WithRequestPolicies(next http.Handler) http.Handler {
 		if a.Settings != nil {
 			publicOrigin = a.Settings.PublicOrigin
 		}
-		if isMutatingMethod(r.Method) && !isSameOriginRequest(r, publicOrigin) {
+		if isMutatingMethod(r.Method) && !strings.HasPrefix(r.URL.Path, "/auth/webauthn/") && !isSameOriginRequest(r, publicOrigin) {
 			if strings.HasPrefix(r.URL.Path, "/api/") && a.hasValidAPIToken(r) {
 				next.ServeHTTP(w, r)
 				return

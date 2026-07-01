@@ -2,6 +2,7 @@
     'use strict';
 
     var STORAGE_KEY = 'bs_last_username';
+    var loginInFlight = false;
 
     function isMobileUA() {
         return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
@@ -58,16 +59,26 @@
         return url;
     }
 
+    function redirectLoginError(next, code) {
+        var url = '/login?webauthn_error=' + encodeURIComponent(code || 'failed');
+        if (next) url += '&next=' + encodeURIComponent(next);
+        global.location.href = url;
+    }
+
+    function isUserCancel(err) {
+        if (!err) return false;
+        var name = err.name || '';
+        return name === 'NotAllowedError' || name === 'AbortError';
+    }
+
     async function runPasskeyLogin(opts) {
         opts = opts || {};
         var username = (opts.username || '').trim();
-        var discoverable = !!opts.discoverable || !username;
-        var mediation = opts.mediation || '';
+        var discoverable = !!opts.discoverable;
         var next = opts.next || '';
 
         var body = { discoverable: discoverable };
         if (username) body.username = username;
-        if (mediation) body.mediation = mediation;
 
         var begin = await fetch('/auth/webauthn/login/begin', {
             method: 'POST',
@@ -75,13 +86,23 @@
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(body)
         });
-        if (!begin.ok) throw new Error('begin_failed');
+        if (!begin.ok) {
+            var beginErr = await begin.json().catch(function () { return {}; });
+            throw new Error(beginErr.error || 'begin_failed');
+        }
 
         var request = WebAuthnClient.decodeRequestOptions(await begin.json());
         if (!request) throw new Error('invalid_options');
-        if (mediation) request.mediation = mediation;
 
-        var cred = await navigator.credentials.get(request);
+        var cred;
+        try {
+            cred = await navigator.credentials.get(request);
+        } catch (e) {
+            if (isUserCancel(e)) throw e;
+            throw new Error('assertion_failed');
+        }
+        if (!cred) throw new Error('assertion_failed');
+
         var finish = await fetch(finishURL(next), {
             method: 'POST',
             credentials: 'same-origin',
@@ -96,18 +117,33 @@
         throw new Error(data.error || 'finish_failed');
     }
 
-    async function tryConditionalPasskey(next) {
-        if (!webAuthnSupported()) return false;
-        if (!global.PublicKeyCredential.isConditionalMediationAvailable) return false;
-        var available = await global.PublicKeyCredential.isConditionalMediationAvailable();
-        if (!available) return false;
-        try {
-            var redirect = await runPasskeyLogin({ discoverable: true, mediation: 'conditional', next: next });
-            global.location.href = redirect;
-            return true;
-        } catch (e) {
-            return false;
+    async function loginWithPasskey(username, next) {
+        username = (username || '').trim();
+        var strategies = [];
+        if (isMobileUA() || !username) {
+            strategies.push({ discoverable: true, username: '' });
         }
+        if (username) {
+            strategies.push({ discoverable: false, username: username });
+        }
+        if (!strategies.length) {
+            throw new Error('username_required');
+        }
+
+        var lastErr = null;
+        for (var i = 0; i < strategies.length; i++) {
+            try {
+                return await runPasskeyLogin({
+                    discoverable: strategies[i].discoverable,
+                    username: strategies[i].username,
+                    next: next
+                });
+            } catch (e) {
+                if (isUserCancel(e)) throw e;
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error('failed');
     }
 
     function initLoginPasskey(config) {
@@ -146,31 +182,26 @@
         }
 
         btn && btn.addEventListener('click', async function () {
-            if (btn.disabled) return;
+            if (btn.disabled || loginInFlight) return;
+            loginInFlight = true;
             btn.disabled = true;
             try {
                 var username = (usernameInput && usernameInput.value || '').trim();
-                var useDiscoverable = isMobileUA() || !username;
-                if (!useDiscoverable && !username) {
+                if (!username && !isMobileUA()) {
                     alert(i18n.usernameRequired || 'Enter your username.');
                     return;
                 }
-                var redirect = await runPasskeyLogin({
-                    username: useDiscoverable ? '' : username,
-                    discoverable: useDiscoverable,
-                    next: next
-                });
+                var redirect = await loginWithPasskey(username, next);
                 global.location.href = redirect;
             } catch (e) {
-                global.location.href = '/login?webauthn_error=failed' + (next ? '&next=' + encodeURIComponent(next) : '');
+                if (isUserCancel(e)) return;
+                var code = (e && e.message) ? e.message : 'failed';
+                redirectLoginError(next, code);
             } finally {
+                loginInFlight = false;
                 btn.disabled = false;
             }
         });
-
-        if (isMobileUA()) {
-            tryConditionalPasskey(next);
-        }
     }
 
     global.LoginPasskey = {
