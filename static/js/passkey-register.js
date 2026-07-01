@@ -1,6 +1,14 @@
 (function (global) {
     'use strict';
 
+    function markRegistered() {
+        if (global.LoginPasskey && global.LoginPasskey.markPasskeyHint) {
+            global.LoginPasskey.markPasskeyHint();
+            return;
+        }
+        try { localStorage.setItem('bs_passkey_hint', '1'); } catch (e) { /* ignore */ }
+    }
+
     function init(opts) {
         opts = opts || {};
         var btn = document.getElementById('passkey-register-btn');
@@ -27,7 +35,11 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(WebAuthnClient.credentialToJSON(cred))
                 });
-                if (finish.ok) { global.location.href = successUrl; return; }
+                if (finish.ok) {
+                    markRegistered();
+                    global.location.href = successUrl;
+                    return;
+                }
                 var errBody = await finish.json().catch(function () { return {}; });
                 global.location.href = errorBase + encodeURIComponent(errBody.error || 'server');
             } catch (e) {
@@ -38,5 +50,5 @@
         });
     }
 
-    global.PasskeyRegister = { init: init };
+    global.PasskeyRegister = { init: init, markRegistered: markRegistered };
 })(typeof window !== 'undefined' ? window : globalThis);

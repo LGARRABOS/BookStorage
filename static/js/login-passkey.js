@@ -2,10 +2,26 @@
     'use strict';
 
     var STORAGE_KEY = 'bs_last_username';
+    var PASSKEY_HINT_KEY = 'bs_passkey_hint';
+    var AUTO_DECLINED_KEY = 'bs_auto_passkey_declined';
     var loginInFlight = false;
 
     function isMobileUA() {
         return /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || '');
+    }
+
+    function isStandalonePWA() {
+        if (global.navigator && global.navigator.standalone === true) return true;
+        try {
+            return global.matchMedia('(display-mode: standalone)').matches
+                || global.matchMedia('(display-mode: minimal-ui)').matches;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function isAppLaunchContext() {
+        return isMobileUA() || isStandalonePWA();
     }
 
     function isIOS() {
@@ -51,6 +67,38 @@
         try {
             if (username) localStorage.setItem(STORAGE_KEY, username);
         } catch (e) { /* ignore */ }
+    }
+
+    function hasPasskeyHint() {
+        try {
+            return localStorage.getItem(PASSKEY_HINT_KEY) === '1';
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function markPasskeyHint() {
+        try {
+            localStorage.setItem(PASSKEY_HINT_KEY, '1');
+        } catch (e) { /* ignore */ }
+    }
+
+    function shouldAutoPromptPasskey() {
+        if (!webAuthnSupported() || !isAppLaunchContext()) return false;
+        if (!hasPasskeyHint() && !isStandalonePWA()) return false;
+        try {
+            if (sessionStorage.getItem(AUTO_DECLINED_KEY) === '1') return false;
+        } catch (e) { /* ignore */ }
+        try {
+            var params = new URLSearchParams(global.location.search || '');
+            if (params.get('webauthn_error')) return false;
+        } catch (e2) { /* ignore */ }
+        return true;
+    }
+
+    function setPasskeyPending(active) {
+        var card = document.querySelector('.auth-card');
+        if (card) card.classList.toggle('auth-card--passkey-pending', !!active);
     }
 
     function finishURL(next) {
@@ -146,6 +194,45 @@
         throw lastErr || new Error('failed');
     }
 
+    async function attemptPasskeyLogin(username, next, opts) {
+        opts = opts || {};
+        if (loginInFlight) return false;
+        loginInFlight = true;
+        if (opts.showPending) setPasskeyPending(true);
+        try {
+            var redirect = await loginWithPasskey(username, next);
+            markPasskeyHint();
+            global.location.href = redirect;
+            return true;
+        } catch (e) {
+            if (isUserCancel(e)) {
+                if (opts.markDeclined) {
+                    try { sessionStorage.setItem(AUTO_DECLINED_KEY, '1'); } catch (err) { /* ignore */ }
+                }
+                return false;
+            }
+            if (!opts.silent) {
+                var code = (e && e.message) ? e.message : 'failed';
+                redirectLoginError(next, code);
+            }
+            return false;
+        } finally {
+            loginInFlight = false;
+            if (opts.showPending) setPasskeyPending(false);
+        }
+    }
+
+    async function tryAutoPasskeyOnLaunch(usernameInput, next) {
+        if (!shouldAutoPromptPasskey()) return;
+        var username = (usernameInput && usernameInput.value || getLastUsername() || '').trim();
+        await new Promise(function (resolve) { global.setTimeout(resolve, 150); });
+        await attemptPasskeyLogin(username, next, {
+            silent: true,
+            markDeclined: true,
+            showPending: true
+        });
+    }
+
     function initLoginPasskey(config) {
         config = config || {};
         var i18n = config.i18n || {};
@@ -183,7 +270,6 @@
 
         btn && btn.addEventListener('click', async function () {
             if (btn.disabled || loginInFlight) return;
-            loginInFlight = true;
             btn.disabled = true;
             try {
                 var username = (usernameInput && usernameInput.value || '').trim();
@@ -191,22 +277,21 @@
                     alert(i18n.usernameRequired || 'Enter your username.');
                     return;
                 }
-                var redirect = await loginWithPasskey(username, next);
-                global.location.href = redirect;
-            } catch (e) {
-                if (isUserCancel(e)) return;
-                var code = (e && e.message) ? e.message : 'failed';
-                redirectLoginError(next, code);
+                await attemptPasskeyLogin(username, next, { silent: false });
             } finally {
-                loginInFlight = false;
                 btn.disabled = false;
             }
         });
+
+        if (config.autoPrompt !== false) {
+            tryAutoPasskeyOnLaunch(usernameInput, next);
+        }
     }
 
     global.LoginPasskey = {
         init: initLoginPasskey,
         biometricLabel: biometricLabel,
-        isMobile: isMobileUA
+        isMobile: isMobileUA,
+        markPasskeyHint: markPasskeyHint
     };
 })(typeof window !== 'undefined' ? window : globalThis);

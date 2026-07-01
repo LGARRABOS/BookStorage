@@ -74,6 +74,9 @@
             successUrl: '/profile/passkeys?webauthn_registered=1',
             errorBase: '/profile/passkeys?webauthn_error='
         });
+        {{ if .WebAuthnPasskeys }}
+        try { localStorage.setItem('bs_passkey_hint', '1'); } catch (e) {}
+        {{ end }}
     });
     </script>
 </body>

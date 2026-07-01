@@ -50,6 +50,17 @@
   margin-bottom: 0.65rem;
 }
 
+.auth-card.auth-card--passkey-pending .form-layout,
+.auth-card.auth-card--passkey-pending .auth-divider,
+.auth-card.auth-card--passkey-pending .auth-oauth-block {
+  opacity: 0.45;
+  pointer-events: none;
+}
+
+.auth-card.auth-card--passkey-pending .auth-biometric-btn {
+  opacity: 0.85;
+}
+
 .auth-biometric-block {
   margin: 0 0 0.75rem;
 }
