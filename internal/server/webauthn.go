@@ -28,6 +28,47 @@ func encodeUserIDBE(id int) []byte {
 	return b
 }
 
+func decodeUserIDBE(b []byte) int {
+	if len(b) == 0 {
+		return 0
+	}
+	if len(b) < 8 {
+		padded := make([]byte, 8)
+		copy(padded[8-len(b):], b)
+		b = padded
+	} else if len(b) > 8 {
+		b = b[len(b)-8:]
+	}
+	var id int
+	for i := 0; i < 8; i++ {
+		id = (id << 8) | int(b[i])
+	}
+	return id
+}
+
+func (a *App) resolveWebAuthnDiscoverableUser(rawID, userHandle []byte) (webAuthnUser, int, error) {
+	if len(userHandle) > 0 {
+		if userID := decodeUserIDBE(userHandle); userID > 0 {
+			user, err := a.loadWebAuthnUser(userID)
+			if err == nil && len(user.credentials) > 0 {
+				return user, userID, nil
+			}
+		}
+	}
+	if len(rawID) == 0 {
+		return webAuthnUser{}, 0, sql.ErrNoRows
+	}
+	var userID int
+	if err := a.DB.QueryRow(
+		`SELECT user_id FROM webauthn_credentials WHERE credential_id = ?`,
+		rawID,
+	).Scan(&userID); err != nil {
+		return webAuthnUser{}, 0, err
+	}
+	user, err := a.loadWebAuthnUser(userID)
+	return user, userID, err
+}
+
 func (u webAuthnUser) WebAuthnID() []byte {
 	return encodeUserIDBE(u.id)
 }

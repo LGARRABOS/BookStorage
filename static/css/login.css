@@ -50,6 +50,41 @@
   margin-bottom: 0.65rem;
 }
 
+.auth-biometric-block {
+  margin: 0 0 0.75rem;
+}
+
+.auth-biometric-btn {
+  width: 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.65rem;
+  padding: 0.95rem 1.25rem;
+  font-size: 1.05rem;
+}
+
+.auth-biometric-icon {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.auth-biometric-hint {
+  margin: 0.55rem 0 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.45;
+  max-width: 36ch;
+  margin-left: auto;
+  margin-right: auto;
+  text-align: center;
+}
+
+.auth-biometric-block--mobile .auth-biometric-btn {
+  padding: 1rem 1.25rem;
+  font-size: 1.08rem;
+}
+
 .auth-card input:-webkit-autofill,
 .auth-card input:-webkit-autofill:hover,
 .auth-card input:-webkit-autofill:focus {

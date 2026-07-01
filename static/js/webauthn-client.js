@@ -71,16 +71,32 @@
         const ua = navigator.userAgent || '';
         if (/Macintosh|Mac OS X/i.test(ua) && attachment === 'platform') return 'Mac (Touch ID)';
         if (/Windows/i.test(ua) && attachment === 'platform') return 'Windows (code PIN)';
-        if (/iPhone|iPad|iPod/i.test(ua) && attachment === 'platform') return 'iPhone / iPad';
-        if (/Android/i.test(ua) && attachment === 'platform') return 'Android';
+        if (/iPhone|iPad|iPod/i.test(ua) && attachment === 'platform') {
+            const ratio = window.screen.width / (window.screen.height || 1);
+            return ratio < 0.7 || /iPhone/i.test(ua) ? 'iPhone (Face ID)' : 'iPad (Touch ID)';
+        }
+        if (/Android/i.test(ua) && attachment === 'platform') return 'Android (empreinte)';
         if (attachment === 'cross-platform') return 'Clé de sécurité';
         if (attachment === 'platform') return 'Cet appareil';
         return 'Passkey';
     }
 
+    function biometricLoginLabel(i18n) {
+        i18n = i18n || {};
+        const ua = navigator.userAgent || '';
+        if (/iPhone|iPad|iPod/i.test(ua)) {
+            const ratio = window.screen.width / (window.screen.height || 1);
+            if (ratio < 0.7 || /iPhone/i.test(ua)) return i18n.faceId || 'Face ID';
+            return i18n.touchId || 'Touch ID';
+        }
+        if (/Android/i.test(ua)) return i18n.fingerprint || 'Fingerprint';
+        return i18n.generic || 'Passkey';
+    }
+
     global.WebAuthnClient = {
         decodeRequestOptions: decodeRequestOptions,
         credentialToJSON: credentialToJSON,
-        suggestPasskeyLabel: suggestPasskeyLabel
+        suggestPasskeyLabel: suggestPasskeyLabel,
+        biometricLoginLabel: biometricLoginLabel
     };
 })(typeof window !== 'undefined' ? window : globalThis);

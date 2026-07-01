@@ -2,10 +2,12 @@ package server
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
 
+	"github.com/go-webauthn/webauthn/protocol"
 	"github.com/go-webauthn/webauthn/webauthn"
 )
 
@@ -66,6 +68,11 @@ func (a *App) HandleWebAuthnRegisterBegin(w http.ResponseWriter, r *http.Request
 	}
 	options, sessionData, err := wa.BeginRegistration(user,
 		webauthn.WithExclusions(webauthn.Credentials(user.WebAuthnCredentials()).CredentialDescriptors()),
+		webauthn.WithResidentKeyRequirement(protocol.ResidentKeyRequirementPreferred),
+		webauthn.WithAuthenticatorSelection(protocol.AuthenticatorSelection{
+			ResidentKey:      protocol.ResidentKeyRequirementPreferred,
+			UserVerification: protocol.VerificationRequired,
+		}),
 	)
 	if err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "begin_failed")
@@ -149,13 +156,39 @@ func (a *App) HandleWebAuthnLoginBegin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	var req struct {
-		Username string `json:"username"`
+		Username     string `json:"username"`
+		Discoverable bool   `json:"discoverable"`
+		Mediation    string `json:"mediation"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_json")
 		return
 	}
-	user, userID, err := a.loadWebAuthnUserByUsername(req.Username)
+	username := strings.TrimSpace(req.Username)
+	if username == "" || req.Discoverable {
+		mediation := parseWebAuthnMediation(req.Mediation)
+		var options *protocol.CredentialAssertion
+		var sessionData *webauthn.SessionData
+		var beginErr error
+		if mediation != protocol.MediationDefault {
+			options, sessionData, beginErr = wa.BeginDiscoverableMediatedLogin(mediation)
+		} else {
+			options, sessionData, beginErr = wa.BeginDiscoverableLogin()
+		}
+		if beginErr != nil {
+			a.apiWriteError(w, http.StatusBadRequest, "begin_failed")
+			return
+		}
+		key, err := a.putWebAuthnChallenge(sessionData, 0)
+		if err != nil {
+			a.apiWriteError(w, http.StatusInternalServerError, "internal_error")
+			return
+		}
+		a.setWebAuthnChallengeCookie(w, key)
+		a.apiWriteJSON(w, http.StatusOK, options)
+		return
+	}
+	user, userID, err := a.loadWebAuthnUserByUsername(username)
 	if err != nil || len(user.credentials) == 0 {
 		a.apiWriteError(w, http.StatusBadRequest, "unknown_user")
 		return
@@ -190,19 +223,38 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 		a.apiWriteError(w, http.StatusBadRequest, "missing_challenge")
 		return
 	}
-	sessionData, userID, ok := a.takeWebAuthnChallenge(key)
+	sessionData, challengeUserID, ok := a.takeWebAuthnChallenge(key)
 	clearWebAuthnChallengeCookie(w, a.Settings.Environment, a.Settings.PublicOrigin)
-	if !ok || userID <= 0 {
+	if !ok {
 		a.apiWriteError(w, http.StatusBadRequest, "invalid_challenge")
 		return
 	}
-	user, err := a.loadWebAuthnUser(userID)
-	if err != nil {
-		a.apiWriteError(w, http.StatusBadRequest, "invalid_user")
-		return
+
+	var credential *webauthn.Credential
+	var userID int
+	if challengeUserID <= 0 {
+		var resolvedID int
+		var err error
+		credential, resolvedID, err = a.finishDiscoverableLogin(wa, sessionData, r)
+		if err != nil {
+			a.apiWriteError(w, http.StatusBadRequest, "finish_failed")
+			return
+		}
+		userID = resolvedID
+	} else {
+		userID = challengeUserID
+		user, err := a.loadWebAuthnUser(userID)
+		if err != nil {
+			a.apiWriteError(w, http.StatusBadRequest, "invalid_user")
+			return
+		}
+		credential, err = wa.FinishLogin(user, sessionData, r)
+		if err != nil {
+			a.apiWriteError(w, http.StatusBadRequest, "finish_failed")
+			return
+		}
 	}
-	credential, err := wa.FinishLogin(user, sessionData, r)
-	if err != nil {
+	if userID <= 0 || credential == nil {
 		a.apiWriteError(w, http.StatusBadRequest, "finish_failed")
 		return
 	}
@@ -275,3 +327,36 @@ func (a *App) HandleWebAuthnDelete(w http.ResponseWriter, r *http.Request) {
 
 // Ensure webAuthnUser satisfies webauthn.User at compile time.
 var _ webauthn.User = webAuthnUser{}
+
+func parseWebAuthnMediation(raw string) protocol.CredentialMediationRequirement {
+	switch strings.ToLower(strings.TrimSpace(raw)) {
+	case "conditional":
+		return protocol.MediationConditional
+	case "optional":
+		return protocol.MediationOptional
+	case "required":
+		return protocol.MediationRequired
+	default:
+		return protocol.MediationDefault
+	}
+}
+
+func (a *App) finishDiscoverableLogin(wa *webauthn.WebAuthn, sessionData webauthn.SessionData, r *http.Request) (*webauthn.Credential, int, error) {
+	var resolvedID int
+	handler := func(rawID, userHandle []byte) (webauthn.User, error) {
+		user, userID, err := a.resolveWebAuthnDiscoverableUser(rawID, userHandle)
+		if err != nil {
+			return nil, err
+		}
+		resolvedID = userID
+		return user, nil
+	}
+	credential, err := wa.FinishDiscoverableLogin(handler, sessionData, r)
+	if err != nil {
+		return nil, 0, err
+	}
+	if resolvedID <= 0 {
+		return nil, 0, fmt.Errorf("discoverable user not resolved")
+	}
+	return credential, resolvedID, nil
+}
