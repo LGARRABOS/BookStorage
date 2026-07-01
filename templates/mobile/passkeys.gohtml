@@ -1,0 +1,81 @@
+{{ define "mobile_passkeys" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "mobile.passkeys.title" }} - BookStorage</title>
+    <style>
+        .mobile-passkeys-page { padding-bottom: 5.5rem; }
+        .mobile-passkeys-intro { color: var(--text-secondary); font-size: 0.92rem; line-height: 1.55; margin: 0 0 1.25rem; }
+        .mobile-passkeys-flash { font-size: 0.88rem; margin: 0 0 1rem; padding: 0.65rem 0.85rem; border-radius: 0.5rem; }
+        .mobile-passkeys-flash--ok { background: rgba(21, 128, 61, 0.12); color: #15803d; }
+        .mobile-passkeys-flash--err { background: rgba(220, 38, 38, 0.1); color: #dc2626; }
+        .mobile-passkey-item { display: flex; justify-content: space-between; align-items: center; gap: 0.75rem; padding: 0.85rem 0; border-top: 1px solid var(--border-subtle); }
+        .mobile-passkey-item:first-child { border-top: none; }
+        .mobile-passkey-meta { font-size: 0.8rem; color: var(--text-muted); display: block; margin-top: 0.2rem; }
+        .mobile-passkey-register { width: 100%; margin-top: 1rem; justify-content: center; display: inline-flex; align-items: center; gap: 0.5rem; }
+    </style>
+</head>
+<body class="mobile-app-body">
+    {{ template "mobile_topbar" . }}
+    <main class="page-body mobile-page mobile-passkeys-page">
+        <div class="container">
+            <section class="mobile-panel">
+                <p class="mobile-passkeys-intro">{{ t .T "mobile.passkeys.desc" }}</p>
+                {{ if .WebAuthnRegistered }}<p class="mobile-passkeys-flash mobile-passkeys-flash--ok">{{ t .T "profile.passkey.registered" }}</p>{{ end }}
+                {{ if .WebAuthnDeleted }}<p class="mobile-passkeys-flash mobile-passkeys-flash--ok">{{ t .T "profile.passkey.deleted" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "last_credential" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.last_credential" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "server" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.server" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "missing_challenge" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.missing_challenge" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "invalid_challenge" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.invalid_challenge" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "finish_failed" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.finish_failed" }}</p>{{ end }}
+                {{ if eq .WebAuthnError "store_failed" }}<p class="mobile-passkeys-flash mobile-passkeys-flash--err">{{ t .T "profile.passkey_error.store_failed" }}</p>{{ end }}
+                {{ if .WebAuthnPasskeys }}
+                <ul style="list-style:none;padding:0;margin:0;">
+                {{ range .WebAuthnPasskeys }}
+                    <li class="mobile-passkey-item">
+                        <span>
+                            <strong>{{ if .Name }}{{ .Name }}{{ else }}{{ t $.T "profile.passkey.unnamed" }}{{ end }}</strong>
+                            <span class="mobile-passkey-meta">{{ t $.T "profile.passkey.added" }} {{ .CreatedAt }}{{ if .LastUsedAt.Valid }} · {{ t $.T "profile.passkey.last_used" }} {{ .LastUsedAt.String }}{{ end }}</span>
+                        </span>
+                        <form method="POST" action="/profile/webauthn/delete/{{ .ID }}">
+                            <button type="submit" class="btn btn-secondary">{{ t $.T "profile.passkey.delete" }}</button>
+                        </form>
+                    </li>
+                {{ end }}
+                </ul>
+                {{ else }}
+                <p style="font-size:0.88rem;color:var(--text-muted);margin:0;">{{ t .T "profile.passkey.empty" }}</p>
+                {{ end }}
+                <button type="button" class="btn btn-primary mobile-passkey-register" id="passkey-register-btn">
+                    <span id="passkey-register-icon" aria-hidden="true">🔐</span>
+                    <span id="passkey-register-label">{{ t .T "profile.passkey.register" }}</span>
+                </button>
+            </section>
+        </div>
+    </main>
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    <script src="/static/js/webauthn-client.js"></script>
+    <script src="/static/js/login-passkey.js"></script>
+    <script src="/static/js/passkey-register.js"></script>
+    <script nonce="{{ .CSPNonce }}">
+    document.addEventListener('DOMContentLoaded', function() {
+        var i18n = {
+            faceId: {{ jsstr (t .T "mobile.passkeys.register_faceid") }},
+            touchId: {{ jsstr (t .T "mobile.passkeys.register_touchid") }},
+            fingerprint: {{ jsstr (t .T "mobile.passkeys.register_fingerprint") }},
+            generic: {{ jsstr (t .T "mobile.passkeys.register") }}
+        };
+        var labelEl = document.getElementById('passkey-register-label');
+        if (labelEl && window.LoginPasskey) labelEl.textContent = LoginPasskey.biometricLabel(i18n);
+        PasskeyRegister.init({
+            namePrompt: {{ jsstr (t .T "profile.passkey.name_prompt") }},
+            successUrl: '/profile/passkeys?webauthn_registered=1',
+            errorBase: '/profile/passkeys?webauthn_error='
+        });
+    });
+    </script>
+</body>
+</html>
+{{ end }}

@@ -198,6 +198,7 @@ func main() {
 	mux.HandleFunc("/dashboard", app.RequireLogin(app.HandleDashboard))
 	mux.HandleFunc("/stats", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleStats)))
 	mux.HandleFunc("/profile", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleProfile)))
+	mux.HandleFunc("/profile/passkeys", app.RequireLogin(app.HandleProfilePasskeys))
 	mux.HandleFunc("POST /profile/logout_all", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleLogoutAll)))
 	mux.HandleFunc("POST /profile/reset_reading_activity", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleProfileResetReadingActivity)))
 	mux.HandleFunc("POST /profile/blocklist/add", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleProfileBlocklistAdd)))
@@ -261,7 +262,7 @@ func main() {
 	mux.HandleFunc("POST /auth/webauthn/register/finish", app.RequireLogin(app.HandleWebAuthnRegisterFinish))
 	mux.HandleFunc("POST /auth/webauthn/login/begin", app.HandleWebAuthnLoginBegin)
 	mux.HandleFunc("POST /auth/webauthn/login/finish", app.HandleWebAuthnLoginFinish)
-	mux.HandleFunc("POST /profile/webauthn/delete/{id}", app.RequireLogin(app.MobileRedirectToDashboard(app.HandleWebAuthnDelete)))
+	mux.HandleFunc("POST /profile/webauthn/delete/{id}", app.RequireLogin(app.HandleWebAuthnDelete))
 
 	// Background prober: check all reading sites every 5 minutes.
 	proberCtx, proberCancel := context.WithCancel(context.Background())

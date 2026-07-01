@@ -71,6 +71,14 @@
             <span id="theme-icon" aria-hidden="true">🌙</span>
         </button>
     </div>
+    {{ if .WebAuthnEnabled }}
+    <div class="mobile-sheet-section">
+        <a class="mobile-sheet-btn mobile-sheet-btn--link" href="/profile/passkeys">
+            <span>{{ t .T "mobile.settings.passkeys" }}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+        </a>
+    </div>
+    {{ end }}
     <button type="button" class="mobile-sheet-close" id="mobile-settings-close">{{ t .T "common.close" }}</button>
 </div>
 {{ end }}

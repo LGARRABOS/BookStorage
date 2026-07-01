@@ -595,3 +595,34 @@ func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 	a.clearSession(w)
 	http.Redirect(w, r, "/?account_deleted=1", http.StatusFound)
 }
+
+// HandleProfilePasskeys serves the mobile passkey management page (Face ID / Touch ID setup).
+func (a *App) HandleProfilePasskeys(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	userID, ok := a.currentUserID(r)
+	if !ok {
+		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
+		return
+	}
+	if !a.webAuthnEnabled() {
+		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		return
+	}
+	if a.resolveViewMode(w, r) != "mobile" {
+		http.Redirect(w, r, "/profile", http.StatusFound)
+		return
+	}
+	passkeys, _ := a.listWebAuthnCredentials(userID)
+	q := r.URL.Query()
+	data := a.mergeData(r, map[string]any{
+		"MobileTopbarTitle":  i18n.T(a.currentLang(r))["mobile.passkeys.title"],
+		"WebAuthnPasskeys":   passkeys,
+		"WebAuthnDeleted":    q.Get("webauthn_deleted") == "1",
+		"WebAuthnRegistered": q.Get("webauthn_registered") == "1",
+		"WebAuthnError":      strings.TrimSpace(q.Get("webauthn_error")),
+	})
+	a.renderTemplate(w, r, "passkeys", data)
+}

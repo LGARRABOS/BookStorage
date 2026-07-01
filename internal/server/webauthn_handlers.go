@@ -290,6 +290,23 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true, "redirect": redirect})
 }
 
+func (a *App) webAuthnManagePath(r *http.Request) string {
+	if r == nil {
+		return "/profile"
+	}
+	if strings.HasPrefix(strings.TrimSpace(r.URL.Path), "/profile/passkeys") {
+		return "/profile/passkeys"
+	}
+	ref := strings.TrimSpace(r.Header.Get("Referer"))
+	if strings.Contains(ref, "/profile/passkeys") {
+		return "/profile/passkeys"
+	}
+	if a.resolveViewMode(nil, r) == "mobile" {
+		return "/profile/passkeys"
+	}
+	return "/profile"
+}
+
 // HandleWebAuthnDelete removes a passkey for the logged-in user.
 func (a *App) HandleWebAuthnDelete(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
@@ -301,28 +318,29 @@ func (a *App) HandleWebAuthnDelete(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
+	base := a.webAuthnManagePath(r)
 	credID, _ := strconv.Atoi(strings.TrimSpace(r.PathValue("id")))
 	if credID <= 0 {
-		http.Redirect(w, r, "/profile?webauthn_error=invalid", http.StatusFound)
+		http.Redirect(w, r, base+"?webauthn_error=invalid", http.StatusFound)
 		return
 	}
 	var remaining int
 	_ = a.DB.QueryRow(`SELECT COUNT(*) FROM webauthn_credentials WHERE user_id = ?`, userID).Scan(&remaining)
 	if remaining <= 1 && a.userPasskeyOnly(userID) {
-		http.Redirect(w, r, "/profile?webauthn_error=last_credential", http.StatusFound)
+		http.Redirect(w, r, base+"?webauthn_error=last_credential", http.StatusFound)
 		return
 	}
 	res, err := a.DB.Exec(`DELETE FROM webauthn_credentials WHERE id = ? AND user_id = ?`, credID, userID)
 	if err != nil {
-		http.Redirect(w, r, "/profile?webauthn_error=server", http.StatusFound)
+		http.Redirect(w, r, base+"?webauthn_error=server", http.StatusFound)
 		return
 	}
 	n, _ := res.RowsAffected()
 	if n == 0 {
-		http.Redirect(w, r, "/profile?webauthn_error=not_found", http.StatusFound)
+		http.Redirect(w, r, base+"?webauthn_error=not_found", http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "/profile?webauthn_deleted=1", http.StatusFound)
+	http.Redirect(w, r, base+"?webauthn_deleted=1", http.StatusFound)
 }
 
 // Ensure webAuthnUser satisfies webauthn.User at compile time.

@@ -299,6 +299,11 @@
   cursor: pointer;
 }
 
+a.mobile-sheet-btn--link {
+  text-decoration: none;
+  box-sizing: border-box;
+}
+
 .mobile-sheet-apply {
   width: 100%;
   min-height: var(--mobile-touch-min);
