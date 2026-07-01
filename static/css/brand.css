@@ -132,7 +132,7 @@
   position: relative;
   max-width: 1100px;
   margin: 0 auto;
-  padding: 0 0.5rem;
+  padding: 0 0.5rem 0.5rem;
 }
 
 .landing-hero-stage .landing-hero {
@@ -140,41 +140,60 @@
   z-index: 1;
 }
 
+/* Mobile : mascottes au-dessus du texte, dans le flux */
 .landing-hero-stage .brand-mascot-heroes {
   display: flex;
   justify-content: center;
   align-items: flex-end;
-  gap: clamp(0.25rem, 3vw, 1rem);
-  margin: 0 auto 0.5rem;
-  max-width: min(340px, 92vw);
+  gap: clamp(0.5rem, 4vw, 1.25rem);
+  margin: 0 auto 1rem;
+  max-width: min(360px, 94vw);
 }
 
 .landing-hero-stage .brand-mascot {
-  width: min(130px, 40vw);
-  max-height: 150px;
+  width: min(120px, 38vw);
+  max-height: 140px;
+  object-position: bottom center;
 }
 
 @media (min-width: 960px) {
+  .landing-hero-stage {
+    display: grid;
+    grid-template-columns: minmax(100px, 200px) minmax(0, 1fr) minmax(100px, 200px);
+    align-items: center;
+    gap: clamp(0.75rem, 2vw, 1.5rem);
+    padding: 0.5rem 0.5rem 1rem;
+  }
+
   .landing-hero-stage .brand-mascot-heroes {
-    display: block;
-    max-width: none;
-    margin: 0;
+    display: contents;
   }
 
   .landing-hero-stage .brand-mascot--female,
   .landing-hero-stage .brand-mascot--male {
-    position: absolute;
-    top: 0;
-    width: min(220px, 19vw);
-    max-height: 270px;
+    width: min(200px, 100%);
+    max-height: 240px;
+    align-self: end;
   }
 
   .landing-hero-stage .brand-mascot--female {
-    left: 0;
+    grid-column: 1;
+    grid-row: 1;
+    justify-self: center;
   }
 
   .landing-hero-stage .brand-mascot--male {
-    right: 0;
+    grid-column: 3;
+    grid-row: 1;
+    justify-self: center;
+  }
+
+  .landing-hero-stage .landing-hero {
+    grid-column: 2;
+    grid-row: 1;
+    max-width: none;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
   }
 }
 
