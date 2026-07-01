@@ -12,11 +12,19 @@
     <link rel="stylesheet" href="/static/css/base.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
-        .landing-hero {
+        .page-body { padding-top: clamp(1rem, 3vw, 2rem); }
+        .landing-hero-stage .landing-hero {
             text-align: center;
-            padding: clamp(2.5rem, 7vw, 4.5rem) 1rem clamp(2rem, 4vw, 3rem);
             max-width: 720px;
             margin: 0 auto;
+            padding: clamp(0.75rem, 2vw, 1.5rem) 1rem clamp(2rem, 4vw, 3rem);
+        }
+        @media (min-width: 960px) {
+            .landing-hero-stage .landing-hero {
+                padding-left: min(190px, 17vw);
+                padding-right: min(190px, 17vw);
+                padding-top: clamp(1.25rem, 3vw, 2rem);
+            }
         }
         .landing-hero h1 {
             font-size: clamp(2.2rem, 6vw, 3.25rem);
@@ -75,14 +83,17 @@
 
     <main class="page-body">
         <div class="container">
-            <section class="landing-hero">
-                <h1>{{ t .T "landing.hero.title" }}</h1>
-                <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
-                <div class="hero-buttons">
-                    <a href="/register" class="btn btn-primary">{{ t .T "landing.hero.cta" }}</a>
-                    <a href="/login" class="btn btn-secondary">{{ t .T "landing.hero.login" }}</a>
-                </div>
-            </section>
+            <div class="landing-hero-stage">
+                {{template "brand_mascot_heroes" .}}
+                <section class="landing-hero">
+                    <h1>{{ t .T "landing.hero.title" }}</h1>
+                    <p class="subtitle">{{ t .T "landing.hero.subtitle" }}</p>
+                    <div class="hero-buttons">
+                        <a href="/register" class="btn btn-primary">{{ t .T "landing.hero.cta" }}</a>
+                        <a href="/login" class="btn btn-secondary">{{ t .T "landing.hero.login" }}</a>
+                    </div>
+                </section>
+            </div>
 
             <section class="features">
                 <h2 class="features-title">{{ t .T "landing.features" }}</h2>
@@ -121,7 +132,6 @@
             </section>
 
             <section class="cta-section">
-                {{template "brand_mascot_heroes_compact" .}}
                 <h2>{{ t .T "landing.cta.title" }}</h2>
                 <p>{{ t .T "landing.cta.subtitle" }}</p>
                 <a href="/register" class="btn btn-primary">{{ t .T "landing.cta.button" }}</a>
