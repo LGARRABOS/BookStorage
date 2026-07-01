@@ -39,7 +39,19 @@
         .hero-buttons .btn { padding: 0.9rem 2rem; font-size: 1.05rem; }
         .features { padding: 2.5rem 0 3rem; border-top: 1px solid var(--border-subtle); }
         .features-title { text-align: center; font-size: 1.6rem; margin-bottom: 2.5rem; color: var(--text-primary); }
-        .features-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.5rem; }
+        .features-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 1.25rem;
+            max-width: 1080px;
+            margin: 0 auto;
+        }
+        @media (min-width: 560px) {
+            .features-grid { grid-template-columns: repeat(2, 1fr); gap: 1.5rem; }
+        }
+        @media (min-width: 900px) {
+            .features-grid { grid-template-columns: repeat(3, 1fr); }
+        }
         .feature-item { background: var(--surface); border-radius: var(--radius); padding: 1.75rem; box-shadow: var(--shadow-soft); border: 1px solid var(--border-subtle); transition: transform 0.2s ease, box-shadow 0.2s ease; }
         .feature-item:hover { transform: translateY(-4px); box-shadow: var(--shadow-base); }
         .feature-item .icon { font-size: 2.2rem; margin-bottom: 0.75rem; display: block; }
