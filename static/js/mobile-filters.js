@@ -52,7 +52,7 @@
   function restoreState(els) {
     try {
       var raw = sessionStorage.getItem(STORAGE_KEY);
-      if (!raw) return;
+      if (!raw) return false;
       var state = JSON.parse(raw);
       if (els.search && state.search) els.search.value = state.search;
       if (els.status && state.status) els.status.value = state.status;
@@ -60,16 +60,20 @@
       if (els.followCheck) els.followCheck.checked = !!state.follow;
       if (els.adultOnlyCheck) els.adultOnlyCheck.checked = !!state.adult;
       if (els.sortSel && state.sort) els.sortSel.value = state.sort;
-      syncQuickTabs(els, state.status || "");
-    } catch (e) {}
+      syncQuickTabs(els, els.status ? els.status.value : "En cours");
+      return true;
+    } catch (e) {
+      return false;
+    }
   }
 
   function syncQuickTabs(els, statusVal) {
     if (!els.quickFilters) return;
     var tabs = els.quickFilters.querySelectorAll(".mobile-collection-tab");
+    var activeStatus = statusVal === undefined || statusVal === null ? "En cours" : statusVal;
     for (var i = 0; i < tabs.length; i += 1) {
       var tabStatus = tabs[i].getAttribute("data-status") || "";
-      var active = tabStatus === (statusVal || "");
+      var active = tabStatus === activeStatus;
       tabs[i].classList.toggle("is-active", active);
       tabs[i].setAttribute("aria-selected", active ? "true" : "false");
     }
@@ -77,7 +81,6 @@
 
   function countActiveFilters(els) {
     var n = 0;
-    if (els.status && els.status.value) n += 1;
     if (els.site && els.site.value) n += 1;
     if (els.followCheck && els.followCheck.checked) n += 1;
     if (els.adultOnlyCheck && els.adultOnlyCheck.checked) n += 1;
@@ -130,11 +133,9 @@
         !fl || (fl === "unfollowed" && rawStatus === "En cours" && notifyVal === "0");
       var matchSite =
         !siteVal || (siteVal === "none" ? cardSite === "none" : cardSite === siteVal);
-      var visible =
-        (!q || title.indexOf(q) !== -1) &&
-        (!s || cs === s) &&
-        matchFollow &&
-        matchSite;
+      var matchSearch = !q || title.indexOf(q) !== -1;
+      var matchStatus = !q && (!s || cs === s);
+      var visible = matchSearch && matchStatus && matchFollow && matchSite;
       row.style.display = visible ? "" : "none";
     });
 
@@ -227,7 +228,11 @@
 
   function init() {
     var els = getEls();
-    restoreState(els);
+    var hadState = restoreState(els);
+    if (!hadState) {
+      if (els.status) els.status.value = "En cours";
+      syncQuickTabs(els, "En cours");
+    }
     updateBadge(els);
 
     if (els.search) {

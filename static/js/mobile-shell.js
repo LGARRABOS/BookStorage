@@ -45,19 +45,44 @@
   function initSearchToggle() {
     var toggle = document.getElementById("mobile-search-toggle");
     var panel = document.getElementById("mobile-search-panel");
-    var input = document.getElementById("mobile-search");
-    if (!toggle || !panel) return;
+    var inlineWrap = document.getElementById("mobile-search-inline");
+    var inlineInput = inlineWrap && inlineWrap.querySelector("#mobile-search");
+    var panelInput = panel && panel.querySelector("#mobile-search");
+    var input = inlineInput || panelInput || document.getElementById("mobile-search");
+    if (!toggle || !input) return;
 
     toggle.addEventListener("click", function () {
+      if (inlineWrap) {
+        inlineWrap.classList.add("is-focused");
+        input.focus();
+        if (typeof input.select === "function" && input.value) {
+          input.select();
+        }
+        inlineWrap.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        toggle.setAttribute("aria-expanded", "true");
+        return;
+      }
+      if (!panel) return;
       var willShow = panel.hidden;
       panel.hidden = !willShow;
       toggle.setAttribute("aria-expanded", willShow ? "true" : "false");
-      if (willShow && input) {
+      if (willShow) {
         setTimeout(function () {
           input.focus();
         }, 50);
       }
     });
+
+    if (inlineInput) {
+      inlineInput.addEventListener("blur", function () {
+        if (inlineWrap) inlineWrap.classList.remove("is-focused");
+        toggle.setAttribute("aria-expanded", "false");
+      });
+      inlineInput.addEventListener("focus", function () {
+        if (inlineWrap) inlineWrap.classList.add("is-focused");
+        toggle.setAttribute("aria-expanded", "true");
+      });
+    }
   }
 
   function initSettingsSheet() {
