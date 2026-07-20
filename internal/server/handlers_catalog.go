@@ -8,6 +8,7 @@ import (
 
 	"bookstorage/internal/catalog"
 	"bookstorage/internal/database"
+	"bookstorage/internal/i18n"
 	"bookstorage/internal/recommend"
 )
 
@@ -88,10 +89,12 @@ func (a *App) HandleCatalog(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
+	lang := a.currentLang(r)
 	data := map[string]any{
-		"Genres":        catalog.AnilistGenres(),
-		"ReadingTypes":  catalogBrowseReadingTypes,
-		"CatalogSource": parseCatalogSource(r.URL.Query().Get("source")),
+		"Genres":            catalog.AnilistGenres(),
+		"ReadingTypes":      catalogBrowseReadingTypes,
+		"CatalogSource":     parseCatalogSource(r.URL.Query().Get("source")),
+		"MobileTopbarTitle": i18n.T(lang)["catalog.title"],
 	}
 	a.renderTemplate(w, r, "catalog", a.mergeData(r, data))
 }

@@ -2,16 +2,20 @@
 <!DOCTYPE html>
 <html lang="{{ .Lang }}">
 <head>
+    {{ if .IsMobileView }}
+    {{ template "mobile_shell_head" . }}
+    {{ else }}
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <meta name="theme-color" content="#4f46e5">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     {{template "site_head_icons" .}}
-    <title>{{ t .T "stats.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
-    <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
+    {{ end }}
+    <title>{{ t .T "stats.title" }} - BookStorage</title>
+    {{ if not .IsMobileView }}<link rel="stylesheet" href="/static/css/mobile.css">{{ end }}
     <script src="/static/js/chart.min.js"></script>
     <style>
         .stats-hero { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1.25rem; margin-bottom: 2rem; }
@@ -64,8 +68,10 @@
         .stats-chart-canvas-wrap.donut { height: 300px; min-height: 260px; width: 100%; max-width: none; margin: 0; }
     </style>
 </head>
-<body>
-    {{ if not .IsMobileView }}
+<body class="{{ if .IsMobileView }}mobile-app-body{{ end }}">
+    {{ if .IsMobileView }}
+    {{ template "mobile_topbar" . }}
+    {{ else }}
     <header class="topbar">
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
@@ -209,13 +215,16 @@
             </section>
         </div>
     </main>
-    {{ if .IsMobileView }}{{ template "mobile_bottom_nav" . }}{{ end }}
-
+    {{ if .IsMobileView }}
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_install_banner" . }}
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    {{ else }}
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
-
     <script src="/static/js/appearance.js"></script>
-    {{ if .IsMobileView }}<script src="/static/js/mobile-nav.js"></script>{{ end }}
-    {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
+    <script src="/static/js/keyboard-shortcuts-nav.js"></script>
+    {{ end }}
     <script nonce="{{ .CSPNonce }}">
     (function(){
         var isDark = document.documentElement.getAttribute('data-theme') === 'dark';

@@ -110,19 +110,18 @@
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
         <span>{{ t .T "mobile.nav.add" }}</span>
     </a>
-    <button type="button" class="mobile-bottom-link mobile-bottom-link--stub" data-nav-stub="catalog" aria-label="{{ t .T "mobile.nav.catalog" }}">
+    <a href="/catalog" class="mobile-bottom-link" data-nav="/catalog">
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span>{{ t .T "mobile.nav.catalog" }}</span>
-    </button>
-    <button type="button" class="mobile-bottom-link mobile-bottom-link--stub" data-nav-stub="stats" aria-label="{{ t .T "mobile.nav.stats" }}">
+    </a>
+    <a href="/stats" class="mobile-bottom-link" data-nav="/stats">
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>{{ t .T "mobile.nav.stats" }}</span>
-    </button>
+    </a>
     <button type="button" class="mobile-bottom-link" id="mobile-account-open" data-nav="/account" aria-label="{{ t .T "mobile.nav.account" }}">
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>{{ t .T "mobile.nav.account" }}</span>
     </button>
-    <span id="mobile-coming-soon-msg" hidden>{{ t .T "mobile.coming_soon" }}</span>
 </nav>
 {{ end }}
 

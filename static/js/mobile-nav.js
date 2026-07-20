@@ -24,20 +24,6 @@
       }
     }
 
-    var stubs = document.querySelectorAll("[data-nav-stub]");
-    for (var j = 0; j < stubs.length; j += 1) {
-      stubs[j].addEventListener("click", function (e) {
-        e.preventDefault();
-        var msgEl = document.getElementById("mobile-coming-soon-msg");
-        var msg = msgEl ? msgEl.textContent : "Coming soon";
-        if (window.showToast) {
-          window.showToast(msg);
-        } else if (window.showAlert) {
-          window.showAlert(msg);
-        }
-      });
-    }
-
     var accountOpen = document.getElementById("mobile-account-open");
     if (accountOpen && window.MobileShell) {
       accountOpen.addEventListener("click", function () {
