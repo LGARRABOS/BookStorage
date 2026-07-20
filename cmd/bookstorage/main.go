@@ -240,6 +240,7 @@ func main() {
 	mux.HandleFunc("DELETE /api/works/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleAPIWorksDelete)))
 	mux.HandleFunc("GET /api/stats", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksRead)(app.HandleAPIStats)))
 	mux.HandleFunc("/edit/{id}", app.RequireLogin(app.HandleEditWork))
+	mux.HandleFunc("/work/{id}", app.RequireLogin(app.HandleWorkDetail))
 	mux.HandleFunc("POST /api/increment/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleIncrement)))
 	mux.HandleFunc("POST /api/decrement/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleDecrement)))
 	mux.HandleFunc("POST /api/set-chapter/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleSetChapter)))

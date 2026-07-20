@@ -4,30 +4,39 @@
 <head>
     {{ template "mobile_shell_head" . }}
     <title>{{ t .T "nav.dashboard" }} - BookStorage</title>
-    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=15">
-    {{ if .Works }}<link rel="stylesheet" href="/static/css/work-status-picker.css?v=2">{{ end }}
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=16">
 </head>
-<body class="mobile-app-body">
+<body class="mobile-app-body mobile-dashboard-body">
     {{ template "mobile_topbar" . }}
-    {{ template "mobile_search_bar" . }}
+
+    <div class="mobile-search-inline">
+        <div class="container">
+            <div class="mobile-search-bar">
+                <svg class="mobile-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="mobile-search" type="search" placeholder="{{ t .T "dashboard.search" }}" autocomplete="off" enterkeyhint="search">
+            </div>
+        </div>
+    </div>
 
     <main class="page-body mobile-page mobile-dashboard-page">
         <div class="container">
             {{ template "import_notice" . }}
 
-            <div class="mobile-toolbar">
-                <div class="mobile-quick-filters" id="mobile-quick-filters" role="tablist">
-                    <button type="button" class="mobile-filter-chip is-active" data-status="" role="tab" aria-selected="true">{{ t .T "dashboard.filter.all" }}</button>
-                    <button type="button" class="mobile-filter-chip" data-status="En cours" role="tab" aria-selected="false">{{ translateStatus "En cours" .T }}</button>
-                    <button type="button" class="mobile-filter-chip" data-status="À lire" role="tab" aria-selected="false">{{ translateStatus "À lire" .T }}</button>
-                    <button type="button" class="mobile-filter-chip" data-status="Terminé" role="tab" aria-selected="false">{{ translateStatus "Terminé" .T }}</button>
+            <div class="mobile-collection-header">
+                <div class="mobile-collection-tabs" id="mobile-quick-filters" role="tablist">
+                    <button type="button" class="mobile-collection-tab is-active" data-status="" role="tab" aria-selected="true">{{ t .T "mobile.tab.collection" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="En cours" role="tab" aria-selected="false">{{ t .T "mobile.tab.complete" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="À lire" role="tab" aria-selected="false">{{ t .T "mobile.tab.wishlist" }}</button>
                 </div>
-                <button type="button" class="mobile-filters-btn" id="mobile-filters-open" aria-haspopup="dialog">
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></svg>
-                    <span>{{ t .T "mobile.filters.button" }}</span>
+                <button type="button" class="mobile-filters-btn" id="mobile-filters-open" aria-haspopup="dialog" aria-label="{{ t .T "mobile.filters.button" }}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
                     <span class="mobile-filters-badge" id="mobile-filters-badge" hidden>0</span>
                 </button>
             </div>
+
+            <p class="mobile-collection-summary" id="mobile-collection-summary" data-label-works="{{ t .T "mobile.collection.works" }}" data-label-chapters="{{ t .T "mobile.collection.chapters" }}">
+                {{ len .Works }} {{ t .T "mobile.collection.works" }} • {{ .TotalChapters }} {{ t .T "mobile.collection.chapters" }}
+            </p>
 
             <div id="mobile-works-container">
             {{ if .Works }}
@@ -87,23 +96,11 @@
         <button type="button" class="mobile-sheet-close" id="mobile-filters-close">{{ t .T "common.close" }}</button>
     </div>
 
-    {{ if .Works }}
-    <template id="work-status-menu-tpl">
-        <div class="work-status-menu" role="menu" hidden>
-            {{ range .ReadingStatus }}
-            <button type="button" role="menuitemradio" class="work-status-menu-item" data-status="{{ . }}" data-label="{{ translateStatus . $.T }}">{{ translateStatus . $.T }}</button>
-            {{ end }}
-        </div>
-    </template>
-    {{ end }}
-
     {{ template "mobile_settings_sheet" . }}
     {{ template "mobile_install_banner" . }}
     {{ template "mobile_bottom_nav" . }}
     {{ template "mobile_shell_scripts" . }}
-    {{ if .Works }}<script src="/static/js/work-status-picker.js"></script>{{ end }}
-    <script src="/static/js/mobile-filters.js?v=1"></script>
-    <script src="/static/js/mobile-dashboard.js?v=1"></script>
+    <script src="/static/js/mobile-filters.js?v=2"></script>
 </body>
 </html>
 {{ end }}

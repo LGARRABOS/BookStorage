@@ -414,11 +414,11 @@ a.mobile-sheet-btn--link {
   bottom: 0;
   z-index: 120;
   display: grid;
-  grid-template-columns: 1fr 1fr 1fr;
+  grid-template-columns: repeat(5, 1fr);
   height: var(--mobile-bottom-nav-height);
   padding-bottom: env(safe-area-inset-bottom);
-  background: var(--topbar-bg, rgba(15, 23, 42, 0.96));
-  border-top: 1px solid rgba(148, 163, 184, 0.2);
+  background: var(--surface);
+  border-top: 1px solid var(--border-subtle);
 }
 
 .mobile-bottom-link {
@@ -427,12 +427,17 @@ a.mobile-sheet-btn--link {
   align-items: center;
   justify-content: center;
   gap: 3px;
-  color: var(--mobile-chrome-fg-muted);
-  font-size: 0.6rem;
-  font-weight: 500;
+  padding: 0.25rem 0.15rem;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  font-size: 0.58rem;
+  font-weight: 600;
   text-decoration: none;
   transition: color 0.15s ease;
   touch-action: manipulation;
+  cursor: pointer;
+  font-family: inherit;
 }
 
 .mobile-bottom-link svg {
@@ -440,11 +445,11 @@ a.mobile-sheet-btn--link {
 }
 
 .mobile-bottom-link.is-active {
-  color: #a5b4fc;
+  color: var(--primary);
 }
 
-.mobile-bottom-link--add {
-  color: #a5b4fc;
+.mobile-bottom-link--stub {
+  opacity: 0.85;
 }
 
 .mobile-nav-icon {
@@ -453,9 +458,12 @@ a.mobile-sheet-btn--link {
   flex-shrink: 0;
 }
 
-.mobile-bottom-link--add .mobile-nav-icon {
-  width: 22px;
-  height: 22px;
+.mobile-sheet-btn--danger {
+  color: #ef4444;
+}
+
+.mobile-sheet-btn--danger svg {
+  stroke: #ef4444;
 }
 
 /* --- Page layout --- */

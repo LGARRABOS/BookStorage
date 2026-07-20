@@ -6,7 +6,7 @@
     var busy = false;
 
     function getCard(picker) {
-        return picker.closest('.work-card') || picker.closest('.work-mobile-card');
+        return picker.closest('.work-card') || picker.closest('.work-mobile-card') || picker.closest('.work-detail');
     }
 
     function closeMenu() {

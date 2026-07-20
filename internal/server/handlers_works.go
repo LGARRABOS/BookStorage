@@ -363,6 +363,62 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func (a *App) HandleWorkDetail(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	workIDStr := r.PathValue("id")
+	if a.resolveViewMode(w, r) != "mobile" {
+		http.Redirect(w, r, "/edit/"+workIDStr, http.StatusFound)
+		return
+	}
+	userID, _ := a.currentUserID(r)
+	workID, _ := strconv.Atoi(workIDStr)
+
+	var work workRow
+	err := scanFullWorkRow(&work, a.DB.QueryRow(
+		`SELECT `+sqlWorkRowFull+`
+         FROM works WHERE id = ? AND user_id = ?`,
+		workID, userID,
+	))
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	catalogCoverByWorkID := map[int]string{}
+	anilistCoverByWorkID := map[int]string{}
+	var imageURL string
+	_ = a.DB.QueryRow(
+		`SELECT COALESCE(c.image_url, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id WHERE w.id = ? AND w.user_id = ?`,
+		workID, userID,
+	).Scan(&imageURL)
+	if strings.TrimSpace(imageURL) != "" {
+		catalogCoverByWorkID[workID] = strings.TrimSpace(imageURL)
+	}
+	var aniURL string
+	_ = a.DB.QueryRow(
+		`SELECT COALESCE(c.image_url, '') FROM works w INNER JOIN catalog c ON c.id = w.catalog_id AND LOWER(TRIM(c.source)) = 'anilist' WHERE w.id = ? AND w.user_id = ?`,
+		workID, userID,
+	).Scan(&aniURL)
+	if strings.TrimSpace(aniURL) != "" {
+		anilistCoverByWorkID[workID] = strings.TrimSpace(aniURL)
+	}
+
+	a.renderTemplate(w, r, "work", a.mergeData(r, map[string]any{
+		"Work":                 work,
+		"CatalogCoverByWorkID": catalogCoverByWorkID,
+		"AnilistCoverByWorkID": anilistCoverByWorkID,
+		"ReadingStatus":        readingStatuses,
+		"MobileTopbarTitle":    work.Title,
+	}))
+}
+
 func (a *App) HandleDeleteWorkAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)

@@ -17,6 +17,7 @@
       sortSel: document.getElementById("mobile-sort"),
       quickFilters: document.getElementById("mobile-quick-filters"),
       badge: document.getElementById("mobile-filters-badge"),
+      summary: document.getElementById("mobile-collection-summary"),
       filtersOpen: document.getElementById("mobile-filters-open"),
       filtersClose: document.getElementById("mobile-filters-close"),
       filtersApply: document.getElementById("mobile-filters-apply"),
@@ -26,9 +27,9 @@
     };
   }
 
-  function getCards() {
+  function getRows() {
     return Array.prototype.slice.call(
-      document.querySelectorAll("#works-mobile-list .work-mobile-card")
+      document.querySelectorAll("#works-mobile-list .work-mobile-row")
     );
   }
 
@@ -59,18 +60,18 @@
       if (els.followCheck) els.followCheck.checked = !!state.follow;
       if (els.adultOnlyCheck) els.adultOnlyCheck.checked = !!state.adult;
       if (els.sortSel && state.sort) els.sortSel.value = state.sort;
-      syncQuickChips(els, state.status || "");
+      syncQuickTabs(els, state.status || "");
     } catch (e) {}
   }
 
-  function syncQuickChips(els, statusVal) {
+  function syncQuickTabs(els, statusVal) {
     if (!els.quickFilters) return;
-    var chips = els.quickFilters.querySelectorAll(".mobile-filter-chip");
-    for (var i = 0; i < chips.length; i += 1) {
-      var chipStatus = chips[i].getAttribute("data-status") || "";
-      var active = chipStatus === (statusVal || "");
-      chips[i].classList.toggle("is-active", active);
-      chips[i].setAttribute("aria-selected", active ? "true" : "false");
+    var tabs = els.quickFilters.querySelectorAll(".mobile-collection-tab");
+    for (var i = 0; i < tabs.length; i += 1) {
+      var tabStatus = tabs[i].getAttribute("data-status") || "";
+      var active = tabStatus === (statusVal || "");
+      tabs[i].classList.toggle("is-active", active);
+      tabs[i].setAttribute("aria-selected", active ? "true" : "false");
     }
   }
 
@@ -95,20 +96,36 @@
     }
   }
 
+  function updateSummary(els) {
+    if (!els.summary) return;
+    var rows = getRows();
+    var visible = 0;
+    var chapters = 0;
+    rows.forEach(function (row) {
+      if (row.style.display === "none") return;
+      visible += 1;
+      chapters += parseInt(row.getAttribute("data-chapter"), 10) || 0;
+    });
+    var worksLabel = els.summary.getAttribute("data-label-works") || "works";
+    var chaptersLabel = els.summary.getAttribute("data-label-chapters") || "chapters";
+    els.summary.textContent =
+      visible + " " + worksLabel + " • " + chapters + " " + chaptersLabel;
+  }
+
   function applyClientFilters(els) {
-    var cards = getCards();
-    if (!cards.length) return;
+    var rows = getRows();
+    if (!rows.length) return;
     var q = normalize(els.search ? els.search.value : "");
     var s = els.status ? normalize(els.status.value) : "";
     var fl = els.followCheck && els.followCheck.checked ? "unfollowed" : "";
     var siteVal = els.site ? els.site.value : "";
 
-    cards.forEach(function (card) {
-      var title = normalize(card.getAttribute("data-title"));
-      var cs = normalize(card.getAttribute("data-status"));
-      var rawStatus = card.getAttribute("data-status") || "";
-      var notifyVal = card.getAttribute("data-notify-new-chapters") || "1";
-      var cardSite = card.getAttribute("data-reading-site-id") || "none";
+    rows.forEach(function (row) {
+      var title = normalize(row.getAttribute("data-title"));
+      var cs = normalize(row.getAttribute("data-status"));
+      var rawStatus = row.getAttribute("data-status") || "";
+      var notifyVal = row.getAttribute("data-notify-new-chapters") || "1";
+      var cardSite = row.getAttribute("data-reading-site-id") || "none";
       var matchFollow =
         !fl || (fl === "unfollowed" && rawStatus === "En cours" && notifyVal === "0");
       var matchSite =
@@ -118,11 +135,12 @@
         (!s || cs === s) &&
         matchFollow &&
         matchSite;
-      card.style.display = visible ? "" : "none";
+      row.style.display = visible ? "" : "none";
     });
 
     saveState(els);
     updateBadge(els);
+    updateSummary(els);
   }
 
   function buildServerUrl(els) {
@@ -160,9 +178,6 @@
       .then(function (html) {
         if (!html || !els.worksContainer) return;
         els.worksContainer.innerHTML = html;
-        if (window.MobileDashboard && window.MobileDashboard.rebind) {
-          window.MobileDashboard.rebind();
-        }
         applyClientFilters(els);
         var newUrl = new URL(buildServerUrl(els));
         newUrl.searchParams.delete("partial");
@@ -190,7 +205,7 @@
     }
     if (els.filtersApply) {
       els.filtersApply.addEventListener("click", function () {
-        syncQuickChips(els, els.status ? els.status.value : "");
+        syncQuickTabs(els, els.status ? els.status.value : "");
         applyClientFilters(els);
         reloadWorksList(els);
         window.MobileShell.closeSheet(els.filtersSheet, els.filtersOverlay);
@@ -198,14 +213,14 @@
     }
   }
 
-  function initQuickFilters(els) {
+  function initQuickTabs(els) {
     if (!els.quickFilters) return;
     els.quickFilters.addEventListener("click", function (e) {
-      var chip = e.target.closest(".mobile-filter-chip");
-      if (!chip) return;
-      var statusVal = chip.getAttribute("data-status") || "";
+      var tab = e.target.closest(".mobile-collection-tab");
+      if (!tab) return;
+      var statusVal = tab.getAttribute("data-status") || "";
       if (els.status) els.status.value = statusVal;
-      syncQuickChips(els, statusVal);
+      syncQuickTabs(els, statusVal);
       applyClientFilters(els);
     });
   }
@@ -215,26 +230,34 @@
     restoreState(els);
     updateBadge(els);
 
-    if (els.search) els.search.addEventListener("input", function () {
-      applyClientFilters(els);
-    });
-    if (els.status) els.status.addEventListener("change", function () {
-      syncQuickChips(els, els.status.value);
-      applyClientFilters(els);
-    });
-    if (els.followCheck) els.followCheck.addEventListener("change", function () {
-      applyClientFilters(els);
-      updateBadge(els);
-    });
-    if (els.site) els.site.addEventListener("change", function () {
-      applyClientFilters(els);
-      updateBadge(els);
-    });
+    if (els.search) {
+      els.search.addEventListener("input", function () {
+        applyClientFilters(els);
+      });
+    }
+    if (els.status) {
+      els.status.addEventListener("change", function () {
+        syncQuickTabs(els, els.status.value);
+        applyClientFilters(els);
+      });
+    }
+    if (els.followCheck) {
+      els.followCheck.addEventListener("change", function () {
+        applyClientFilters(els);
+        updateBadge(els);
+      });
+    }
+    if (els.site) {
+      els.site.addEventListener("change", function () {
+        applyClientFilters(els);
+        updateBadge(els);
+      });
+    }
     document.addEventListener("workstatuschanged", function () {
       applyClientFilters(els);
     });
 
-    initQuickFilters(els);
+    initQuickTabs(els);
     initFiltersSheet(els);
     applyClientFilters(els);
   }
@@ -245,7 +268,9 @@
     init();
   }
 
-  window.MobileFilters = { applyClientFilters: function () {
-    applyClientFilters(getEls());
-  }};
+  window.MobileFilters = {
+    applyClientFilters: function () {
+      applyClientFilters(getEls());
+    },
+  };
 })();

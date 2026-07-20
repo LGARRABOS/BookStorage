@@ -126,12 +126,14 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	linkDotStatusByWorkID := make(map[int]string, len(works))
 	linkDeadCount := 0
+	totalChapters := 0
 	for _, w := range works {
 		st := effectiveLinkDotStatus(w, readingSiteStatusMap)
 		linkDotStatusByWorkID[w.ID] = st
 		if linkStatusIsDead(st) {
 			linkDeadCount++
 		}
+		totalChapters += w.Chapter
 	}
 
 	var sitesDownCount int
@@ -142,6 +144,7 @@ func (a *App) HandleDashboard(w http.ResponseWriter, r *http.Request) {
 
 	data := map[string]any{
 		"Works":                 works,
+		"TotalChapters":         totalChapters,
 		"CatalogCoverByWorkID":  catalogCoverByWorkID,
 		"AnilistCoverByWorkID":  anilistCoverByWorkID,
 		"ReadingTypes":          readingTypes,

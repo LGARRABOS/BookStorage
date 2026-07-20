@@ -1,0 +1,90 @@
+{{ define "mobile_work" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ .Work.Title }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=16">
+    <link rel="stylesheet" href="/static/css/work-status-picker.css?v=2">
+</head>
+<body class="mobile-app-body mobile-work-detail-body">
+    {{ template "mobile_topbar" . }}
+
+    <main class="page-body mobile-page mobile-work-detail-page">
+        <div class="container">
+            <article class="work-detail" data-work-id="{{ .Work.ID }}" data-status="{{ if .Work.Status.Valid }}{{ .Work.Status.String }}{{ end }}">
+                <div class="work-detail-cover">
+                    {{ $anilistCover := index .AnilistCoverByWorkID .Work.ID }}
+                    {{ if $anilistCover }}
+                        {{ $imgUrl := work_image_url $anilistCover }}
+                        {{ if $imgUrl }}
+                            <img src="{{ $imgUrl }}" alt="" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                        {{ else }}
+                            <span class="no-image" aria-hidden="true">📖</span>
+                        {{ end }}
+                    {{ else if .Work.ImagePath.Valid }}
+                        {{ $imgUrl := work_image_url .Work.ImagePath.String }}
+                        {{ if $imgUrl }}
+                            <img src="{{ $imgUrl }}" alt="" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                        {{ else }}
+                            <span class="no-image" aria-hidden="true">📖</span>
+                        {{ end }}
+                    {{ else }}
+                        {{ $extCover := index .CatalogCoverByWorkID .Work.ID }}
+                        {{ if $extCover }}
+                            <img src="{{ $extCover }}" alt="" loading="eager" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                            <span class="no-image" style="display:none;" aria-hidden="true">📖</span>
+                        {{ else }}
+                            <span class="no-image" aria-hidden="true">📖</span>
+                        {{ end }}
+                    {{ end }}
+                </div>
+
+                <div class="work-detail-header">
+                    <h1 class="work-detail-title">{{ .Work.Title }}</h1>
+                    <div class="work-detail-tags">
+                        <button type="button" class="work-detail-status work-status-picker" data-work-id="{{ .Work.ID }}" data-status="{{ if .Work.Status.Valid }}{{ .Work.Status.String }}{{ end }}" aria-haspopup="menu" aria-expanded="false">{{ if .Work.Status.Valid }}{{ translateStatus .Work.Status.String $.T }}{{ else }}—{{ end }}</button>
+                        {{ if .Work.ReadingType.Valid }}<span class="work-detail-tag work-detail-tag--type">{{ .Work.ReadingType.String }}</span>{{ end }}
+                        {{ if and .Work.IsAdult.Valid (eq .Work.IsAdult.Int64 1) }}<span class="work-detail-tag work-detail-tag--adult">18+</span>{{ end }}
+                    </div>
+                </div>
+
+                <section class="work-detail-section">
+                    <h2 class="work-detail-section-title">{{ t .T "dashboard.chapter" }}</h2>
+                    <div class="work-detail-chapter">
+                        <button type="button" class="btn-chapter btn-chapter-dec" data-work-id="{{ .Work.ID }}" aria-label="{{ t .T "dashboard.chapter" }} -1">−</button>
+                        <span class="work-detail-chapter-count" id="chapter-count-{{ .Work.ID }}">{{ .Work.Chapter }}</span>
+                        <button type="button" class="btn-chapter btn-chapter-inc" data-work-id="{{ .Work.ID }}" aria-label="{{ t .T "dashboard.chapter" }} +1">+</button>
+                    </div>
+                </section>
+
+                <div class="work-detail-actions">
+                    {{ if .Work.Link.Valid }}
+                    <a href="{{ .Work.Link.String }}" class="btn btn-primary work-detail-btn mobile-external-link" target="_blank" rel="noopener noreferrer external">{{ t .T "dashboard.reading_link" }}</a>
+                    {{ end }}
+                    <a href="/edit/{{ .Work.ID }}" class="btn work-detail-btn work-detail-btn--secondary">{{ t .T "mobile.actions.edit" }}</a>
+                    <button type="button" class="btn work-detail-btn work-detail-btn--danger js-confirm-delete" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}">{{ t .T "mobile.actions.delete" }}</button>
+                </div>
+            </article>
+        </div>
+    </main>
+
+    <template id="work-status-menu-tpl">
+        <div class="work-status-menu" role="menu" hidden>
+            {{ range .ReadingStatus }}
+            <button type="button" role="menuitemradio" class="work-status-menu-item" data-status="{{ . }}" data-label="{{ translateStatus . $.T }}">{{ translateStatus . $.T }}</button>
+            {{ end }}
+        </div>
+    </template>
+
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_install_banner" . }}
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    <script src="/static/js/work-status-picker.js"></script>
+    <script src="/static/js/mobile-work-detail.js?v=1"></script>
+</body>
+</html>
+{{ end }}
