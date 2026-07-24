@@ -12,6 +12,129 @@ import (
 	"testing"
 )
 
+func TestMalScoreToStars(t *testing.T) {
+	cases := []struct {
+		in, want int
+	}{
+		{0, 0}, {1, 1}, {5, 5}, {6, 3}, {7, 4}, {8, 4}, {9, 5}, {10, 5}, {11, 5},
+	}
+	for _, tc := range cases {
+		if got := malScoreToStars(tc.in); got != tc.want {
+			t.Fatalf("malScoreToStars(%d)=%d want %d", tc.in, got, tc.want)
+		}
+	}
+}
+
+func TestParseMALAnimeXML(t *testing.T) {
+	xmlData := `<?xml version="1.0" encoding="UTF-8" ?>
+<myanimelist>
+  <anime>
+    <series_animedb_id>53802</series_animedb_id>
+    <series_title><![CDATA[2.5-jigen no Ririsa]]></series_title>
+    <series_type>TV</series_type>
+    <series_episodes>24</series_episodes>
+    <my_watched_episodes>24</my_watched_episodes>
+    <my_start_date>2024-10-25</my_start_date>
+    <my_finish_date>2024-12-14</my_finish_date>
+    <my_score>8</my_score>
+    <my_status>Completed</my_status>
+    <my_comments><![CDATA[nice]]></my_comments>
+    <my_tags><![CDATA[]]></my_tags>
+  </anime>
+  <anime>
+    <series_animedb_id>60510</series_animedb_id>
+    <series_title><![CDATA[Plan Entry]]></series_title>
+    <series_type>Movie</series_type>
+    <series_episodes>0</series_episodes>
+    <my_watched_episodes>0</my_watched_episodes>
+    <my_start_date>0000-00-00</my_start_date>
+    <my_finish_date>0000-00-00</my_finish_date>
+    <my_score>0</my_score>
+    <my_status>Plan to Watch</my_status>
+    <my_comments><![CDATA[]]></my_comments>
+    <my_tags><![CDATA[]]></my_tags>
+  </anime>
+</myanimelist>`
+	rows, ok := parseMALAnimeXML([]byte(xmlData))
+	if !ok || len(rows) != 2 {
+		t.Fatalf("parse ok=%v len=%d", ok, len(rows))
+	}
+	if rows[0].Title != "2.5-jigen no Ririsa" || rows[0].Status != "Terminé" || rows[0].Episode != 24 {
+		t.Fatalf("row0 unexpected: %+v", rows[0])
+	}
+	if rows[0].Rating != 4 || rows[0].ExternalID != "53802" {
+		t.Fatalf("row0 score/id: rating=%d ext=%s", rows[0].Rating, rows[0].ExternalID)
+	}
+	if rows[0].TotalEpisodes == nil || *rows[0].TotalEpisodes != 24 {
+		t.Fatalf("row0 total episodes: %v", rows[0].TotalEpisodes)
+	}
+	if rows[0].StartedAt != "2024-10-25" || rows[0].FinishedAt != "2024-12-14" {
+		t.Fatalf("row0 dates: %s / %s", rows[0].StartedAt, rows[0].FinishedAt)
+	}
+	if !strings.Contains(rows[0].Link, "/anime/53802") {
+		t.Fatalf("row0 link: %s", rows[0].Link)
+	}
+	if rows[1].Status != "À voir" || rows[1].AnimeType != "Film" || rows[1].StartedAt != "" {
+		t.Fatalf("row1 unexpected: %+v", rows[1])
+	}
+}
+
+func TestImportFromXML_MALAnime(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	xmlData := `<?xml version="1.0" encoding="UTF-8" ?>
+<myanimelist>
+  <anime>
+    <series_animedb_id>21</series_animedb_id>
+    <series_title><![CDATA[One Piece]]></series_title>
+    <series_type>TV</series_type>
+    <series_episodes>1000</series_episodes>
+    <my_watched_episodes>1100</my_watched_episodes>
+    <my_start_date>2020-01-01</my_start_date>
+    <my_finish_date>0000-00-00</my_finish_date>
+    <my_score>9</my_score>
+    <my_status>Watching</my_status>
+    <my_comments><![CDATA[]]></my_comments>
+    <my_tags><![CDATA[]]></my_tags>
+  </anime>
+</myanimelist>`
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	_ = w.WriteField("duplicate_mode", "skip")
+	part, err := w.CreateFormFile("import_file", "animelist.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.WriteString(part, xmlData)
+	_ = w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/anime/import", &b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAnimeImport(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	var gotTitle, gotStatus, gotSource, gotExt string
+	var gotEpisode, gotRating int
+	var total sql.NullInt64
+	err = db.QueryRow(`SELECT title, status, episode, rating, total_episodes, source, external_id FROM anime_works WHERE user_id = 1 LIMIT 1`).
+		Scan(&gotTitle, &gotStatus, &gotEpisode, &gotRating, &total, &gotSource, &gotExt)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if gotTitle != "One Piece" || gotStatus != "En cours" || gotEpisode != 1100 || gotRating != 5 {
+		t.Fatalf("MAL XML import unexpected: %s %s ep=%d rating=%d", gotTitle, gotStatus, gotEpisode, gotRating)
+	}
+	if !total.Valid || total.Int64 != 1000 || gotSource != "mal" || gotExt != "21" {
+		t.Fatalf("meta unexpected: total=%v source=%s ext=%s", total, gotSource, gotExt)
+	}
+}
+
 func TestImportFromCSV_MALAnime(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}

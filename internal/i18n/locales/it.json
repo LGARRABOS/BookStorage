@@ -621,7 +621,7 @@
   "tools.anime.import.subtitle": "Importa un file BookStorage, MyAnimeList (anime) o AniList.",
   "tools.import.format_title": "Formati accettati",
   "tools.import.format_hint_manga": "Anche: CSV MAL (capitoli) e JSON/CSV AniList manga.",
-  "tools.import.format_hint_anime": "Anche: CSV MAL (episodi) e JSON AniList (tipo ANIME).",
+  "tools.import.format_hint_anime": "Anche: XML/CSV MAL (episodi) e JSON AniList (tipo ANIME).",
   "tools.data_quality.action": "Gestisci duplicati",
   "tools.data_quality.desc": "Rileva e unisci i duplicati nella tua biblioteca.",
   "tools.data_quality.title": "Qualità dei dati",

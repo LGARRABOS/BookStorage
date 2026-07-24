@@ -6,6 +6,7 @@ import (
 	"encoding/base64"
 	"encoding/csv"
 	"encoding/json"
+	"encoding/xml"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -58,7 +59,7 @@ func mapMALAnimeStatus(s string) string {
 		return "En cours"
 	case "completed", "2":
 		return "Terminé"
-	case "on_hold", "on-hold", "onhold", "3":
+	case "on_hold", "on-hold", "onhold", "on hold", "3":
 		return "En pause"
 	case "dropped", "4":
 		return "Abandonné"
@@ -67,6 +68,20 @@ func mapMALAnimeStatus(s string) string {
 	default:
 		return s
 	}
+}
+
+// malScoreToStars maps MAL 0–10 scores onto BookStorage 0–5 stars.
+func malScoreToStars(score int) int {
+	if score <= 0 {
+		return 0
+	}
+	if score > 10 {
+		score = 10
+	}
+	if score <= 5 {
+		return clampRating(score)
+	}
+	return clampRating((score + 1) / 2)
 }
 
 func mapMALAnimeType(s string) string {
@@ -158,7 +173,7 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 			Episode:   clampChapter(ep),
 			Status:    normalizeAnimeStatusForWrite(mapMALAnimeStatus(safeCell(row, idxStatus))),
 			AnimeType: normalizeAnimeTypeForWrite(mapMALAnimeType(safeCell(row, idxType))),
-			Rating:    clampRating(rating),
+			Rating:    malScoreToStars(rating),
 			Source:    "manual",
 		}
 		if tot, err := strconv.Atoi(safeCell(row, idxTotal)); err == nil && tot > 0 {
@@ -517,6 +532,90 @@ func parseCSVAnimeWorkRow(record []string) (exportAnimeWork, bool) {
 	return w, true
 }
 
+// malAnimeListXML matches MyAnimeList XML export (Version 1.1.0).
+type malAnimeListXML struct {
+	XMLName xml.Name           `xml:"myanimelist"`
+	Anime   []malAnimeEntryXML `xml:"anime"`
+}
+
+type malAnimeEntryXML struct {
+	SeriesAnimeDBID   int    `xml:"series_animedb_id"`
+	SeriesTitle       string `xml:"series_title"`
+	SeriesType        string `xml:"series_type"`
+	SeriesEpisodes    int    `xml:"series_episodes"`
+	MyWatchedEpisodes int    `xml:"my_watched_episodes"`
+	MyStartDate       string `xml:"my_start_date"`
+	MyFinishDate      string `xml:"my_finish_date"`
+	MyScore           int    `xml:"my_score"`
+	MyStatus          string `xml:"my_status"`
+	MyComments        string `xml:"my_comments"`
+	MyTags            string `xml:"my_tags"`
+}
+
+func malAnimeDate(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" || s == "0000-00-00" || strings.HasPrefix(s, "0000-") {
+		return ""
+	}
+	return s
+}
+
+func parseMALAnimeXML(data []byte) ([]exportAnimeWork, bool) {
+	var list malAnimeListXML
+	if err := xml.Unmarshal(data, &list); err != nil || len(list.Anime) == 0 {
+		return nil, false
+	}
+	out := make([]exportAnimeWork, 0, len(list.Anime))
+	for _, e := range list.Anime {
+		title := strings.TrimSpace(e.SeriesTitle)
+		if title == "" {
+			continue
+		}
+		w := exportAnimeWork{
+			Title:      title,
+			Episode:    clampChapter(e.MyWatchedEpisodes),
+			Status:     normalizeAnimeStatusForWrite(mapMALAnimeStatus(e.MyStatus)),
+			AnimeType:  normalizeAnimeTypeForWrite(mapMALAnimeType(e.SeriesType)),
+			Rating:     malScoreToStars(e.MyScore),
+			StartedAt:  malAnimeDate(e.MyStartDate),
+			FinishedAt: malAnimeDate(e.MyFinishDate),
+			Source:     "mal",
+		}
+		if e.SeriesEpisodes > 0 {
+			tot := e.SeriesEpisodes
+			w.TotalEpisodes = &tot
+		}
+		if e.SeriesAnimeDBID > 0 {
+			id := strconv.Itoa(e.SeriesAnimeDBID)
+			w.ExternalID = id
+			w.Link = "https://myanimelist.net/anime/" + id
+		}
+		notes := strings.TrimSpace(e.MyComments)
+		if tags := strings.TrimSpace(e.MyTags); tags != "" {
+			if notes != "" {
+				notes += "\n"
+			}
+			notes += tags
+		}
+		w.Notes = notes
+		out = append(out, w)
+	}
+	return out, len(out) > 0
+}
+
+func (a *App) ImportAnimeFromMALXML(w http.ResponseWriter, r *http.Request, userID int, data []byte, mode DuplicateMode) {
+	rows, ok := parseMALAnimeXML(data)
+	if !ok {
+		http.Redirect(w, r, pathToolsAnime+"?error=import", http.StatusFound)
+		return
+	}
+	report := ImportReport{}
+	for i, row := range rows {
+		a.importOneAnimeWork(userID, i+1, row, mode, &report)
+	}
+	redirectWithAnimeImportReport(w, r, report)
+}
+
 func (a *App) ImportAnimeFromJSONBytes(w http.ResponseWriter, r *http.Request, userID int, data []byte, mode DuplicateMode) {
 	var payload struct {
 		ExportVersion int               `json:"export_version"`
@@ -660,7 +759,7 @@ func (a *App) HandleAnimeExport(w http.ResponseWriter, r *http.Request) {
 	cw.Flush()
 }
 
-// HandleAnimeImport accepts CSV or JSON (file upload or JSON body) into anime_works.
+// HandleAnimeImport accepts CSV, JSON, or MAL XML (file upload or JSON body) into anime_works.
 func (a *App) HandleAnimeImport(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -680,7 +779,7 @@ func (a *App) HandleAnimeImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	if err := r.ParseMultipartForm(10 << 20); err != nil {
+	if err := r.ParseMultipartForm(32 << 20); err != nil {
 		http.Redirect(w, r, pathToolsAnime+"?error=import", http.StatusFound)
 		return
 	}
@@ -706,7 +805,15 @@ func (a *App) HandleAnimeImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	trim := strings.TrimSpace(string(data))
-	isJSON := strings.HasSuffix(strings.ToLower(filename), ".json") ||
+	lowerName := strings.ToLower(filename)
+	isXML := strings.HasSuffix(lowerName, ".xml") ||
+		strings.HasPrefix(trim, "<?xml") ||
+		strings.Contains(strings.ToLower(trim[:min(len(trim), 512)]), "<myanimelist")
+	if isXML {
+		a.ImportAnimeFromMALXML(w, r, userID, data, mode)
+		return
+	}
+	isJSON := strings.HasSuffix(lowerName, ".json") ||
 		strings.HasPrefix(trim, "{") || strings.HasPrefix(trim, "[")
 	if isJSON {
 		a.ImportAnimeFromJSONBytes(w, r, userID, data, mode)
