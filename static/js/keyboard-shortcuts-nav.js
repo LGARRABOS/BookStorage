@@ -21,7 +21,7 @@
     } else if (k === 'g') {
       window.location.href = '/manga/dashboard';
     } else if (k === 'o') {
-      window.location.href = '/manga/tools';
+      window.location.href = '/tools';
     } else if (k === 't' && typeof window.toggleTheme === 'function') {
       e.preventDefault();
       window.toggleTheme();

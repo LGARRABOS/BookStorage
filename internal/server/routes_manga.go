@@ -19,11 +19,6 @@ func (a *App) RegisterMangaRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST "+pathMangaReadingSites+"/probe", a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleReadingSiteProbe)))
 	mux.HandleFunc("POST "+pathMangaReadingSites+"/probe-all", a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleReadingSiteProbeAll)))
 
-	mux.HandleFunc(pathMangaTools, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleTools)))
-	mux.HandleFunc(pathMangaToolsCSV, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleToolsCSVImport)))
-	mux.HandleFunc(pathMangaToolsDup, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleDuplicates)))
-	mux.HandleFunc("POST "+pathMangaToolsDup+"/merge", a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleMergeDuplicate)))
-
 	mux.HandleFunc(pathMangaUsers, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleUsers)))
 	mux.HandleFunc(pathMangaUsersPrefix+"{id}", a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleUserDetail)))
 	mux.HandleFunc("POST "+pathMangaUsersPrefix+"{user_id}/import/{work_id}", a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleImportWork)))

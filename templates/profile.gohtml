@@ -150,7 +150,7 @@
                             {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}🌍 {{ t .T "profile.public" }}{{ else }}🔒 {{ t .T "profile.private" }}{{ end }}{{ else }}🌍 {{ t .T "profile.public" }}{{ end }}
                         </div>
                         <div class="side-actions">
-                            <a href="/manga/tools" class="btn btn-secondary">{{ t .T "profile.open_tools" }}</a>
+                            <a href="/tools" class="btn btn-secondary">{{ t .T "profile.open_tools" }}</a>
                         </div>
                     </aside>
 

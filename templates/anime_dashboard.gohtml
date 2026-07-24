@@ -11,7 +11,7 @@
     <link rel="stylesheet" href="/static/css/mobile.css">
     <script src="/static/js/appearance-init.js"></script>
     <style>
-        .anime-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .anime-header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
         .anime-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
         .anime-title p { color: var(--text-muted); margin: 0; }
         .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
@@ -43,9 +43,17 @@
         .anime-card-actions a, .anime-card-actions button { flex: 1; text-align: center; padding: 0.4rem; border-radius: 0.5rem; font-size: 0.8rem; text-decoration: none; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); cursor: pointer; }
         .anime-card-actions a:hover { border-color: var(--primary); color: var(--primary); }
         .anime-card-actions .del:hover { border-color: #ef4444; color: #ef4444; }
-        .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+        .empty-state { text-align: center; padding: 3rem 1.25rem; color: var(--text-muted); max-width: 420px; margin: 0 auto; border: 1px dashed var(--border-subtle); border-radius: 1rem; background: var(--surface); }
         .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-state .btn { margin-top: 1rem; }
         [data-theme="dark"] .anime-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        @media (max-width: 768px) {
+            .anime-header { flex-direction: column; align-items: stretch; }
+            .header-actions { justify-content: stretch; }
+            .header-actions .btn { flex: 1; justify-content: center; }
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .search-box { min-width: 0; width: 100%; }
+        }
     </style>
 </head>
 <body>

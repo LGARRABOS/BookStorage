@@ -32,7 +32,7 @@
     {{ end }}
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div class="container content-card">
-            <p><a href="/manga/tools">← {{ t .T "tools.csv_import.back" }}</a></p>
+            <p><a href="/tools/manga">← {{ t .T "tools.csv_import.back" }}</a></p>
             <h1>{{ t .T "tools.csv_import.title" }}</h1>
             <p>{{ t .T "tools.csv_import.subtitle" }}</p>
             {{ if .CSVError }}<p class="err">{{ t .T "tools.csv_import.error" }}: {{ .CSVError }}</p>{{ end }}

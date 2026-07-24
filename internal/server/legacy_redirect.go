@@ -33,13 +33,19 @@ func (a *App) RegisterLegacyRedirects(mux *http.ServeMux) {
 	mux.HandleFunc("/add_work", redirect(pathMangaAddWork))
 	mux.HandleFunc("/export", redirect(pathMangaExport))
 	mux.HandleFunc("/reading-sites", redirect(pathMangaReadingSites))
-	mux.HandleFunc("/tools", redirect(pathMangaTools))
-	mux.HandleFunc("/tools/csv-import", redirect(pathMangaToolsCSV))
-	mux.HandleFunc("/tools/duplicates", redirect(pathMangaToolsDup))
 	mux.HandleFunc("/users", redirect(pathMangaUsers))
 	mux.HandleFunc("/edit/{id}", redirectID(pathMangaEditPrefix, "id"))
 	mux.HandleFunc("/work/{id}", redirectID(pathMangaWorkPrefix, "id"))
 	mux.HandleFunc("/users/{id}", redirectID(pathMangaUsersPrefix, "id"))
+
+	// Pre-hub flat tools → new /tools/manga paths (index /tools is registered as a real page).
+	mux.HandleFunc("/tools/csv-import", redirect(pathToolsMangaCSV))
+	mux.HandleFunc("/tools/duplicates", redirect(pathToolsMangaDup))
+
+	// Pre-tools-hub manga tools URLs → /tools/manga.
+	mux.HandleFunc(pathMangaTools, redirect(pathToolsManga))
+	mux.HandleFunc(pathMangaToolsCSV, redirect(pathToolsMangaCSV))
+	mux.HandleFunc(pathMangaToolsDup, redirect(pathToolsMangaDup))
 
 	// Form POST endpoints (308 preserves method + body).
 	mux.HandleFunc("POST /import", redirect(pathMangaImport))
@@ -47,5 +53,6 @@ func (a *App) RegisterLegacyRedirects(mux *http.ServeMux) {
 	mux.HandleFunc("POST /reading-sites/delete", redirect(pathMangaReadingSites+"/delete"))
 	mux.HandleFunc("POST /reading-sites/probe", redirect(pathMangaReadingSites+"/probe"))
 	mux.HandleFunc("POST /reading-sites/probe-all", redirect(pathMangaReadingSites+"/probe-all"))
-	mux.HandleFunc("POST /tools/duplicates/merge", redirect(pathMangaToolsDup+"/merge"))
+	mux.HandleFunc("POST /tools/duplicates/merge", redirect(pathToolsMangaDup+"/merge"))
+	mux.HandleFunc("POST "+pathMangaToolsDup+"/merge", redirect(pathToolsMangaDup+"/merge"))
 }

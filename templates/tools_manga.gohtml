@@ -1,0 +1,101 @@
+{{ define "tools_manga" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{template "site_head_icons" .}}
+    <title>{{ t .T "tools.section.manga" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ template "tools_card_styles" . }}
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    {{ template "tools_topbar" . }}
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">📚 {{ t .T "tools.section.manga" }}</h1>
+                    <p class="page-subtitle">{{ t .T "tools.section.manga.desc" }}</p>
+                    <p><a href="/tools">← {{ t .T "tools.back_index" }}</a></p>
+                </header>
+
+                {{ template "import_notice" . }}
+
+                {{ if .CSVImportCount }}
+                <p style="background:var(--primary-muted);padding:0.75rem 1rem;border-radius:0.75rem;margin-bottom:1rem;">
+                    {{ t .T "tools.csv_import.flash" }} <strong>{{ .CSVImportCount }}</strong>
+                </p>
+                {{ end }}
+
+                <div class="tools-grid">
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.export.title" }}</h2>
+                        <p>{{ t .T "tools.export.subtitle" }}</p>
+                        <div class="tool-actions">
+                            <a href="/manga/export" class="btn btn-primary">{{ t .T "tools.export.csv" }}</a>
+                            <a href="/manga/export?format=json" class="btn btn-secondary">{{ t .T "tools.export.json" }}</a>
+                        </div>
+                    </article>
+
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.data_quality.title" }}</h2>
+                        <p>{{ t .T "tools.data_quality.desc" }}</p>
+                        <div class="tool-actions">
+                            <a href="/tools/manga/duplicates" class="btn btn-secondary">{{ t .T "tools.data_quality.action" }}</a>
+                        </div>
+                    </article>
+
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.csv_import.title" }}</h2>
+                        <p>{{ t .T "tools.csv_import.subtitle" }}</p>
+                        <div class="tool-actions">
+                            <a href="/tools/manga/csv-import" class="btn btn-secondary">{{ t .T "tools.csv_import.link" }}</a>
+                        </div>
+                    </article>
+                </div>
+
+                <article class="tool-card tool-card--import">
+                    <h2>{{ t .T "tools.import.title" }}</h2>
+                    <p>{{ t .T "tools.import.subtitle" }}</p>
+                    <div class="import-layout">
+                        <form class="import-form" action="/manga/import" method="POST" enctype="multipart/form-data">
+                            <input type="hidden" name="from" value="tools">
+                            <div class="form-group">
+                                <label for="duplicate_mode">{{ t .T "profile.import.duplicate_mode" }}</label>
+                                <select id="duplicate_mode" name="duplicate_mode">
+                                    <option value="skip">{{ t .T "profile.import.duplicate_skip" }}</option>
+                                    <option value="update">{{ t .T "profile.import.duplicate_update" }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="import_file">{{ t .T "tools.import.file_label" }}</label>
+                                <input id="import_file" type="file" name="import_file" accept=".csv,.json,text/csv,application/json" required>
+                            </div>
+                            <div class="tool-actions">
+                                <button type="submit" class="btn btn-secondary">{{ t .T "tools.import.action" }}</button>
+                            </div>
+                        </form>
+                        <div class="format-box">
+                            <strong>{{ t .T "tools.import.format_title" }}</strong>
+                            <code>Title;Chapter;Link;Status;Type;Rating;Notes;CatalogID;IsAdult;ImagePath</code>
+                            <p class="format-hint">{{ t .T "tools.import.format_hint_manga" }}</p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
+</body>
+</html>
+{{ end }}

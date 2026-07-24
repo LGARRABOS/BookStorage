@@ -135,7 +135,9 @@ func shouldRateLimit(path string) (key string, capacity, refillPerSec float64, o
 		path == "/profile/delete",
 		path == "/profile/google/unlink",
 		path == "/import",
+		strings.HasPrefix(path, "/tools/manga/csv-import"),
 		strings.HasPrefix(path, "/tools/csv-import"),
+		path == "/anime/import",
 		strings.HasPrefix(path, "/users/"),
 		strings.HasPrefix(path, "/admin/"),
 		strings.HasPrefix(path, "/api/admin/"):

@@ -15,12 +15,14 @@ const (
 	pathMangaCatalog      = "/manga/catalog"
 	pathMangaAddWork      = "/manga/add_work"
 	pathMangaReadingSites = "/manga/reading-sites"
-	pathMangaTools        = "/manga/tools"
-	pathMangaToolsCSV     = "/manga/tools/csv-import"
-	pathMangaToolsDup     = "/manga/tools/duplicates"
 	pathMangaUsers        = "/manga/users"
 	pathMangaExport       = "/manga/export"
 	pathMangaImport       = "/manga/import"
+
+	// Legacy tools URLs (308 → /tools/manga/...). Kept for redirects.
+	pathMangaTools    = "/manga/tools"
+	pathMangaToolsCSV = "/manga/tools/csv-import"
+	pathMangaToolsDup = "/manga/tools/duplicates"
 
 	// Prefixes for routes carrying a path value (append the id).
 	pathMangaEditPrefix  = "/manga/edit/"

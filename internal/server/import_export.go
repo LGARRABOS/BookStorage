@@ -34,10 +34,12 @@ type aniImportCover struct {
 }
 type aniImportMedia struct {
 	ID         int            `json:"id"`
+	Type       string         `json:"type"`
 	Title      aniImportTitle `json:"title"`
 	Format     string         `json:"format"`
 	IsAdult    bool           `json:"isAdult"`
 	CoverImage aniImportCover `json:"coverImage"`
+	Episodes   *int           `json:"episodes"`
 }
 type aniImportEntry struct {
 	Status   string         `json:"status"`
@@ -366,8 +368,13 @@ func redirectWithImportReport(w http.ResponseWriter, r *http.Request, rep Import
 	enc := base64.RawURLEncoding.EncodeToString(b)
 	base := pathMangaDashboard
 	if ref := strings.TrimSpace(r.Referer()); ref != "" {
-		if ru, err := url.Parse(ref); err == nil && ru.Path == pathMangaTools {
-			base = pathMangaTools
+		if ru, err := url.Parse(ref); err == nil {
+			switch ru.Path {
+			case pathToolsManga, pathMangaTools:
+				base = pathToolsManga
+			case pathToolsAnime:
+				base = pathToolsAnime
+			}
 		}
 	}
 	u := base + "?" + url.Values{"import_report": {enc}}.Encode()

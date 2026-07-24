@@ -7,11 +7,7 @@ import (
 	"strings"
 )
 
-func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
+func toolsImportReportData(r *http.Request) map[string]any {
 	data := map[string]any{}
 	if enc := r.URL.Query().Get("import_report"); enc != "" {
 		raw, err := base64.RawURLEncoding.DecodeString(enc)
@@ -28,5 +24,32 @@ func (a *App) HandleTools(w http.ResponseWriter, r *http.Request) {
 	if v := strings.TrimSpace(r.URL.Query().Get("csv_imported")); v != "" {
 		data["CSVImportCount"] = v
 	}
-	a.renderTemplate(w, r, "tools", a.mergeData(r, data))
+	return data
+}
+
+// HandleToolsIndex renders the hub-level Tools landing page (/tools).
+func (a *App) HandleToolsIndex(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "tools", a.mergeData(r, map[string]any{}))
+}
+
+// HandleToolsManga renders manga/webtoon tools (export, import, duplicates, CSV assistant).
+func (a *App) HandleToolsManga(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "tools_manga", a.mergeData(r, toolsImportReportData(r)))
+}
+
+// HandleToolsAnime renders anime tools (export + import).
+func (a *App) HandleToolsAnime(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "tools_anime", a.mergeData(r, toolsImportReportData(r)))
 }

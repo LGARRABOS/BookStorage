@@ -1435,7 +1435,9 @@ func TestRegisterLegacyRedirects(t *testing.T) {
 	}{
 		{http.MethodGet, "/dashboard", "/manga/dashboard"},
 		{http.MethodGet, "/catalog", "/manga/catalog"},
-		{http.MethodGet, "/tools/csv-import", "/manga/tools/csv-import"},
+		{http.MethodGet, "/tools/csv-import", "/tools/manga/csv-import"},
+		{http.MethodGet, "/manga/tools", "/tools/manga"},
+		{http.MethodGet, "/manga/tools/csv-import", "/tools/manga/csv-import"},
 		{http.MethodGet, "/work/5?x=1", "/manga/work/5?x=1"},
 		{http.MethodGet, "/edit/42", "/manga/edit/42"},
 		{http.MethodGet, "/users/7", "/manga/users/7"},

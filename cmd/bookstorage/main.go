@@ -255,6 +255,9 @@ func main() {
 	app.RegisterMangaRoutes(mux)
 	app.RegisterLegacyRedirects(mux)
 
+	// Hub-level Tools (/tools) + section tools + anime import/export.
+	app.RegisterToolsRoutes(mux)
+
 	// Anime module pages live under /anime/.
 	app.RegisterAnimeRoutes(mux)
 
