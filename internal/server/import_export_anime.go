@@ -35,7 +35,8 @@ type exportAnimeWork struct {
 }
 
 func (a *App) redirectWithAnimeImportReport(w http.ResponseWriter, r *http.Request, userID int, rep ImportReport) {
-	if rep.Imported > 0 || rep.Updated > 0 {
+	// Enrich covers even on re-import (duplicates skipped) when entries still lack images.
+	if rep.Imported > 0 || rep.Updated > 0 || rep.SkippedDuplicate > 0 {
 		a.scheduleAnimeCoverEnrichment(userID)
 	}
 	for len(mustJSON(rep)) > maxImportReportURLLen && len(rep.Errors) > 3 {
@@ -427,6 +428,10 @@ func (a *App) importOneAnimeWork(userID int, lineNum int, w exportAnimeWork, mod
 	}
 	if err == nil {
 		if mode == DuplicateSkip {
+			if a.fillAnimeDuplicateCoverIfMissing(userID, existsID, imagePath, source, externalID) {
+				report.Updated++
+				return
+			}
 			report.SkippedDuplicate++
 			return
 		}
@@ -458,6 +463,50 @@ func (a *App) importOneAnimeWork(userID int, lineNum int, w exportAnimeWork, mod
 		return
 	}
 	report.Imported++
+}
+
+// fillAnimeDuplicateCoverIfMissing sets a cover on a duplicate entry that has none.
+// Prefer the image from the import file; otherwise merge source/external_id so
+// background AniList enrichment can resolve a cover later. Returns true when image_path was set.
+func (a *App) fillAnimeDuplicateCoverIfMissing(userID, workID int, imagePath, source, externalID string) bool {
+	var existingImage string
+	err := a.DB.QueryRow(
+		`SELECT COALESCE(image_path, '') FROM anime_works WHERE id = ? AND user_id = ?`,
+		workID, userID,
+	).Scan(&existingImage)
+	if err != nil || strings.TrimSpace(existingImage) != "" {
+		return false
+	}
+
+	cover := strings.TrimSpace(imagePath)
+	if cover != "" {
+		res, err := a.DB.Exec(
+			`UPDATE anime_works SET image_path = ?,
+             source = CASE WHEN COALESCE(TRIM(source), '') IN ('', 'manual') AND ? != '' THEN ? ELSE source END,
+             external_id = COALESCE(NULLIF(TRIM(COALESCE(external_id, '')), ''), NULLIF(?, '')),
+             updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND user_id = ? AND (image_path IS NULL OR TRIM(image_path) = '')`,
+			cover, source, source, externalID, workID, userID,
+		)
+		if err != nil {
+			return false
+		}
+		n, _ := res.RowsAffected()
+		return n > 0
+	}
+
+	// No cover in the import: keep/merge MAL/AniList ids for later enrichment.
+	if source != "" || externalID != "" {
+		_, _ = a.DB.Exec(
+			`UPDATE anime_works SET
+             source = CASE WHEN COALESCE(TRIM(source), '') IN ('', 'manual') AND ? != '' THEN ? ELSE source END,
+             external_id = COALESCE(NULLIF(TRIM(COALESCE(external_id, '')), ''), NULLIF(?, '')),
+             updated_at = CURRENT_TIMESTAMP
+             WHERE id = ? AND user_id = ? AND (image_path IS NULL OR TRIM(image_path) = '')`,
+			source, source, externalID, workID, userID,
+		)
+	}
+	return false
 }
 
 func (a *App) ImportAnimeFromCSVRecords(w http.ResponseWriter, r *http.Request, userID int, records [][]string, mode DuplicateMode) {

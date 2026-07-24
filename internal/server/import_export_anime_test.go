@@ -10,6 +10,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestMalScoreToStars(t *testing.T) {
@@ -273,3 +274,142 @@ func TestHandleAnimeExport_JSONRoundTrip(t *testing.T) {
 		t.Fatalf("export inattendu: %+v", payload.AnimeWorks)
 	}
 }
+
+func TestImportAnimeDuplicateSkip_FillsMissingCover(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, user_id, source, updated_at)
+		 VALUES ('Coverless', 1, 'En cours', 'TV', 1, 'manual', CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	report := ImportReport{}
+	app.importOneAnimeWork(1, 1, exportAnimeWork{
+		Title:      "Coverless",
+		Episode:    5,
+		Status:     "En cours",
+		AnimeType:  "TV",
+		ImagePath:  "https://cdn.test/cover.jpg",
+		Source:     "anilist",
+		ExternalID: "99",
+	}, DuplicateSkip, &report)
+
+	if report.Updated != 1 || report.SkippedDuplicate != 0 {
+		t.Fatalf("expected cover update, report=%+v", report)
+	}
+	var img, source, ext string
+	var ep int
+	err = db.QueryRow(`SELECT COALESCE(image_path,''), episode, source, COALESCE(external_id,'') FROM anime_works WHERE title='Coverless'`).
+		Scan(&img, &ep, &source, &ext)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img != "https://cdn.test/cover.jpg" {
+		t.Fatalf("cover not filled: %q", img)
+	}
+	if ep != 1 {
+		t.Fatalf("skip mode must not overwrite episode, got %d", ep)
+	}
+	if source != "anilist" || ext != "99" {
+		t.Fatalf("expected source/id merge, got %s/%s", source, ext)
+	}
+}
+
+func TestImportAnimeDuplicateSkip_KeepsExistingCover(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, image_path, user_id, source, updated_at)
+		 VALUES ('HasCover', 1, 'En cours', 'TV', 'https://cdn.test/old.jpg', 1, 'manual', CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	report := ImportReport{}
+	app.importOneAnimeWork(1, 1, exportAnimeWork{
+		Title:     "HasCover",
+		ImagePath: "https://cdn.test/new.jpg",
+		Source:    "anilist",
+	}, DuplicateSkip, &report)
+	if report.SkippedDuplicate != 1 || report.Updated != 0 {
+		t.Fatalf("expected pure skip, report=%+v", report)
+	}
+	var img string
+	_ = db.QueryRow(`SELECT image_path FROM anime_works WHERE title='HasCover'`).Scan(&img)
+	if img != "https://cdn.test/old.jpg" {
+		t.Fatalf("existing cover must stay: %q", img)
+	}
+}
+
+func TestImportAnimeDuplicateSkip_SchedulesEnrichment(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, source, external_id, user_id, updated_at)
+		 VALUES ('NeedEnrich', 1, 'En cours', 'TV', 'mal', '21', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	done := make(chan struct{})
+	orig := resolveAnimeCoverURL
+	defer func() { resolveAnimeCoverURL = orig }()
+	resolveAnimeCoverURL = func(source, externalID, title string) string {
+		defer close(done)
+		return "https://cdn.test/enriched.jpg"
+	}
+
+	var b bytes.Buffer
+	w := multipart.NewWriter(&b)
+	_ = w.WriteField("duplicate_mode", "skip")
+	part, err := w.CreateFormFile("import_file", "animelist.xml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _ = io.WriteString(part, `<?xml version="1.0"?>
+<myanimelist>
+  <anime>
+    <series_animedb_id>21</series_animedb_id>
+    <series_title><![CDATA[NeedEnrich]]></series_title>
+    <series_type>TV</series_type>
+    <series_episodes>0</series_episodes>
+    <my_watched_episodes>1</my_watched_episodes>
+    <my_score>0</my_score>
+    <my_status>Watching</my_status>
+    <my_comments><![CDATA[]]></my_comments>
+    <my_tags><![CDATA[]]></my_tags>
+  </anime>
+</myanimelist>`)
+	_ = w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/anime/import", &b)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAnimeImport(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+
+	select {
+	case <-done:
+	case <-time.After(2 * time.Second):
+		t.Fatal("enrichment not scheduled on duplicate skip re-import")
+	}
+	deadline := time.Now().Add(2 * time.Second)
+	for time.Now().Before(deadline) {
+		var img string
+		_ = db.QueryRow(`SELECT COALESCE(image_path,'') FROM anime_works WHERE title='NeedEnrich'`).Scan(&img)
+		if img == "https://cdn.test/enriched.jpg" {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatal("cover not enriched after duplicate re-import")
+}
+
