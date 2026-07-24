@@ -12,15 +12,7 @@
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body>
-    <header class="topbar">
-        <div class="container nav-layout">
-            {{template "site_brand_dashboard" .}}
-            <nav class="nav-links">
-                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
-                {{template "nav_account_links" .}}
-            </nav>
-        </div>
-    </header>
+    {{ template "hub_topbar" . }}
     {{ template "admin_update_banner" . }}
     <main class="page-body">
         <div class="container content-card">

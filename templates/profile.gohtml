@@ -106,17 +106,7 @@
     {{ if .IsMobileView }}
     {{ template "mobile_topbar" . }}
     {{ else }}
-    <header class="topbar">
-        <div class="container nav-layout">
-            {{template "site_brand_dashboard" .}}
-            <nav class="nav-links">
-                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
-                {{template "nav_more_menu" .}}
-                {{template "nav_account_links" .}}
-                {{template "nav_settings_dropdown" .}}
-            </nav>
-        </div>
-    </header>
+    {{ template "hub_topbar" . }}
     {{ end }}
 
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
