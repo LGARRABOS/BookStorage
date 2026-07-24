@@ -49,6 +49,8 @@
 }
 
 .hub-card--manga::before { background: linear-gradient(180deg, #4f46e5, #6366f1); }
+.hub-card--tools::before { background: linear-gradient(180deg, #0ea5e9, #38bdf8); }
+.hub-card--sites::before { background: linear-gradient(180deg, #14b8a6, #2dd4bf); }
 .hub-card--profile::before { background: linear-gradient(180deg, #f97316, #fb923c); }
 .hub-card--admin::before { background: linear-gradient(180deg, #10b981, #34d399); }
 .hub-card--soon::before { background: var(--border); }
@@ -71,6 +73,8 @@
     background: var(--primary-muted);
 }
 
+.hub-card--tools .hub-card-icon { background: rgba(14, 165, 233, 0.15); }
+.hub-card--sites .hub-card-icon { background: rgba(20, 184, 166, 0.15); }
 .hub-card--profile .hub-card-icon { background: rgba(251, 146, 60, 0.15); }
 .hub-card--admin .hub-card-icon { background: rgba(16, 185, 129, 0.15); }
 .hub-card--soon .hub-card-icon { background: var(--input-bg); }

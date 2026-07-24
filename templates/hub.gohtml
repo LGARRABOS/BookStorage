@@ -35,6 +35,24 @@
                     </span>
                 </a>
 
+                <a class="hub-card hub-card--tools" href="/manga/tools">
+                    <span class="hub-card-icon" aria-hidden="true">🛠️</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.tools" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.tools.desc" }}</span>
+                    </span>
+                </a>
+
+                {{ if .IsAdmin }}
+                <a class="hub-card hub-card--sites" href="/manga/reading-sites">
+                    <span class="hub-card-icon" aria-hidden="true">🌐</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.reading_sites" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.reading_sites.desc" }}</span>
+                    </span>
+                </a>
+                {{ end }}
+
                 <a class="hub-card hub-card--profile" href="/profile">
                     <span class="hub-card-icon" aria-hidden="true">👤</span>
                     <span class="hub-card-body">
