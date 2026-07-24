@@ -1,0 +1,13 @@
+{{ define "anime_topbar" }}
+<header class="topbar">
+    <div class="container nav-layout">
+        {{ template "site_brand_dashboard" . }}
+        <nav class="nav-links">
+            <a href="/anime/dashboard">{{ t .T "anime.nav.dashboard" }}</a>
+            <a href="/anime/catalog">{{ t .T "anime.nav.catalog" }}</a>
+            <a href="/">{{ t .T "hub.nav.back" }}</a>
+            {{ template "nav_settings_dropdown" . }}
+        </nav>
+    </div>
+</header>
+{{ end }}

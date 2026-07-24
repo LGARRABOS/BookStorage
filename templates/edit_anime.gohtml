@@ -1,0 +1,47 @@
+{{ define "edit_anime" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "anime.edit.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ template "anime_form_styles" . }}
+</head>
+<body>
+    {{ template "anime_topbar" . }}
+    <main class="page-body">
+        <div class="container form-page">
+            <div class="form-header">
+                <div class="form-header-title"><h1>✏️ {{ t .T "anime.edit.title" }}</h1></div>
+                <a href="/anime/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+            </div>
+            {{ template "edit_anime_form" . }}
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+    {{ template "anime_form_scripts" . }}
+    <script nonce="{{ .CSPNonce }}">
+        var deleteConfirmMsg = {{ jsstr (t .T "anime.delete.confirm") }};
+        var delBtn = document.getElementById('anime-delete-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                var id = delBtn.getAttribute('data-id');
+                var title = delBtn.getAttribute('data-title') || '';
+                if (!confirm(deleteConfirmMsg.replace('%s', title))) return;
+                fetch('/api/anime/delete/' + id, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { if (data && data.ok) window.location.href = '/anime/dashboard'; });
+            });
+        }
+    </script>
+</body>
+</html>
+{{ end }}

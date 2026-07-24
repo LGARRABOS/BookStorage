@@ -35,14 +35,14 @@
                     </span>
                 </a>
 
-                <div class="hub-card hub-card--soon is-disabled" aria-disabled="true">
-                    <span class="hub-card-icon" aria-hidden="true">✨</span>
+                <a class="hub-card hub-card--anime" href="/anime/dashboard">
+                    <span class="hub-card-icon" aria-hidden="true">🎬</span>
                     <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.coming_soon" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.coming_soon.desc" }}</span>
+                        <span class="hub-card-title">{{ t .T "hub.section.anime" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.anime.desc" }}</span>
+                        <span class="hub-card-meta">{{ .HubAnimeProgress }} {{ t .T "hub.section.anime.in_progress" }}</span>
                     </span>
-                    <span class="hub-card-badge">{{ t .T "hub.badge.soon" }}</span>
-                </div>
+                </a>
             </div>
         </div>
     </main>

@@ -1,0 +1,197 @@
+{{ define "anime_dashboard" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "anime.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .anime-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .anime-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .anime-title p { color: var(--text-muted); margin: 0; }
+        .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input { width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.95rem; background: var(--background); color: var(--text-primary); }
+        .search-box::before { content: "🔍"; position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
+        .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); color: var(--text-primary); cursor: pointer; }
+        .filter-check { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; }
+        .anime-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.25rem; }
+        .anime-card { background: var(--surface); border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .anime-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .anime-cover { position: relative; width: 100%; aspect-ratio: 2 / 3; background: linear-gradient(135deg, var(--primary-muted), rgba(129, 140, 248, 0.12)); overflow: hidden; }
+        .anime-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .anime-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
+        .anime-badges { position: absolute; top: 0.5rem; left: 0.5rem; display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .anime-badge { font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: rgba(15,23,42,0.72); color: #fff; }
+        .anime-body { padding: 0.85rem 0.95rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+        .anime-card-title { font-weight: 600; font-size: 0.95rem; line-height: 1.25; color: var(--text-primary); }
+        .anime-card-title a { color: inherit; text-decoration: none; }
+        .anime-card-meta { font-size: 0.78rem; color: var(--text-muted); }
+        .anime-stars { color: #fbbf24; font-size: 0.9rem; letter-spacing: 0.05em; }
+        .anime-stars .empty { color: var(--border-subtle); }
+        .episode-counter { display: flex; align-items: center; gap: 0.5rem; margin-top: auto; }
+        .episode-counter button { width: 30px; height: 30px; border-radius: 0.5rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-size: 1.1rem; cursor: pointer; line-height: 1; }
+        .episode-counter button:hover { border-color: var(--primary); color: var(--primary); }
+        .episode-counter .count { font-weight: 600; font-size: 0.95rem; min-width: 2.5rem; text-align: center; }
+        .anime-card-actions { display: flex; gap: 0.5rem; }
+        .anime-card-actions a, .anime-card-actions button { flex: 1; text-align: center; padding: 0.4rem; border-radius: 0.5rem; font-size: 0.8rem; text-decoration: none; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); cursor: pointer; }
+        .anime-card-actions a:hover { border-color: var(--primary); color: var(--primary); }
+        .anime-card-actions .del:hover { border-color: #ef4444; color: #ef4444; }
+        .empty-state { text-align: center; padding: 4rem 1rem; color: var(--text-muted); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        [data-theme="dark"] .anime-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+    </style>
+</head>
+<body>
+    {{ template "anime_topbar" . }}
+
+    <main class="page-body">
+        <div class="container">
+            <div class="anime-header">
+                <div class="anime-title">
+                    <h1>🎬 {{ t .T "anime.title" }}</h1>
+                    <p>{{ t .T "anime.subtitle" }}</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/anime/catalog" class="btn btn-secondary">🔍 {{ t .T "anime.nav.catalog" }}</a>
+                    <a href="/anime/add_work" class="btn btn-primary">➕ {{ t .T "anime.add" }}</a>
+                </div>
+            </div>
+
+            <form method="GET" class="filters-bar" id="anime-filters">
+                <div class="search-box">
+                    <input type="text" id="anime-search" placeholder="{{ t .T "anime.search.placeholder" }}" value="{{ .SearchQuery }}" autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <select name="sort" onchange="document.getElementById('anime-filters').submit()">
+                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "anime.sort.title" }}</option>
+                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "anime.sort.title_desc" }}</option>
+                        <option value="status" {{ if eq .SortBy "status" }}selected{{ end }}>{{ t .T "anime.sort.status" }}</option>
+                        <option value="type" {{ if eq .SortBy "type" }}selected{{ end }}>{{ t .T "anime.sort.type" }}</option>
+                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "anime.sort.recent" }}</option>
+                        <option value="modified_desc" {{ if eq .SortBy "modified_desc" }}selected{{ end }}>{{ t .T "anime.sort.modified" }}</option>
+                    </select>
+                </div>
+                <label class="filter-check">
+                    <input type="checkbox" name="adult" value="only" {{ if eq .AdultFilter "only" }}checked{{ end }} onchange="document.getElementById('anime-filters').submit()">
+                    +18
+                </label>
+            </form>
+
+            {{ if .Works }}
+            <div class="anime-grid" id="anime-grid">
+                {{ range .Works }}
+                <article class="anime-card" data-title="{{ .Title }}">
+                    <div class="anime-cover">
+                        {{ if and .ImagePath.Valid .ImagePath.String }}
+                        <img src="{{ work_image_url .ImagePath.String }}" alt="" loading="lazy">
+                        {{ else }}
+                        <div class="no-image">🎬</div>
+                        {{ end }}
+                        <div class="anime-badges">
+                            {{ if .AnimeType.Valid }}<span class="anime-badge">{{ .AnimeType.String }}</span>{{ end }}
+                            {{ if .Status.Valid }}<span class="anime-badge">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                        </div>
+                    </div>
+                    <div class="anime-body">
+                        <div class="anime-card-title"><a href="/anime/edit/{{ .ID }}">{{ .Title }}</a></div>
+                        <div class="anime-stars">
+                            {{ $r := .Rating }}{{ range $i := seq 5 }}<span class="{{ if ge $r $i }}{{ else }}empty{{ end }}">★</span>{{ end }}
+                        </div>
+                        <div class="anime-card-meta">
+                            {{ t $.T "anime.episodes" }}: <span class="ep-value">{{ .Episode }}</span>{{ if .TotalEpisodes.Valid }} / {{ .TotalEpisodes.Int64 }}{{ end }}
+                        </div>
+                        <div class="episode-counter" data-id="{{ .ID }}">
+                            <button type="button" class="ep-minus" aria-label="-1">−</button>
+                            <span class="count">{{ .Episode }}</span>
+                            <button type="button" class="ep-plus" aria-label="+1">+</button>
+                        </div>
+                        <div class="anime-card-actions">
+                            <a href="/anime/edit/{{ .ID }}">✏️ {{ t $.T "common.edit" }}</a>
+                            <button type="button" class="del" data-id="{{ .ID }}" data-title="{{ .Title }}">🗑️</button>
+                        </div>
+                    </div>
+                </article>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="empty-state">
+                <div class="icon">🎬</div>
+                <p>{{ t .T "anime.dashboard.empty" }}</p>
+                <a href="/anime/catalog" class="btn btn-primary">{{ t .T "anime.dashboard.empty.cta" }}</a>
+            </div>
+            {{ end }}
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+    <script nonce="{{ .CSPNonce }}">
+        var deleteConfirmMsg = {{ jsstr (t .T "anime.delete.confirm") }};
+
+        function post(url) {
+            return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        }
+
+        document.querySelectorAll('.episode-counter').forEach(function(counter) {
+            var id = counter.getAttribute('data-id');
+            var countEl = counter.querySelector('.count');
+            var card = counter.closest('.anime-card');
+            var epValue = card ? card.querySelector('.ep-value') : null;
+            function setCount(n) {
+                countEl.textContent = n;
+                if (epValue) epValue.textContent = n;
+            }
+            counter.querySelector('.ep-plus').addEventListener('click', function() {
+                post('/api/anime/increment/' + id).then(function(r) {
+                    if (r.ok) setCount(parseInt(countEl.textContent, 10) + 1);
+                });
+            });
+            counter.querySelector('.ep-minus').addEventListener('click', function() {
+                var cur = parseInt(countEl.textContent, 10);
+                if (cur <= 0) return;
+                post('/api/anime/decrement/' + id).then(function(r) {
+                    if (r.ok) setCount(cur - 1);
+                });
+            });
+        });
+
+        document.querySelectorAll('.anime-card-actions .del').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var id = btn.getAttribute('data-id');
+                var title = btn.getAttribute('data-title') || '';
+                if (!confirm(deleteConfirmMsg.replace('%s', title))) return;
+                post('/api/anime/delete/' + id).then(function(r) {
+                    return r.json();
+                }).then(function(data) {
+                    if (data && data.ok) {
+                        var card = btn.closest('.anime-card');
+                        if (card) card.remove();
+                    }
+                });
+            });
+        });
+
+        (function() {
+            var search = document.getElementById('anime-search');
+            var grid = document.getElementById('anime-grid');
+            if (!search || !grid) return;
+            search.addEventListener('input', function() {
+                var q = this.value.trim().toLowerCase();
+                grid.querySelectorAll('.anime-card').forEach(function(card) {
+                    var title = (card.getAttribute('data-title') || '').toLowerCase();
+                    card.style.display = (!q || title.indexOf(q) !== -1) ? '' : 'none';
+                });
+            });
+        })();
+    </script>
+</body>
+</html>
+{{ end }}

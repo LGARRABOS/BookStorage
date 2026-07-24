@@ -1,0 +1,12 @@
+{{ define "edit_anime_form" }}
+<form method="POST" enctype="multipart/form-data" id="anime-form" action="/anime/edit/{{ .Work.ID }}">
+    {{ template "anime_form_fields" . }}
+    <div class="form-actions">
+        <a href="/anime/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+        <div class="form-actions-right">
+            <button type="button" class="btn btn-danger" id="anime-delete-btn" data-id="{{ .Work.ID }}" data-title="{{ .Work.Title }}">🗑️ {{ t .T "common.delete" }}</button>
+            <button type="submit" class="btn btn-primary">✓ {{ t .T "anime.form.submit.save" }}</button>
+        </div>
+    </div>
+</form>
+{{ end }}

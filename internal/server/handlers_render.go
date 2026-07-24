@@ -277,6 +277,22 @@ var readingStatuses = []string{
 	"À lire",
 }
 
+var animeTypes = []string{
+	"TV",
+	"Film",
+	"OVA",
+	"ONA",
+	"Spécial",
+}
+
+var animeStatuses = []string{
+	"En cours",
+	"Terminé",
+	"En pause",
+	"Abandonné",
+	"À voir",
+}
+
 func buildMediaRelativePath(filename, urlPath string) string {
 	urlPath = strings.Trim(urlPath, "/")
 	if urlPath == "" {

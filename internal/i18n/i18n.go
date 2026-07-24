@@ -48,6 +48,7 @@ var statusKeyMap = map[string]string{
 	"En pause":  "status.on_hold",
 	"Abandonné": "status.dropped",
 	"À lire":    "status.plan_to_read",
+	"À voir":    "status.plan_to_watch",
 }
 
 func init() {

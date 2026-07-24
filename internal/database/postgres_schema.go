@@ -74,6 +74,25 @@ var postgresSchemaStatements = []string{
 		link_probe_http_status INTEGER,
 		link_probe_detail TEXT
 	)`,
+	`CREATE TABLE IF NOT EXISTS anime_works (
+		id BIGSERIAL PRIMARY KEY,
+		title TEXT NOT NULL,
+		episode INTEGER NOT NULL DEFAULT 0,
+		total_episodes INTEGER,
+		status TEXT,
+		anime_type TEXT,
+		link TEXT,
+		image_path TEXT,
+		rating INTEGER DEFAULT 0,
+		notes TEXT,
+		is_adult INTEGER NOT NULL DEFAULT 0,
+		source TEXT NOT NULL DEFAULT 'manual',
+		external_id TEXT,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		updated_at TIMESTAMPTZ,
+		started_at TIMESTAMPTZ,
+		finished_at TIMESTAMPTZ
+	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
 		user_id BIGINT NOT NULL REFERENCES users(id),
@@ -204,6 +223,7 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_dismissed_recommendations_user_source
 		ON dismissed_recommendations(user_id, source)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_id ON works(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_anime_works_user_id ON anime_works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_status ON works(user_id, status)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_type ON works(user_id, reading_type)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_updated_at ON works(user_id, updated_at)`,

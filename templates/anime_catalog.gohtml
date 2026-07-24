@@ -1,0 +1,182 @@
+{{ define "anime_catalog" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "anime.catalog.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/catalog.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "anime_topbar" . }}
+
+    <main class="page-body">
+        <div class="container">
+            <header class="catalog-header">
+                <h1>{{ t .T "anime.catalog.title" }}</h1>
+                <p>{{ t .T "anime.catalog.intro" }}</p>
+            </header>
+
+            <section class="catalog-explore-section">
+                <h2 class="catalog-explore-title">{{ t .T "anime.catalog.explore.title" }}</h2>
+                <p class="catalog-explore-hint">{{ t .T "anime.catalog.explore.hint" }}</p>
+
+                <div class="catalog-genre-chips" id="catalog-genre-chips">
+                    {{ range .Genres }}
+                    <label class="catalog-genre-chip">
+                        <input type="checkbox" name="catalog-genre" value="{{ . }}">
+                        {{ . }}
+                    </label>
+                    {{ end }}
+                </div>
+
+                <div class="catalog-explore-toolbar">
+                    <select id="catalog-browse-sort">
+                        <option value="POPULARITY_DESC">{{ t .T "catalog.explore.sort_popularity" }}</option>
+                        <option value="SCORE_DESC">{{ t .T "catalog.explore.sort_score" }}</option>
+                    </select>
+                    <label class="catalog-filter-check">
+                        <input type="checkbox" id="catalog-adult-only-check">
+                        +18
+                    </label>
+                    <button type="button" class="btn btn-primary" id="catalog-browse-btn">{{ t .T "catalog.explore.discover" }}</button>
+                </div>
+
+                <div class="catalog-browse-grid" id="catalog-browse-grid" hidden>
+                    <p class="catalog-browse-msg" id="catalog-browse-loading">{{ t .T "catalog.explore.loading" }}</p>
+                </div>
+                <div class="catalog-browse-pagination" id="catalog-browse-pagination" hidden>
+                    <button type="button" class="btn btn-secondary" id="catalog-browse-prev">{{ t .T "catalog.explore.prev" }}</button>
+                    <button type="button" class="btn btn-secondary" id="catalog-browse-next">{{ t .T "catalog.explore.next" }}</button>
+                </div>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+    <script nonce="{{ .CSPNonce }}">
+    (function animeCatalogBrowse() {
+        var grid = document.getElementById('catalog-browse-grid');
+        var btn = document.getElementById('catalog-browse-btn');
+        var sortSel = document.getElementById('catalog-browse-sort');
+        var adultOnlyCheck = document.getElementById('catalog-adult-only-check');
+        var pagination = document.getElementById('catalog-browse-pagination');
+        var prevBtn = document.getElementById('catalog-browse-prev');
+        var nextBtn = document.getElementById('catalog-browse-next');
+        if (!grid || !btn) return;
+
+        var addLabel = {{ jsstr (t .T "anime.add") }};
+        var emptyMsg = {{ jsstr (t .T "catalog.explore.empty") }};
+        var errMsg = {{ jsstr (t .T "catalog.explore.error") }};
+        var rateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
+        var loadingMsg = {{ jsstr (t .T "catalog.explore.loading") }};
+        var currentPage = 1;
+        var hasNext = false;
+
+        function showMsg(text, id) {
+            grid.replaceChildren();
+            var p = document.createElement('p');
+            p.className = 'catalog-browse-msg';
+            if (id) p.id = id;
+            p.textContent = text;
+            grid.appendChild(p);
+        }
+        function parseApiJson(r) {
+            if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+            if (r.status === 400) return r.json().then(function(d) { throw new Error(d.error || 'bad_request'); });
+            return r.json().catch(function() { return {}; }).then(function(d) {
+                if (!r.ok) return Promise.reject({ apiError: (d && d.error) || 'upstream' });
+                return d;
+            });
+        }
+        function buildCard(item) {
+            var article = document.createElement('article');
+            article.className = 'reco-card';
+            var cover = document.createElement('div');
+            cover.className = 'reco-card-cover';
+            if (item.image_url) {
+                var img = document.createElement('img');
+                img.src = item.image_url; img.alt = ''; img.loading = 'lazy';
+                cover.appendChild(img);
+            } else {
+                var nc = document.createElement('span');
+                nc.className = 'no-cover'; nc.textContent = '🎬';
+                cover.appendChild(nc);
+            }
+            var body = document.createElement('div');
+            body.className = 'reco-card-body';
+            var titleEl = document.createElement('div');
+            titleEl.className = 'reco-card-title';
+            titleEl.textContent = item.title || '';
+            var metaEl = document.createElement('div');
+            metaEl.className = 'reco-card-meta';
+            var meta = (item.anime_type || '') + (item.episodes ? ' · ' + item.episodes + ' ep.' : '') + (item.is_adult ? ' · 18+' : '');
+            metaEl.textContent = meta;
+            var addLink = document.createElement('a');
+            addLink.className = 'btn-reco';
+            addLink.href = '/anime/add_work?anilist_id=' + encodeURIComponent(item.anilist_id || item.external_id);
+            addLink.textContent = addLabel;
+            body.appendChild(titleEl);
+            body.appendChild(metaEl);
+            body.appendChild(addLink);
+            article.appendChild(cover);
+            article.appendChild(body);
+            return article;
+        }
+        function selectedGenres() {
+            var out = [];
+            document.querySelectorAll('input[name="catalog-genre"]:checked').forEach(function(el) {
+                if (el.value) out.push(el.value);
+            });
+            return out;
+        }
+        function loadBrowse(page) {
+            currentPage = page || 1;
+            grid.hidden = false;
+            showMsg(loadingMsg, 'catalog-browse-loading');
+            pagination.hidden = true;
+            btn.disabled = true;
+            var params = new URLSearchParams();
+            selectedGenres().forEach(function(g) { params.append('genre', g); });
+            params.set('page', String(currentPage));
+            if (sortSel && sortSel.value) params.set('sort', sortSel.value);
+            if (adultOnlyCheck && adultOnlyCheck.checked) params.set('adult', 'only');
+            fetch('/api/anime/catalog/browse?' + params.toString())
+                .then(parseApiJson)
+                .then(function(data) {
+                    var list = (data && data.results) ? data.results : [];
+                    hasNext = !!(data && data.has_next);
+                    if (!list.length) { showMsg(emptyMsg); pagination.hidden = true; return; }
+                    grid.replaceChildren();
+                    list.forEach(function(item) { grid.appendChild(buildCard(item)); });
+                    pagination.hidden = false;
+                    if (prevBtn) prevBtn.disabled = currentPage <= 1;
+                    if (nextBtn) nextBtn.disabled = !hasNext;
+                })
+                .catch(function(e) {
+                    var msg = (e && e.apiError === 'rate_limit') ? rateLimitMsg : errMsg;
+                    showMsg(msg);
+                    pagination.hidden = true;
+                })
+                .finally(function() { btn.disabled = false; });
+        }
+        btn.addEventListener('click', function() { loadBrowse(1); });
+        if (prevBtn) prevBtn.addEventListener('click', function() { if (currentPage > 1) loadBrowse(currentPage - 1); });
+        if (nextBtn) nextBtn.addEventListener('click', function() { if (hasNext) loadBrowse(currentPage + 1); });
+        document.querySelectorAll('input[name="catalog-genre"]').forEach(function(el) {
+            el.addEventListener('change', function() {
+                if (document.querySelectorAll('input[name="catalog-genre"]:checked').length > 3) el.checked = false;
+            });
+        });
+    })();
+    </script>
+</body>
+</html>
+{{ end }}

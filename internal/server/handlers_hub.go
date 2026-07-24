@@ -24,12 +24,19 @@ func (a *App) HandleHub(w http.ResponseWriter, r *http.Request) {
 		userID, "En cours",
 	).Scan(&worksInProgress)
 
+	var animeInProgress int
+	_ = a.DB.QueryRow(
+		`SELECT COUNT(*) FROM anime_works WHERE user_id = ? AND status = ?`,
+		userID, "En cours",
+	).Scan(&animeInProgress)
+
 	tr := i18n.T(a.currentLang(r))
 
 	w.Header().Set("Cache-Control", "no-store")
 	a.renderTemplate(w, r, "hub", a.mergeData(r, map[string]any{
 		"IsAdmin":           isAdmin == 1,
 		"HubWorksProgress":  worksInProgress,
+		"HubAnimeProgress":  animeInProgress,
 		"MobileTopbarTitle": tr["hub.title"],
 	}))
 }

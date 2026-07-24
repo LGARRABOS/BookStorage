@@ -227,6 +227,12 @@ func main() {
 	mux.HandleFunc("POST /api/decrement/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleDecrement)))
 	mux.HandleFunc("POST /api/set-chapter/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleSetChapter)))
 	mux.HandleFunc("POST /api/delete/{id}", app.RequireLogin(app.RequireAPIScope(server.ScopeWorksWrite)(app.HandleDeleteWorkAPI)))
+	mux.HandleFunc("GET /api/anime/catalog/browse", app.RequireLogin(app.HandleAnimeCatalogBrowse))
+	mux.HandleFunc("GET /api/anime/catalog/search", app.RequireLogin(app.HandleAnimeCatalogSearch))
+	mux.HandleFunc("POST /api/anime/increment/{id}", app.RequireLogin(app.HandleAnimeIncrement))
+	mux.HandleFunc("POST /api/anime/decrement/{id}", app.RequireLogin(app.HandleAnimeDecrement))
+	mux.HandleFunc("POST /api/anime/set-episode/{id}", app.RequireLogin(app.HandleAnimeSetEpisode))
+	mux.HandleFunc("POST /api/anime/delete/{id}", app.RequireLogin(app.HandleAnimeDeleteAPI))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToMangaDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/database", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminDatabase)))
 	mux.HandleFunc("/admin/migrate-postgres", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAdminMigratePostgres))))
@@ -248,6 +254,9 @@ func main() {
 	// Manga/Webtoon module pages live under /manga/; old flat URLs 308-redirect.
 	app.RegisterMangaRoutes(mux)
 	app.RegisterLegacyRedirects(mux)
+
+	// Anime module pages live under /anime/.
+	app.RegisterAnimeRoutes(mux)
 
 	// Background prober: check all reading sites every 5 minutes.
 	proberCtx, proberCancel := context.WithCancel(context.Background())
