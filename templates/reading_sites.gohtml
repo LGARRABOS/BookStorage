@@ -74,7 +74,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -102,7 +102,7 @@
 
                 <div class="add-site-card">
                     <h2>{{ t .T "reading_sites.add" }}</h2>
-                    <form method="POST" action="/reading-sites" class="add-site-form">
+                    <form method="POST" action="/manga/reading-sites" class="add-site-form">
                         <div class="form-group">
                             <label for="site-name">{{ t .T "reading_sites.form.name" }}</label>
                             <input id="site-name" type="text" name="name" placeholder="MangaDex, Webtoon..." required>
@@ -149,11 +149,11 @@
                                     data-id="{{ .ID }}"
                                     data-name="{{ .Name }}"
                                     data-url="{{ .BaseURL }}">✏️</button>
-                                <form method="POST" action="/reading-sites/probe">
+                                <form method="POST" action="/manga/reading-sites/probe">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
                                 </form>
-                                <form method="POST" action="/reading-sites/delete" onsubmit="return confirm('{{ t $.T "reading_sites.confirm_delete" }}')">
+                                <form method="POST" action="/manga/reading-sites/delete" onsubmit="return confirm('{{ t $.T "reading_sites.confirm_delete" }}')">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
                                 </form>
@@ -162,7 +162,7 @@
                         {{ end }}
                     </tbody>
                 </table>
-                <form method="POST" action="/reading-sites/probe-all" style="margin-bottom:1.5rem;">
+                <form method="POST" action="/manga/reading-sites/probe-all" style="margin-bottom:1.5rem;">
                     <button type="submit" class="btn btn-secondary">🔄 {{ t .T "reading_sites.action.probe_all" }}</button>
                 </form>
                 {{ else }}
@@ -191,7 +191,7 @@
     <div class="detail-modal-overlay" id="siteEditModal">
         <div class="detail-modal" role="dialog" aria-modal="true">
             <h3>{{ t .T "reading_sites.modal.edit_title" }}</h3>
-            <form method="POST" action="/reading-sites/edit" id="editSiteForm">
+            <form method="POST" action="/manga/reading-sites/edit" id="editSiteForm">
                 <input type="hidden" name="id" id="editSiteId">
                 <div class="form-group" style="margin-bottom:0.75rem;">
                     <label for="editSiteName" style="display:block;font-size:0.85rem;font-weight:500;margin-bottom:0.3rem;">Nom</label>

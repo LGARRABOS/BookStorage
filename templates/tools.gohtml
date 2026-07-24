@@ -37,7 +37,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -67,8 +67,8 @@
                         <h2>{{ t .T "tools.export.title" }}</h2>
                         <p>{{ t .T "tools.export.subtitle" }}</p>
                         <div class="tool-actions">
-                            <a href="/export" class="btn btn-primary">{{ t .T "tools.export.csv" }}</a>
-                            <a href="/export?format=json" class="btn btn-secondary">{{ t .T "tools.export.json" }}</a>
+                            <a href="/manga/export" class="btn btn-primary">{{ t .T "tools.export.csv" }}</a>
+                            <a href="/manga/export?format=json" class="btn btn-secondary">{{ t .T "tools.export.json" }}</a>
                         </div>
                     </article>
 
@@ -76,7 +76,7 @@
                         <h2>{{ t .T "tools.data_quality.title" }}</h2>
                         <p>{{ t .T "tools.data_quality.desc" }}</p>
                         <div class="tool-actions">
-                            <a href="/tools/duplicates" class="btn btn-secondary">{{ t .T "tools.data_quality.action" }}</a>
+                            <a href="/manga/tools/duplicates" class="btn btn-secondary">{{ t .T "tools.data_quality.action" }}</a>
                         </div>
                     </article>
 
@@ -84,7 +84,7 @@
                         <h2>{{ t .T "tools.csv_import.title" }}</h2>
                         <p>{{ t .T "tools.csv_import.subtitle" }}</p>
                         <div class="tool-actions">
-                            <a href="/tools/csv-import" class="btn btn-secondary">{{ t .T "tools.csv_import.link" }}</a>
+                            <a href="/manga/tools/csv-import" class="btn btn-secondary">{{ t .T "tools.csv_import.link" }}</a>
                         </div>
                     </article>
                 </div>
@@ -93,7 +93,7 @@
                     <h2>{{ t .T "tools.import.title" }}</h2>
                     <p>{{ t .T "tools.import.subtitle" }}</p>
                     <div class="import-layout">
-                        <form class="import-form" action="/import" method="POST" enctype="multipart/form-data">
+                        <form class="import-form" action="/manga/import" method="POST" enctype="multipart/form-data">
                             <input type="hidden" name="from" value="tools">
                             <div class="form-group">
                                 <label for="duplicate_mode">{{ t .T "profile.import.duplicate_mode" }}</label>

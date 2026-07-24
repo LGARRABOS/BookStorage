@@ -24,7 +24,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -54,7 +54,7 @@
                         <strong>{{ .Username }}</strong>
                         {{ if .DisplayName.Valid }} ({{ .DisplayName.String }}){{ end }}
                         {{ if .Bio.Valid }}<p>{{ .Bio.String }}</p>{{ end }}
-                        <a class="btn btn-secondary" href="/users/{{ .ID }}">{{ t $.T "users.view" }}</a>
+                        <a class="btn btn-secondary" href="/manga/users/{{ .ID }}">{{ t $.T "users.view" }}</a>
                     </li>
                     {{ end }}
                 </ul>

@@ -124,7 +124,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -140,7 +140,7 @@
                     <h1>✏️ {{ t .T "work.edit.title" }}</h1>
                     <p>{{ .Work.Title }}</p>
                 </div>
-                <a href="/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+                <a href="/manga/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
             {{ template "edit_work_form" . }}
@@ -196,7 +196,7 @@
                         if (!ok || !deleteId) return;
                         fetch('/api/delete/' + deleteId, { method: 'POST', credentials: 'same-origin', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
                             .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.json(); })
-                            .then(data => { if (data && data.ok) window.location.href = '/dashboard'; });
+                            .then(data => { if (data && data.ok) window.location.href = '/manga/dashboard'; });
                     });
                 }
             });

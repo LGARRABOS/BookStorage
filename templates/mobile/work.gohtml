@@ -64,7 +64,7 @@
                     {{ if .Work.Link.Valid }}
                     <a href="{{ .Work.Link.String }}" class="btn btn-primary work-detail-btn mobile-external-link" target="_blank" rel="noopener noreferrer external">{{ t .T "dashboard.reading_link" }}</a>
                     {{ end }}
-                    <a href="/edit/{{ .Work.ID }}" class="btn work-detail-btn work-detail-btn--secondary">{{ t .T "mobile.actions.edit" }}</a>
+                    <a href="/manga/edit/{{ .Work.ID }}" class="btn work-detail-btn work-detail-btn--secondary">{{ t .T "mobile.actions.edit" }}</a>
                     <button type="button" class="btn work-detail-btn work-detail-btn--danger js-confirm-delete" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}">{{ t .T "mobile.actions.delete" }}</button>
                 </div>
             </article>

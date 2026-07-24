@@ -97,7 +97,7 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 	fromID, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("from_id")))
 	intoID, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("into_id")))
 	if fromID <= 0 || intoID <= 0 || fromID == intoID {
-		http.Redirect(w, r, "/tools/duplicates", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsDup, http.StatusFound)
 		return
 	}
 
@@ -123,18 +123,18 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 
 	from, err := load(fromID)
 	if err != nil {
-		http.Redirect(w, r, "/tools/duplicates", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsDup, http.StatusFound)
 		return
 	}
 	into, err := load(intoID)
 	if err != nil {
-		http.Redirect(w, r, "/tools/duplicates", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsDup, http.StatusFound)
 		return
 	}
 
 	// Guard: only merge likely duplicates (same normalized title + reading_type).
 	if normalizeTitleForDedupe(from.Title) != normalizeTitleForDedupe(into.Title) {
-		http.Redirect(w, r, "/tools/duplicates", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsDup, http.StatusFound)
 		return
 	}
 	ft := ""
@@ -146,7 +146,7 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 		it = into.ReadingType.String
 	}
 	if strings.TrimSpace(ft) != strings.TrimSpace(it) {
-		http.Redirect(w, r, "/tools/duplicates", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsDup, http.StatusFound)
 		return
 	}
 
@@ -217,7 +217,7 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, r, "/tools/duplicates?merged=1", http.StatusFound)
+	http.Redirect(w, r, pathMangaToolsDup+"?merged=1", http.StatusFound)
 }
 
 func nullStringOrNil(ns sql.NullString) any {

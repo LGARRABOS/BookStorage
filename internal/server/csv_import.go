@@ -41,7 +41,7 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if err := r.ParseMultipartForm(8 << 20); err != nil {
-		http.Redirect(w, r, "/tools/csv-import?error=form", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=form", http.StatusFound)
 		return
 	}
 	action := strings.TrimSpace(r.FormValue("action"))
@@ -51,13 +51,13 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 	}
 	file, _, err := r.FormFile("csvfile")
 	if err != nil {
-		http.Redirect(w, r, "/tools/csv-import?error=file", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=file", http.StatusFound)
 		return
 	}
 	defer func() { _ = file.Close() }()
 	raw, err := io.ReadAll(io.LimitReader(file, csvImportMaxBytes+1))
 	if err != nil || len(raw) > csvImportMaxBytes {
-		http.Redirect(w, r, "/tools/csv-import?error=size", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=size", http.StatusFound)
 		return
 	}
 	_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE user_id = ?`, userID)
@@ -71,7 +71,7 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 		`INSERT INTO csv_import_sessions (id, user_id, raw_csv) VALUES (?, ?, ?)`,
 		sid, userID, string(raw),
 	); err != nil {
-		http.Redirect(w, r, "/tools/csv-import?error=db", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=db", http.StatusFound)
 		return
 	}
 	reader := csv.NewReader(strings.NewReader(string(raw)))
@@ -80,12 +80,12 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 	allRows, err := reader.ReadAll()
 	if err != nil || len(allRows) == 0 {
 		_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE id = ?`, sid)
-		http.Redirect(w, r, "/tools/csv-import?error=parse", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=parse", http.StatusFound)
 		return
 	}
 	if len(allRows) > csvImportMaxRows {
 		_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE id = ?`, sid)
-		http.Redirect(w, r, "/tools/csv-import?error=rows", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=rows", http.StatusFound)
 		return
 	}
 	headers := allRows[0]
@@ -104,7 +104,7 @@ func (a *App) HandleToolsCSVImport(w http.ResponseWriter, r *http.Request) {
 func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, userID int) {
 	sid := strings.TrimSpace(r.FormValue("session_id"))
 	if sid == "" {
-		http.Redirect(w, r, "/tools/csv-import?error=session", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=session", http.StatusFound)
 		return
 	}
 	var raw string
@@ -113,7 +113,7 @@ func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, use
 		sid, userID,
 	).Scan(&raw)
 	if err != nil {
-		http.Redirect(w, r, "/tools/csv-import?error=session", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=session", http.StatusFound)
 		return
 	}
 	titleCol, _ := strconv.Atoi(strings.TrimSpace(r.FormValue("col_title")))
@@ -133,7 +133,7 @@ func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, use
 	reader.LazyQuotes = true
 	rows, err := reader.ReadAll()
 	if err != nil || len(rows) < 2 {
-		http.Redirect(w, r, "/tools/csv-import?error=parse", http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error=parse", http.StatusFound)
 		return
 	}
 	dataRows := rows[1:]
@@ -182,8 +182,8 @@ func (a *App) handleCSVImportConfirm(w http.ResponseWriter, r *http.Request, use
 	}
 	_, _ = a.DB.Exec(`DELETE FROM csv_import_sessions WHERE id = ?`, sid)
 	if firstErr != "" && imported == 0 {
-		http.Redirect(w, r, "/tools/csv-import?error="+firstErr, http.StatusFound)
+		http.Redirect(w, r, pathMangaToolsCSV+"?error="+firstErr, http.StatusFound)
 		return
 	}
-	http.Redirect(w, r, "/tools?csv_imported="+strconv.Itoa(imported), http.StatusFound)
+	http.Redirect(w, r, pathMangaTools+"?csv_imported="+strconv.Itoa(imported), http.StatusFound)
 }

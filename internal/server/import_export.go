@@ -360,14 +360,14 @@ func redirectWithImportReport(w http.ResponseWriter, r *http.Request, rep Import
 	}
 	b, err := json.Marshal(rep)
 	if err != nil {
-		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 		return
 	}
 	enc := base64.RawURLEncoding.EncodeToString(b)
-	base := "/dashboard"
+	base := pathMangaDashboard
 	if ref := strings.TrimSpace(r.Referer()); ref != "" {
-		if ru, err := url.Parse(ref); err == nil && ru.Path == "/tools" {
-			base = "/tools"
+		if ru, err := url.Parse(ref); err == nil && ru.Path == pathMangaTools {
+			base = pathMangaTools
 		}
 	}
 	u := base + "?" + url.Values{"import_report": {enc}}.Encode()
@@ -659,7 +659,7 @@ func (a *App) ImportFromJSONBytes(w http.ResponseWriter, r *http.Request, userID
 			if ext, ok := parseAniListExportJSON(data); ok && len(ext) > 0 {
 				payload.Works = ext
 			} else {
-				http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+				http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 				return
 			}
 		} else {
@@ -825,7 +825,7 @@ func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 	if strings.HasPrefix(ct, "application/json") {
 		body, err := io.ReadAll(io.LimitReader(r.Body, 32<<20))
 		if err != nil {
-			http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+			http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 			return
 		}
 		a.ImportFromJSONBytes(w, r, userID, body, mode)
@@ -833,7 +833,7 @@ func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := r.ParseMultipartForm(10 << 20); err != nil {
-		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 		return
 	}
 	mode = parseDuplicateMode(r.FormValue("duplicate_mode"))
@@ -847,14 +847,14 @@ func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 	} else if f, h, err := r.FormFile("json_file"); err == nil {
 		file, filename = f, h.Filename
 	} else {
-		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 		return
 	}
 	defer func() { _ = file.Close() }()
 
 	data, err := io.ReadAll(io.LimitReader(file, 32<<20))
 	if err != nil {
-		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 		return
 	}
 	trim := strings.TrimSpace(string(data))
@@ -870,7 +870,7 @@ func (a *App) HandleImport(w http.ResponseWriter, r *http.Request) {
 	reader.LazyQuotes = true
 	records, err := reader.ReadAll()
 	if err != nil {
-		http.Redirect(w, r, "/dashboard?error=import", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard+"?error=import", http.StatusFound)
 		return
 	}
 	a.ImportFromCSVRecords(w, r, userID, records, mode)

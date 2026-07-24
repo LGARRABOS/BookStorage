@@ -608,7 +608,7 @@ func (a *App) HandleProfilePasskeys(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !a.webAuthnEnabled() {
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard, http.StatusFound)
 		return
 	}
 	if a.resolveViewMode(w, r) != "mobile" {

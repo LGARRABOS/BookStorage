@@ -11,17 +11,17 @@
     }
     var k = e.key.toLowerCase();
     if (k === 'n' || k === '+') {
-      window.location.href = '/add_work';
+      window.location.href = '/manga/add_work';
     } else if (k === 's') {
-      window.location.href = '/stats';
+      window.location.href = '/manga/stats';
     } else if (k === 'p') {
       window.location.href = '/profile';
     } else if (k === 'u') {
-      window.location.href = '/users';
+      window.location.href = '/manga/users';
     } else if (k === 'g') {
-      window.location.href = '/dashboard';
+      window.location.href = '/manga/dashboard';
     } else if (k === 'o') {
-      window.location.href = '/tools';
+      window.location.href = '/manga/tools';
     } else if (k === 't' && typeof window.toggleTheme === 'function') {
       e.preventDefault();
       window.toggleTheme();

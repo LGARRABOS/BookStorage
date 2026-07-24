@@ -189,7 +189,7 @@
 
             var addLink = document.createElement('a');
             addLink.className = 'btn-reco';
-            addLink.href = '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            addLink.href = '/manga/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
             addLink.textContent = addLabel;
 
             var dismissBtn = document.createElement('button');
@@ -308,7 +308,7 @@
             actions.className = 'reco-detail-actions';
             var addBtn = document.createElement('a');
             addBtn.className = 'btn btn-primary';
-            addBtn.href = '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            addBtn.href = '/manga/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
             addBtn.textContent = detailAdd;
             actions.appendChild(addBtn);
             if (dismissable) {

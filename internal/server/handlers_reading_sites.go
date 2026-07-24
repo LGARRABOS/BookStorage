@@ -36,13 +36,13 @@ func (a *App) handleReadingSiteCreate(w http.ResponseWriter, r *http.Request, us
 	baseURL := strings.TrimSpace(r.FormValue("base_url"))
 
 	if name == "" || baseURL == "" {
-		http.Redirect(w, r, "/reading-sites?err=name+and+url+required", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=name+and+url+required", http.StatusFound)
 		return
 	}
 
 	parsed, err := url.Parse(baseURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-		http.Redirect(w, r, "/reading-sites?err=invalid+URL", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=invalid+URL", http.StatusFound)
 		return
 	}
 
@@ -51,12 +51,12 @@ func (a *App) handleReadingSiteCreate(w http.ResponseWriter, r *http.Request, us
 		userID, name, baseURL,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=save+failed", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=save+failed", http.StatusFound)
 		return
 	}
 	// Link existing works that match this new site.
 	a.BackfillReadingSiteIDs()
-	http.Redirect(w, r, "/reading-sites?msg=site+added", http.StatusFound)
+	http.Redirect(w, r, pathMangaReadingSites+"?msg=site+added", http.StatusFound)
 }
 
 func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
@@ -64,7 +64,7 @@ func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=invalid+id", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=invalid+id", http.StatusFound)
 		return
 	}
 
@@ -72,13 +72,13 @@ func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
 	baseURL := strings.TrimSpace(r.FormValue("base_url"))
 
 	if name == "" || baseURL == "" {
-		http.Redirect(w, r, "/reading-sites?err=name+and+url+required", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=name+and+url+required", http.StatusFound)
 		return
 	}
 
 	parsed, err := url.Parse(baseURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-		http.Redirect(w, r, "/reading-sites?err=invalid+URL", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=invalid+URL", http.StatusFound)
 		return
 	}
 
@@ -87,12 +87,12 @@ func (a *App) HandleReadingSiteEdit(w http.ResponseWriter, r *http.Request) {
 		name, baseURL, id, userID,
 	)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=update+failed", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=update+failed", http.StatusFound)
 		return
 	}
 	// Re-link works that might now match the updated URL.
 	a.BackfillReadingSiteIDs()
-	http.Redirect(w, r, "/reading-sites?msg=site+updated", http.StatusFound)
+	http.Redirect(w, r, pathMangaReadingSites+"?msg=site+updated", http.StatusFound)
 }
 
 func (a *App) HandleReadingSiteDelete(w http.ResponseWriter, r *http.Request) {
@@ -100,13 +100,13 @@ func (a *App) HandleReadingSiteDelete(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=invalid+id", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=invalid+id", http.StatusFound)
 		return
 	}
 	// Unlink works referencing this site
 	_, _ = a.DB.Exec(`UPDATE works SET reading_site_id = NULL WHERE reading_site_id = ? AND user_id = ?`, id, userID)
 	_, _ = a.DB.Exec(`DELETE FROM reading_sites WHERE id = ? AND user_id = ?`, id, userID)
-	http.Redirect(w, r, "/reading-sites?msg=site+deleted", http.StatusFound)
+	http.Redirect(w, r, pathMangaReadingSites+"?msg=site+deleted", http.StatusFound)
 }
 
 func (a *App) HandleReadingSiteProbe(w http.ResponseWriter, r *http.Request) {
@@ -114,7 +114,7 @@ func (a *App) HandleReadingSiteProbe(w http.ResponseWriter, r *http.Request) {
 	idStr := r.FormValue("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=invalid+id", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=invalid+id", http.StatusFound)
 		return
 	}
 
@@ -124,14 +124,14 @@ func (a *App) HandleReadingSiteProbe(w http.ResponseWriter, r *http.Request) {
 		id, userID,
 	).Scan(&site.ID, &site.UserID, &site.Name, &site.BaseURL, &site.LastProbeAt, &site.ProbeStatus, &site.ProbeHTTPStatus, &site.ProbeDetail)
 	if err != nil {
-		http.Redirect(w, r, "/reading-sites?err=not+found", http.StatusFound)
+		http.Redirect(w, r, pathMangaReadingSites+"?err=not+found", http.StatusFound)
 		return
 	}
 
 	ctx, cancel := context.WithTimeout(r.Context(), 10*time.Second)
 	defer cancel()
 	a.ProbeAndUpdateSite(ctx, site)
-	http.Redirect(w, r, "/reading-sites?msg=probe+done", http.StatusFound)
+	http.Redirect(w, r, pathMangaReadingSites+"?msg=probe+done", http.StatusFound)
 }
 
 func (a *App) HandleReadingSiteProbeAll(w http.ResponseWriter, r *http.Request) {
@@ -139,7 +139,7 @@ func (a *App) HandleReadingSiteProbeAll(w http.ResponseWriter, r *http.Request) 
 	ctx, cancel := context.WithTimeout(r.Context(), 60*time.Second)
 	defer cancel()
 	a.ProbeAllUserSites(ctx, userID, 0)
-	http.Redirect(w, r, "/reading-sites?msg=all+probed", http.StatusFound)
+	http.Redirect(w, r, pathMangaReadingSites+"?msg=all+probed", http.StatusFound)
 }
 
 // HandleAPIReadingSiteMatch returns JSON with the matched site for a given link URL.

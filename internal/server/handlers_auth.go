@@ -160,7 +160,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 		a.setSessionCookie(w, token, sessionSlidingTTL)
 		dest := safePostLoginRedirect(strings.TrimSpace(r.FormValue("next")))
 		if dest == "" {
-			dest = "/dashboard"
+			dest = pathHub
 		}
 		http.Redirect(w, r, dest, http.StatusFound)
 	default:

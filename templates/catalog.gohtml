@@ -27,7 +27,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -278,9 +278,9 @@
             var src = item.source || 'anilist';
             var ext = item.external_id || (item.anilist_id ? String(item.anilist_id) : '');
             if (src === 'anilist' && item.anilist_id) {
-                return '/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+                return '/manga/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
             }
-            return '/add_work?catalog_source=' + encodeURIComponent(src) + '&catalog_external_id=' + encodeURIComponent(ext);
+            return '/manga/add_work?catalog_source=' + encodeURIComponent(src) + '&catalog_external_id=' + encodeURIComponent(ext);
         }
 
         function bindBrowseCards() {

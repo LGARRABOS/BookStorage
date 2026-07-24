@@ -230,7 +230,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/add_work">+ {{ t .T "dashboard.add_work" }}</a>
+                <a href="/manga/add_work">+ {{ t .T "dashboard.add_work" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -244,7 +244,7 @@
             <div class="dashboard-header">
                 <div class="dashboard-title">
                     <h1>📖 {{ t .T "dashboard.title" }}</h1>
-                    {{ if gt .SitesDownCount 0 }}<a href="/reading-sites?issues=1" class="sites-down-badge sites-down-badge--clickable" title="{{ t .T "dashboard.sites_down.title" }}">⚠ {{ t .T "dashboard.sites_down" }} ({{ .SitesDownCount }})</a>{{ end }}
+                    {{ if gt .SitesDownCount 0 }}<a href="/manga/reading-sites?issues=1" class="sites-down-badge sites-down-badge--clickable" title="{{ t .T "dashboard.sites_down.title" }}">⚠ {{ t .T "dashboard.sites_down" }} ({{ .SitesDownCount }})</a>{{ end }}
                     {{ if gt .LinkDeadCount 0 }}<button type="button" id="dead-links-toggle" class="sites-down-badge sites-down-badge--clickable sites-down-badge--dead" title="{{ t .T "dashboard.links_dead.title" }}" aria-pressed="false">🔗 {{ t .T "dashboard.links_dead" }} ({{ .LinkDeadCount }})</button>{{ end }}
                 </div>
             </div>
@@ -405,7 +405,7 @@
                                 <span>{{ t $.T "dashboard.bulk.select" }}</span>
                             </label>
                             <div class="work-actions">
-                                <a href="/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
+                                <a href="/manga/edit/{{ .ID }}" class="edit-btn js-edit-work" data-edit-id="{{ .ID }}" title="{{ t $.T "dashboard.edit" }}">✏️</a>
                                 <button type="button" class="delete-btn js-confirm-delete" title="{{ t $.T "dashboard.delete" }}" data-delete-id="{{ .ID }}" data-confirm="{{ t $.T "dashboard.delete.confirm" }}">🗑️</button>
                             </div>
                         </div>
@@ -418,7 +418,7 @@
                 {{template "brand_mascot_heroes_compact" .}}
                 <h2>{{ t .T "dashboard.empty" }}</h2>
                 <p>{{ t .T "dashboard.empty.start" }}</p>
-                <a href="/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
+                <a href="/manga/add_work" class="btn btn-primary">+ {{ t .T "dashboard.add_work" }}</a>
             </div>
             {{ end }}
         </div>
@@ -648,7 +648,7 @@
                 params.push('adult=only');
             }
             const query = params.length ? ('?' + params.join('&')) : '';
-            window.location.href = '/dashboard' + query;
+            window.location.href = '/manga/dashboard' + query;
         };
 
         if (adultOnlyCheck) adultOnlyCheck.addEventListener('change', applyDashboardFilters);
@@ -814,7 +814,7 @@
             }
         }
         function openEditModal(id) {
-            fetch('/edit/' + id + '?format=partial')
+            fetch('/manga/edit/' + id + '?format=partial')
                 .then(r => { if (r.status === 401) { window.location.href = '/login?expired=1'; return null; } return r.text(); })
                 .then(html => {
                     if (!html) return;
@@ -986,10 +986,10 @@
             switch(e.key.toLowerCase()) {
                 case 'n':
                 case '+':
-                    window.location.href = '/add_work';
+                    window.location.href = '/manga/add_work';
                     break;
                 case 'g':
-                    window.location.href = '/dashboard';
+                    window.location.href = '/manga/dashboard';
                     break;
                 case 't':
                     e.preventDefault();
@@ -1021,10 +1021,10 @@
                     if (si) { si.focus(); si.select(); }
                     break;
                 case 'u':
-                    window.location.href = '/users';
+                    window.location.href = '/manga/users';
                     break;
                 case 's':
-                    window.location.href = '/stats';
+                    window.location.href = '/manga/stats';
                     break;
                 case 'p':
                     window.location.href = '/profile';

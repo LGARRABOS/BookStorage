@@ -31,7 +31,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -82,7 +82,7 @@
                         </tbody>
                     </table>
                     {{ if ge (len .Works) 2 }}
-                    <form method="POST" action="/tools/duplicates/merge" class="merge-row">
+                    <form method="POST" action="/manga/tools/duplicates/merge" class="merge-row">
                         <div>
                             <label style="display:block; font-size:0.82rem; color:var(--text-muted); margin-bottom:0.3rem;">{{ t $.T "duplicates.delete_from" }}</label>
                             <select name="from_id">
@@ -104,7 +104,7 @@
                     <div class="empty-state-icon">✅</div>
                     <h2>{{ t .T "duplicates.none_title" }}</h2>
                     <p>{{ t .T "duplicates.none_desc" }}</p>
-                    <a href="/tools" class="btn btn-secondary">{{ t .T "duplicates.back_tools" }}</a>
+                    <a href="/manga/tools" class="btn btn-secondary">{{ t .T "duplicates.back_tools" }}</a>
                 </div>
                 {{ end }}
             </section>

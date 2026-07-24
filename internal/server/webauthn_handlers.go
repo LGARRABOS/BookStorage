@@ -285,7 +285,7 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 	a.setSessionCookie(w, token, sessionSlidingTTL)
 	redirect := safePostLoginRedirect(r.URL.Query().Get("next"))
 	if redirect == "" {
-		redirect = "/dashboard"
+		redirect = pathHub
 	}
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true, "redirect": redirect})
 }

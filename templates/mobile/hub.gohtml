@@ -1,0 +1,54 @@
+{{ define "mobile_hub" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "hub.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/hub.css">
+</head>
+<body class="mobile-app-body">
+    <header class="topbar topbar-mobile topbar-mobile-v2">
+        <div class="container nav-layout nav-layout-mobile">
+            {{ template "site_brand_mobile" . }}
+            <div class="mobile-topbar-actions">
+                <button type="button" class="mobile-icon-btn" id="mobile-settings-open" aria-label="{{ t .T "mobile.settings.title" }}" aria-haspopup="dialog">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="page-body mobile-page">
+        <div class="container">
+            <section class="hub-hero">
+                <h1 class="hub-hero-title">{{ t .T "hub.title" }}</h1>
+                <p class="hub-hero-subtitle">{{ t .T "hub.subtitle" }}</p>
+            </section>
+
+            <div class="hub-grid">
+                <a class="hub-card hub-card--manga" href="/manga/dashboard">
+                    <span class="hub-card-icon" aria-hidden="true">📚</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.manga" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.manga.desc" }}</span>
+                        <span class="hub-card-meta">{{ .HubWorksProgress }} {{ t .T "hub.section.manga.in_progress" }}</span>
+                    </span>
+                </a>
+
+                <div class="hub-card hub-card--soon is-disabled" aria-disabled="true">
+                    <span class="hub-card-icon" aria-hidden="true">✨</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.coming_soon" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.coming_soon.desc" }}</span>
+                    </span>
+                    <span class="hub-card-badge">{{ t .T "hub.badge.soon" }}</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_shell_scripts" . }}
+</body>
+</html>
+{{ end }}

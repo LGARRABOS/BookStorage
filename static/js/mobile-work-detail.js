@@ -49,7 +49,7 @@
           })
           .then(function (data) {
             if (data && data.ok) {
-              window.location.href = "/dashboard";
+              window.location.href = "/manga/dashboard";
             }
           });
       });

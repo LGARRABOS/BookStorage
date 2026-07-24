@@ -23,7 +23,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -33,7 +33,7 @@
     {{ end }}
     <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
         <div class="container content-card">
-            <p><a href="/tools">← {{ t .T "tools.csv_import.back" }}</a></p>
+            <p><a href="/manga/tools">← {{ t .T "tools.csv_import.back" }}</a></p>
             <h1>{{ t .T "tools.csv_import.title" }}</h1>
             <p>{{ t .T "tools.csv_import.subtitle" }}</p>
             {{ if .CSVError }}<p class="err">{{ t .T "tools.csv_import.error" }}: {{ .CSVError }}</p>{{ end }}

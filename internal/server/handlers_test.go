@@ -996,8 +996,8 @@ func TestHandleSetLanguage_RedirectUsesSafeReferer(t *testing.T) {
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status %d", rec.Code)
 	}
-	if loc := rec.Header().Get("Location"); loc != "/dashboard" {
-		t.Fatalf("Location %q want /dashboard", loc)
+	if loc := rec.Header().Get("Location"); loc != "/" {
+		t.Fatalf("Location %q want /", loc)
 	}
 }
 
@@ -1157,7 +1157,7 @@ func TestHandleLogin_PostIgnoresUnsafeNext(t *testing.T) {
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status %d", rec.Code)
 	}
-	if g := rec.Header().Get("Location"); g != "/dashboard" {
+	if g := rec.Header().Get("Location"); g != "/" {
 		t.Fatalf("Location %q", g)
 	}
 }
@@ -1419,5 +1419,73 @@ func TestCatalogSourcePageURL(t *testing.T) {
 	}
 	if got := catalogSourcePageURL("anilist", ""); got != "" {
 		t.Fatalf("empty ext: got %q", got)
+	}
+}
+
+func TestRegisterLegacyRedirects(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	mux := http.NewServeMux()
+	app.RegisterLegacyRedirects(mux)
+
+	cases := []struct {
+		method string
+		path   string
+		want   string
+	}{
+		{http.MethodGet, "/dashboard", "/manga/dashboard"},
+		{http.MethodGet, "/catalog", "/manga/catalog"},
+		{http.MethodGet, "/tools/csv-import", "/manga/tools/csv-import"},
+		{http.MethodGet, "/work/5?x=1", "/manga/work/5?x=1"},
+		{http.MethodGet, "/edit/42", "/manga/edit/42"},
+		{http.MethodGet, "/users/7", "/manga/users/7"},
+		{http.MethodPost, "/import", "/manga/import"},
+	}
+	for _, tc := range cases {
+		req := httptest.NewRequest(tc.method, tc.path, nil)
+		rec := httptest.NewRecorder()
+		mux.ServeHTTP(rec, req)
+		if rec.Code != http.StatusPermanentRedirect {
+			t.Fatalf("%s %s: status %d, want 308", tc.method, tc.path, rec.Code)
+		}
+		if loc := rec.Header().Get("Location"); loc != tc.want {
+			t.Fatalf("%s %s: Location %q, want %q", tc.method, tc.path, loc, tc.want)
+		}
+	}
+}
+
+func TestHandleHome_HubForLoggedIn(t *testing.T) {
+	db, s := openTestDB(t)
+	tpl := template.Must(template.New("").Parse(`
+{{ define "hub" }}HUB manga={{ .HubWorksProgress }} admin={{ .IsAdmin }}{{ end }}
+{{ define "mobile_hub" }}MOBILE HUB{{ end }}
+{{ define "landing" }}LANDING{{ end }}
+`))
+	app := &App{
+		Settings:        s,
+		SiteConfig:      config.DefaultSiteConfig(),
+		DB:              db,
+		TemplatesWeb:    tpl,
+		TemplatesMobile: tpl,
+	}
+
+	// Anonymous visitor sees the landing page.
+	req := httptest.NewRequest(http.MethodGet, "/", nil)
+	rec := httptest.NewRecorder()
+	app.HandleHome(rec, req)
+	if body := rec.Body.String(); !strings.Contains(body, "LANDING") {
+		t.Fatalf("anonymous should see landing, got %q", body)
+	}
+
+	// Logged-in user lands on the hub.
+	req2 := httptest.NewRequest(http.MethodGet, "/", nil)
+	req2.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec2 := httptest.NewRecorder()
+	app.HandleHome(rec2, req2)
+	if rec2.Code != http.StatusOK {
+		t.Fatalf("status %d", rec2.Code)
+	}
+	if body := rec2.Body.String(); !strings.Contains(body, "HUB") {
+		t.Fatalf("logged-in user should see hub, got %q", body)
 	}
 }

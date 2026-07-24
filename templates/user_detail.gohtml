@@ -24,7 +24,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -63,7 +63,7 @@
                                 <td>{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ else }}Other{{ end }}</td>
                                 {{ if $.CanImport }}
                                 <td>
-                                    <form method="POST" action="/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
+                                    <form method="POST" action="/manga/users/{{ $.TargetUser.ID }}/import/{{ .ID }}">
                                         <button type="submit" class="btn btn-primary btn-icon">{{ t $.T "user.import" }}</button>
                                     </form>
                                 </td>

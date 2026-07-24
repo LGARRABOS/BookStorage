@@ -19,17 +19,16 @@
         {{ t .T "nav.more" }} <span class="nav-dropdown-caret" aria-hidden="true">▾</span>
     </button>
     <div class="nav-dropdown-panel" id="nav-more-panel" data-nav-dropdown-panel hidden role="menu">
-        <a role="menuitem" class="nav-dropdown-item" href="/catalog">{{ t .T "nav.catalog" }}</a>
-        <a role="menuitem" class="nav-dropdown-item" href="/stats">{{ t .T "nav.stats" }}</a>
-        <a role="menuitem" class="nav-dropdown-item" href="/reading-sites">{{ t .T "nav.reading_sites" }}</a>
-        <a role="menuitem" class="nav-dropdown-item" href="/users">{{ t .T "nav.readers" }}</a>
-        <a role="menuitem" class="nav-dropdown-item" href="/tools">{{ t .T "nav.tools" }}</a>
-        {{ if or .IsAdmin (hasPrefix .CurrentPath "/admin") }}<a role="menuitem" class="nav-dropdown-item" href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}
+        <a role="menuitem" class="nav-dropdown-item" href="/manga/catalog">{{ t .T "nav.catalog" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/manga/stats">{{ t .T "nav.stats" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/manga/reading-sites">{{ t .T "nav.reading_sites" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/manga/users">{{ t .T "nav.readers" }}</a>
+        <a role="menuitem" class="nav-dropdown-item" href="/manga/tools">{{ t .T "nav.tools" }}</a>
     </div>
 </div>
 {{end}}
 
 {{define "nav_account_links"}}
-<a href="/profile">{{ t .T "nav.profile" }}</a>
+<a href="/">{{ t .T "hub.nav_home" }}</a>
 <a href="/logout">{{ t .T "nav.logout" }}</a>
 {{end}}

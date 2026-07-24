@@ -290,7 +290,7 @@ func (a *App) handleGoogleLoginCallback(w http.ResponseWriter, r *http.Request, 
 		a.setSessionCookie(w, token, sessionSlidingTTL)
 		dest := safePostLoginRedirect(nextPath)
 		if dest == "" {
-			dest = "/dashboard"
+			dest = pathHub
 		}
 		http.Redirect(w, r, dest, http.StatusFound)
 		return
@@ -336,7 +336,7 @@ func (a *App) handleGoogleLoginCallback(w http.ResponseWriter, r *http.Request, 
 	a.setSessionCookie(w, token, sessionSlidingTTL)
 	dest := safePostLoginRedirect(nextPath)
 	if dest == "" {
-		dest = "/dashboard"
+		dest = pathHub
 	}
 	http.Redirect(w, r, dest, http.StatusFound)
 }

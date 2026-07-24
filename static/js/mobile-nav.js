@@ -16,9 +16,9 @@
       if (!href) continue;
       var isActive =
         current === href ||
-        (href === "/dashboard" &&
-          (current === "/dashboard" || current.indexOf("/work/") === 0)) ||
-        (href !== "/dashboard" && current.indexOf(href) === 0);
+        (href === "/manga/dashboard" &&
+          (current === "/manga/dashboard" || current.indexOf("/manga/work/") === 0)) ||
+        (href !== "/manga/dashboard" && current.indexOf(href) === 0);
       if (isActive) {
         links[i].classList.add("is-active");
       }

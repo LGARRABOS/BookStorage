@@ -195,7 +195,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -210,7 +210,7 @@
                 <div class="form-header-title">
                     <h1>➕ {{ t .T "work.add.title" }}</h1>
                 </div>
-                <a href="/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+                <a href="/manga/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
             {{ template "recommendations_section" . }}
@@ -333,7 +333,7 @@
                 </div>
 
                 <div class="form-actions">
-                    <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                    <a href="/manga/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
                     <div class="form-actions-right">
                         <button type="submit" class="btn btn-primary">✓ {{ t .T "work.form.submit.add" }}</button>
                     </div>

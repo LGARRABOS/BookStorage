@@ -110,7 +110,7 @@
         <div class="container nav-layout">
             {{template "site_brand_dashboard" .}}
             <nav class="nav-links">
-                <a href="/dashboard">{{ t .T "nav.dashboard" }}</a>
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
                 {{template "nav_more_menu" .}}
                 {{template "nav_account_links" .}}
                 {{template "nav_settings_dropdown" .}}
@@ -160,7 +160,7 @@
                             {{ if .User.IsPublic.Valid }}{{ if eq .User.IsPublic.Int64 1 }}🌍 {{ t .T "profile.public" }}{{ else }}🔒 {{ t .T "profile.private" }}{{ end }}{{ else }}🌍 {{ t .T "profile.public" }}{{ end }}
                         </div>
                         <div class="side-actions">
-                            <a href="/tools" class="btn btn-secondary">{{ t .T "profile.open_tools" }}</a>
+                            <a href="/manga/tools" class="btn btn-secondary">{{ t .T "profile.open_tools" }}</a>
                         </div>
                     </aside>
 
@@ -516,7 +516,7 @@
                         </div>
 
                         <div class="form-actions" id="profile-form-actions">
-                            <a href="/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                            <a href="/manga/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
                             <button type="submit" class="btn btn-primary" form="profile-edit-form">{{ t .T "profile.save" }}</button>
                         </div>
                     </div>

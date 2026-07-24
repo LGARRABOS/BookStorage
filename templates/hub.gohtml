@@ -1,0 +1,73 @@
+{{ define "hub" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="/static/pwa/manifest.json">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "hub.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/hub.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "hub_topbar" . }}
+
+    <main class="page-body">
+        <div class="container">
+            <section class="hub-hero">
+                <h1 class="hub-hero-title">{{ t .T "hub.title" }}</h1>
+                <p class="hub-hero-subtitle">{{ t .T "hub.subtitle" }}</p>
+            </section>
+
+            <div class="hub-grid">
+                <a class="hub-card hub-card--manga" href="/manga/dashboard">
+                    <span class="hub-card-icon" aria-hidden="true">📚</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.manga" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.manga.desc" }}</span>
+                        <span class="hub-card-meta">{{ .HubWorksProgress }} {{ t .T "hub.section.manga.in_progress" }}</span>
+                    </span>
+                </a>
+
+                <a class="hub-card hub-card--profile" href="/profile">
+                    <span class="hub-card-icon" aria-hidden="true">👤</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.profile" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.profile.desc" }}</span>
+                    </span>
+                </a>
+
+                {{ if .IsAdmin }}
+                <a class="hub-card hub-card--admin" href="/admin/accounts">
+                    <span class="hub-card-icon" aria-hidden="true">🛡️</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.admin" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.admin.desc" }}</span>
+                    </span>
+                </a>
+                {{ end }}
+
+                <div class="hub-card hub-card--soon is-disabled" aria-disabled="true">
+                    <span class="hub-card-icon" aria-hidden="true">✨</span>
+                    <span class="hub-card-body">
+                        <span class="hub-card-title">{{ t .T "hub.section.coming_soon" }}</span>
+                        <span class="hub-card-desc">{{ t .T "hub.section.coming_soon.desc" }}</span>
+                    </span>
+                    <span class="hub-card-badge">{{ t .T "hub.badge.soon" }}</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

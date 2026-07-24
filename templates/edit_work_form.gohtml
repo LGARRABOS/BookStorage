@@ -63,7 +63,7 @@
 [data-theme="dark"] .bsdp-day.selected { background: var(--primary); }
 .edit-modal-content .bsdp-trigger { padding: 0.6rem 0.85rem; border-radius: 0.6rem; font-size: 0.95rem; background: var(--surface); }
 </style>
-<form method="POST" action="/edit/{{ .Work.ID }}" enctype="multipart/form-data" class="edit-work-form" data-bsdp-clear="{{ t .T "work.form.rating.clear" }}" data-bsdp-today="{{ t .T "work.dates.today" }}">
+<form method="POST" action="/manga/edit/{{ .Work.ID }}" enctype="multipart/form-data" class="edit-work-form" data-bsdp-clear="{{ t .T "work.form.rating.clear" }}" data-bsdp-today="{{ t .T "work.dates.today" }}">
     <div class="form-card">
         <div class="form-card-header"><div class="icon blue">📖</div><div><h2>{{ t .T "work.section.info" }}</h2></div></div>
         <div class="form-group">
@@ -247,7 +247,7 @@
             <button type="button" class="btn btn-danger {{ if .IsModal }}js-modal-delete{{ else }}js-confirm-delete{{ end }}" data-delete-id="{{ .Work.ID }}" data-confirm="{{ t .T "dashboard.delete.confirm" }}">🗑️ {{ t .T "work.form.delete" }}</button>
         </div>
         <div class="form-actions-right">
-            <a href="/dashboard" class="btn btn-secondary js-modal-cancel">{{ t .T "common.cancel" }}</a>
+            <a href="/manga/dashboard" class="btn btn-secondary js-modal-cancel">{{ t .T "common.cancel" }}</a>
             <button type="submit" class="btn btn-primary">✓ {{ t .T "work.form.submit.edit" }}</button>
         </div>
     </div>

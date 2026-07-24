@@ -136,7 +136,7 @@ func (a *App) HandleAddWork(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
 		}
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard, http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -202,7 +202,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 				_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "title_required"})
 				return
 			}
-			http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
+			http.Redirect(w, r, pathMangaEditPrefix+strconv.Itoa(workID), http.StatusFound)
 			return
 		}
 		link := strings.TrimSpace(r.FormValue("link"))
@@ -235,7 +235,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 					_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "invalid_parent"})
 					return
 				}
-				http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
+				http.Redirect(w, r, pathMangaEditPrefix+strconv.Itoa(workID), http.StatusFound)
 				return
 			}
 			if err := a.validateWorkParent(userID, workID, pid); err != nil {
@@ -245,7 +245,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 					_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "invalid_parent"})
 					return
 				}
-				http.Redirect(w, r, "/edit/"+strconv.Itoa(workID), http.StatusFound)
+				http.Redirect(w, r, pathMangaEditPrefix+strconv.Itoa(workID), http.StatusFound)
 				return
 			}
 			parentArg = pid
@@ -357,7 +357,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			_ = json.NewEncoder(w).Encode(map[string]any{"ok": true})
 			return
 		}
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		http.Redirect(w, r, pathMangaDashboard, http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
@@ -370,7 +370,7 @@ func (a *App) HandleWorkDetail(w http.ResponseWriter, r *http.Request) {
 	}
 	workIDStr := r.PathValue("id")
 	if a.resolveViewMode(w, r) != "mobile" {
-		http.Redirect(w, r, "/edit/"+workIDStr, http.StatusFound)
+		http.Redirect(w, r, pathMangaEditPrefix+workIDStr, http.StatusFound)
 		return
 	}
 	userID, _ := a.currentUserID(r)

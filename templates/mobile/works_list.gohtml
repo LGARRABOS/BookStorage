@@ -2,7 +2,7 @@
 {{ if .Works }}
 <section class="works-mobile-list" id="works-mobile-list">
     {{ range .Works }}
-    <a href="/work/{{ .ID }}" class="work-mobile-row" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-chapter="{{ .Chapter }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}">
+    <a href="/manga/work/{{ .ID }}" class="work-mobile-row" data-work-id="{{ .ID }}" data-title="{{ .Title }}" data-chapter="{{ .Chapter }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .ReadingType.Valid }}{{ .ReadingType.String }}{{ end }}" data-notify-new-chapters="{{ .NotifyNewChapters }}" data-reading-site-id="{{ if .ReadingSiteID.Valid }}{{ .ReadingSiteID.Int64 }}{{ else }}none{{ end }}">
         <div class="work-mobile-cover">
             {{ $anilistCover := index $.AnilistCoverByWorkID .ID }}
             {{ if $anilistCover }}

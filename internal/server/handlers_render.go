@@ -47,7 +47,7 @@ func (a *App) HandleSetLanguage(w http.ResponseWriter, r *http.Request) {
 	}
 	a.setLang(w, lang)
 
-	http.Redirect(w, r, safeLanguageRedirect(r, "/dashboard"), http.StatusFound)
+	http.Redirect(w, r, safeLanguageRedirect(r, pathHub), http.StatusFound)
 }
 
 // baseData returns common template data including translations
@@ -84,12 +84,13 @@ func (a *App) baseData(r *http.Request) map[string]any {
 	}
 }
 
-// MobileRedirectToDashboard redirects to /dashboard when in mobile mode.
-// Used for pages that are not part of the simplified mobile experience.
-func (a *App) MobileRedirectToDashboard(next http.HandlerFunc) http.HandlerFunc {
+// MobileRedirectToMangaDashboard redirects to the manga dashboard when in
+// mobile mode. Used for pages that are not part of the simplified mobile
+// experience.
+func (a *App) MobileRedirectToMangaDashboard(next http.HandlerFunc) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if a.resolveViewMode(w, r) == "mobile" {
-			http.Redirect(w, r, "/dashboard", http.StatusFound)
+			http.Redirect(w, r, pathMangaDashboard, http.StatusFound)
 			return
 		}
 		next(w, r)

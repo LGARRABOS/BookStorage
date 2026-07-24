@@ -14,7 +14,8 @@ func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if _, ok := a.currentUserID(r); ok {
-		http.Redirect(w, r, "/dashboard", http.StatusFound)
+		// Logged-in users land on the central hub.
+		a.HandleHub(w, r)
 		return
 	}
 	// Landing page for non-logged in visitors

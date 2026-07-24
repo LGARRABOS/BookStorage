@@ -199,7 +199,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if viewerID == targetID {
-		http.Redirect(w, r, "/users/"+strconv.Itoa(targetID), http.StatusFound)
+		http.Redirect(w, r, pathMangaUsersPrefix+strconv.Itoa(targetID), http.StatusFound)
 		return
 	}
 
@@ -225,7 +225,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		viewerID, src.Title, nullableString(src.Link),
 	).Scan(&existsID)
 	if err == nil && existsID != 0 {
-		http.Redirect(w, r, "/users/"+strconv.Itoa(targetID), http.StatusFound)
+		http.Redirect(w, r, pathMangaUsersPrefix+strconv.Itoa(targetID), http.StatusFound)
 		return
 	}
 
@@ -258,7 +258,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.Redirect(w, r, "/users/"+strconv.Itoa(targetID), http.StatusFound)
+	http.Redirect(w, r, pathMangaUsersPrefix+strconv.Itoa(targetID), http.StatusFound)
 }
 
 func nullableString(ns sql.NullString) any {

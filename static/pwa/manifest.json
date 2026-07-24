@@ -3,7 +3,7 @@
   "name": "BookStorage",
   "short_name": "BookStorage",
   "description": "Personal reading tracker / Gestionnaire de lectures",
-  "start_url": "/dashboard?view=mobile",
+  "start_url": "/?view=mobile",
   "scope": "/",
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
@@ -35,7 +35,7 @@
     {
       "name": "Ajouter",
       "short_name": "Ajouter",
-      "url": "/add_work",
+      "url": "/manga/add_work",
       "icons": [
         {
           "src": "/static/brand/pwa/icon-192.png",
