@@ -1,7 +1,9 @@
 package server
 
 import (
+	"bytes"
 	"html/template"
+	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
 	"strconv"
@@ -10,6 +12,67 @@ import (
 
 	"bookstorage/internal/config"
 )
+
+func TestHandleAnimeAddWork_DuplicateRejected(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, source, external_id, user_id, updated_at)
+		 VALUES ('One Piece', 10, 'En cours', 'TV', 'anilist', '21', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var body bytes.Buffer
+	w := multipart.NewWriter(&body)
+	_ = w.WriteField("title", "one piece")
+	_ = w.WriteField("status", "À voir")
+	_ = w.WriteField("anime_type", "TV")
+	_ = w.WriteField("catalog_source", "anilist")
+	_ = w.WriteField("catalog_external_id", "21")
+	_ = w.Close()
+
+	req := httptest.NewRequest(http.MethodPost, "/anime/add_work", &body)
+	req.Header.Set("Content-Type", w.FormDataContentType())
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleAnimeAddWork(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d", rec.Code)
+	}
+	loc := rec.Header().Get("Location")
+	if !strings.Contains(loc, "/anime/edit/") || !strings.Contains(loc, "error=exists") {
+		t.Fatalf("expected redirect to edit with exists, got %s", loc)
+	}
+	var count int
+	_ = db.QueryRow(`SELECT COUNT(*) FROM anime_works WHERE user_id = 1`).Scan(&count)
+	if count != 1 {
+		t.Fatalf("expected no duplicate insert, got count=%d", count)
+	}
+}
+
+func TestFindAnimeInLibrary(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, source, external_id, user_id, updated_at)
+		 VALUES ('Frieren', 1, 'En cours', 'TV', 'anilist', '154587', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if id, ok := app.findAnimeInLibrary(1, "FRIEREN", "", ""); !ok || id == 0 {
+		t.Fatalf("title match failed: id=%d ok=%v", id, ok)
+	}
+	if id, ok := app.findAnimeInLibrary(1, "Other", "anilist", "154587"); !ok || id == 0 {
+		t.Fatalf("external id match failed: id=%d ok=%v", id, ok)
+	}
+	if _, ok := app.findAnimeInLibrary(1, "Missing", "anilist", "1"); ok {
+		t.Fatal("expected miss")
+	}
+}
 
 func TestHandleAnimeDashboard_AdultFilterAndRender(t *testing.T) {
 	db, s := openTestDB(t)

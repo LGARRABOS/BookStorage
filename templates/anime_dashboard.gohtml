@@ -77,6 +77,14 @@
                     <input type="text" id="anime-search" placeholder="{{ t .T "anime.search.placeholder" }}" value="{{ .SearchQuery }}" autocomplete="off">
                 </div>
                 <div class="filter-group">
+                    <select id="status-filter" aria-label="{{ t .T "dashboard.filter.all" }}">
+                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                        <option value="En cours" selected>{{ t .T "status.reading" }}</option>
+                        <option value="Terminé">{{ t .T "status.completed" }}</option>
+                        <option value="En pause">{{ t .T "status.on_hold" }}</option>
+                        <option value="Abandonné">{{ t .T "status.dropped" }}</option>
+                        <option value="À voir">{{ t .T "status.plan_to_watch" }}</option>
+                    </select>
                     <select name="sort" onchange="document.getElementById('anime-filters').submit()">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "anime.sort.title" }}</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "anime.sort.title_desc" }}</option>
@@ -95,7 +103,7 @@
             {{ if .Works }}
             <div class="anime-grid" id="anime-grid">
                 {{ range .Works }}
-                <article class="anime-card" data-title="{{ .Title }}">
+                <article class="anime-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}">
                     <div class="anime-cover">
                         {{ if and .ImagePath.Valid .ImagePath.String }}
                         <img src="{{ work_image_url .ImagePath.String }}" alt="" loading="lazy">
@@ -189,15 +197,23 @@
 
         (function() {
             var search = document.getElementById('anime-search');
+            var statusFilter = document.getElementById('status-filter');
             var grid = document.getElementById('anime-grid');
-            if (!search || !grid) return;
-            search.addEventListener('input', function() {
-                var q = this.value.trim().toLowerCase();
+            if (!grid) return;
+            function filterAnime() {
+                var q = search ? search.value.trim().toLowerCase() : '';
+                var status = statusFilter ? statusFilter.value : '';
                 grid.querySelectorAll('.anime-card').forEach(function(card) {
                     var title = (card.getAttribute('data-title') || '').toLowerCase();
-                    card.style.display = (!q || title.indexOf(q) !== -1) ? '' : 'none';
+                    var cardStatus = card.getAttribute('data-status') || '';
+                    var matchTitle = !q || title.indexOf(q) !== -1;
+                    var matchStatus = !status || cardStatus === status;
+                    card.style.display = (matchTitle && matchStatus) ? '' : 'none';
                 });
-            });
+            }
+            if (search) search.addEventListener('input', filterAnime);
+            if (statusFilter) statusFilter.addEventListener('change', filterAnime);
+            filterAnime();
         })();
     </script>
 </body>

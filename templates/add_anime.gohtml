@@ -21,6 +21,10 @@
                 <a href="/anime/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "anime.error.exists" }}</div>
+            {{ end }}
+
             <div class="form-card">
                 <div class="form-card-header">
                     <div class="icon purple">🔍</div>
@@ -54,6 +58,7 @@
     <script nonce="{{ .CSPNonce }}">
         var catalogSearchEmptyMsg = {{ jsstr (t .T "anime.catalog.search.empty") }};
         var catalogSearchErrMsg = {{ jsstr (t .T "anime.catalog.search.error") }};
+        var alreadyInLibraryMsg = {{ jsstr (t .T "anime.in_library") }};
         (function() {
             var searchTimer;
             var searchInput = document.getElementById('catalog-search');
@@ -78,26 +83,35 @@
                             } else {
                                 list.forEach(function(item) {
                                     var el = document.createElement('div');
-                                    el.className = 'catalog-result-item';
+                                    el.className = 'catalog-result-item' + (item.in_library ? ' is-in-library' : '');
                                     var cover = item.image_url
                                         ? '<img src="' + item.image_url + '" alt="">'
                                         : '<span class="no-cover">🎬</span>';
                                     var meta = (item.anime_type || '') + (item.episodes ? ' · ' + item.episodes + ' ep.' : '') + (item.is_adult ? ' · 18+' : '');
-                                    el.innerHTML = cover + '<div class="info"><strong></strong><span></span></div><span class="badge">AniList</span>';
+                                    var badgeClass = item.in_library ? 'badge in-library' : 'badge';
+                                    var badgeText = item.in_library ? alreadyInLibraryMsg : 'AniList';
+                                    el.innerHTML = cover + '<div class="info"><strong></strong><span></span></div><span class="' + badgeClass + '"></span>';
                                     el.querySelector('strong').textContent = item.title || '';
                                     el.querySelector('.info span').textContent = meta;
-                                    el.addEventListener('click', function() {
-                                        document.getElementById('title').value = item.title || '';
-                                        document.getElementById('image_url').value = item.image_url || '';
-                                        if (item.anime_type) document.getElementById('anime_type').value = item.anime_type;
-                                        if (item.episodes) document.getElementById('total_episodes').value = item.episodes;
-                                        document.getElementById('is_adult').checked = !!item.is_adult;
-                                        document.getElementById('catalog_source').value = item.source || 'anilist';
-                                        document.getElementById('catalog_external_id').value = item.external_id || '';
-                                        if (item.image_url) previewImageUrl(document.getElementById('image_url'));
-                                        resultsEl.classList.remove('visible');
-                                        searchInput.value = '';
-                                    });
+                                    el.querySelector('.badge').textContent = badgeText;
+                                    if (item.in_library) {
+                                        el.addEventListener('click', function() {
+                                            if (item.library_id) window.location.href = '/anime/edit/' + item.library_id;
+                                        });
+                                    } else {
+                                        el.addEventListener('click', function() {
+                                            document.getElementById('title').value = item.title || '';
+                                            document.getElementById('image_url').value = item.image_url || '';
+                                            if (item.anime_type) document.getElementById('anime_type').value = item.anime_type;
+                                            if (item.episodes) document.getElementById('total_episodes').value = item.episodes;
+                                            document.getElementById('is_adult').checked = !!item.is_adult;
+                                            document.getElementById('catalog_source').value = item.source || 'anilist';
+                                            document.getElementById('catalog_external_id').value = item.external_id || '';
+                                            if (item.image_url) previewImageUrl(document.getElementById('image_url'));
+                                            resultsEl.classList.remove('visible');
+                                            searchInput.value = '';
+                                        });
+                                    }
                                     resultsEl.appendChild(el);
                                 });
                             }

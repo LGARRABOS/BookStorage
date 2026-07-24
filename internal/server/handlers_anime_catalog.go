@@ -21,6 +21,8 @@ type animeCatalogItem struct {
 	ImageURL   string   `json:"image_url,omitempty"`
 	IsAdult    bool     `json:"is_adult"`
 	Genres     []string `json:"genres,omitempty"`
+	InLibrary  bool     `json:"in_library,omitempty"`
+	LibraryID  int      `json:"library_id,omitempty"`
 }
 
 func animeResultToItem(r catalog.AnilistAnimeResult) animeCatalogItem {
@@ -35,6 +37,16 @@ func animeResultToItem(r catalog.AnilistAnimeResult) animeCatalogItem {
 		ImageURL:   r.ImageURL,
 		IsAdult:    r.IsAdult,
 		Genres:     r.Genres,
+	}
+}
+
+func markAnimeCatalogInLibrary(items []animeCatalogItem, owned map[string]int) {
+	for i := range items {
+		key := strings.ToLower(strings.TrimSpace(items[i].Source)) + ":" + strings.TrimSpace(items[i].ExternalID)
+		if id, ok := owned[key]; ok {
+			items[i].InLibrary = true
+			items[i].LibraryID = id
+		}
 	}
 }
 
@@ -56,7 +68,8 @@ func (a *App) HandleAnimeCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if _, ok := a.currentUserID(r); !ok {
+	userID, ok := a.currentUserID(r)
+	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -100,6 +113,7 @@ func (a *App) HandleAnimeCatalogBrowse(w http.ResponseWriter, r *http.Request) {
 	for _, res := range results {
 		out = append(out, animeResultToItem(res))
 	}
+	markAnimeCatalogInLibrary(out, a.animeLibraryExternalKeys(userID))
 
 	adultFilter := ""
 	if adultOnly {
@@ -122,7 +136,8 @@ func (a *App) HandleAnimeCatalogSearch(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	if _, ok := a.currentUserID(r); !ok {
+	userID, ok := a.currentUserID(r)
+	if !ok {
 		w.WriteHeader(http.StatusUnauthorized)
 		return
 	}
@@ -147,6 +162,7 @@ func (a *App) HandleAnimeCatalogSearch(w http.ResponseWriter, r *http.Request) {
 	for _, res := range results {
 		out = append(out, animeResultToItem(res))
 	}
+	markAnimeCatalogInLibrary(out, a.animeLibraryExternalKeys(userID))
 	resp["results"] = out
 	w.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(w).Encode(resp)

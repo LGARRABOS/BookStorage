@@ -34,7 +34,10 @@ type exportAnimeWork struct {
 	FinishedAt    string `json:"finished_at,omitempty"`
 }
 
-func redirectWithAnimeImportReport(w http.ResponseWriter, r *http.Request, rep ImportReport) {
+func (a *App) redirectWithAnimeImportReport(w http.ResponseWriter, r *http.Request, userID int, rep ImportReport) {
+	if rep.Imported > 0 || rep.Updated > 0 {
+		a.scheduleAnimeCoverEnrichment(userID)
+	}
 	for len(mustJSON(rep)) > maxImportReportURLLen && len(rep.Errors) > 3 {
 		rep.Errors = rep.Errors[:len(rep.Errors)-1]
 	}
@@ -429,7 +432,7 @@ func (a *App) importOneAnimeWork(userID int, lineNum int, w exportAnimeWork, mod
 		}
 		_, err = a.DB.Exec(
 			`UPDATE anime_works SET episode = ?, total_episodes = ?, link = ?, status = ?, anime_type = ?,
-             rating = ?, notes = ?, is_adult = ?, image_path = ?, source = ?, external_id = ?,
+             rating = ?, notes = ?, is_adult = ?, image_path = COALESCE(NULLIF(?, ''), image_path), source = ?, external_id = ?,
              started_at = COALESCE(?, started_at), finished_at = COALESCE(?, finished_at), updated_at = CURRENT_TIMESTAMP
              WHERE id = ? AND user_id = ?`,
 			episode, totalArg, link, status, animeType, rating, notes, isAdult, imgArg, source, extArg,
@@ -474,14 +477,14 @@ func (a *App) ImportAnimeFromCSVRecords(w http.ResponseWriter, r *http.Request, 
 			}
 			a.importOneAnimeWork(userID, i+1, aw, mode, &report)
 		}
-		redirectWithAnimeImportReport(w, r, report)
+		a.redirectWithAnimeImportReport(w, r, userID, report)
 		return
 	}
 	report := ImportReport{}
 	for i, row := range rows {
 		a.importOneAnimeWork(userID, i+1, row, mode, &report)
 	}
-	redirectWithAnimeImportReport(w, r, report)
+	a.redirectWithAnimeImportReport(w, r, userID, report)
 }
 
 func parseCSVAnimeWorkRow(record []string) (exportAnimeWork, bool) {
@@ -613,7 +616,7 @@ func (a *App) ImportAnimeFromMALXML(w http.ResponseWriter, r *http.Request, user
 	for i, row := range rows {
 		a.importOneAnimeWork(userID, i+1, row, mode, &report)
 	}
-	redirectWithAnimeImportReport(w, r, report)
+	a.redirectWithAnimeImportReport(w, r, userID, report)
 }
 
 func (a *App) ImportAnimeFromJSONBytes(w http.ResponseWriter, r *http.Request, userID int, data []byte, mode DuplicateMode) {
@@ -643,7 +646,7 @@ func (a *App) ImportAnimeFromJSONBytes(w http.ResponseWriter, r *http.Request, u
 	for i, row := range rows {
 		a.importOneAnimeWork(userID, i+1, row, mode, &report)
 	}
-	redirectWithAnimeImportReport(w, r, report)
+	a.redirectWithAnimeImportReport(w, r, userID, report)
 }
 
 // HandleAnimeExport downloads the user's anime_works as CSV or JSON.

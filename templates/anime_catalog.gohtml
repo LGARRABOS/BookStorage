@@ -76,6 +76,7 @@
         if (!grid || !btn) return;
 
         var addLabel = {{ jsstr (t .T "anime.add") }};
+        var alreadyInLibraryMsg = {{ jsstr (t .T "anime.in_library") }};
         var emptyMsg = {{ jsstr (t .T "catalog.explore.empty") }};
         var errMsg = {{ jsstr (t .T "catalog.explore.error") }};
         var rateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
@@ -122,13 +123,21 @@
             metaEl.className = 'reco-card-meta';
             var meta = (item.anime_type || '') + (item.episodes ? ' · ' + item.episodes + ' ep.' : '') + (item.is_adult ? ' · 18+' : '');
             metaEl.textContent = meta;
-            var addLink = document.createElement('a');
-            addLink.className = 'btn-reco';
-            addLink.href = '/anime/add_work?anilist_id=' + encodeURIComponent(item.anilist_id || item.external_id);
-            addLink.textContent = addLabel;
             body.appendChild(titleEl);
             body.appendChild(metaEl);
-            body.appendChild(addLink);
+            if (item.in_library) {
+                var openLink = document.createElement('a');
+                openLink.className = 'btn-reco';
+                openLink.href = '/anime/edit/' + encodeURIComponent(item.library_id || '');
+                openLink.textContent = alreadyInLibraryMsg;
+                body.appendChild(openLink);
+            } else {
+                var addLink = document.createElement('a');
+                addLink.className = 'btn-reco';
+                addLink.href = '/anime/add_work?anilist_id=' + encodeURIComponent(item.anilist_id || item.external_id);
+                addLink.textContent = addLabel;
+                body.appendChild(addLink);
+            }
             article.appendChild(cover);
             article.appendChild(body);
             return article;

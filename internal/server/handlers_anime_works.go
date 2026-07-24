@@ -15,6 +15,7 @@ import (
 func (a *App) HandleAnimeAddWork(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case http.MethodGet:
+		userID, _ := a.currentUserID(r)
 		data := map[string]any{
 			"AnimeTypes":    animeTypes,
 			"Statuses":      animeStatuses,
@@ -22,7 +23,15 @@ func (a *App) HandleAnimeAddWork(w http.ResponseWriter, r *http.Request) {
 		}
 		if aid := strings.TrimSpace(r.URL.Query().Get("anilist_id")); aid != "" {
 			if id, err := strconv.Atoi(aid); err == nil && id > 0 {
+				if existingID, found := a.findAnimeInLibrary(userID, "", "anilist", aid); found {
+					http.Redirect(w, r, pathAnimeEditPrefix+strconv.Itoa(existingID)+"?error=exists", http.StatusFound)
+					return
+				}
 				if d, err := catalog.GetAnilistAnimeByID(id); err == nil && d != nil && d.Title != "" {
+					if existingID, found := a.findAnimeInLibrary(userID, d.Title, "anilist", aid); found {
+						http.Redirect(w, r, pathAnimeEditPrefix+strconv.Itoa(existingID)+"?error=exists", http.StatusFound)
+						return
+					}
 					data["PrefillAnilistID"] = id
 					data["PrefillCatalogSource"] = "anilist"
 					data["PrefillCatalogExternalID"] = aid
@@ -33,6 +42,9 @@ func (a *App) HandleAnimeAddWork(w http.ResponseWriter, r *http.Request) {
 					data["PrefillIsAdult"] = d.IsAdult
 				}
 			}
+		}
+		if r.URL.Query().Get("error") == "exists" {
+			data["ErrorExists"] = true
 		}
 		lang := a.currentLang(r)
 		data["MobileTopbarTitle"] = i18n.T(lang)["anime.add.title"]
@@ -63,9 +75,15 @@ func (a *App) HandleAnimeAddWork(w http.ResponseWriter, r *http.Request) {
 		if source == "" {
 			source = "manual"
 		}
+		externalID := strings.TrimSpace(r.FormValue("catalog_external_id"))
 		var externalIDArg any
-		if ext := strings.TrimSpace(r.FormValue("catalog_external_id")); ext != "" {
-			externalIDArg = ext
+		if externalID != "" {
+			externalIDArg = externalID
+		}
+
+		if existingID, found := a.findAnimeInLibrary(userID, title, source, externalID); found {
+			http.Redirect(w, r, pathAnimeEditPrefix+strconv.Itoa(existingID)+"?error=exists", http.StatusFound)
+			return
 		}
 
 		var imagePath sql.NullString
@@ -140,6 +158,7 @@ func (a *App) HandleAnimeEditWork(w http.ResponseWriter, r *http.Request) {
 			"AnimeTypes":        animeTypes,
 			"Statuses":          animeStatuses,
 			"CatalogPageURL":    catalogPageURL,
+			"ErrorExists":       r.URL.Query().Get("error") == "exists",
 			"MobileTopbarTitle": i18n.T(lang)["anime.edit.title"],
 		}))
 	case http.MethodPost:

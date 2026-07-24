@@ -20,6 +20,9 @@
                 <div class="form-header-title"><h1>✏️ {{ t .T "anime.edit.title" }}</h1></div>
                 <a href="/anime/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "anime.error.exists" }}</div>
+            {{ end }}
             {{ template "edit_anime_form" . }}
         </div>
     </main>

@@ -191,6 +191,34 @@ func GetAnilistAnimeByID(id int) (*AnilistAnimeResult, error) {
 	return &res, nil
 }
 
+// GetAnilistAnimeByMALID loads one anime Media by MyAnimeList id (idMal).
+func GetAnilistAnimeByMALID(malID int) (*AnilistAnimeResult, error) {
+	if malID <= 0 {
+		return nil, nil
+	}
+	q := `query($id: Int) {
+  Media(idMal: $id, type: ANIME) {` + anilistAnimeFields + `
+  }
+}`
+	payload := map[string]any{
+		"query":     q,
+		"variables": map[string]any{"id": malID},
+	}
+	body, _ := json.Marshal(payload)
+	var out anilistAnimeByIDResponse
+	if err := anilistPostAndDecode(body, &out); err != nil {
+		return nil, err
+	}
+	if err := firstGraphQLError(anilistErrorMessages(out.Errors)); err != nil {
+		return nil, err
+	}
+	if out.Data.Media == nil {
+		return nil, nil
+	}
+	res := anilistAnimeResultFromMedia(*out.Data.Media)
+	return &res, nil
+}
+
 // BrowseAnimeParams filters Page.media for anime (type: ANIME).
 type BrowseAnimeParams struct {
 	GenreIn  []string
