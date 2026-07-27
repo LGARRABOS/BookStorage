@@ -1,4 +1,5 @@
 {{ define "mobile_bd_list" }}
+{{ if .ActiveSeries }}
 {{ if .Works }}
 <section class="works-mobile-list" id="bd-mobile-list">
     {{ range .Works }}
@@ -18,12 +19,42 @@
                 {{ end }}
             </div>
             <div class="work-mobile-row-text">
-                <h2 class="work-mobile-title">{{ .Title }}</h2>
+                <h2 class="work-mobile-title">{{ bd_album_title .Title }}</h2>
                 <p class="work-mobile-meta">
                     {{ if gt .Tome 0 }}<span>{{ t $.T "bd.album_number" }} {{ .Tome }}</span>{{ end }}
                     {{ if and (gt .Tome 0) .Status.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span>{{ end }}
                     {{ if .Status.Valid }}<span>{{ translateStatus .Status.String $.T }}</span>{{ end }}
                     {{ if .BdType.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ .BdType.String }}</span>{{ end }}
+                </p>
+            </div>
+        </a>
+    </article>
+    {{ end }}
+</section>
+{{ end }}
+{{ else if .Series }}
+<section class="works-mobile-list" id="bd-mobile-list">
+    {{ range .Series }}
+    <article class="work-mobile-row bd-mobile-row bd-mobile-series" data-title="{{ .TitlesBlob }}" data-statuses="{{ .StatusesBlob }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-adult="{{ if .IsAdult }}1{{ else }}0{{ end }}">
+        <a href="/bd/dashboard?series={{ .Name | urlquery }}{{ if ne $.SortBy "title" }}&sort={{ $.SortBy }}{{ end }}{{ if eq $.AdultFilter "only" }}&adult=only{{ end }}" class="bd-mobile-row-main">
+            <div class="work-mobile-cover">
+                {{ if and .ImagePath.Valid .ImagePath.String }}
+                    {{ $imgUrl := work_image_url .ImagePath.String }}
+                    {{ if $imgUrl }}
+                        <img src="{{ $imgUrl }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <span class="no-image" style="display:none;" aria-hidden="true">📘</span>
+                    {{ else }}
+                        <span class="no-image" aria-hidden="true">📘</span>
+                    {{ end }}
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">📘</span>
+                {{ end }}
+            </div>
+            <div class="work-mobile-row-text">
+                <h2 class="work-mobile-title">{{ .Name }}</h2>
+                <p class="work-mobile-meta">
+                    <span>{{ .AlbumCount }} {{ t $.T "bd.series.albums" }}</span>
+                    {{ if gt .MaxTome 0 }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ t $.T "bd.album_number" }} {{ .MaxTome }}</span>{{ end }}
                 </p>
             </div>
         </a>

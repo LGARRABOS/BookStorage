@@ -98,8 +98,28 @@ func (a *App) HandleBdDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	seriesCards := groupBdWorksBySeries(works)
+	sortBdSeriesCards(seriesCards, sortBy)
+
+	activeSeries := strings.TrimSpace(r.URL.Query().Get("series"))
+	var seriesList []bdSeriesCard
+	var albumList []bdWorkRow
+	if activeSeries != "" {
+		if card, ok := findBdSeriesCard(seriesCards, activeSeries); ok {
+			activeSeries = card.Name
+			albumList = card.Albums
+		} else {
+			activeSeries = ""
+			seriesList = seriesCards
+		}
+	} else {
+		seriesList = seriesCards
+	}
+
 	data := map[string]any{
-		"Works":           works,
+		"Works":           albumList,
+		"Series":          seriesList,
+		"ActiveSeries":    activeSeries,
 		"TotalTomes":      totalTomes,
 		"InProgressCount": inProgress,
 		"BdTypes":         bdTypes,

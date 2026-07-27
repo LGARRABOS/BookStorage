@@ -121,8 +121,12 @@
     rows.forEach(function (row) {
       var title = normalize(row.getAttribute("data-title"));
       var cardStatus = row.getAttribute("data-status") || "";
+      var statuses = (row.getAttribute("data-statuses") || "")
+        .split("|")
+        .filter(Boolean);
       var matchSearch = !q || title.indexOf(q) !== -1;
-      var matchStatus = !s || cardStatus === s;
+      var matchStatus =
+        !s || cardStatus === s || statuses.indexOf(s) !== -1;
       row.style.display = matchSearch && matchStatus ? "" : "none";
     });
     saveState(els);

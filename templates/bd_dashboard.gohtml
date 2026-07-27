@@ -69,6 +69,7 @@
             </div>
 
             <form method="GET" class="filters-bar" id="bd-filters">
+                {{ if .ActiveSeries }}<input type="hidden" name="series" value="{{ .ActiveSeries }}">{{ end }}
                 <div class="search-box">
                     <input type="text" id="bd-search" placeholder="{{ t .T "bd.search.placeholder" }}" value="{{ .SearchQuery }}" autocomplete="off">
                 </div>
@@ -96,6 +97,15 @@
                 </label>
             </form>
 
+            {{ if .ActiveSeries }}
+            <p class="bd-series-nav" style="margin:0 0 1rem;">
+                <a href="/bd/dashboard{{ if or (ne .SortBy "title") (eq .AdultFilter "only") }}?{{ end }}{{ if ne .SortBy "title" }}sort={{ .SortBy }}{{ end }}{{ if and (ne .SortBy "title") (eq .AdultFilter "only") }}&{{ end }}{{ if eq .AdultFilter "only" }}adult=only{{ end }}" style="color:var(--primary);text-decoration:none;">← {{ t .T "bd.series.back" }}</a>
+                <strong style="margin-left:0.75rem;">{{ .ActiveSeries }}</strong>
+                <span style="color:var(--text-muted);"> · {{ len .Works }} {{ t .T "bd.series.albums" }}</span>
+            </p>
+            {{ end }}
+
+            {{ if .ActiveSeries }}
             {{ if .Works }}
             <div class="bd-grid" id="bd-grid">
                 {{ range .Works }}
@@ -113,7 +123,7 @@
                         </div>
                     </div>
                     <div class="bd-body">
-                        <div class="bd-card-title"><a href="/bd/edit/{{ .ID }}">{{ .Title }}</a></div>
+                        <div class="bd-card-title"><a href="/bd/edit/{{ .ID }}">{{ bd_album_title .Title }}</a></div>
                         <div class="bd-stars">
                             {{ $r := .Rating }}{{ range $i := seq 5 }}<span class="{{ if ge $r $i }}{{ else }}empty{{ end }}">★</span>{{ end }}
                         </div>
@@ -124,9 +134,42 @@
                         {{ end }}
                         <div class="bd-card-actions">
                             <a href="/bd/edit/{{ .ID }}">✏️ {{ t $.T "common.edit" }}</a>
-                            <button type="button" class="del" data-id="{{ .ID }}" data-title="{{ .Title }}">🗑️</button>
+                            <button type="button" class="del" data-id="{{ .ID }}" data-title="{{ bd_album_title .Title }}">🗑️</button>
                         </div>
                     </div>
+                </article>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="empty-state">
+                <div class="icon">📘</div>
+                <p>{{ t .T "bd.dashboard.empty" }}</p>
+            </div>
+            {{ end }}
+            {{ else if .Series }}
+            <div class="bd-grid" id="bd-grid">
+                {{ range .Series }}
+                <article class="bd-card bd-series-card" data-title="{{ .TitlesBlob }}" data-statuses="{{ .StatusesBlob }}" data-adult="{{ if .IsAdult }}1{{ else }}0{{ end }}">
+                    <a href="/bd/dashboard?series={{ .Name | urlquery }}{{ if ne $.SortBy "title" }}&sort={{ $.SortBy }}{{ end }}{{ if eq $.AdultFilter "only" }}&adult=only{{ end }}" class="bd-series-link" style="color:inherit;text-decoration:none;display:flex;flex-direction:column;flex:1;">
+                    <div class="bd-cover">
+                        {{ if and .ImagePath.Valid .ImagePath.String }}
+                        <img src="{{ work_image_url .ImagePath.String }}" alt="" loading="lazy">
+                        {{ else }}
+                        <div class="no-image">📘</div>
+                        {{ end }}
+                        <div class="bd-badges">
+                            {{ if .BdType.Valid }}<span class="bd-badge">{{ .BdType.String }}</span>{{ end }}
+                            {{ if .Status.Valid }}<span class="bd-badge">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                            {{ if .IsAdult }}<span class="bd-badge">+18</span>{{ end }}
+                        </div>
+                    </div>
+                    <div class="bd-body">
+                        <div class="bd-card-title">{{ .Name }}</div>
+                        <div class="bd-card-meta">
+                            {{ .AlbumCount }} {{ t $.T "bd.series.albums" }}{{ if gt .MaxTome 0 }} · {{ t $.T "bd.album_number" }} {{ .MaxTome }}{{ end }}
+                        </div>
+                    </div>
+                    </a>
                 </article>
                 {{ end }}
             </div>
@@ -170,7 +213,6 @@
             var form = document.getElementById('bd-filters');
             var sortSel = document.getElementById('bd-sort');
             var adultCheck = document.getElementById('bd-adult-only');
-            // CSP blocks inline onchange; submit via listeners instead.
             function submitFilters() {
                 if (form) form.submit();
             }
@@ -181,7 +223,6 @@
             var statusFilter = document.getElementById('status-filter');
             var grid = document.getElementById('bd-grid');
             if (!grid) return;
-            // BD entries are albums (not chapter progress): default to all statuses.
             if (statusFilter) {
                 statusFilter.value = '';
             }
@@ -191,8 +232,9 @@
                 grid.querySelectorAll('.bd-card').forEach(function(card) {
                     var title = (card.getAttribute('data-title') || '').toLowerCase();
                     var cardStatus = card.getAttribute('data-status') || '';
+                    var statuses = (card.getAttribute('data-statuses') || '').split('|').filter(Boolean);
                     var matchTitle = !q || title.indexOf(q) !== -1;
-                    var matchStatus = !status || cardStatus === status;
+                    var matchStatus = !status || cardStatus === status || statuses.indexOf(status) !== -1;
                     card.style.display = (matchTitle && matchStatus) ? '' : 'none';
                 });
             }

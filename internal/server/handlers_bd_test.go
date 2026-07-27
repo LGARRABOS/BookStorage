@@ -11,10 +11,13 @@ import (
 func TestHandleBdDashboard_AdultFilterAndRender(t *testing.T) {
 	db, s := openTestDB(t)
 	tpl := template.Must(template.New("").Parse(`
-{{ define "bd_dashboard" }}{{ range .Works }}{{ .Title }}:{{ .Tome }}
-{{ end }}Adult={{ .AdultFilter }}{{ end }}
-{{ define "mobile_bd_dashboard" }}{{ range .Works }}{{ .Title }}:{{ .Tome }}
-{{ end }}{{ end }}
+{{ define "bd_dashboard" }}{{ if .ActiveSeries }}SERIES={{ .ActiveSeries }}
+{{ range .Works }}{{ .Title }}:{{ .Tome }}
+{{ end }}{{ else }}{{ range .Series }}{{ .Name }}:{{ .AlbumCount }}
+{{ end }}{{ end }}Adult={{ .AdultFilter }}{{ end }}
+{{ define "mobile_bd_dashboard" }}{{ if .ActiveSeries }}{{ range .Works }}{{ .Title }}
+{{ end }}{{ else }}{{ range .Series }}{{ .Name }}
+{{ end }}{{ end }}{{ end }}
 `))
 	app := &App{Settings: s, DB: db, TemplatesWeb: tpl, TemplatesMobile: tpl}
 
@@ -46,6 +49,23 @@ func TestHandleBdDashboard_AdultFilterAndRender(t *testing.T) {
 	}
 	if !strings.Contains(body2, "Adult BD") {
 		t.Fatalf("expected adult visible when adult=only, body=%s", body2)
+	}
+
+	_, err = db.Exec(
+		`INSERT INTO bd_works (title, tome, status, bd_type, is_adult, user_id, updated_at)
+		 VALUES ('Aldébaran — La catastrophe', 1, 'Terminé', 'Album', 0, 1, CURRENT_TIMESTAMP),
+		        ('Aldébaran — La blonde', 2, 'Terminé', 'Album', 0, 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	req3 := httptest.NewRequest(http.MethodGet, "/bd/dashboard?series=Ald%C3%A9baran", nil)
+	req3.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec3 := httptest.NewRecorder()
+	app.HandleBdDashboard(rec3, req3)
+	body3 := rec3.Body.String()
+	if !strings.Contains(body3, "SERIES=Aldébaran") || !strings.Contains(body3, "La blonde") {
+		t.Fatalf("series drill-down body=%s", body3)
 	}
 }
 

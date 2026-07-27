@@ -38,12 +38,19 @@
                 </button>
             </div>
 
-            <p class="mobile-collection-summary" id="mobile-bd-summary" data-label-works="{{ t .T "mobile.bd.works" }}">
-                {{ len .Works }} {{ t .T "mobile.bd.works" }}
+            <p class="mobile-collection-summary" id="mobile-bd-summary" data-label-works="{{ if .ActiveSeries }}{{ t .T "bd.series.albums" }}{{ else }}{{ t .T "bd.series.label" }}{{ end }}">
+                {{ if .ActiveSeries }}{{ len .Works }} {{ t .T "bd.series.albums" }}{{ else }}{{ len .Series }} {{ t .T "bd.series.label" }}{{ end }}
             </p>
 
+            {{ if .ActiveSeries }}
+            <p style="margin:0 0 0.75rem;">
+                <a href="/bd/dashboard{{ if or (ne .SortBy "title") (eq .AdultFilter "only") }}?{{ end }}{{ if ne .SortBy "title" }}sort={{ .SortBy }}{{ end }}{{ if and (ne .SortBy "title") (eq .AdultFilter "only") }}&{{ end }}{{ if eq .AdultFilter "only" }}adult=only{{ end }}" style="color:var(--primary);text-decoration:none;">← {{ t .T "bd.series.back" }}</a>
+                <strong style="margin-left:0.5rem;">{{ .ActiveSeries }}</strong>
+            </p>
+            {{ end }}
+
             <div id="mobile-bd-container">
-            {{ if .Works }}
+            {{ if or .Works .Series }}
             {{ template "mobile_bd_list" . }}
             {{ else }}
             <section class="mobile-panel mobile-empty-state">
