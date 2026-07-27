@@ -4,7 +4,6 @@ import (
 	"html/template"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -47,46 +46,6 @@ func TestHandleBdDashboard_AdultFilterAndRender(t *testing.T) {
 	}
 	if !strings.Contains(body2, "Adult BD") {
 		t.Fatalf("expected adult visible when adult=only, body=%s", body2)
-	}
-}
-
-func TestHandleBdIncrementDecrement(t *testing.T) {
-	db, s := openTestDB(t)
-	app := &App{Settings: s, DB: db}
-
-	res, err := db.Exec(
-		`INSERT INTO bd_works (title, tome, status, bd_type, user_id, updated_at)
-		 VALUES ('Counter', 0, 'En cours', 'Série', 1, CURRENT_TIMESTAMP)`,
-	)
-	if err != nil {
-		t.Fatal(err)
-	}
-	id, _ := res.LastInsertId()
-	idStr := strconv.FormatInt(id, 10)
-
-	doPost := func(handler http.HandlerFunc, url string) {
-		req := httptest.NewRequest(http.MethodPost, url, nil)
-		req.SetPathValue("id", idStr)
-		req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
-		rec := httptest.NewRecorder()
-		handler(rec, req)
-		if rec.Code != http.StatusOK {
-			t.Fatalf("status %d for %s", rec.Code, url)
-		}
-	}
-
-	doPost(app.HandleBdIncrement, "/api/bd/increment/"+idStr)
-	doPost(app.HandleBdIncrement, "/api/bd/increment/"+idStr)
-	var tome int
-	_ = db.QueryRow(`SELECT tome FROM bd_works WHERE id = ?`, id).Scan(&tome)
-	if tome != 2 {
-		t.Fatalf("expected tome=2 after 2 increments, got %d", tome)
-	}
-
-	doPost(app.HandleBdDecrement, "/api/bd/decrement/"+idStr)
-	_ = db.QueryRow(`SELECT tome FROM bd_works WHERE id = ?`, id).Scan(&tome)
-	if tome != 1 {
-		t.Fatalf("expected tome=1 after decrement, got %d", tome)
 	}
 }
 

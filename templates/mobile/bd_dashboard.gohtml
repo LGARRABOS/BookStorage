@@ -8,12 +8,6 @@
     <style>
         .bd-mobile-row { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; }
         .bd-mobile-row-main { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
-        .bd-mobile-ep-controls { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
-        .bd-mobile-ep-controls button {
-            width: 32px; height: 32px; border-radius: 0.5rem; border: 1px solid var(--border-subtle);
-            background: var(--background); color: var(--text-primary); font-size: 1.1rem; line-height: 1; cursor: pointer;
-        }
-        .bd-ep-count { font-weight: 600; min-width: 1.75rem; text-align: center; font-size: 0.9rem; }
     </style>
 </head>
 <body class="mobile-app-body mobile-dashboard-body">
@@ -34,8 +28,8 @@
 
             <div class="mobile-collection-header">
                 <div class="mobile-collection-tabs" id="mobile-bd-quick-filters" role="tablist">
-                    <button type="button" class="mobile-collection-tab is-active" data-status="En cours" role="tab" aria-selected="true">{{ t .T "mobile.bd.tab.watching" }}</button>
-                    <button type="button" class="mobile-collection-tab" data-status="" role="tab" aria-selected="false">{{ t .T "mobile.bd.tab.all" }}</button>
+                    <button type="button" class="mobile-collection-tab is-active" data-status="" role="tab" aria-selected="true">{{ t .T "mobile.bd.tab.all" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="En cours" role="tab" aria-selected="false">{{ t .T "mobile.bd.tab.watching" }}</button>
                     <button type="button" class="mobile-collection-tab" data-status="À lire" role="tab" aria-selected="false">{{ t .T "mobile.bd.tab.plan" }}</button>
                 </div>
                 <button type="button" class="mobile-filters-btn" id="mobile-bd-filters-open" aria-haspopup="dialog" aria-label="{{ t .T "mobile.filters.button" }}">
@@ -44,8 +38,8 @@
                 </button>
             </div>
 
-            <p class="mobile-collection-summary" id="mobile-bd-summary" data-label-works="{{ t .T "mobile.bd.works" }}" data-label-tomes="{{ t .T "mobile.bd.tomes" }}">
-                {{ len .Works }} {{ t .T "mobile.bd.works" }} • {{ .TotalTomes }} {{ t .T "mobile.bd.tomes" }}
+            <p class="mobile-collection-summary" id="mobile-bd-summary" data-label-works="{{ t .T "mobile.bd.works" }}">
+                {{ len .Works }} {{ t .T "mobile.bd.works" }}
             </p>
 
             <div id="mobile-bd-container">
@@ -72,7 +66,7 @@
             <select id="mobile-bd-filter-status" class="mobile-sheet-select" autocomplete="off">
                 <option value="">{{ t .T "dashboard.filter.all" }}</option>
                 {{ range .BdStatuses }}
-                <option value="{{ . }}" {{ if eq . "En cours" }}selected{{ end }}>{{ translateStatus . $.T }}</option>
+                <option value="{{ . }}">{{ translateStatus . $.T }}</option>
                 {{ end }}
             </select>
         </div>
@@ -101,7 +95,7 @@
     {{ template "mobile_install_banner" . }}
     {{ template "mobile_bottom_nav" . }}
     {{ template "mobile_shell_scripts" . }}
-    <script src="/static/js/mobile-bd-dashboard.js?v=2"></script>
+    <script src="/static/js/mobile-bd-dashboard.js?v=3"></script>
 </body>
 </html>
 {{ end }}

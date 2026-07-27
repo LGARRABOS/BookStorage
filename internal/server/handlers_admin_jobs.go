@@ -5,20 +5,25 @@ import (
 	"strconv"
 )
 
-// HandleAdminJobs renders the background jobs overview (cover enrichment queue).
+// HandleAdminJobs renders the background jobs overview (cover enrichment queues).
 func (a *App) HandleAdminJobs(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodGet {
 		w.WriteHeader(http.StatusMethodNotAllowed)
 		return
 	}
-	status := a.animeCoverJobStatus()
+	animeStatus := a.animeCoverJobStatus()
+	bdStatus := a.bdCoverJobStatus()
 	a.renderTemplate(w, r, "admin_jobs", a.mergeData(r, map[string]any{
-		"AdminTab":           "jobs",
-		"CoverJob":           status,
-		"CoverETAHuman":      formatDurationSeconds(status.ETASeconds),
-		"CoverJobRunning":    status.Running,
-		"CoverGlobalMissing": status.GlobalMissing,
-		"JobsStarted":        r.URL.Query().Get("started") == "1",
+		"AdminTab":             "jobs",
+		"CoverJob":             animeStatus,
+		"CoverETAHuman":        formatDurationSeconds(animeStatus.ETASeconds),
+		"CoverJobRunning":      animeStatus.Running,
+		"CoverGlobalMissing":   animeStatus.GlobalMissing,
+		"BdCoverJob":           bdStatus,
+		"BdCoverETAHuman":      formatDurationSeconds(bdStatus.ETASeconds),
+		"BdCoverJobRunning":    bdStatus.Running,
+		"BdCoverGlobalMissing": bdStatus.GlobalMissing,
+		"JobsStarted":          r.URL.Query().Get("started") == "1",
 	}))
 }
 
@@ -28,15 +33,18 @@ func (a *App) HandleAPIAdminJobs(w http.ResponseWriter, r *http.Request) {
 		a.apiWriteError(w, http.StatusMethodNotAllowed, "method_not_allowed")
 		return
 	}
-	status := a.animeCoverJobStatus()
+	animeStatus := a.animeCoverJobStatus()
+	bdStatus := a.bdCoverJobStatus()
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{
-		"ok":        true,
-		"covers":    status,
-		"eta_human": formatDurationSeconds(status.ETASeconds),
+		"ok":           true,
+		"covers":       animeStatus,
+		"eta_human":    formatDurationSeconds(animeStatus.ETASeconds),
+		"bd_covers":    bdStatus,
+		"bd_eta_human": formatDurationSeconds(bdStatus.ETASeconds),
 	})
 }
 
-// HandleAdminJobsRunCovers enqueues cover enrichment for every user with missing covers.
+// HandleAdminJobsRunCovers enqueues anime cover enrichment for every user with missing covers.
 func (a *App) HandleAdminJobsRunCovers(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)
@@ -44,6 +52,18 @@ func (a *App) HandleAdminJobsRunCovers(w http.ResponseWriter, r *http.Request) {
 	}
 	for _, uid := range a.listUsersWithMissingAnimeCovers() {
 		a.scheduleAnimeCoverEnrichment(uid)
+	}
+	http.Redirect(w, r, "/admin/jobs?started=1", http.StatusFound)
+}
+
+// HandleAdminJobsRunBdCovers enqueues BD cover enrichment for every user with missing covers.
+func (a *App) HandleAdminJobsRunBdCovers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	for _, uid := range a.listUsersWithMissingBdCovers() {
+		a.scheduleBdCoverEnrichment(uid)
 	}
 	http.Redirect(w, r, "/admin/jobs?started=1", http.StatusFound)
 }

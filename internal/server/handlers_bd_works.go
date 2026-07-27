@@ -232,66 +232,6 @@ func (a *App) HandleBdEditWork(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (a *App) HandleBdIncrement(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	userID, _ := a.currentUserID(r)
-	workID, _ := strconv.Atoi(r.PathValue("id"))
-
-	_, err := a.DB.Exec(
-		`UPDATE bd_works SET tome = tome + 1, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
-		workID, userID,
-	)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write([]byte("ok"))
-}
-
-func (a *App) HandleBdDecrement(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	userID, _ := a.currentUserID(r)
-	workID, _ := strconv.Atoi(r.PathValue("id"))
-
-	_, err := a.DB.Exec(
-		`UPDATE bd_works
-         SET tome = CASE WHEN tome > 0 THEN tome - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND user_id = ?`,
-		workID, userID,
-	)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write([]byte("ok"))
-}
-
-func (a *App) HandleBdSetTome(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodPost {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	userID, _ := a.currentUserID(r)
-	workID, _ := strconv.Atoi(r.PathValue("id"))
-
-	tome := clampChapter(atoiDefault(r.FormValue("tome"), 0))
-	_, err := a.DB.Exec(
-		`UPDATE bd_works SET tome = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ? AND user_id = ?`,
-		tome, workID, userID,
-	)
-	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
-	_, _ = w.Write([]byte("ok"))
-}
-
 func (a *App) HandleBdDeleteAPI(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.WriteHeader(http.StatusMethodNotAllowed)

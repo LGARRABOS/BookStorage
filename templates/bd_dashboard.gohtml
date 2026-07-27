@@ -35,11 +35,7 @@
         .bd-card-meta { font-size: 0.78rem; color: var(--text-muted); }
         .bd-stars { color: #fbbf24; font-size: 0.9rem; letter-spacing: 0.05em; }
         .bd-stars .empty { color: var(--border-subtle); }
-        .tome-counter { display: flex; align-items: center; gap: 0.5rem; margin-top: auto; }
-        .tome-counter button { width: 30px; height: 30px; border-radius: 0.5rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-size: 1.1rem; cursor: pointer; line-height: 1; }
-        .tome-counter button:hover { border-color: var(--primary); color: var(--primary); }
-        .tome-counter .count { font-weight: 600; font-size: 0.95rem; min-width: 2.5rem; text-align: center; }
-        .bd-card-actions { display: flex; gap: 0.5rem; }
+        .bd-card-actions { display: flex; gap: 0.5rem; margin-top: auto; }
         .bd-card-actions a, .bd-card-actions button { flex: 1; text-align: center; padding: 0.4rem; border-radius: 0.5rem; font-size: 0.8rem; text-decoration: none; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); cursor: pointer; }
         .bd-card-actions a:hover { border-color: var(--primary); color: var(--primary); }
         .bd-card-actions .del:hover { border-color: #ef4444; color: #ef4444; }
@@ -83,7 +79,7 @@
                         <option value="Terminé">{{ t .T "status.completed" }}</option>
                         <option value="En pause">{{ t .T "status.on_hold" }}</option>
                         <option value="Abandonné">{{ t .T "status.dropped" }}</option>
-                        <option value="À lire">{{ t .T "status.plan_to_watch" }}</option>
+                        <option value="À lire">{{ t .T "status.plan_to_read" }}</option>
                     </select>
                     <select name="sort" id="bd-sort">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "bd.sort.title" }}</option>
@@ -121,14 +117,11 @@
                         <div class="bd-stars">
                             {{ $r := .Rating }}{{ range $i := seq 5 }}<span class="{{ if ge $r $i }}{{ else }}empty{{ end }}">★</span>{{ end }}
                         </div>
+                        {{ if or (gt .Tome 0) .TotalTomes.Valid }}
                         <div class="bd-card-meta">
-                            {{ t $.T "bd.tomes" }}: <span class="ep-value">{{ .Tome }}</span>{{ if .TotalTomes.Valid }} / {{ .TotalTomes.Int64 }}{{ end }}
+                            {{ if gt .Tome 0 }}{{ t $.T "bd.album_number" }} {{ .Tome }}{{ end }}{{ if and (gt .Tome 0) .TotalTomes.Valid }} · {{ end }}{{ if .TotalTomes.Valid }}{{ t $.T "bd.series_tomes" }} {{ .TotalTomes.Int64 }}{{ end }}
                         </div>
-                        <div class="tome-counter" data-id="{{ .ID }}">
-                            <button type="button" class="ep-minus" aria-label="-1">−</button>
-                            <span class="count">{{ .Tome }}</span>
-                            <button type="button" class="ep-plus" aria-label="+1">+</button>
-                        </div>
+                        {{ end }}
                         <div class="bd-card-actions">
                             <a href="/bd/edit/{{ .ID }}">✏️ {{ t $.T "common.edit" }}</a>
                             <button type="button" class="del" data-id="{{ .ID }}" data-title="{{ .Title }}">🗑️</button>
@@ -156,29 +149,6 @@
         function post(url) {
             return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
         }
-
-        document.querySelectorAll('.tome-counter').forEach(function(counter) {
-            var id = counter.getAttribute('data-id');
-            var countEl = counter.querySelector('.count');
-            var card = counter.closest('.bd-card');
-            var epValue = card ? card.querySelector('.ep-value') : null;
-            function setCount(n) {
-                countEl.textContent = n;
-                if (epValue) epValue.textContent = n;
-            }
-            counter.querySelector('.ep-plus').addEventListener('click', function() {
-                post('/api/bd/increment/' + id).then(function(r) {
-                    if (r.ok) setCount(parseInt(countEl.textContent, 10) + 1);
-                });
-            });
-            counter.querySelector('.ep-minus').addEventListener('click', function() {
-                var cur = parseInt(countEl.textContent, 10);
-                if (cur <= 0) return;
-                post('/api/bd/decrement/' + id).then(function(r) {
-                    if (r.ok) setCount(cur - 1);
-                });
-            });
-        });
 
         document.querySelectorAll('.bd-card-actions .del').forEach(function(btn) {
             btn.addEventListener('click', function() {
@@ -210,12 +180,10 @@
             var search = document.getElementById('bd-search');
             var statusFilter = document.getElementById('status-filter');
             var grid = document.getElementById('bd-grid');
-            var adultOnly = {{ if eq .AdultFilter "only" }}true{{ else }}false{{ end }};
             if (!grid) return;
-            // When showing +18 only, default to all statuses so the filter is visible.
-            // Otherwise keep the usual "En cours" quick filter.
+            // BD entries are albums (not chapter progress): default to all statuses.
             if (statusFilter) {
-                statusFilter.value = adultOnly ? '' : 'En cours';
+                statusFilter.value = '';
             }
             function filterBd() {
                 var q = search ? search.value.trim().toLowerCase() : '';

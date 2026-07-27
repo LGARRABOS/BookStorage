@@ -132,6 +132,9 @@ func searchOpenLibraryRaw(params url.Values, limit int) ([]OpenLibraryBdResult, 
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
+	if resp.StatusCode == http.StatusTooManyRequests {
+		return nil, ErrOpenLibraryRateLimit
+	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
 		return nil, fmt.Errorf("openlibrary: http %d", resp.StatusCode)
 	}

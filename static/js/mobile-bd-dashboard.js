@@ -35,7 +35,7 @@
       sessionStorage.setItem(
         STORAGE_KEY,
         JSON.stringify({
-          status: els.status ? els.status.value : "En cours",
+          status: els.status ? els.status.value : "",
           adult: els.adultOnlyCheck ? els.adultOnlyCheck.checked : false,
           sort: els.sortSel ? els.sortSel.value : "title",
           search: els.search ? els.search.value : "",
@@ -48,8 +48,8 @@
     try {
       var raw = sessionStorage.getItem(STORAGE_KEY);
       if (!raw) {
-        if (els.status) els.status.value = "En cours";
-        syncQuickTabs(els, "En cours");
+        if (els.status) els.status.value = "";
+        syncQuickTabs(els, "");
         return false;
       }
       var state = JSON.parse(raw);
@@ -57,16 +57,16 @@
       if (els.status) {
         els.status.value =
           state.status === undefined || state.status === null
-            ? "En cours"
+            ? ""
             : state.status;
       }
       if (els.adultOnlyCheck) els.adultOnlyCheck.checked = !!state.adult;
       if (els.sortSel && state.sort) els.sortSel.value = state.sort;
-      syncQuickTabs(els, els.status ? els.status.value : "En cours");
+      syncQuickTabs(els, els.status ? els.status.value : "");
       return true;
     } catch (e) {
-      if (els.status) els.status.value = "En cours";
-      syncQuickTabs(els, "En cours");
+      if (els.status) els.status.value = "";
+      syncQuickTabs(els, "");
       return false;
     }
   }
@@ -75,7 +75,7 @@
     if (!els.quickFilters) return;
     var tabs = els.quickFilters.querySelectorAll(".mobile-collection-tab");
     var activeStatus =
-      statusVal === undefined || statusVal === null ? "En cours" : statusVal;
+      statusVal === undefined || statusVal === null ? "" : statusVal;
     for (var i = 0; i < tabs.length; i += 1) {
       var tabStatus = tabs[i].getAttribute("data-status") || "";
       var active = tabStatus === activeStatus;
@@ -106,23 +106,18 @@
     if (!els.summary) return;
     var rows = getRows();
     var visible = 0;
-    var episodes = 0;
     rows.forEach(function (row) {
       if (row.style.display === "none") return;
       visible += 1;
-      episodes += parseInt(row.getAttribute("data-tome"), 10) || 0;
     });
     var worksLabel = els.summary.getAttribute("data-label-works") || "works";
-    var tomesLabel =
-      els.summary.getAttribute("data-label-tomes") || "episodes";
-    els.summary.textContent =
-      visible + " " + worksLabel + " • " + episodes + " " + tomesLabel;
+    els.summary.textContent = visible + " " + worksLabel;
   }
 
   function applyClientFilters(els) {
     var rows = getRows();
     var q = normalize(els.search ? els.search.value : "");
-    var s = els.status ? els.status.value : "En cours";
+    var s = els.status ? els.status.value : "";
     rows.forEach(function (row) {
       var title = normalize(row.getAttribute("data-title"));
       var cardStatus = row.getAttribute("data-status") || "";
@@ -149,51 +144,6 @@
     }
     saveState(els);
     window.location.href = u.toString();
-  }
-
-  function post(url) {
-    return fetch(url, {
-      method: "POST",
-      headers: { "X-Requested-With": "XMLHttpRequest" },
-      credentials: "same-origin",
-    });
-  }
-
-  function bindEpisodeControls() {
-    document.querySelectorAll(".bd-mobile-ep-controls").forEach(function (counter) {
-      var id = counter.getAttribute("data-id");
-      var countEl = counter.querySelector(".bd-tome-count");
-      var row = counter.closest(".bd-mobile-row");
-      var epValue = row ? row.querySelector(".ep-value") : null;
-      function setCount(n) {
-        countEl.textContent = String(n);
-        if (epValue) epValue.textContent = String(n);
-        if (row) row.setAttribute("data-tome", String(n));
-        updateSummary(getEls());
-      }
-      var plus = counter.querySelector(".bd-tome-plus");
-      var minus = counter.querySelector(".bd-tome-minus");
-      if (plus) {
-        plus.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          post("/api/bd/increment/" + id).then(function (r) {
-            if (r.ok) setCount((parseInt(countEl.textContent, 10) || 0) + 1);
-          });
-        });
-      }
-      if (minus) {
-        minus.addEventListener("click", function (e) {
-          e.preventDefault();
-          e.stopPropagation();
-          var cur = parseInt(countEl.textContent, 10) || 0;
-          if (cur <= 0) return;
-          post("/api/bd/decrement/" + id).then(function (r) {
-            if (r.ok) setCount(cur - 1);
-          });
-        });
-      }
-    });
   }
 
   function initFiltersSheet(els) {
@@ -229,9 +179,7 @@
     var adultInURL =
       new URL(window.location.href).searchParams.get("adult") === "only";
     if (adultInURL) {
-      // URL is the source of truth for the server-side +18 filter.
       if (els.adultOnlyCheck) els.adultOnlyCheck.checked = true;
-      // Don't hide +18 results behind the default "En cours" client filter.
       if (els.status) {
         els.status.value = "";
         syncQuickTabs(els, "");
@@ -241,12 +189,10 @@
       els.adultOnlyCheck &&
       els.adultOnlyCheck.checked
     ) {
-      // Session had +18 on but the page was rendered without adult=only — reload.
       reloadWithServerParams(els);
       return;
     }
     applyClientFilters(els);
-    bindEpisodeControls();
     initFiltersSheet(els);
 
     if (els.search) {

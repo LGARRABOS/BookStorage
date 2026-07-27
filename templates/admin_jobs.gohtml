@@ -21,6 +21,8 @@
         .jobs-dot--warn { background: #d97706; box-shadow: 0 0 0 3px rgba(217, 119, 6, 0.2); }
         .jobs-meta { color: var(--text-muted); font-size: 0.9rem; line-height: 1.55; }
         .jobs-actions { margin-top: 1.25rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        .jobs-block { margin-top: 2rem; padding-top: 0.5rem; border-top: 1px solid var(--border-subtle); }
+        .jobs-block:first-of-type { border-top: none; padding-top: 0; margin-top: 1.5rem; }
     </style>
 </head>
 <body>
@@ -38,7 +40,8 @@
                 <p class="badge success" style="margin-top:0.75rem;">{{ t .T "admin.jobs.started" }}</p>
                 {{ end }}
 
-                <h2 style="font-size:1.05rem;margin:1.5rem 0 0.5rem;">{{ t .T "admin.jobs.covers.title" }}</h2>
+                <div class="jobs-block" id="jobs-anime-block">
+                <h2 style="font-size:1.05rem;margin:0 0 0.5rem;">{{ t .T "admin.jobs.covers.title" }}</h2>
                 <p class="jobs-meta">{{ t .T "admin.jobs.covers.desc" }}</p>
 
                 <div class="jobs-grid" id="jobs-kpis">
@@ -87,6 +90,59 @@
                     </form>
                     <span class="jobs-meta">{{ t .T "admin.jobs.covers.run_hint" }}</span>
                 </div>
+                </div>
+
+                <div class="jobs-block" id="jobs-bd-block">
+                <h2 style="font-size:1.05rem;margin:0 0 0.5rem;">{{ t .T "admin.jobs.bd_covers.title" }}</h2>
+                <p class="jobs-meta">{{ t .T "admin.jobs.bd_covers.desc" }}</p>
+
+                <div class="jobs-grid" id="jobs-bd-kpis">
+                    <div class="jobs-kpi">
+                        <span class="jobs-kpi-label">{{ t .T "admin.jobs.covers.missing" }}</span>
+                        <span class="jobs-kpi-value" data-bd-kpi="global_missing">{{ .BdCoverGlobalMissing }}</span>
+                    </div>
+                    <div class="jobs-kpi">
+                        <span class="jobs-kpi-label">{{ t .T "admin.jobs.covers.pending" }}</span>
+                        <span class="jobs-kpi-value" data-bd-kpi="pending_now">{{ .BdCoverJob.PendingNow }}</span>
+                    </div>
+                    <div class="jobs-kpi">
+                        <span class="jobs-kpi-label">{{ t .T "admin.jobs.covers.filled" }}</span>
+                        <span class="jobs-kpi-value" data-bd-kpi="filled">{{ .BdCoverJob.Filled }}</span>
+                    </div>
+                    <div class="jobs-kpi">
+                        <span class="jobs-kpi-label">{{ t .T "admin.jobs.covers.eta" }}</span>
+                        <span class="jobs-kpi-value" data-bd-kpi="eta_human">{{ if .BdCoverETAHuman }}{{ .BdCoverETAHuman }}{{ else }}—{{ end }}</span>
+                    </div>
+                </div>
+
+                <p class="jobs-status" id="jobs-bd-status-line">
+                    <span class="jobs-dot{{ if .BdCoverJob.RateLimited }} jobs-dot--warn{{ else if .BdCoverJobRunning }} jobs-dot--on{{ end }}" id="jobs-bd-dot"></span>
+                    <span id="jobs-bd-status-text">
+                        {{ if .BdCoverJob.RateLimited }}{{ t .T "admin.jobs.bd_covers.rate_limited" }}
+                        {{ else if .BdCoverJobRunning }}{{ t .T "admin.jobs.covers.running" }}
+                        {{ else if gt .BdCoverGlobalMissing 0 }}{{ t .T "admin.jobs.covers.idle_pending" }}
+                        {{ else }}{{ t .T "admin.jobs.covers.idle" }}{{ end }}
+                    </span>
+                </p>
+                <p class="jobs-meta" id="jobs-bd-detail">
+                    {{ if .BdCoverJobRunning }}
+                        {{ if .BdCoverJob.Username }}{{ t .T "admin.jobs.covers.user" }}: <strong>{{ .BdCoverJob.Username }}</strong> (#{{ .BdCoverJob.UserID }}) · {{ end }}
+                        {{ if .BdCoverJob.CurrentTitle }}{{ t .T "admin.jobs.covers.current" }}: <em>{{ .BdCoverJob.CurrentTitle }}</em> · {{ end }}
+                        {{ t .T "admin.jobs.covers.processed" }}: {{ .BdCoverJob.Processed }}
+                        ({{ .BdCoverJob.Filled }} {{ t .T "admin.jobs.covers.ok" }} / {{ .BdCoverJob.Skipped }} {{ t .T "admin.jobs.covers.skip" }})
+                    {{ end }}
+                </p>
+                <p class="jobs-meta" id="jobs-bd-queue" {{ if not .BdCoverJob.QueuedUsers }}hidden{{ end }}>
+                    {{ t .T "admin.jobs.covers.queued" }}: <span id="jobs-bd-queue-ids">{{ range $i, $uid := .BdCoverJob.QueuedUsers }}{{ if $i }}, {{ end }}#{{ $uid }}{{ end }}</span>
+                </p>
+
+                <div class="jobs-actions">
+                    <form method="POST" action="/admin/jobs/bd-covers/run">
+                        <button type="submit" class="btn btn-primary" {{ if eq .BdCoverGlobalMissing 0 }}disabled{{ end }}>{{ t .T "admin.jobs.bd_covers.run" }}</button>
+                    </form>
+                    <span class="jobs-meta">{{ t .T "admin.jobs.bd_covers.run_hint" }}</span>
+                </div>
+                </div>
             </section>
         </div>
     </main>
@@ -97,6 +153,7 @@
             idle: {{ jsstr (t .T "admin.jobs.covers.idle") }},
             idlePending: {{ jsstr (t .T "admin.jobs.covers.idle_pending") }},
             rateLimited: {{ jsstr (t .T "admin.jobs.covers.rate_limited") }},
+            bdRateLimited: {{ jsstr (t .T "admin.jobs.bd_covers.rate_limited") }},
             user: {{ jsstr (t .T "admin.jobs.covers.user") }},
             current: {{ jsstr (t .T "admin.jobs.covers.current") }},
             processed: {{ jsstr (t .T "admin.jobs.covers.processed") }},
@@ -108,50 +165,80 @@
             var el = document.querySelector(sel);
             if (el) el.textContent = val == null || val === '' ? '—' : String(val);
         }
+        function refreshJob(opts) {
+            var c = opts.data;
+            if (!c) return;
+            var kpi = opts.kpiAttr;
+            setText('[' + kpi + '="global_missing"]', c.global_missing);
+            setText('[' + kpi + '="pending_now"]', c.pending_now);
+            setText('[' + kpi + '="filled"]', c.filled);
+            setText('[' + kpi + '="eta_human"]', opts.etaHuman || '—');
+            var dot = document.getElementById(opts.dotId);
+            var status = document.getElementById(opts.statusId);
+            if (dot) {
+                dot.className = 'jobs-dot';
+                if (c.rate_limited) dot.classList.add('jobs-dot--warn');
+                else if (c.running) dot.classList.add('jobs-dot--on');
+            }
+            if (status) {
+                if (c.rate_limited) status.textContent = opts.rateLimitedLabel;
+                else if (c.running) status.textContent = i18n.running;
+                else if (c.global_missing > 0) status.textContent = i18n.idlePending;
+                else status.textContent = i18n.idle;
+            }
+            var detail = document.getElementById(opts.detailId);
+            if (detail) {
+                if (c.running) {
+                    var parts = [];
+                    if (c.username) parts.push(i18n.user + ': ' + c.username + ' (#' + c.user_id + ')');
+                    if (c.current_title) parts.push(i18n.current + ': ' + c.current_title);
+                    parts.push(i18n.processed + ': ' + c.processed + ' (' + c.filled + ' ' + i18n.ok + ' / ' + c.skipped + ' ' + i18n.skip + ')');
+                    detail.textContent = parts.join(' · ');
+                } else {
+                    detail.textContent = '';
+                }
+            }
+            var queue = document.getElementById(opts.queueId);
+            var queueIds = document.getElementById(opts.queueIdsId);
+            if (queue && queueIds) {
+                if (c.queued_user_ids && c.queued_user_ids.length) {
+                    queue.hidden = false;
+                    queueIds.textContent = c.queued_user_ids.map(function (id) { return '#' + id; }).join(', ');
+                } else {
+                    queue.hidden = true;
+                }
+            }
+        }
         function refresh() {
             fetch('/api/admin/jobs', { credentials: 'same-origin', headers: { 'Accept': 'application/json' } })
                 .then(function (r) { return r.ok ? r.json() : null; })
                 .then(function (data) {
-                    if (!data || !data.covers) return;
-                    var c = data.covers;
-                    setText('[data-kpi="global_missing"]', c.global_missing);
-                    setText('[data-kpi="pending_now"]', c.pending_now);
-                    setText('[data-kpi="filled"]', c.filled);
-                    setText('[data-kpi="eta_human"]', data.eta_human || '—');
-                    var dot = document.getElementById('jobs-dot');
-                    var status = document.getElementById('jobs-status-text');
-                    if (dot) {
-                        dot.className = 'jobs-dot';
-                        if (c.rate_limited) dot.classList.add('jobs-dot--warn');
-                        else if (c.running) dot.classList.add('jobs-dot--on');
+                    if (!data) return;
+                    if (data.covers) {
+                        refreshJob({
+                            data: data.covers,
+                            etaHuman: data.eta_human,
+                            kpiAttr: 'data-kpi',
+                            dotId: 'jobs-dot',
+                            statusId: 'jobs-status-text',
+                            detailId: 'jobs-detail',
+                            queueId: 'jobs-queue',
+                            queueIdsId: 'jobs-queue-ids',
+                            rateLimitedLabel: i18n.rateLimited
+                        });
                     }
-                    if (status) {
-                        if (c.rate_limited) status.textContent = i18n.rateLimited;
-                        else if (c.running) status.textContent = i18n.running;
-                        else if (c.global_missing > 0) status.textContent = i18n.idlePending;
-                        else status.textContent = i18n.idle;
-                    }
-                    var detail = document.getElementById('jobs-detail');
-                    if (detail) {
-                        if (c.running) {
-                            var parts = [];
-                            if (c.username) parts.push(i18n.user + ': ' + c.username + ' (#' + c.user_id + ')');
-                            if (c.current_title) parts.push(i18n.current + ': ' + c.current_title);
-                            parts.push(i18n.processed + ': ' + c.processed + ' (' + c.filled + ' ' + i18n.ok + ' / ' + c.skipped + ' ' + i18n.skip + ')');
-                            detail.textContent = parts.join(' · ');
-                        } else {
-                            detail.textContent = '';
-                        }
-                    }
-                    var queue = document.getElementById('jobs-queue');
-                    var queueIds = document.getElementById('jobs-queue-ids');
-                    if (queue && queueIds) {
-                        if (c.queued_user_ids && c.queued_user_ids.length) {
-                            queue.hidden = false;
-                            queueIds.textContent = c.queued_user_ids.map(function (id) { return '#' + id; }).join(', ');
-                        } else {
-                            queue.hidden = true;
-                        }
+                    if (data.bd_covers) {
+                        refreshJob({
+                            data: data.bd_covers,
+                            etaHuman: data.bd_eta_human,
+                            kpiAttr: 'data-bd-kpi',
+                            dotId: 'jobs-bd-dot',
+                            statusId: 'jobs-bd-status-text',
+                            detailId: 'jobs-bd-detail',
+                            queueId: 'jobs-bd-queue',
+                            queueIdsId: 'jobs-bd-queue-ids',
+                            rateLimitedLabel: i18n.bdRateLimited
+                        });
                     }
                 }).catch(function () {});
         }

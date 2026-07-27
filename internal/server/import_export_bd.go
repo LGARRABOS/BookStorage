@@ -113,7 +113,9 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 }
 
 func (a *App) redirectWithBdImportReport(w http.ResponseWriter, r *http.Request, userID int, rep ImportReport) {
-	_ = userID
+	if rep.Imported > 0 || rep.Updated > 0 || rep.SkippedDuplicate > 0 {
+		a.scheduleBdCoverEnrichment(userID)
+	}
 	for len(mustJSON(rep)) > maxImportReportURLLen && len(rep.Errors) > 3 {
 		rep.Errors = rep.Errors[:len(rep.Errors)-1]
 	}

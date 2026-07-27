@@ -20,18 +20,13 @@
             <div class="work-mobile-row-text">
                 <h2 class="work-mobile-title">{{ .Title }}</h2>
                 <p class="work-mobile-meta">
-                    <span class="ep-value">{{ .Tome }}</span>{{ if .TotalTomes.Valid }}<span> / {{ .TotalTomes.Int64 }}</span>{{ end }}
-                    <span> {{ t $.T "mobile.bd.tomes_short" }}</span>
-                    {{ if .Status.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                    {{ if gt .Tome 0 }}<span>{{ t $.T "bd.album_number" }} {{ .Tome }}</span>{{ end }}
+                    {{ if and (gt .Tome 0) .Status.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span>{{ end }}
+                    {{ if .Status.Valid }}<span>{{ translateStatus .Status.String $.T }}</span>{{ end }}
                     {{ if .BdType.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ .BdType.String }}</span>{{ end }}
                 </p>
             </div>
         </a>
-        <div class="bd-mobile-ep-controls" data-id="{{ .ID }}">
-            <button type="button" class="bd-ep-minus" aria-label="-1">−</button>
-            <span class="bd-ep-count">{{ .Tome }}</span>
-            <button type="button" class="bd-ep-plus" aria-label="+1">+</button>
-        </div>
     </article>
     {{ end }}
 </section>

@@ -25,6 +25,7 @@ type App struct {
 	ProcessStartedAt time.Time
 	dbProbe          dbAvailabilityProbe
 	animeCoverJobs   animeCoverJobController
+	bdCoverJobs      bdCoverJobController
 }
 
 func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *database.Conn, version string) *App {
