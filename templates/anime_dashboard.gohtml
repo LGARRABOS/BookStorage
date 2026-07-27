@@ -85,7 +85,7 @@
                         <option value="Abandonné">{{ t .T "status.dropped" }}</option>
                         <option value="À voir">{{ t .T "status.plan_to_watch" }}</option>
                     </select>
-                    <select name="sort" onchange="document.getElementById('anime-filters').submit()">
+                    <select name="sort" id="anime-sort">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "anime.sort.title" }}</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "anime.sort.title_desc" }}</option>
                         <option value="status" {{ if eq .SortBy "status" }}selected{{ end }}>{{ t .T "anime.sort.status" }}</option>
@@ -95,7 +95,7 @@
                     </select>
                 </div>
                 <label class="filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
-                    <input type="checkbox" name="adult" value="only" {{ if eq .AdultFilter "only" }}checked{{ end }} onchange="document.getElementById('anime-filters').submit()">
+                    <input type="checkbox" name="adult" id="anime-adult-only" value="only" {{ if eq .AdultFilter "only" }}checked{{ end }}>
                     +18
                 </label>
             </form>
@@ -149,7 +149,7 @@
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
-    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/appearance.js?v=2"></script>
     <script nonce="{{ .CSPNonce }}">
         var deleteConfirmMsg = {{ jsstr (t .T "anime.delete.confirm") }};
 
@@ -197,6 +197,16 @@
         });
 
         (function() {
+            var form = document.getElementById('anime-filters');
+            var sortSel = document.getElementById('anime-sort');
+            var adultCheck = document.getElementById('anime-adult-only');
+            // CSP blocks inline onchange; submit via listeners instead.
+            function submitFilters() {
+                if (form) form.submit();
+            }
+            if (sortSel) sortSel.addEventListener('change', submitFilters);
+            if (adultCheck) adultCheck.addEventListener('change', submitFilters);
+
             var search = document.getElementById('anime-search');
             var statusFilter = document.getElementById('status-filter');
             var grid = document.getElementById('anime-grid');

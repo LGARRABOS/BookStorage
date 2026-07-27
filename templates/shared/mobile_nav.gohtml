@@ -68,7 +68,7 @@
     </div>
     <div class="mobile-sheet-section">
         <h3 class="mobile-sheet-label">{{ t .T "mobile.settings.theme" }}</h3>
-        <button class="mobile-sheet-btn" type="button" onclick="toggleTheme()">
+        <button class="mobile-sheet-btn theme-toggle" type="button">
             <span id="mobile-theme-label">{{ t .T "nav.theme" }}</span>
             <span id="theme-icon" aria-hidden="true">🌙</span>
         </button>
@@ -148,7 +148,7 @@
 
 {{ define "mobile_shell_scripts" }}
     <script src="/static/js/modals.js"></script>
-    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/appearance.js?v=2"></script>
     <script src="/static/js/mobile-shell.js?v=3"></script>
     <script src="/static/js/mobile-nav.js?v=3"></script>
     <script nonce="{{ .CSPNonce }}">

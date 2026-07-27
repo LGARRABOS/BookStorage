@@ -164,5 +164,12 @@
       window.BookStorageAppearance.init();
     }
     initNavDropdowns();
+    // CSP blocks inline onclick; bind theme toggles via listeners.
+    document.querySelectorAll('.theme-toggle').forEach(function (btn) {
+      btn.addEventListener('click', function (e) {
+        e.preventDefault();
+        window.toggleTheme();
+      });
+    });
   });
 })();
