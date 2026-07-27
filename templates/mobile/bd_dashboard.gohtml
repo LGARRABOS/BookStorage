@@ -44,7 +44,7 @@
 
             {{ if .ActiveSeries }}
             <p style="margin:0 0 0.75rem;">
-                <a href="/bd/dashboard{{ if or (ne .SortBy "title") (eq .AdultFilter "only") }}?{{ end }}{{ if ne .SortBy "title" }}sort={{ .SortBy }}{{ end }}{{ if and (ne .SortBy "title") (eq .AdultFilter "only") }}&{{ end }}{{ if eq .AdultFilter "only" }}adult=only{{ end }}" style="color:var(--primary);text-decoration:none;">← {{ t .T "bd.series.back" }}</a>
+                <a href="{{ bd_dash_url .SortBy .AdultFilter "" }}" style="color:var(--primary);text-decoration:none;">← {{ t .T "bd.series.back" }}</a>
                 <strong style="margin-left:0.5rem;">{{ .ActiveSeries }}</strong>
             </p>
             {{ end }}

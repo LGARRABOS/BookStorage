@@ -2,8 +2,18 @@ package server
 
 import (
 	"database/sql"
+	"strings"
 	"testing"
 )
+
+func TestBdDashboardURL(t *testing.T) {
+	if got := bdDashboardURL("title", "", ""); got != "/bd/dashboard" {
+		t.Fatalf("got %q", got)
+	}
+	if got := string(bdDashboardURL("recent", "only", "Aldébaran")); !strings.Contains(got, "series=Ald") || !strings.Contains(got, "sort=recent") || !strings.Contains(got, "adult=only") {
+		t.Fatalf("got %q", got)
+	}
+}
 
 func TestBdSplitSeriesTitle(t *testing.T) {
 	s, a := bdSplitSeriesTitle("Aldébaran — La blonde")

@@ -36,7 +36,7 @@
 <section class="works-mobile-list" id="bd-mobile-list">
     {{ range .Series }}
     <article class="work-mobile-row bd-mobile-row bd-mobile-series" data-title="{{ .TitlesBlob }}" data-statuses="{{ .StatusesBlob }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-adult="{{ if .IsAdult }}1{{ else }}0{{ end }}">
-        <a href="/bd/dashboard?series={{ .Name | urlquery }}{{ if ne $.SortBy "title" }}&sort={{ $.SortBy }}{{ end }}{{ if eq $.AdultFilter "only" }}&adult=only{{ end }}" class="bd-mobile-row-main">
+        <a href="{{ bd_dash_url $.SortBy $.AdultFilter .Name }}" class="bd-mobile-row-main">
             <div class="work-mobile-cover">
                 {{ if and .ImagePath.Valid .ImagePath.String }}
                     {{ $imgUrl := work_image_url .ImagePath.String }}

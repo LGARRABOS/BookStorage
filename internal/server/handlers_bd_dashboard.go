@@ -1,6 +1,7 @@
 package server
 
 import (
+	"log"
 	"net/http"
 	"strings"
 )
@@ -73,7 +74,8 @@ func (a *App) HandleBdDashboard(w http.ResponseWriter, r *http.Request) {
 
 	rows, err := a.DB.Query(query, args...)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("[bd-dashboard] query user=%d: %v", userID, err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 	defer func() { _ = rows.Close() }()
@@ -84,7 +86,8 @@ func (a *App) HandleBdDashboard(w http.ResponseWriter, r *http.Request) {
 	for rows.Next() {
 		var wRow bdWorkRow
 		if err := scanBdRow(&wRow, rows); err != nil {
-			w.WriteHeader(http.StatusInternalServerError)
+			log.Printf("[bd-dashboard] scan user=%d: %v", userID, err)
+			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 		works = append(works, wRow)
@@ -94,7 +97,8 @@ func (a *App) HandleBdDashboard(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
+		log.Printf("[bd-dashboard] rows user=%d: %v", userID, err)
+		http.Error(w, "Database error", http.StatusInternalServerError)
 		return
 	}
 

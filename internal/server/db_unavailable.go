@@ -18,13 +18,20 @@ func (p *dbAvailabilityProbe) check(db *database.Conn) bool {
 	if db == nil {
 		return false
 	}
-	ctx, cancel := context.WithTimeout(context.Background(), 2*time.Second)
-	defer cancel()
-	err := db.PingContext(ctx)
-	if err != nil {
-		log.Printf("database unavailable: %v", err)
+	// Brief SQLite write bursts (cover enrichment) can make a single Ping fail;
+	// retry so normal page loads are not served as empty/503 during jobs.
+	var lastErr error
+	for attempt := 0; attempt < 3; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+		lastErr = db.PingContext(ctx)
+		cancel()
+		if lastErr == nil {
+			return true
+		}
+		time.Sleep(150 * time.Millisecond)
 	}
-	return err == nil
+	log.Printf("database unavailable: %v", lastErr)
+	return false
 }
 
 // WithDatabaseUnavailable serves a maintenance-style page (503) when the database cannot be reached.

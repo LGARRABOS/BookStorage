@@ -17,7 +17,7 @@ const (
 
 // Overridable in tests to keep enrichment suites fast.
 var (
-	bdCoverEnrichPace           = 250 * time.Millisecond
+	bdCoverEnrichPace           = 400 * time.Millisecond
 	bdCoverEnrichInitialBackoff = 2 * time.Second
 	bdCoverEnrichRateLimitSleep = time.Sleep
 )

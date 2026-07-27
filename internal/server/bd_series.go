@@ -2,9 +2,31 @@ package server
 
 import (
 	"database/sql"
+	"html/template"
+	"net/url"
 	"sort"
 	"strings"
 )
+
+// bdDashboardURL builds /bd/dashboard query links for templates (avoids ambiguous URL contexts).
+func bdDashboardURL(sortBy, adult, series string) template.URL {
+	q := url.Values{}
+	sortBy = strings.TrimSpace(sortBy)
+	if sortBy != "" && sortBy != "title" {
+		q.Set("sort", sortBy)
+	}
+	if strings.TrimSpace(adult) == "only" {
+		q.Set("adult", "only")
+	}
+	if s := strings.TrimSpace(series); s != "" {
+		q.Set("series", s)
+	}
+	out := pathBdDashboard
+	if enc := q.Encode(); enc != "" {
+		out += "?" + enc
+	}
+	return template.URL(out)
+}
 
 // bdSeriesCard is one series on the BD dashboard (one or more albums).
 type bdSeriesCard struct {

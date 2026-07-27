@@ -147,13 +147,32 @@ func (a *App) renderTemplate(w http.ResponseWriter, r *http.Request, templateNam
 	if _, ok := data["IsMobileView"]; !ok {
 		data["IsMobileView"] = mode == "mobile"
 	}
-	if mode == "mobile" {
+
+	exec := a.TemplatesWeb
+	name := templateName
+	if mode == "mobile" && a.TemplatesMobile != nil {
 		mobileName := "mobile_" + templateName
-		if err := a.TemplatesMobile.ExecuteTemplate(w, mobileName, data); err == nil {
-			return
+		if a.TemplatesMobile.Lookup(mobileName) != nil {
+			exec = a.TemplatesMobile
+			name = mobileName
 		}
 	}
-	_ = a.TemplatesWeb.ExecuteTemplate(w, templateName, data)
+	if exec == nil {
+		log.Printf("[template] nil templates for %q", templateName)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+
+	var buf bytes.Buffer
+	if err := exec.ExecuteTemplate(&buf, name, data); err != nil {
+		log.Printf("[template] %q: %v", name, err)
+		http.Error(w, "Template error", http.StatusInternalServerError)
+		return
+	}
+	if w.Header().Get("Content-Type") == "" {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	}
+	_, _ = w.Write(buf.Bytes())
 }
 
 func (a *App) viewModeFromRequest(r *http.Request) string {

@@ -34,31 +34,17 @@ func NormalizeISBNDigits(raw string) string {
 }
 
 // LookupBnFCoverByISBN returns a BnF cover image URL when the notice has a front cover.
-// Tries EAN (digits) then ISBN (original string). BnF returns HTTP 500 when no cover exists.
+// Tries EAN first (13-digit), then ISBN digits once. BnF returns HTTP 500 when no cover exists.
 func LookupBnFCoverByISBN(rawISBN string) (string, error) {
 	digits := NormalizeISBNDigits(rawISBN)
 	if digits == "" {
 		return "", nil
 	}
-	candidates := []struct {
-		key, val string
-	}{
-		{"EAN", digits},
-		{"ISBN", digits},
+	// Prefer a single probe: EAN for ISBN-13, else ISBN.
+	if len(digits) == 13 {
+		return probeBnFCover("EAN", digits)
 	}
-	if dashed := strings.TrimSpace(rawISBN); dashed != "" && dashed != digits {
-		candidates = append(candidates, struct{ key, val string }{"ISBN", dashed})
-	}
-	for _, c := range candidates {
-		u, err := probeBnFCover(c.key, c.val)
-		if err != nil {
-			return "", err
-		}
-		if u != "" {
-			return u, nil
-		}
-	}
-	return "", nil
+	return probeBnFCover("ISBN", digits)
 }
 
 func probeBnFCover(param, value string) (string, error) {
@@ -84,7 +70,8 @@ func probeBnFCover(param, value string) (string, error) {
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
+	// Only sniff a tiny prefix so cover enrichment does not stream large images.
+	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
 
 	if resp.StatusCode == http.StatusTooManyRequests {
 		// Soft-skip: do not pause the whole BD cover job (BnF is optional in the chain).
