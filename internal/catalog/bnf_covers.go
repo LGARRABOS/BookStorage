@@ -87,7 +87,8 @@ func probeBnFCover(param, value string) (string, error) {
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 64<<10))
 
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", ErrOpenLibraryRateLimit // reuse typed rate-limit for job backoff
+		// Soft-skip: do not pause the whole BD cover job (BnF is optional in the chain).
+		return "", nil
 	}
 	if resp.StatusCode != http.StatusOK {
 		// BnF documents HTTP 500 when the notice has no cover image.
@@ -130,7 +131,8 @@ func OpenLibraryCoverByISBN(rawISBN string) (string, error) {
 	defer func() { _ = resp.Body.Close() }()
 	_, _ = io.Copy(io.Discard, io.LimitReader(resp.Body, 4<<10))
 	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", ErrOpenLibraryRateLimit
+		// Soft-skip cover CDN throttling; search.json rate limits remain hard.
+		return "", nil
 	}
 	if resp.StatusCode != http.StatusOK {
 		return "", nil

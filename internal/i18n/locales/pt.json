@@ -997,7 +997,7 @@
   "bd.album_number": "Vol.",
   "bd.series_tomes": "series",
   "admin.jobs.bd_covers.title": "BD covers",
-  "admin.jobs.bd_covers.desc": "BnF → Google Books → Open Library (ISBN then title). Fill missing covers or replace existing images.",
+  "admin.jobs.bd_covers.desc": "BnF → Google Books (optional API key) → Open Library. Fill missing covers or replace existing images.",
   "admin.jobs.bd_covers.rate_limited": "Paused (cover API rate limit)…",
   "admin.jobs.bd_covers.run": "Missing only",
   "admin.jobs.bd_covers.replace": "Replace all",

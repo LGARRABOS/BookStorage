@@ -42,7 +42,11 @@ type googleBooksVolumeList struct {
 }
 
 // LookupGoogleBooksCoverByISBN returns the best available cover URL for an ISBN.
+// Without BOOKSTORAGE_GOOGLE_BOOKS_API_KEY, Google Books is skipped (shared IPs often hit 429 immediately).
 func LookupGoogleBooksCoverByISBN(rawISBN string) (string, error) {
+	if googleBooksAPIKey() == "" {
+		return "", nil
+	}
 	digits := NormalizeISBNDigits(rawISBN)
 	if digits == "" {
 		return "", nil
@@ -52,6 +56,9 @@ func LookupGoogleBooksCoverByISBN(rawISBN string) (string, error) {
 
 // LookupGoogleBooksCoverByTitle returns a cover URL for a free-text title search.
 func LookupGoogleBooksCoverByTitle(title string) (string, error) {
+	if googleBooksAPIKey() == "" {
+		return "", nil
+	}
 	title = strings.TrimSpace(title)
 	if title == "" {
 		return "", nil
@@ -85,11 +92,12 @@ func googleBooksSearch(q string, maxResults int) (string, error) {
 		return "", err
 	}
 	defer func() { _ = resp.Body.Close() }()
-	if resp.StatusCode == http.StatusTooManyRequests {
-		return "", ErrOpenLibraryRateLimit
+	// Soft-skip quota/auth failures so the job continues with BnF / Open Library.
+	if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode == http.StatusForbidden {
+		return "", nil
 	}
 	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return "", fmt.Errorf("google books: http %d", resp.StatusCode)
+		return "", nil
 	}
 	var parsed googleBooksVolumeList
 	if err := json.NewDecoder(io.LimitReader(resp.Body, googleBooksMaxBody)).Decode(&parsed); err != nil {

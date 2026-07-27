@@ -1056,7 +1056,7 @@
   "bd.album_number": "Tome",
   "bd.series_tomes": "série",
   "admin.jobs.bd_covers.title": "Covers BD",
-  "admin.jobs.bd_covers.desc": "Chaîne BnF → Google Books → Open Library (ISBN puis titre). Remplit les manquantes ou remplace les images déjà présentes.",
+  "admin.jobs.bd_covers.desc": "Chaîne BnF → Google Books (clé API optionnelle) → Open Library. Remplit les manquantes ou remplace les images déjà présentes.",
   "admin.jobs.bd_covers.rate_limited": "Pause API covers (rate limit)…",
   "admin.jobs.bd_covers.run": "Manquantes seulement",
   "admin.jobs.bd_covers.replace": "Tout remplacer",

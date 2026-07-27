@@ -73,6 +73,7 @@ func firstCoverURL(fns ...func() (string, error)) (string, error) {
 	for _, fn := range fns {
 		u, err := fn()
 		if err != nil {
+			// Only Open Library search rate-limits pause the job; other sources soft-skip upstream.
 			if catalog.IsOpenLibraryRateLimit(err) {
 				return "", err
 			}
@@ -120,28 +121,28 @@ func resolveBdCoverURLDefault(source, externalID, title, isbn string) (bdCoverRe
 
 	var lastErr error
 	for _, q := range bdCoverSearchTitles(title) {
-		u, err := catalog.LookupGoogleBooksCoverByTitle(q)
-		if err != nil {
-			lastErr = err
-			if catalog.IsOpenLibraryRateLimit(err) {
-				return bdCoverResolve{}, err
-			}
-		} else if strings.TrimSpace(u) != "" {
-			return bdCoverResolve{URL: strings.TrimSpace(u)}, nil
-		}
-
+		// Prefer Open Library for BD titles; Google Books is optional (needs API key).
 		results, err := catalog.SearchOpenLibraryBDCover(q, 5)
 		if err != nil {
 			lastErr = err
 			if catalog.IsOpenLibraryRateLimit(err) {
 				return bdCoverResolve{}, err
 			}
+		} else {
+			for i := range results {
+				if strings.TrimSpace(results[i].ImageURL) != "" {
+					return resolveFromOpenLibraryBD(&results[i]), nil
+				}
+			}
+		}
+
+		u, err := catalog.LookupGoogleBooksCoverByTitle(q)
+		if err != nil {
+			lastErr = err
 			continue
 		}
-		for i := range results {
-			if strings.TrimSpace(results[i].ImageURL) != "" {
-				return resolveFromOpenLibraryBD(&results[i]), nil
-			}
+		if strings.TrimSpace(u) != "" {
+			return bdCoverResolve{URL: strings.TrimSpace(u)}, nil
 		}
 	}
 	if lastErr != nil {
