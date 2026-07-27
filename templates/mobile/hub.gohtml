@@ -4,9 +4,9 @@
 <head>
     {{ template "mobile_shell_head" . }}
     <title>{{ t .T "hub.title" }} - BookStorage</title>
-    <link rel="stylesheet" href="/static/css/hub.css">
+    <link rel="stylesheet" href="/static/css/hub.css?v=2">
 </head>
-<body class="mobile-app-body">
+<body class="mobile-app-body hub-page">
     <header class="topbar topbar-mobile topbar-mobile-v2">
         <div class="container nav-layout nav-layout-mobile">
             {{ template "site_brand_mobile" . }}
@@ -18,32 +18,43 @@
         </div>
     </header>
 
-    <main class="page-body mobile-page">
-        <div class="container">
-            <section class="hub-hero">
+    <main class="page-body mobile-page hub-main">
+        <div class="container hub-layout">
+            <header class="hub-hero">
+                <p class="hub-hero-brand">BookStorage</p>
                 <h1 class="hub-hero-title">{{ t .T "hub.title" }}</h1>
                 <p class="hub-hero-subtitle">{{ t .T "hub.subtitle" }}</p>
+            </header>
+
+            <section class="hub-primary" aria-label="{{ t .T "hub.collections" }}">
+                <a class="hub-tile hub-tile--featured hub-tile--manga" href="/manga/dashboard">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">📚</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.manga" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.manga.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubWorksProgress }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.manga.in_progress" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
+
+                <a class="hub-tile hub-tile--featured hub-tile--anime" href="/anime/dashboard">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">🎬</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.anime" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.anime.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubAnimeProgress }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.anime.in_progress" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
             </section>
-
-            <div class="hub-grid">
-                <a class="hub-card hub-card--manga" href="/manga/dashboard">
-                    <span class="hub-card-icon" aria-hidden="true">📚</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.manga" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.manga.desc" }}</span>
-                        <span class="hub-card-meta">{{ .HubWorksProgress }} {{ t .T "hub.section.manga.in_progress" }}</span>
-                    </span>
-                </a>
-
-                <a class="hub-card hub-card--anime" href="/anime/dashboard">
-                    <span class="hub-card-icon" aria-hidden="true">🎬</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.anime" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.anime.desc" }}</span>
-                        <span class="hub-card-meta">{{ .HubAnimeProgress }} {{ t .T "hub.section.anime.in_progress" }}</span>
-                    </span>
-                </a>
-            </div>
         </div>
     </main>
 

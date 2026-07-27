@@ -12,81 +12,96 @@
     <title>{{ t .T "hub.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/hub.css">
+    <link rel="stylesheet" href="/static/css/hub.css?v=2">
     <script src="/static/js/appearance-init.js"></script>
 </head>
-<body>
+<body class="hub-page">
     {{ template "hub_topbar" . }}
 
-    <main class="page-body">
-        <div class="container">
-            <section class="hub-hero">
+    <main class="page-body hub-main">
+        <div class="container hub-layout">
+            <header class="hub-hero">
+                <p class="hub-hero-brand">BookStorage</p>
                 <h1 class="hub-hero-title">{{ t .T "hub.title" }}</h1>
                 <p class="hub-hero-subtitle">{{ t .T "hub.subtitle" }}</p>
+            </header>
+
+            <section class="hub-primary" aria-label="{{ t .T "hub.collections" }}">
+                <a class="hub-tile hub-tile--featured hub-tile--manga" href="/manga/dashboard">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">📚</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.manga" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.manga.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubWorksProgress }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.manga.in_progress" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
+
+                <a class="hub-tile hub-tile--featured hub-tile--anime" href="/anime/dashboard">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">🎬</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.anime" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.anime.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubAnimeProgress }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.anime.in_progress" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
             </section>
 
-            <div class="hub-grid">
-                <a class="hub-card hub-card--manga" href="/manga/dashboard">
-                    <span class="hub-card-icon" aria-hidden="true">📚</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.manga" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.manga.desc" }}</span>
-                        <span class="hub-card-meta">{{ .HubWorksProgress }} {{ t .T "hub.section.manga.in_progress" }}</span>
-                    </span>
-                </a>
+            <section class="hub-secondary" aria-labelledby="hub-more-heading">
+                <h2 id="hub-more-heading" class="hub-section-label">{{ t .T "hub.more" }}</h2>
+                <div class="hub-secondary-grid">
+                    <a class="hub-tile hub-tile--compact hub-tile--tools" href="/tools">
+                        <span class="hub-tile-icon" aria-hidden="true">🛠️</span>
+                        <span class="hub-tile-body">
+                            <span class="hub-tile-title">{{ t .T "hub.section.tools" }}</span>
+                            <span class="hub-tile-desc">{{ t .T "hub.section.tools.desc" }}</span>
+                        </span>
+                    </a>
 
-                <a class="hub-card hub-card--anime" href="/anime/dashboard">
-                    <span class="hub-card-icon" aria-hidden="true">🎬</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.anime" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.anime.desc" }}</span>
-                        <span class="hub-card-meta">{{ .HubAnimeProgress }} {{ t .T "hub.section.anime.in_progress" }}</span>
-                    </span>
-                </a>
+                    {{ if .IsAdmin }}
+                    <a class="hub-tile hub-tile--compact hub-tile--sites" href="/manga/reading-sites">
+                        <span class="hub-tile-icon" aria-hidden="true">🌐</span>
+                        <span class="hub-tile-body">
+                            <span class="hub-tile-title">{{ t .T "hub.section.reading_sites" }}</span>
+                            <span class="hub-tile-desc">{{ t .T "hub.section.reading_sites.desc" }}</span>
+                        </span>
+                    </a>
+                    {{ end }}
 
-                <a class="hub-card hub-card--tools" href="/tools">
-                    <span class="hub-card-icon" aria-hidden="true">🛠️</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.tools" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.tools.desc" }}</span>
-                    </span>
-                </a>
+                    <a class="hub-tile hub-tile--compact hub-tile--profile" href="/profile">
+                        <span class="hub-tile-icon" aria-hidden="true">👤</span>
+                        <span class="hub-tile-body">
+                            <span class="hub-tile-title">{{ t .T "hub.section.profile" }}</span>
+                            <span class="hub-tile-desc">{{ t .T "hub.section.profile.desc" }}</span>
+                        </span>
+                    </a>
 
-                {{ if .IsAdmin }}
-                <a class="hub-card hub-card--sites" href="/manga/reading-sites">
-                    <span class="hub-card-icon" aria-hidden="true">🌐</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.reading_sites" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.reading_sites.desc" }}</span>
-                    </span>
-                </a>
-                {{ end }}
-
-                <a class="hub-card hub-card--profile" href="/profile">
-                    <span class="hub-card-icon" aria-hidden="true">👤</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.profile" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.profile.desc" }}</span>
-                    </span>
-                </a>
-
-                {{ if .IsAdmin }}
-                <a class="hub-card hub-card--admin" href="/admin/accounts">
-                    <span class="hub-card-icon" aria-hidden="true">🛡️</span>
-                    <span class="hub-card-body">
-                        <span class="hub-card-title">{{ t .T "hub.section.admin" }}</span>
-                        <span class="hub-card-desc">{{ t .T "hub.section.admin.desc" }}</span>
-                    </span>
-                </a>
-                {{ end }}
-
-            </div>
+                    {{ if .IsAdmin }}
+                    <a class="hub-tile hub-tile--compact hub-tile--admin" href="/admin/accounts">
+                        <span class="hub-tile-icon" aria-hidden="true">🛡️</span>
+                        <span class="hub-tile-body">
+                            <span class="hub-tile-title">{{ t .T "hub.section.admin" }}</span>
+                            <span class="hub-tile-desc">{{ t .T "hub.section.admin.desc" }}</span>
+                        </span>
+                    </a>
+                    {{ end }}
+                </div>
+            </section>
         </div>
     </main>
 
     <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
 
-    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/appearance.js?v=2"></script>
 </body>
 </html>
 {{ end }}

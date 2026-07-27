@@ -1,7 +1,9 @@
 {
-  "hub.title": "Home",
-  "hub.subtitle": "Pick a section to get started",
+  "hub.title": "Welcome",
+  "hub.subtitle": "Where do you want to continue?",
   "hub.nav_home": "Home",
+  "hub.collections": "Collections",
+  "hub.more": "Account & tools",
   "hub.section.manga": "Manga & Webtoons",
   "hub.section.manga.desc": "Track and organize your reading chapter by chapter.",
   "hub.section.manga.in_progress": "in progress",
