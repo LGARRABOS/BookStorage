@@ -435,7 +435,8 @@ func parseExternalCSVRecords(records [][]string) ([]exportWork, bool) {
 }
 
 func normalizeHeader(s string) string {
-	s = strings.TrimSpace(strings.ToLower(s))
+	s = strings.TrimPrefix(strings.TrimSpace(s), "\ufeff")
+	s = strings.ToLower(s)
 	s = strings.ReplaceAll(s, " ", "_")
 	s = strings.ReplaceAll(s, "-", "_")
 	return s
