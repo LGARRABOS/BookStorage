@@ -1,0 +1,120 @@
+{{ define "mobile_add_anime" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "anime.add.title" }} - BookStorage</title>
+    {{ template "anime_form_styles" . }}
+</head>
+<body class="mobile-app-body">
+    {{ template "mobile_topbar" . }}
+    {{ template "mobile_settings_sheet" . }}
+
+    <main class="page-body mobile-page">
+        <div class="container form-page">
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "anime.error.exists" }}</div>
+            {{ end }}
+
+            <div class="form-card">
+                <div class="form-card-header">
+                    <div class="icon purple">🔍</div>
+                    <div><h2>{{ t .T "anime.catalog.search.title" }}</h2><span>{{ t .T "anime.catalog.search.desc" }}</span></div>
+                </div>
+                <div class="form-group">
+                    <label for="catalog-search">{{ t .T "anime.catalog.search.label" }}</label>
+                    <input type="text" id="catalog-search" placeholder="{{ t .T "anime.catalog.search.placeholder" }}" autocomplete="off">
+                </div>
+                <div id="catalog-results" class="catalog-results"></div>
+            </div>
+
+            <form method="POST" enctype="multipart/form-data" id="anime-form">
+                <input type="hidden" name="catalog_source" id="catalog_source" value="{{ if .PrefillCatalogSource }}{{ .PrefillCatalogSource }}{{ end }}">
+                <input type="hidden" name="catalog_external_id" id="catalog_external_id" value="{{ if .PrefillCatalogExternalID }}{{ .PrefillCatalogExternalID }}{{ end }}">
+                {{ template "anime_form_fields" . }}
+                <div class="form-actions">
+                    <a href="/anime/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                    <div class="form-actions-right">
+                        <button type="submit" class="btn btn-primary">✓ {{ t .T "anime.form.submit.add" }}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    {{ template "anime_form_scripts" . }}
+    <script nonce="{{ .CSPNonce }}">
+        var catalogSearchEmptyMsg = {{ jsstr (t .T "anime.catalog.search.empty") }};
+        var catalogSearchErrMsg = {{ jsstr (t .T "anime.catalog.search.error") }};
+        var alreadyInLibraryMsg = {{ jsstr (t .T "anime.in_library") }};
+        (function() {
+            var searchTimer;
+            var searchInput = document.getElementById('catalog-search');
+            var resultsEl = document.getElementById('catalog-results');
+            if (!searchInput) return;
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimer);
+                var q = this.value.trim();
+                if (q.length < 2) { resultsEl.classList.remove('visible'); resultsEl.innerHTML = ''; return; }
+                searchTimer = setTimeout(function() {
+                    fetch('/api/anime/catalog/search?q=' + encodeURIComponent(q))
+                        .then(function(r) {
+                            if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+                            return r.json();
+                        })
+                        .then(function(data) {
+                            var list = data.results || [];
+                            resultsEl.innerHTML = '';
+                            if (!list.length) {
+                                var msg = data.anilist_error === 'rate_limit' ? catalogSearchErrMsg : catalogSearchEmptyMsg;
+                                resultsEl.innerHTML = '<div class="catalog-result-item" style="cursor:default;color:var(--text-muted);">' + msg + '</div>';
+                            } else {
+                                list.forEach(function(item) {
+                                    var el = document.createElement('div');
+                                    el.className = 'catalog-result-item' + (item.in_library ? ' is-in-library' : '');
+                                    var cover = item.image_url
+                                        ? '<img src="' + item.image_url + '" alt="">'
+                                        : '<span class="no-cover">🎬</span>';
+                                    var meta = (item.anime_type || '') + (item.episodes ? ' · ' + item.episodes + ' ep.' : '') + (item.is_adult ? ' · 18+' : '');
+                                    var badgeClass = item.in_library ? 'badge in-library' : 'badge';
+                                    var badgeText = item.in_library ? alreadyInLibraryMsg : 'AniList';
+                                    el.innerHTML = cover + '<div class="info"><strong></strong><span></span></div><span class="' + badgeClass + '"></span>';
+                                    el.querySelector('strong').textContent = item.title || '';
+                                    el.querySelector('.info span').textContent = meta;
+                                    el.querySelector('.badge').textContent = badgeText;
+                                    if (item.in_library) {
+                                        el.addEventListener('click', function() {
+                                            if (item.library_id) window.location.href = '/anime/edit/' + item.library_id;
+                                        });
+                                    } else {
+                                        el.addEventListener('click', function() {
+                                            document.getElementById('title').value = item.title || '';
+                                            document.getElementById('image_url').value = item.image_url || '';
+                                            if (item.anime_type) document.getElementById('anime_type').value = item.anime_type;
+                                            if (item.episodes) document.getElementById('total_episodes').value = item.episodes;
+                                            document.getElementById('is_adult').checked = !!item.is_adult;
+                                            document.getElementById('catalog_source').value = item.source || 'anilist';
+                                            document.getElementById('catalog_external_id').value = item.external_id || '';
+                                            if (item.image_url) previewImageUrl(document.getElementById('image_url'));
+                                            resultsEl.classList.remove('visible');
+                                            searchInput.value = '';
+                                        });
+                                    }
+                                    resultsEl.appendChild(el);
+                                });
+                            }
+                            resultsEl.classList.add('visible');
+                        })
+                        .catch(function() { resultsEl.classList.remove('visible'); });
+                }, 300);
+            });
+            document.addEventListener('click', function(e) {
+                if (!resultsEl.contains(e.target) && e.target.id !== 'catalog-search') resultsEl.classList.remove('visible');
+            });
+        })();
+    </script>
+</body>
+</html>
+{{ end }}

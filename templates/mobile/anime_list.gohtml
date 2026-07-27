@@ -1,0 +1,39 @@
+{{ define "mobile_anime_list" }}
+{{ if .Works }}
+<section class="works-mobile-list" id="anime-mobile-list">
+    {{ range .Works }}
+    <article class="work-mobile-row anime-mobile-row" data-anime-id="{{ .ID }}" data-title="{{ .Title }}" data-episode="{{ .Episode }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .AnimeType.Valid }}{{ .AnimeType.String }}{{ end }}">
+        <a href="/anime/edit/{{ .ID }}" class="anime-mobile-row-main">
+            <div class="work-mobile-cover">
+                {{ if and .ImagePath.Valid .ImagePath.String }}
+                    {{ $imgUrl := work_image_url .ImagePath.String }}
+                    {{ if $imgUrl }}
+                        <img src="{{ $imgUrl }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <span class="no-image" style="display:none;" aria-hidden="true">🎬</span>
+                    {{ else }}
+                        <span class="no-image" aria-hidden="true">🎬</span>
+                    {{ end }}
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">🎬</span>
+                {{ end }}
+            </div>
+            <div class="work-mobile-row-text">
+                <h2 class="work-mobile-title">{{ .Title }}</h2>
+                <p class="work-mobile-meta">
+                    <span class="ep-value">{{ .Episode }}</span>{{ if .TotalEpisodes.Valid }}<span> / {{ .TotalEpisodes.Int64 }}</span>{{ end }}
+                    <span> {{ t $.T "mobile.anime.episodes_short" }}</span>
+                    {{ if .Status.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                    {{ if .AnimeType.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ .AnimeType.String }}</span>{{ end }}
+                </p>
+            </div>
+        </a>
+        <div class="anime-mobile-ep-controls" data-id="{{ .ID }}">
+            <button type="button" class="anime-ep-minus" aria-label="-1">−</button>
+            <span class="anime-ep-count">{{ .Episode }}</span>
+            <button type="button" class="anime-ep-plus" aria-label="+1">+</button>
+        </div>
+    </article>
+    {{ end }}
+</section>
+{{ end }}
+{{ end }}

@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bookstorage/internal/i18n"
 	"net/http"
 	"strings"
 )
@@ -101,18 +100,16 @@ func (a *App) HandleAnimeDashboard(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	lang := a.currentLang(r)
 	data := map[string]any{
-		"Works":             works,
-		"TotalEpisodes":     totalEpisodes,
-		"InProgressCount":   inProgress,
-		"AnimeTypes":        animeTypes,
-		"AnimeStatuses":     animeStatuses,
-		"IsAdmin":           isAdmin == 1,
-		"SortBy":            sortBy,
-		"AdultFilter":       adultFilter,
-		"SearchQuery":       r.URL.Query().Get("q"),
-		"MobileTopbarTitle": i18n.T(lang)["anime.title"],
+		"Works":           works,
+		"TotalEpisodes":   totalEpisodes,
+		"InProgressCount": inProgress,
+		"AnimeTypes":      animeTypes,
+		"AnimeStatuses":   animeStatuses,
+		"IsAdmin":         isAdmin == 1,
+		"SortBy":          sortBy,
+		"AdultFilter":     adultFilter,
+		"SearchQuery":     r.URL.Query().Get("q"),
 	}
 	a.renderTemplate(w, r, "anime_dashboard", a.mergeData(r, data))
 }

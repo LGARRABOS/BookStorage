@@ -16,7 +16,9 @@
 <header class="topbar topbar-mobile topbar-mobile-v2">
     <div class="container nav-layout nav-layout-mobile">
         {{ if .MobileTopbarTitle }}
-        <a href="/manga/dashboard" class="mobile-topbar-back" aria-label="{{ t .T "common.back" }}">
+        {{ $backHref := "/manga/dashboard" }}
+        {{ if hasPrefix .CurrentPath "/anime" }}{{ $backHref = "/anime/dashboard" }}{{ end }}
+        <a href="{{ $backHref }}" class="mobile-topbar-back" aria-label="{{ t .T "common.back" }}">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
         </a>
         <h1 class="mobile-topbar-title">{{ .MobileTopbarTitle }}</h1>
@@ -102,6 +104,24 @@
 
 {{ define "mobile_bottom_nav" }}
 <nav class="mobile-bottom-nav" aria-label="{{ t .T "nav.quick" }}">
+    {{ if hasPrefix .CurrentPath "/anime" }}
+    <a href="/anime/dashboard" class="mobile-bottom-link" data-nav="/anime/dashboard">
+        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="7" width="20" height="15" rx="2"/><polyline points="17 2 12 7 7 2"/></svg>
+        <span>{{ t .T "mobile.nav.collection" }}</span>
+    </a>
+    <a href="/anime/add_work" class="mobile-bottom-link" data-nav="/anime/add_work">
+        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        <span>{{ t .T "mobile.nav.add" }}</span>
+    </a>
+    <a href="/anime/catalog" class="mobile-bottom-link" data-nav="/anime/catalog">
+        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <span>{{ t .T "mobile.nav.catalog" }}</span>
+    </a>
+    <a href="/" class="mobile-bottom-link" data-nav="/">
+        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>
+        <span>{{ t .T "mobile.nav.home" }}</span>
+    </a>
+    {{ else }}
     <a href="/manga/dashboard" class="mobile-bottom-link" data-nav="/manga/dashboard">
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
         <span>{{ t .T "mobile.nav.collection" }}</span>
@@ -118,6 +138,7 @@
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
         <span>{{ t .T "mobile.nav.stats" }}</span>
     </a>
+    {{ end }}
     <button type="button" class="mobile-bottom-link" id="mobile-account-open" data-nav="/account" aria-label="{{ t .T "mobile.nav.account" }}">
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
         <span>{{ t .T "mobile.nav.account" }}</span>
@@ -129,7 +150,7 @@
     <script src="/static/js/modals.js"></script>
     <script src="/static/js/appearance.js"></script>
     <script src="/static/js/mobile-shell.js?v=3"></script>
-    <script src="/static/js/mobile-nav.js?v=2"></script>
+    <script src="/static/js/mobile-nav.js?v=3"></script>
     <script nonce="{{ .CSPNonce }}">
     if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('/static/pwa/sw.js').catch(function(){});

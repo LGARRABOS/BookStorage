@@ -14,11 +14,20 @@
     for (var i = 0; i < links.length; i += 1) {
       var href = links[i].getAttribute("data-nav");
       if (!href) continue;
-      var isActive =
-        current === href ||
-        (href === "/manga/dashboard" &&
-          (current === "/manga/dashboard" || current.indexOf("/manga/work/") === 0)) ||
-        (href !== "/manga/dashboard" && current.indexOf(href) === 0);
+      var isActive = false;
+      if (href === "/") {
+        isActive = current === "/" || current === "";
+      } else if (href === "/anime/dashboard") {
+        isActive =
+          current === "/anime/dashboard" ||
+          current.indexOf("/anime/edit/") === 0;
+      } else if (href === "/manga/dashboard") {
+        isActive =
+          current === "/manga/dashboard" ||
+          current.indexOf("/manga/work/") === 0;
+      } else {
+        isActive = current === href || current.indexOf(href) === 0;
+      }
       if (isActive) {
         links[i].classList.add("is-active");
       }
