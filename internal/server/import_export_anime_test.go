@@ -489,6 +489,7 @@ func TestImportAnimeDuplicateSkip_SchedulesEnrichment(t *testing.T) {
 	origPace := animeCoverEnrichPace
 	animeCoverEnrichPace = 0
 	defer func() {
+		app.animeCoverJobs.waitIdle(3 * time.Second)
 		resolveAnimeCoverURL = orig
 		animeCoverEnrichPace = origPace
 	}()

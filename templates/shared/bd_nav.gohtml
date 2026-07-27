@@ -1,0 +1,13 @@
+{{ define "bd_topbar" }}
+<header class="topbar">
+    <div class="container nav-layout">
+        {{ template "site_brand_dashboard" . }}
+        <nav class="nav-links">
+            <a href="/bd/dashboard">{{ t .T "bd.nav.dashboard" }}</a>
+            <a href="/bd/catalog">{{ t .T "bd.nav.catalog" }}</a>
+            <a href="/">{{ t .T "hub.nav.back" }}</a>
+            {{ template "nav_settings_dropdown" . }}
+        </nav>
+    </div>
+</header>
+{{ end }}

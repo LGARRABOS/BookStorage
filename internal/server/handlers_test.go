@@ -965,6 +965,7 @@ func TestResolvePostLoginRedirect(t *testing.T) {
 		{"/manga/dashboard", pathHub},
 		{"/manga/dashboard?view=mobile", pathHub},
 		{"/anime/dashboard", pathHub},
+		{"/bd/dashboard", pathHub},
 		{"/dashboard", pathHub},
 		{"/admin/accounts", "/admin/accounts"},
 		{"/manga/work/12", "/manga/work/12"},

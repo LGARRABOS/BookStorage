@@ -243,7 +243,7 @@ func postLoginPathOnly(dest string) string {
 // landing directly inside one section (common with PWA start URLs / bookmarks).
 func isSectionHomePath(p string) bool {
 	switch postLoginPathOnly(p) {
-	case pathHub, "/dashboard", pathMangaDashboard, pathAnimeDashboard:
+	case pathHub, "/dashboard", pathMangaDashboard, pathAnimeDashboard, pathBdDashboard:
 		return true
 	default:
 		return false

@@ -233,6 +233,12 @@ func main() {
 	mux.HandleFunc("POST /api/anime/decrement/{id}", app.RequireLogin(app.HandleAnimeDecrement))
 	mux.HandleFunc("POST /api/anime/set-episode/{id}", app.RequireLogin(app.HandleAnimeSetEpisode))
 	mux.HandleFunc("POST /api/anime/delete/{id}", app.RequireLogin(app.HandleAnimeDeleteAPI))
+	mux.HandleFunc("GET /api/bd/catalog/browse", app.RequireLogin(app.HandleBdCatalogBrowse))
+	mux.HandleFunc("GET /api/bd/catalog/search", app.RequireLogin(app.HandleBdCatalogSearch))
+	mux.HandleFunc("POST /api/bd/increment/{id}", app.RequireLogin(app.HandleBdIncrement))
+	mux.HandleFunc("POST /api/bd/decrement/{id}", app.RequireLogin(app.HandleBdDecrement))
+	mux.HandleFunc("POST /api/bd/set-tome/{id}", app.RequireLogin(app.HandleBdSetTome))
+	mux.HandleFunc("POST /api/bd/delete/{id}", app.RequireLogin(app.HandleBdDeleteAPI))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToMangaDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/database", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminDatabase)))
 	mux.HandleFunc("/admin/migrate-postgres", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAdminMigratePostgres))))
@@ -263,6 +269,9 @@ func main() {
 
 	// Anime module pages live under /anime/.
 	app.RegisterAnimeRoutes(mux)
+
+	// BD (bande dessinée) module pages live under /bd/.
+	app.RegisterBdRoutes(mux)
 
 	// Background prober: check all reading sites every 5 minutes.
 	proberCtx, proberCancel := context.WithCancel(context.Background())

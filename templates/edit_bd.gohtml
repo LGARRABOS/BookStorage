@@ -1,0 +1,50 @@
+{{ define "edit_bd" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "bd.edit.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ template "bd_form_styles" . }}
+</head>
+<body>
+    {{ template "bd_topbar" . }}
+    <main class="page-body">
+        <div class="container form-page">
+            <div class="form-header">
+                <div class="form-header-title"><h1>✏️ {{ t .T "bd.edit.title" }}</h1></div>
+                <a href="/bd/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+            </div>
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "bd.error.exists" }}</div>
+            {{ end }}
+            {{ template "edit_bd_form" . }}
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+    {{ template "bd_form_scripts" . }}
+    <script nonce="{{ .CSPNonce }}">
+        var deleteConfirmMsg = {{ jsstr (t .T "bd.delete.confirm") }};
+        var delBtn = document.getElementById('bd-delete-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                var id = delBtn.getAttribute('data-id');
+                var title = delBtn.getAttribute('data-title') || '';
+                if (!confirm(deleteConfirmMsg.replace('%s', title))) return;
+                fetch('/api/bd/delete/' + id, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { if (data && data.ok) window.location.href = '/bd/dashboard'; });
+            });
+        }
+    </script>
+</body>
+</html>
+{{ end }}

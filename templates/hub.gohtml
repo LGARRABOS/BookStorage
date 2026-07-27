@@ -12,7 +12,7 @@
     <title>{{ t .T "hub.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/hub.css?v=2">
+    <link rel="stylesheet" href="/static/css/hub.css?v=3">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="hub-page">
@@ -50,6 +50,20 @@
                         <span class="hub-tile-stat">
                             <span class="hub-tile-stat-value">{{ .HubAnimeProgress }}</span>
                             <span class="hub-tile-stat-label">{{ t .T "hub.section.anime.in_progress" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
+
+                <a class="hub-tile hub-tile--featured hub-tile--bd" href="/bd/dashboard">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">📘</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.bd" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.bd.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubBdProgress }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.bd.in_progress" }}</span>
                         </span>
                     </span>
                     <span class="hub-tile-go" aria-hidden="true">→</span>

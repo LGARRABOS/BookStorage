@@ -168,6 +168,20 @@ func (c *animeCoverJobController) finish() {
 	c.rateLimited = false
 }
 
+// waitIdle blocks until the cover job worker has drained its queue (or timeout).
+func (c *animeCoverJobController) waitIdle(timeout time.Duration) {
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		c.mu.Lock()
+		idle := !c.running && !c.workerOn && len(c.queue) == 0
+		c.mu.Unlock()
+		if idle {
+			return
+		}
+		time.Sleep(10 * time.Millisecond)
+	}
+}
+
 func (c *animeCoverJobController) setCurrent(title string) {
 	c.mu.Lock()
 	c.currentTitle = title

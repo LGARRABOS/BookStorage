@@ -1,0 +1,238 @@
+{{ define "bd_dashboard" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "bd.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    <style>
+        .bd-header { display: flex; justify-content: space-between; align-items: center; gap: 1.5rem; margin-bottom: 2rem; flex-wrap: wrap; }
+        .bd-title h1 { font-size: 1.75rem; margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem; }
+        .bd-title p { color: var(--text-muted); margin: 0; }
+        .header-actions { display: flex; gap: 0.75rem; flex-wrap: wrap; }
+        .filters-bar { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; display: flex; flex-wrap: wrap; gap: 0.75rem; align-items: center; }
+        .search-box { flex: 1; min-width: 200px; position: relative; }
+        .search-box input { width: 100%; padding: 0.65rem 1rem 0.65rem 2.5rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.95rem; background: var(--background); color: var(--text-primary); }
+        .search-box::before { content: "🔍"; position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); font-size: 0.9rem; opacity: 0.5; }
+        .filter-group select { padding: 0.65rem 2rem 0.65rem 0.85rem; border: 1px solid var(--border-subtle); border-radius: 0.75rem; font-size: 0.9rem; background: var(--background); color: var(--text-primary); cursor: pointer; }
+        .filter-check { display: inline-flex; align-items: center; gap: 0.3rem; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; }
+        .bd-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 1.25rem; }
+        .bd-card { background: var(--surface); border-radius: 1rem; overflow: hidden; border: 1px solid var(--border-subtle); display: flex; flex-direction: column; transition: transform 0.2s ease, box-shadow 0.2s ease; }
+        .bd-card:hover { transform: translateY(-4px); box-shadow: var(--shadow-lg); }
+        .bd-cover { position: relative; width: 100%; aspect-ratio: 2 / 3; background: linear-gradient(135deg, var(--primary-muted), rgba(129, 140, 248, 0.12)); overflow: hidden; }
+        .bd-cover img { width: 100%; height: 100%; object-fit: cover; }
+        .bd-cover .no-image { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 3rem; opacity: 0.3; }
+        .bd-badges { position: absolute; top: 0.5rem; left: 0.5rem; display: flex; gap: 0.35rem; flex-wrap: wrap; }
+        .bd-badge { font-size: 0.68rem; padding: 0.2rem 0.5rem; border-radius: 999px; background: rgba(15,23,42,0.72); color: #fff; }
+        .bd-body { padding: 0.85rem 0.95rem; display: flex; flex-direction: column; gap: 0.55rem; flex: 1; }
+        .bd-card-title { font-weight: 600; font-size: 0.95rem; line-height: 1.25; color: var(--text-primary); }
+        .bd-card-title a { color: inherit; text-decoration: none; }
+        .bd-card-meta { font-size: 0.78rem; color: var(--text-muted); }
+        .bd-stars { color: #fbbf24; font-size: 0.9rem; letter-spacing: 0.05em; }
+        .bd-stars .empty { color: var(--border-subtle); }
+        .tome-counter { display: flex; align-items: center; gap: 0.5rem; margin-top: auto; }
+        .tome-counter button { width: 30px; height: 30px; border-radius: 0.5rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-primary); font-size: 1.1rem; cursor: pointer; line-height: 1; }
+        .tome-counter button:hover { border-color: var(--primary); color: var(--primary); }
+        .tome-counter .count { font-weight: 600; font-size: 0.95rem; min-width: 2.5rem; text-align: center; }
+        .bd-card-actions { display: flex; gap: 0.5rem; }
+        .bd-card-actions a, .bd-card-actions button { flex: 1; text-align: center; padding: 0.4rem; border-radius: 0.5rem; font-size: 0.8rem; text-decoration: none; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); cursor: pointer; }
+        .bd-card-actions a:hover { border-color: var(--primary); color: var(--primary); }
+        .bd-card-actions .del:hover { border-color: #ef4444; color: #ef4444; }
+        .empty-state { text-align: center; padding: 3rem 1.25rem; color: var(--text-muted); max-width: 420px; margin: 0 auto; border: 1px dashed var(--border-subtle); border-radius: 1rem; background: var(--surface); }
+        .empty-state .icon { font-size: 3rem; margin-bottom: 1rem; }
+        .empty-state .btn { margin-top: 1rem; }
+        [data-theme="dark"] .bd-card { background: rgba(51, 65, 85, 0.6); border-color: rgba(100, 116, 139, 0.3); }
+        @media (max-width: 768px) {
+            .bd-header { flex-direction: column; align-items: stretch; }
+            .header-actions { justify-content: stretch; }
+            .header-actions .btn { flex: 1; justify-content: center; }
+            .filters-bar { flex-direction: column; align-items: stretch; }
+            .search-box { min-width: 0; width: 100%; }
+        }
+    </style>
+</head>
+<body>
+    {{ template "bd_topbar" . }}
+
+    <main class="page-body">
+        <div class="container">
+            <div class="bd-header">
+                <div class="bd-title">
+                    <h1>📘 {{ t .T "bd.title" }}</h1>
+                    <p>{{ t .T "bd.subtitle" }}</p>
+                </div>
+                <div class="header-actions">
+                    <a href="/bd/catalog" class="btn btn-secondary">🔍 {{ t .T "bd.nav.catalog" }}</a>
+                    <a href="/bd/add_work" class="btn btn-primary">➕ {{ t .T "bd.add" }}</a>
+                </div>
+            </div>
+
+            <form method="GET" class="filters-bar" id="bd-filters">
+                <div class="search-box">
+                    <input type="text" id="bd-search" placeholder="{{ t .T "bd.search.placeholder" }}" value="{{ .SearchQuery }}" autocomplete="off">
+                </div>
+                <div class="filter-group">
+                    <select id="status-filter" aria-label="{{ t .T "dashboard.filter.all" }}">
+                        <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                        <option value="En cours">{{ t .T "status.reading" }}</option>
+                        <option value="Terminé">{{ t .T "status.completed" }}</option>
+                        <option value="En pause">{{ t .T "status.on_hold" }}</option>
+                        <option value="Abandonné">{{ t .T "status.dropped" }}</option>
+                        <option value="À lire">{{ t .T "status.plan_to_watch" }}</option>
+                    </select>
+                    <select name="sort" id="bd-sort">
+                        <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "bd.sort.title" }}</option>
+                        <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "bd.sort.title_desc" }}</option>
+                        <option value="status" {{ if eq .SortBy "status" }}selected{{ end }}>{{ t .T "bd.sort.status" }}</option>
+                        <option value="type" {{ if eq .SortBy "type" }}selected{{ end }}>{{ t .T "bd.sort.type" }}</option>
+                        <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "bd.sort.recent" }}</option>
+                        <option value="modified_desc" {{ if eq .SortBy "modified_desc" }}selected{{ end }}>{{ t .T "bd.sort.modified" }}</option>
+                    </select>
+                </div>
+                <label class="filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
+                    <input type="checkbox" name="adult" id="bd-adult-only" value="only" {{ if eq .AdultFilter "only" }}checked{{ end }}>
+                    +18
+                </label>
+            </form>
+
+            {{ if .Works }}
+            <div class="bd-grid" id="bd-grid">
+                {{ range .Works }}
+                <article class="bd-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
+                    <div class="bd-cover">
+                        {{ if and .ImagePath.Valid .ImagePath.String }}
+                        <img src="{{ work_image_url .ImagePath.String }}" alt="" loading="lazy">
+                        {{ else }}
+                        <div class="no-image">📘</div>
+                        {{ end }}
+                        <div class="bd-badges">
+                            {{ if .BdType.Valid }}<span class="bd-badge">{{ .BdType.String }}</span>{{ end }}
+                            {{ if .Status.Valid }}<span class="bd-badge">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                            {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="bd-badge">+18</span>{{ end }}
+                        </div>
+                    </div>
+                    <div class="bd-body">
+                        <div class="bd-card-title"><a href="/bd/edit/{{ .ID }}">{{ .Title }}</a></div>
+                        <div class="bd-stars">
+                            {{ $r := .Rating }}{{ range $i := seq 5 }}<span class="{{ if ge $r $i }}{{ else }}empty{{ end }}">★</span>{{ end }}
+                        </div>
+                        <div class="bd-card-meta">
+                            {{ t $.T "bd.tomes" }}: <span class="ep-value">{{ .Tome }}</span>{{ if .TotalTomes.Valid }} / {{ .TotalTomes.Int64 }}{{ end }}
+                        </div>
+                        <div class="tome-counter" data-id="{{ .ID }}">
+                            <button type="button" class="ep-minus" aria-label="-1">−</button>
+                            <span class="count">{{ .Tome }}</span>
+                            <button type="button" class="ep-plus" aria-label="+1">+</button>
+                        </div>
+                        <div class="bd-card-actions">
+                            <a href="/bd/edit/{{ .ID }}">✏️ {{ t $.T "common.edit" }}</a>
+                            <button type="button" class="del" data-id="{{ .ID }}" data-title="{{ .Title }}">🗑️</button>
+                        </div>
+                    </div>
+                </article>
+                {{ end }}
+            </div>
+            {{ else }}
+            <div class="empty-state">
+                <div class="icon">📘</div>
+                <p>{{ t .T "bd.dashboard.empty" }}</p>
+                <a href="/bd/catalog" class="btn btn-primary">{{ t .T "bd.dashboard.empty.cta" }}</a>
+            </div>
+            {{ end }}
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js?v=2"></script>
+    <script nonce="{{ .CSPNonce }}">
+        var deleteConfirmMsg = {{ jsstr (t .T "bd.delete.confirm") }};
+
+        function post(url) {
+            return fetch(url, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        }
+
+        document.querySelectorAll('.tome-counter').forEach(function(counter) {
+            var id = counter.getAttribute('data-id');
+            var countEl = counter.querySelector('.count');
+            var card = counter.closest('.bd-card');
+            var epValue = card ? card.querySelector('.ep-value') : null;
+            function setCount(n) {
+                countEl.textContent = n;
+                if (epValue) epValue.textContent = n;
+            }
+            counter.querySelector('.ep-plus').addEventListener('click', function() {
+                post('/api/bd/increment/' + id).then(function(r) {
+                    if (r.ok) setCount(parseInt(countEl.textContent, 10) + 1);
+                });
+            });
+            counter.querySelector('.ep-minus').addEventListener('click', function() {
+                var cur = parseInt(countEl.textContent, 10);
+                if (cur <= 0) return;
+                post('/api/bd/decrement/' + id).then(function(r) {
+                    if (r.ok) setCount(cur - 1);
+                });
+            });
+        });
+
+        document.querySelectorAll('.bd-card-actions .del').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var id = btn.getAttribute('data-id');
+                var title = btn.getAttribute('data-title') || '';
+                if (!confirm(deleteConfirmMsg.replace('%s', title))) return;
+                post('/api/bd/delete/' + id).then(function(r) {
+                    return r.json();
+                }).then(function(data) {
+                    if (data && data.ok) {
+                        var card = btn.closest('.bd-card');
+                        if (card) card.remove();
+                    }
+                });
+            });
+        });
+
+        (function() {
+            var form = document.getElementById('bd-filters');
+            var sortSel = document.getElementById('bd-sort');
+            var adultCheck = document.getElementById('bd-adult-only');
+            // CSP blocks inline onchange; submit via listeners instead.
+            function submitFilters() {
+                if (form) form.submit();
+            }
+            if (sortSel) sortSel.addEventListener('change', submitFilters);
+            if (adultCheck) adultCheck.addEventListener('change', submitFilters);
+
+            var search = document.getElementById('bd-search');
+            var statusFilter = document.getElementById('status-filter');
+            var grid = document.getElementById('bd-grid');
+            var adultOnly = {{ if eq .AdultFilter "only" }}true{{ else }}false{{ end }};
+            if (!grid) return;
+            // When showing +18 only, default to all statuses so the filter is visible.
+            // Otherwise keep the usual "En cours" quick filter.
+            if (statusFilter) {
+                statusFilter.value = adultOnly ? '' : 'En cours';
+            }
+            function filterBd() {
+                var q = search ? search.value.trim().toLowerCase() : '';
+                var status = statusFilter ? statusFilter.value : '';
+                grid.querySelectorAll('.bd-card').forEach(function(card) {
+                    var title = (card.getAttribute('data-title') || '').toLowerCase();
+                    var cardStatus = card.getAttribute('data-status') || '';
+                    var matchTitle = !q || title.indexOf(q) !== -1;
+                    var matchStatus = !status || cardStatus === status;
+                    card.style.display = (matchTitle && matchStatus) ? '' : 'none';
+                });
+            }
+            if (search) search.addEventListener('input', filterBd);
+            if (statusFilter) statusFilter.addEventListener('change', filterBd);
+            filterBd();
+        })();
+    </script>
+</body>
+</html>
+{{ end }}

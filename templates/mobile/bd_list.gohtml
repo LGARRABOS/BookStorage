@@ -1,0 +1,39 @@
+{{ define "mobile_bd_list" }}
+{{ if .Works }}
+<section class="works-mobile-list" id="bd-mobile-list">
+    {{ range .Works }}
+    <article class="work-mobile-row bd-mobile-row" data-bd-id="{{ .ID }}" data-title="{{ .Title }}" data-tome="{{ .Tome }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .BdType.Valid }}{{ .BdType.String }}{{ end }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
+        <a href="/bd/edit/{{ .ID }}" class="bd-mobile-row-main">
+            <div class="work-mobile-cover">
+                {{ if and .ImagePath.Valid .ImagePath.String }}
+                    {{ $imgUrl := work_image_url .ImagePath.String }}
+                    {{ if $imgUrl }}
+                        <img src="{{ $imgUrl }}" alt="" loading="lazy" decoding="async" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                        <span class="no-image" style="display:none;" aria-hidden="true">📘</span>
+                    {{ else }}
+                        <span class="no-image" aria-hidden="true">📘</span>
+                    {{ end }}
+                {{ else }}
+                    <span class="no-image" aria-hidden="true">📘</span>
+                {{ end }}
+            </div>
+            <div class="work-mobile-row-text">
+                <h2 class="work-mobile-title">{{ .Title }}</h2>
+                <p class="work-mobile-meta">
+                    <span class="ep-value">{{ .Tome }}</span>{{ if .TotalTomes.Valid }}<span> / {{ .TotalTomes.Int64 }}</span>{{ end }}
+                    <span> {{ t $.T "mobile.bd.tomes_short" }}</span>
+                    {{ if .Status.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                    {{ if .BdType.Valid }}<span class="work-mobile-meta-sep" aria-hidden="true">•</span><span>{{ .BdType.String }}</span>{{ end }}
+                </p>
+            </div>
+        </a>
+        <div class="bd-mobile-ep-controls" data-id="{{ .ID }}">
+            <button type="button" class="bd-ep-minus" aria-label="-1">−</button>
+            <span class="bd-ep-count">{{ .Tome }}</span>
+            <button type="button" class="bd-ep-plus" aria-label="+1">+</button>
+        </div>
+    </article>
+    {{ end }}
+</section>
+{{ end }}
+{{ end }}

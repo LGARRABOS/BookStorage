@@ -64,6 +64,29 @@ CREATE TABLE IF NOT EXISTS anime_works (
 );
 CREATE INDEX IF NOT EXISTS idx_anime_works_user_id ON anime_works(user_id);`
 
+const createBdWorksTableSQL = `
+CREATE TABLE IF NOT EXISTS bd_works (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    tome INTEGER DEFAULT 0,
+    total_tomes INTEGER,
+    status TEXT,
+    bd_type TEXT,
+    link TEXT,
+    image_path TEXT,
+    rating INTEGER DEFAULT 0,
+    notes TEXT,
+    is_adult INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'manual',
+    external_id TEXT,
+    user_id INTEGER NOT NULL,
+    updated_at DATETIME,
+    started_at DATETIME,
+    finished_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_bd_works_user_id ON bd_works(user_id);`
+
 const createCatalogTableSQL = `
 CREATE TABLE IF NOT EXISTS catalog (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -280,6 +303,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createAnimeWorksTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createBdWorksTableSQL); err != nil {
 		return err
 	}
 	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {

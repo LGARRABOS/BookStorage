@@ -1,0 +1,78 @@
+{{ define "tools_bd" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{template "site_head_icons" .}}
+    <title>{{ t .T "tools.section.bd" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ template "tools_card_styles" . }}
+</head>
+<body>
+    {{ if not .IsMobileView }}
+    {{ template "tools_topbar" . }}
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <section class="page-section">
+                <header class="section-header">
+                    <h1 class="page-title">📘 {{ t .T "tools.section.bd" }}</h1>
+                    <p class="page-subtitle">{{ t .T "tools.section.bd.desc" }}</p>
+                    <p><a href="/tools">← {{ t .T "tools.back_index" }}</a></p>
+                </header>
+
+                {{ template "import_notice" . }}
+
+                <div class="tools-grid">
+                    <article class="tool-card">
+                        <h2>{{ t .T "tools.export.title" }}</h2>
+                        <p>{{ t .T "tools.bd.export.subtitle" }}</p>
+                        <div class="tool-actions">
+                            <a href="/bd/export" class="btn btn-primary">{{ t .T "tools.export.csv" }}</a>
+                            <a href="/bd/export?format=json" class="btn btn-secondary">{{ t .T "tools.export.json" }}</a>
+                        </div>
+                    </article>
+                </div>
+
+                <article class="tool-card tool-card--import">
+                    <h2>{{ t .T "tools.import.title" }}</h2>
+                    <p>{{ t .T "tools.bd.import.subtitle" }}</p>
+                    <div class="import-layout">
+                        <form class="import-form" action="/bd/import" method="POST" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label for="duplicate_mode">{{ t .T "profile.import.duplicate_mode" }}</label>
+                                <select id="duplicate_mode" name="duplicate_mode">
+                                    <option value="skip">{{ t .T "profile.import.duplicate_skip" }}</option>
+                                    <option value="update">{{ t .T "profile.import.duplicate_update" }}</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label for="import_file">{{ t .T "tools.import.file_label" }}</label>
+                                <input id="import_file" type="file" name="import_file" accept=".csv,.json,.xml,text/csv,application/json,application/xml,text/xml" required>
+                            </div>
+                            <div class="tool-actions">
+                                <button type="submit" class="btn btn-secondary">{{ t .T "tools.import.action" }}</button>
+                            </div>
+                        </form>
+                        <div class="format-box">
+                            <strong>{{ t .T "tools.import.format_title" }}</strong>
+                            <code>Title;Tome;TotalTomes;Link;Status;Type;Rating;Notes;IsAdult;ImagePath;Source;ExternalID</code>
+                            <p class="format-hint">{{ t .T "tools.import.format_hint_bd" }}</p>
+                        </div>
+                    </div>
+                </article>
+            </section>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+    {{ if not .IsMobileView }}<script src="/static/js/keyboard-shortcuts-nav.js"></script>{{ end }}
+</body>
+</html>
+{{ end }}

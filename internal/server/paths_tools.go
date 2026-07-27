@@ -9,7 +9,10 @@ const (
 	pathToolsMangaCSV = "/tools/manga/csv-import"
 	pathToolsMangaDup = "/tools/manga/duplicates"
 	pathToolsAnime    = "/tools/anime"
+	pathToolsBd       = "/tools/bd"
 
 	pathAnimeExport = "/anime/export"
 	pathAnimeImport = "/anime/import"
+	pathBdExport    = "/bd/export"
+	pathBdImport    = "/bd/import"
 )

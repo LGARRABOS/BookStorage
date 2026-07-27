@@ -1,0 +1,107 @@
+{{ define "mobile_bd_dashboard" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "bd.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/dashboard-mobile.css?v=17">
+    <style>
+        .bd-mobile-row { display: flex; align-items: center; gap: 0.5rem; text-decoration: none; color: inherit; }
+        .bd-mobile-row-main { display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 0; text-decoration: none; color: inherit; }
+        .bd-mobile-ep-controls { display: flex; align-items: center; gap: 0.25rem; flex-shrink: 0; }
+        .bd-mobile-ep-controls button {
+            width: 32px; height: 32px; border-radius: 0.5rem; border: 1px solid var(--border-subtle);
+            background: var(--background); color: var(--text-primary); font-size: 1.1rem; line-height: 1; cursor: pointer;
+        }
+        .bd-ep-count { font-weight: 600; min-width: 1.75rem; text-align: center; font-size: 0.9rem; }
+    </style>
+</head>
+<body class="mobile-app-body mobile-dashboard-body">
+    {{ template "mobile_topbar" . }}
+
+    <div class="mobile-search-inline" id="mobile-search-inline">
+        <div class="container">
+            <div class="mobile-search-bar">
+                <svg class="mobile-search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input id="mobile-bd-search" type="search" placeholder="{{ t .T "bd.search.placeholder" }}" value="{{ .SearchQuery }}" autocomplete="off" enterkeyhint="search" aria-label="{{ t .T "bd.search.placeholder" }}">
+            </div>
+        </div>
+    </div>
+
+    <main class="page-body mobile-page mobile-dashboard-page">
+        <div class="container">
+            {{ template "import_notice" . }}
+
+            <div class="mobile-collection-header">
+                <div class="mobile-collection-tabs" id="mobile-bd-quick-filters" role="tablist">
+                    <button type="button" class="mobile-collection-tab is-active" data-status="En cours" role="tab" aria-selected="true">{{ t .T "mobile.bd.tab.watching" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="" role="tab" aria-selected="false">{{ t .T "mobile.bd.tab.all" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="À lire" role="tab" aria-selected="false">{{ t .T "mobile.bd.tab.plan" }}</button>
+                </div>
+                <button type="button" class="mobile-filters-btn" id="mobile-bd-filters-open" aria-haspopup="dialog" aria-label="{{ t .T "mobile.filters.button" }}">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><line x1="4" y1="6" x2="20" y2="6"/><line x1="8" y1="12" x2="20" y2="12"/><line x1="12" y1="18" x2="20" y2="18"/></svg>
+                    <span class="mobile-filters-badge" id="mobile-bd-filters-badge" hidden>0</span>
+                </button>
+            </div>
+
+            <p class="mobile-collection-summary" id="mobile-bd-summary" data-label-works="{{ t .T "mobile.bd.works" }}" data-label-tomes="{{ t .T "mobile.bd.tomes" }}">
+                {{ len .Works }} {{ t .T "mobile.bd.works" }} • {{ .TotalTomes }} {{ t .T "mobile.bd.tomes" }}
+            </p>
+
+            <div id="mobile-bd-container">
+            {{ if .Works }}
+            {{ template "mobile_bd_list" . }}
+            {{ else }}
+            <section class="mobile-panel mobile-empty-state">
+                <div class="mobile-empty-icon" aria-hidden="true" style="font-size:2.5rem;">📘</div>
+                <h2>{{ t .T "bd.dashboard.empty" }}</h2>
+                <p>{{ t .T "bd.subtitle" }}</p>
+                <a href="/bd/catalog" class="btn btn-primary mobile-empty-cta">{{ t .T "bd.dashboard.empty.cta" }}</a>
+            </section>
+            {{ end }}
+            </div>
+        </div>
+    </main>
+
+    <div class="mobile-sheet-overlay" id="mobile-bd-filters-overlay" hidden></div>
+    <div class="mobile-sheet mobile-filters-sheet" id="mobile-bd-filters-sheet" role="dialog" aria-labelledby="mobile-bd-filters-title" hidden>
+        <div class="mobile-sheet-handle" aria-hidden="true"></div>
+        <h2 class="mobile-sheet-title" id="mobile-bd-filters-title">{{ t .T "mobile.filters.title" }}</h2>
+        <div class="mobile-sheet-section">
+            <label class="mobile-sheet-label" for="mobile-bd-filter-status">{{ t .T "bd.form.status" }}</label>
+            <select id="mobile-bd-filter-status" class="mobile-sheet-select" autocomplete="off">
+                <option value="">{{ t .T "dashboard.filter.all" }}</option>
+                {{ range .BdStatuses }}
+                <option value="{{ . }}" {{ if eq . "En cours" }}selected{{ end }}>{{ translateStatus . $.T }}</option>
+                {{ end }}
+            </select>
+        </div>
+        <div class="mobile-sheet-section">
+            <label class="mobile-sheet-label" for="mobile-bd-sort">{{ t .T "dashboard.sort" }}</label>
+            <select id="mobile-bd-sort" class="mobile-sheet-select" autocomplete="off">
+                <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "bd.sort.title" }}</option>
+                <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "bd.sort.title_desc" }}</option>
+                <option value="status" {{ if eq .SortBy "status" }}selected{{ end }}>{{ t .T "bd.sort.status" }}</option>
+                <option value="type" {{ if eq .SortBy "type" }}selected{{ end }}>{{ t .T "bd.sort.type" }}</option>
+                <option value="recent" {{ if eq .SortBy "recent" }}selected{{ end }}>{{ t .T "bd.sort.recent" }}</option>
+                <option value="modified_desc" {{ if eq .SortBy "modified_desc" }}selected{{ end }}>{{ t .T "bd.sort.modified" }}</option>
+            </select>
+        </div>
+        <div class="mobile-sheet-section mobile-sheet-checks">
+            <label class="mobile-filter-check">
+                <input type="checkbox" id="mobile-bd-adult-only-check" {{ if eq .AdultFilter "only" }}checked{{ end }}>
+                <span>{{ t .T "dashboard.filter.only_adult" }}</span>
+            </label>
+        </div>
+        <button type="button" class="btn btn-primary mobile-sheet-apply" id="mobile-bd-filters-apply">{{ t .T "mobile.filters.apply" }}</button>
+        <button type="button" class="mobile-sheet-close" id="mobile-bd-filters-close">{{ t .T "common.close" }}</button>
+    </div>
+
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_install_banner" . }}
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    <script src="/static/js/mobile-bd-dashboard.js?v=2"></script>
+</body>
+</html>
+{{ end }}

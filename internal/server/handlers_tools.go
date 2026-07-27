@@ -53,3 +53,12 @@ func (a *App) HandleToolsAnime(w http.ResponseWriter, r *http.Request) {
 	}
 	a.renderTemplate(w, r, "tools_anime", a.mergeData(r, toolsImportReportData(r)))
 }
+
+// HandleToolsBd renders bande dessinée tools (export + import).
+func (a *App) HandleToolsBd(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	a.renderTemplate(w, r, "tools_bd", a.mergeData(r, toolsImportReportData(r)))
+}

@@ -15,4 +15,8 @@ func (a *App) RegisterToolsRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(pathToolsAnime, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleToolsAnime)))
 	mux.HandleFunc(pathAnimeExport, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleAnimeExport)))
 	mux.HandleFunc("POST "+pathAnimeImport, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleAnimeImport)))
+
+	mux.HandleFunc(pathToolsBd, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleToolsBd)))
+	mux.HandleFunc(pathBdExport, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleBdExport)))
+	mux.HandleFunc("POST "+pathBdImport, a.RequireLogin(a.MobileRedirectToMangaDashboard(a.HandleBdImport)))
 }
