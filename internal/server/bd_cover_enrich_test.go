@@ -13,8 +13,44 @@ func TestBdCoverSearchTitles(t *testing.T) {
 	if len(got) < 2 || got[0] != "Aigles de Rome (Les) — Livre VII" {
 		t.Fatalf("got %#v", got)
 	}
-	if got[1] != "Aigles de Rome (Les)" {
-		t.Fatalf("serie part=%q", got[1])
+	for _, q := range got {
+		if q == "Aigles de Rome (Les)" {
+			t.Fatalf("must not search series alone: %#v", got)
+		}
+	}
+	joined := false
+	for _, q := range got {
+		if q == "Aigles de Rome (Les) Livre VII" {
+			joined = true
+		}
+	}
+	if !joined {
+		t.Fatalf("expected series+album query, got %#v", got)
+	}
+}
+
+func TestScoreOpenLibraryCoverMatch_RejectsWrongTome(t *testing.T) {
+	want := "Alix Senator — Le Dernier Pharaon"
+	if sc := scoreOpenLibraryCoverMatch("Alix Senator - L'esclave de Khorasabad", want, 2); sc >= 0 {
+		t.Fatalf("wrong tome should be rejected, score=%d", sc)
+	}
+	if sc := scoreOpenLibraryCoverMatch("Alix Senator : Le Dernier Pharaon", want, 2); sc < 100 {
+		t.Fatalf("matching album score=%d", sc)
+	}
+	if sc := scoreOpenLibraryCoverMatch("Alix Senator", want, 2); sc >= 0 {
+		t.Fatalf("series-only candidate should be rejected, score=%d", sc)
+	}
+}
+
+func TestPickOpenLibraryCover(t *testing.T) {
+	results := []catalog.OpenLibraryBdResult{
+		{Title: "Alix Senator - L'esclave de Khorasabad", ImageURL: "https://cdn/wrong.jpg"},
+		{Title: "Alix Senator : Le Dernier Pharaon", ImageURL: "https://cdn/good.jpg"},
+		{Title: "Something else", ImageURL: "https://cdn/other.jpg"},
+	}
+	best := pickOpenLibraryCover(results, "Alix Senator — Le Dernier Pharaon", 2)
+	if best == nil || best.ImageURL != "https://cdn/good.jpg" {
+		t.Fatalf("best=%+v", best)
 	}
 }
 
@@ -42,7 +78,7 @@ func TestEnrichBdCoversMissing(t *testing.T) {
 	}()
 	var mu sync.Mutex
 	calls := 0
-	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string, tome int) (bdCoverResolve, error) {
 		mu.Lock()
 		calls++
 		mu.Unlock()
@@ -96,9 +132,12 @@ func TestEnrichBdCoversReplace(t *testing.T) {
 		resolveBdCoverURL = orig
 		bdCoverEnrichPace = origPace
 	}()
-	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string, tome int) (bdCoverResolve, error) {
 		if isbn != "9782205070000" {
 			t.Fatalf("isbn=%q", isbn)
+		}
+		if tome != 1 {
+			t.Fatalf("tome=%d", tome)
 		}
 		return bdCoverResolve{URL: "https://cdn.test/new.jpg"}, nil
 	}
@@ -138,7 +177,7 @@ func TestEnrichBdCoversMissing_RetriesRateLimit(t *testing.T) {
 	}()
 
 	attempts := 0
-	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string, tome int) (bdCoverResolve, error) {
 		attempts++
 		if attempts == 1 {
 			return bdCoverResolve{}, catalog.ErrOpenLibraryRateLimit
@@ -149,7 +188,7 @@ func TestEnrichBdCoversMissing_RetriesRateLimit(t *testing.T) {
 	var id int
 	_ = db.QueryRow(`SELECT id FROM bd_works WHERE title = 'Rate Limited'`).Scan(&id)
 	app.enrichOneBdCover(1, bdCoverPending{
-		id: id, title: "Rate Limited", source: "openlibrary", externalID: "/works/OL9W",
+		id: id, title: "Rate Limited", source: "openlibrary", externalID: "/works/OL9W", tome: 1,
 	}, false)
 
 	var img string
@@ -181,7 +220,7 @@ func TestScheduleBdCoverEnrichment(t *testing.T) {
 		resolveBdCoverURL = orig
 		bdCoverEnrichPace = origPace
 	}()
-	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string, tome int) (bdCoverResolve, error) {
 		return bdCoverResolve{URL: "https://cdn.test/async-bd.jpg"}, nil
 	}
 

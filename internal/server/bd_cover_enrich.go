@@ -2,9 +2,11 @@ package server
 
 import (
 	"log"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
+	"unicode"
 
 	"bookstorage/internal/catalog"
 )
@@ -23,7 +25,7 @@ var (
 )
 
 // resolveBdCoverURL looks up a cover via BnF / Google Books / Open Library.
-// Overridable in tests.
+// Overridable in tests. tome helps disambiguate volumes of the same series.
 var resolveBdCoverURL = resolveBdCoverURLDefault
 
 type bdCoverResolve struct {
@@ -38,8 +40,49 @@ func resolveFromOpenLibraryBD(res *catalog.OpenLibraryBdResult) bdCoverResolve {
 	return bdCoverResolve{URL: strings.TrimSpace(res.ImageURL), IsAdult: adultBoolPtr(res.IsAdult)}
 }
 
-// bdCoverSearchTitles returns title variants for Open Library cover lookup.
-// BDGest-style titles often look like "Serie — Album"; try both full and parts.
+// foldCoverKey normalizes titles for cover matching (case, accents, punctuation).
+func foldCoverKey(s string) string {
+	s = strings.TrimSpace(s)
+	if s == "" {
+		return ""
+	}
+	var b strings.Builder
+	b.Grow(len(s))
+	for _, r := range strings.ToLower(s) {
+		switch r {
+		case 'à', 'á', 'â', 'ä', 'ã', 'å':
+			b.WriteByte('a')
+		case 'è', 'é', 'ê', 'ë':
+			b.WriteByte('e')
+		case 'ì', 'í', 'î', 'ï':
+			b.WriteByte('i')
+		case 'ò', 'ó', 'ô', 'ö', 'õ':
+			b.WriteByte('o')
+		case 'ù', 'ú', 'û', 'ü':
+			b.WriteByte('u')
+		case 'ý', 'ÿ':
+			b.WriteByte('y')
+		case 'ç':
+			b.WriteByte('c')
+		case 'ñ':
+			b.WriteByte('n')
+		case 'æ':
+			b.WriteString("ae")
+		case 'œ':
+			b.WriteString("oe")
+		default:
+			if unicode.IsLetter(r) || unicode.IsDigit(r) {
+				b.WriteRune(r)
+			} else if unicode.IsSpace(r) || r == '-' || r == '—' || r == '–' || r == '\'' || r == '’' {
+				b.WriteByte(' ')
+			}
+		}
+	}
+	return strings.Join(strings.Fields(b.String()), " ")
+}
+
+// bdCoverSearchTitles returns safe title queries for cover lookup.
+// Never searches by series name alone (that maps every tome to the same popular cover).
 func bdCoverSearchTitles(title string) []string {
 	title = strings.TrimSpace(title)
 	if title == "" {
@@ -58,14 +101,81 @@ func bdCoverSearchTitles(title string) []string {
 		seen[s] = struct{}{}
 		out = append(out, s)
 	}
-	for _, sep := range []string{" — ", " – ", " - "} {
-		if i := strings.Index(title, sep); i > 0 {
-			add(title[:i])
-			add(title[i+len(sep):])
-			break
-		}
+	series, album := bdSplitSeriesTitle(title)
+	if album != "" && !strings.EqualFold(album, series) {
+		add(series + " " + album)
+		add(`"` + album + `" ` + series)
 	}
 	return out
+}
+
+// scoreOpenLibraryCoverMatch ranks a candidate title against the wanted album.
+// Returns -1 when the hit is clearly the wrong volume (e.g. same series, other subtitle).
+func scoreOpenLibraryCoverMatch(candidateTitle, fullTitle string, tome int) int {
+	cand := foldCoverKey(candidateTitle)
+	if cand == "" {
+		return -1
+	}
+	series, album := bdSplitSeriesTitle(fullTitle)
+	seriesKey := foldCoverKey(series)
+	albumKey := foldCoverKey(album)
+	fullKey := foldCoverKey(fullTitle)
+
+	score := 0
+	if albumKey != "" && albumKey != seriesKey {
+		if strings.Contains(cand, albumKey) {
+			score += 100
+		} else {
+			// Candidate does not mention the album subtitle → wrong tome / wrong work.
+			return -1
+		}
+		if seriesKey != "" && strings.Contains(cand, seriesKey) {
+			score += 25
+		}
+	} else {
+		if fullKey != "" && (strings.Contains(cand, fullKey) || strings.Contains(fullKey, cand)) {
+			score += 60
+		} else if seriesKey != "" && strings.Contains(cand, seriesKey) {
+			score += 20
+		} else {
+			return -1
+		}
+	}
+	if tome > 0 {
+		tomeStr := strconv.Itoa(tome)
+		for _, needle := range []string{
+			"tome " + tomeStr,
+			"t " + tomeStr,
+			"vol " + tomeStr,
+			"volume " + tomeStr,
+			"#" + tomeStr,
+		} {
+			if strings.Contains(cand, needle) {
+				score += 15
+				break
+			}
+		}
+	}
+	return score
+}
+
+func pickOpenLibraryCover(results []catalog.OpenLibraryBdResult, fullTitle string, tome int) *catalog.OpenLibraryBdResult {
+	bestScore := -1
+	var best *catalog.OpenLibraryBdResult
+	for i := range results {
+		if strings.TrimSpace(results[i].ImageURL) == "" {
+			continue
+		}
+		sc := scoreOpenLibraryCoverMatch(results[i].Title, fullTitle, tome)
+		if sc > bestScore {
+			bestScore = sc
+			best = &results[i]
+		}
+	}
+	if bestScore < 0 {
+		return nil
+	}
+	return best
 }
 
 func firstCoverURL(fns ...func() (string, error)) (string, error) {
@@ -87,10 +197,11 @@ func firstCoverURL(fns ...func() (string, error)) (string, error) {
 	return "", lastErr
 }
 
-func resolveBdCoverURLDefault(source, externalID, title, isbn string) (bdCoverResolve, error) {
+func resolveBdCoverURLDefault(source, externalID, title, isbn string, tome int) (bdCoverResolve, error) {
 	source = strings.ToLower(strings.TrimSpace(source))
 	ext := strings.TrimSpace(externalID)
 	isbn = strings.TrimSpace(isbn)
+	title = strings.TrimSpace(title)
 
 	if isbn != "" {
 		u, err := firstCoverURL(
@@ -121,30 +232,20 @@ func resolveBdCoverURLDefault(source, externalID, title, isbn string) (bdCoverRe
 
 	var lastErr error
 	for _, q := range bdCoverSearchTitles(title) {
-		// Prefer Open Library for BD titles; Google Books is optional (needs API key).
-		results, err := catalog.SearchOpenLibraryBDCover(q, 5)
+		results, err := catalog.SearchOpenLibraryBDCover(q, 8)
 		if err != nil {
 			lastErr = err
 			if catalog.IsOpenLibraryRateLimit(err) {
 				return bdCoverResolve{}, err
 			}
-		} else {
-			for i := range results {
-				if strings.TrimSpace(results[i].ImageURL) != "" {
-					return resolveFromOpenLibraryBD(&results[i]), nil
-				}
-			}
-		}
-
-		u, err := catalog.LookupGoogleBooksCoverByTitle(q)
-		if err != nil {
-			lastErr = err
 			continue
 		}
-		if strings.TrimSpace(u) != "" {
-			return bdCoverResolve{URL: strings.TrimSpace(u)}, nil
+		if best := pickOpenLibraryCover(results, title, tome); best != nil {
+			return resolveFromOpenLibraryBD(best), nil
 		}
 	}
+	// Intentionally skip Google Books title search: without result scoring it often
+	// attaches another volume's cover of the same series.
 	if lastErr != nil {
 		return bdCoverResolve{}, lastErr
 	}
@@ -473,6 +574,7 @@ type bdCoverPending struct {
 	source     string
 	externalID string
 	isbn       string
+	tome       int
 }
 
 func (a *App) loadBdCoverTargets(userID, afterID, limit int, replace bool) ([]bdCoverPending, error) {
@@ -481,7 +583,7 @@ func (a *App) loadBdCoverTargets(userID, afterID, limit int, replace bool) ([]bd
 		missingClause = ""
 	}
 	rows, err := a.DB.Query(
-		`SELECT id, title, COALESCE(source, ''), COALESCE(external_id, ''), COALESCE(isbn, '')
+		`SELECT id, title, COALESCE(source, ''), COALESCE(external_id, ''), COALESCE(isbn, ''), COALESCE(tome, 0)
          FROM bd_works
          WHERE user_id = ? AND id > ? `+missingClause+`
          ORDER BY id
@@ -496,7 +598,7 @@ func (a *App) loadBdCoverTargets(userID, afterID, limit int, replace bool) ([]bd
 	var list []bdCoverPending
 	for rows.Next() {
 		var p bdCoverPending
-		if err := rows.Scan(&p.id, &p.title, &p.source, &p.externalID, &p.isbn); err != nil {
+		if err := rows.Scan(&p.id, &p.title, &p.source, &p.externalID, &p.isbn, &p.tome); err != nil {
 			return nil, err
 		}
 		list = append(list, p)
@@ -514,7 +616,7 @@ func (a *App) enrichOneBdCover(userID int, p bdCoverPending, replace bool) {
 	a.bdCoverJobs.setCurrent(p.title)
 	backoff := bdCoverEnrichInitialBackoff
 	for attempt := 0; attempt < bdCoverEnrichRateRetries; attempt++ {
-		got, err := resolveBdCoverURL(p.source, p.externalID, p.title, p.isbn)
+		got, err := resolveBdCoverURL(p.source, p.externalID, p.title, p.isbn, p.tome)
 		if catalog.IsOpenLibraryRateLimit(err) {
 			a.bdCoverJobs.setRateLimited(true)
 			log.Printf("[bd-covers] rate limit user=%d id=%d attempt=%d; sleeping %s", userID, p.id, attempt+1, backoff)

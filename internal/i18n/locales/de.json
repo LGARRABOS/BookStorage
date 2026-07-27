@@ -1000,9 +1000,9 @@
   "bd.series.albums": "albums",
   "bd.series.label": "series",
   "admin.jobs.bd_covers.title": "BD covers",
-  "admin.jobs.bd_covers.desc": "BnF → Google Books (optional API key) → Open Library. Fill missing covers or replace existing images.",
+  "admin.jobs.bd_covers.desc": "BnF/Google/Open Library by ISBN, else album title (never series alone). Fill or replace. Re-import BDGest with update to store ISBNs.",
   "admin.jobs.bd_covers.rate_limited": "Paused (cover API rate limit)…",
   "admin.jobs.bd_covers.run": "Missing only",
   "admin.jobs.bd_covers.replace": "Replace all",
-  "admin.jobs.bd_covers.run_hint": "Missing: accounts without an image. Replace: re-fetch and overwrite every BD cover."
+  "admin.jobs.bd_covers.run_hint": "Missing: no image. Replace: re-fetch. Best with ISBN (BDGest re-import)."
 }

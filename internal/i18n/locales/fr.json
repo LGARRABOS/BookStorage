@@ -1059,9 +1059,9 @@
   "bd.series.albums": "albums",
   "bd.series.label": "séries",
   "admin.jobs.bd_covers.title": "Covers BD",
-  "admin.jobs.bd_covers.desc": "Chaîne BnF → Google Books (clé API optionnelle) → Open Library. Remplit les manquantes ou remplace les images déjà présentes.",
+  "admin.jobs.bd_covers.desc": "Chaîne BnF/Google/Open Library par ISBN, sinon titre album (pas la série seule). Remplit ou remplace. Réimportez BDGest en « mise à jour » pour stocker les ISBN.",
   "admin.jobs.bd_covers.rate_limited": "Pause API covers (rate limit)…",
   "admin.jobs.bd_covers.run": "Manquantes seulement",
   "admin.jobs.bd_covers.replace": "Tout remplacer",
-  "admin.jobs.bd_covers.run_hint": "Manquantes : comptes sans image. Remplacer : re-télécharge et écrase toutes les covers BD."
+  "admin.jobs.bd_covers.run_hint": "Manquantes : sans image. Remplacer : re-télécharge. Meilleur résultat avec ISBN (réimport BDGest)."
 }
