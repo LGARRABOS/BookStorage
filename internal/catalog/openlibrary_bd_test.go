@@ -95,3 +95,42 @@ func TestMapOpenLibraryBdType(t *testing.T) {
 		t.Fatalf("got %q", got)
 	}
 }
+
+func TestSearchOpenLibraryBDCover_NoLanguageFilter(t *testing.T) {
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Query().Get("language") != "" {
+			t.Fatalf("cover search should omit language, got %q", r.URL.Query().Get("language"))
+		}
+		q := r.URL.Query().Get("q")
+		if strings.Contains(strings.ToLower(q), "bande dessinée") {
+			t.Fatalf("cover search should be plain title, got %q", q)
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"numFound": 1,
+			"docs": [{
+				"key": "/works/OL9W",
+				"title": "Aigles de Rome",
+				"cover_i": 7
+			}]
+		}`))
+	}))
+	defer srv.Close()
+
+	origBase, origClient := olSearchBase, olHTTPClient
+	olSearchBase = srv.URL
+	olHTTPClient = srv.Client()
+	olLastCall = time.Time{}
+	defer func() {
+		olSearchBase = origBase
+		olHTTPClient = origClient
+	}()
+
+	got, err := SearchOpenLibraryBDCover("Aigles de Rome (Les) — Livre VII", 5)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(got) != 1 || got[0].ImageURL == "" {
+		t.Fatalf("got %+v", got)
+	}
+}

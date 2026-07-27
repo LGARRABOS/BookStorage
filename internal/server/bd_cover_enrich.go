@@ -12,13 +12,13 @@ import (
 const (
 	bdCoverEnrichBatchSize   = 100
 	bdCoverEnrichMaxPasses   = 50
-	bdCoverEnrichRateRetries = 6
+	bdCoverEnrichRateRetries = 3
 )
 
 // Overridable in tests to keep enrichment suites fast.
 var (
-	bdCoverEnrichPace           = 400 * time.Millisecond
-	bdCoverEnrichInitialBackoff = 20 * time.Second
+	bdCoverEnrichPace           = 250 * time.Millisecond
+	bdCoverEnrichInitialBackoff = 2 * time.Second
 	bdCoverEnrichRateLimitSleep = time.Sleep
 )
 
@@ -38,10 +38,41 @@ func resolveFromOpenLibraryBD(res *catalog.OpenLibraryBdResult) bdCoverResolve {
 	return bdCoverResolve{URL: strings.TrimSpace(res.ImageURL), IsAdult: adultBoolPtr(res.IsAdult)}
 }
 
+// bdCoverSearchTitles returns title variants for Open Library cover lookup.
+// BDGest-style titles often look like "Serie — Album"; try both full and parts.
+func bdCoverSearchTitles(title string) []string {
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return nil
+	}
+	seen := map[string]struct{}{title: {}}
+	out := []string{title}
+	add := func(s string) {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			return
+		}
+		if _, ok := seen[s]; ok {
+			return
+		}
+		seen[s] = struct{}{}
+		out = append(out, s)
+	}
+	for _, sep := range []string{" — ", " – ", " - "} {
+		if i := strings.Index(title, sep); i > 0 {
+			add(title[:i])
+			add(title[i+len(sep):])
+			break
+		}
+	}
+	return out
+}
+
 func resolveBdCoverURLDefault(source, externalID, title string) (bdCoverResolve, error) {
 	source = strings.ToLower(strings.TrimSpace(source))
 	ext := strings.TrimSpace(externalID)
-	if ext != "" && (source == "openlibrary" || source == "ol" || strings.HasPrefix(ext, "/works/") || strings.HasPrefix(ext, "OL")) {
+	// Only treat as Open Library id when source says so, or the key looks like /works/OL…W.
+	if ext != "" && (source == "openlibrary" || source == "ol" || strings.HasPrefix(ext, "/works/")) {
 		res, err := catalog.GetOpenLibraryBDByID(ext)
 		if err != nil {
 			if catalog.IsOpenLibraryRateLimit(err) {
@@ -53,18 +84,24 @@ func resolveBdCoverURLDefault(source, externalID, title string) (bdCoverResolve,
 		}
 	}
 
-	title = strings.TrimSpace(title)
-	if title == "" {
-		return bdCoverResolve{}, nil
-	}
-	results, err := catalog.SearchOpenLibraryBD(title, 5)
-	if err != nil {
-		return bdCoverResolve{}, err
-	}
-	for i := range results {
-		if strings.TrimSpace(results[i].ImageURL) != "" {
-			return resolveFromOpenLibraryBD(&results[i]), nil
+	var lastErr error
+	for _, q := range bdCoverSearchTitles(title) {
+		results, err := catalog.SearchOpenLibraryBDCover(q, 5)
+		if err != nil {
+			lastErr = err
+			if catalog.IsOpenLibraryRateLimit(err) {
+				return bdCoverResolve{}, err
+			}
+			continue
 		}
+		for i := range results {
+			if strings.TrimSpace(results[i].ImageURL) != "" {
+				return resolveFromOpenLibraryBD(&results[i]), nil
+			}
+		}
+	}
+	if lastErr != nil {
+		return bdCoverResolve{}, lastErr
 	}
 	return bdCoverResolve{}, nil
 }
@@ -240,7 +277,14 @@ func (a *App) runBdCoverJobQueue() {
 
 		pending := a.countBdMissingCovers(uid)
 		a.bdCoverJobs.begin(uid, pending)
-		a.enrichBdCoversMissing(uid)
+		func() {
+			defer func() {
+				if rec := recover(); rec != nil {
+					log.Printf("[bd-covers] queue panic user=%d: %v", uid, rec)
+				}
+			}()
+			a.enrichBdCoversMissing(uid)
+		}()
 		a.bdCoverJobs.finish()
 	}
 }
@@ -303,6 +347,11 @@ func (a *App) bdCoverJobStatus() bdCoverJobSnapshot {
 }
 
 func (a *App) enrichBdCoversMissing(userID int) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("[bd-covers] panic user=%d: %v", userID, rec)
+		}
+	}()
 	lastID := 0
 	for pass := 0; pass < bdCoverEnrichMaxPasses; pass++ {
 		list, err := a.loadBdMissingCovers(userID, lastID, bdCoverEnrichBatchSize)
@@ -353,6 +402,12 @@ func (a *App) loadBdMissingCovers(userID, afterID, limit int) ([]bdCoverPending,
 }
 
 func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
+	defer func() {
+		if rec := recover(); rec != nil {
+			log.Printf("[bd-covers] panic user=%d id=%d title=%q: %v", userID, p.id, p.title, rec)
+			a.bdCoverJobs.markSkipped()
+		}
+	}()
 	a.bdCoverJobs.setCurrent(p.title)
 	backoff := bdCoverEnrichInitialBackoff
 	for attempt := 0; attempt < bdCoverEnrichRateRetries; attempt++ {
@@ -361,13 +416,18 @@ func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
 			a.bdCoverJobs.setRateLimited(true)
 			log.Printf("[bd-covers] rate limit user=%d id=%d attempt=%d; sleeping %s", userID, p.id, attempt+1, backoff)
 			bdCoverEnrichRateLimitSleep(backoff)
-			if backoff < 2*time.Minute {
+			if backoff < 15*time.Second {
 				backoff *= 2
 			}
 			continue
 		}
 		a.bdCoverJobs.setRateLimited(false)
-		if err != nil || got.URL == "" {
+		if err != nil {
+			log.Printf("[bd-covers] skip user=%d id=%d title=%q: %v", userID, p.id, p.title, err)
+			a.bdCoverJobs.markSkipped()
+			return
+		}
+		if got.URL == "" {
 			a.bdCoverJobs.markSkipped()
 			return
 		}
@@ -388,6 +448,7 @@ func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
 			got.URL, adultArg, p.id, userID,
 		)
 		if err != nil {
+			log.Printf("[bd-covers] db update failed user=%d id=%d: %v", userID, p.id, err)
 			a.bdCoverJobs.markSkipped()
 			return
 		}

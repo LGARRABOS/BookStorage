@@ -1,6 +1,7 @@
 package catalog
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -48,18 +49,31 @@ type openLibrarySearchResponse struct {
 var (
 	olMu         sync.Mutex
 	olLastCall   time.Time
-	olHTTPClient = &http.Client{Timeout: openLibraryDefaultTimeout}
+	olHTTPClient = &http.Client{
+		Timeout: openLibraryDefaultTimeout,
+		Transport: &http.Transport{
+			Proxy:                 http.ProxyFromEnvironment,
+			ResponseHeaderTimeout: 8 * time.Second,
+			IdleConnTimeout:       30 * time.Second,
+			TLSHandshakeTimeout:   5 * time.Second,
+		},
+	}
 	// olSearchBase is overridable in tests.
 	olSearchBase = openLibrarySearchURL
 )
 
 func openLibraryThrottle() {
 	olMu.Lock()
-	defer olMu.Unlock()
+	wait := time.Duration(0)
 	if elapsed := time.Since(olLastCall); elapsed < openLibraryMinInterval {
-		time.Sleep(openLibraryMinInterval - elapsed)
+		wait = openLibraryMinInterval - elapsed
 	}
-	olLastCall = time.Now()
+	// Reserve the next slot before unlocking so concurrent callers stagger correctly.
+	olLastCall = time.Now().Add(wait)
+	olMu.Unlock()
+	if wait > 0 {
+		time.Sleep(wait)
+	}
 }
 
 func openLibraryCoverURL(coverID int) string {
@@ -114,13 +128,19 @@ func searchOpenLibraryRaw(params url.Values, limit int) ([]OpenLibraryBdResult, 
 		limit = 40
 	}
 	params.Set("limit", strconv.Itoa(limit))
-	if params.Get("language") == "" {
+	switch params.Get("language") {
+	case "":
 		params.Set("language", "fre")
+	case "*":
+		// Cover enrichment / id lookup: no language filter (faster, more hits).
+		params.Del("language")
 	}
 
 	openLibraryThrottle()
 	reqURL := olSearchBase + "?" + params.Encode()
-	req, err := http.NewRequest(http.MethodGet, reqURL, nil)
+	ctx, cancel := context.WithTimeout(context.Background(), openLibraryDefaultTimeout)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, reqURL, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -163,6 +183,24 @@ func SearchOpenLibraryBD(q string, limit int) ([]OpenLibraryBdResult, error) {
 	return searchOpenLibraryRaw(params, limit)
 }
 
+// SearchOpenLibraryBDCover is a lightweight title search for cover enrichment.
+// It skips the French language filter and heavy subject clauses so Open Library
+// responds quickly enough for background jobs.
+func SearchOpenLibraryBDCover(q string, limit int) ([]OpenLibraryBdResult, error) {
+	q = strings.TrimSpace(q)
+	if q == "" {
+		return nil, nil
+	}
+	if limit <= 0 {
+		limit = 5
+	}
+	params := url.Values{}
+	params.Set("q", q)
+	params.Set("language", "*")
+	params.Set("fields", "key,title,author_name,cover_i,first_publish_year,subject")
+	return searchOpenLibraryRaw(params, limit)
+}
+
 // BrowseOpenLibraryBD lists popular/recent French BD-ish works via subject search.
 func BrowseOpenLibraryBD(page, perPage int) ([]OpenLibraryBdResult, error) {
 	if page < 1 {
@@ -192,6 +230,7 @@ func GetOpenLibraryBDByID(workKey string) (*OpenLibraryBdResult, error) {
 	}
 	params := url.Values{}
 	params.Set("q", "key:"+workKey)
+	params.Set("language", "*")
 	results, err := searchOpenLibraryRaw(params, 5)
 	if err != nil {
 		return nil, err

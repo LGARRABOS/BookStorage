@@ -8,6 +8,16 @@ import (
 	"bookstorage/internal/catalog"
 )
 
+func TestBdCoverSearchTitles(t *testing.T) {
+	got := bdCoverSearchTitles("Aigles de Rome (Les) — Livre VII")
+	if len(got) < 2 || got[0] != "Aigles de Rome (Les) — Livre VII" {
+		t.Fatalf("got %#v", got)
+	}
+	if got[1] != "Aigles de Rome (Les)" {
+		t.Fatalf("serie part=%q", got[1])
+	}
+}
+
 func TestEnrichBdCoversMissing(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
