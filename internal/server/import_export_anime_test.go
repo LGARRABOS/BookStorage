@@ -72,6 +72,9 @@ func TestParseMALAnimeXML(t *testing.T) {
 	if rows[0].StartedAt != "2024-10-25" || rows[0].FinishedAt != "2024-12-14" {
 		t.Fatalf("row0 dates: %s / %s", rows[0].StartedAt, rows[0].FinishedAt)
 	}
+	if rows[0].Notes != "nice" {
+		t.Fatalf("row0 notes: %q", rows[0].Notes)
+	}
 	if !strings.Contains(rows[0].Link, "/anime/53802") {
 		t.Fatalf("row0 link: %s", rows[0].Link)
 	}
@@ -96,8 +99,8 @@ func TestImportFromXML_MALAnime(t *testing.T) {
     <my_finish_date>0000-00-00</my_finish_date>
     <my_score>9</my_score>
     <my_status>Watching</my_status>
-    <my_comments><![CDATA[]]></my_comments>
-    <my_tags><![CDATA[]]></my_tags>
+    <my_comments><![CDATA[great pirate saga]]></my_comments>
+    <my_tags><![CDATA[shonen]]></my_tags>
   </anime>
 </myanimelist>`
 
@@ -120,11 +123,11 @@ func TestImportFromXML_MALAnime(t *testing.T) {
 		t.Fatalf("status %d", rec.Code)
 	}
 
-	var gotTitle, gotStatus, gotSource, gotExt string
+	var gotTitle, gotStatus, gotSource, gotExt, gotNotes string
 	var gotEpisode, gotRating int
 	var total sql.NullInt64
-	err = db.QueryRow(`SELECT title, status, episode, rating, total_episodes, source, external_id FROM anime_works WHERE user_id = 1 LIMIT 1`).
-		Scan(&gotTitle, &gotStatus, &gotEpisode, &gotRating, &total, &gotSource, &gotExt)
+	err = db.QueryRow(`SELECT title, status, episode, rating, total_episodes, source, external_id, COALESCE(notes,'') FROM anime_works WHERE user_id = 1 LIMIT 1`).
+		Scan(&gotTitle, &gotStatus, &gotEpisode, &gotRating, &total, &gotSource, &gotExt, &gotNotes)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -133,6 +136,9 @@ func TestImportFromXML_MALAnime(t *testing.T) {
 	}
 	if !total.Valid || total.Int64 != 1000 || gotSource != "mal" || gotExt != "21" {
 		t.Fatalf("meta unexpected: total=%v source=%s ext=%s", total, gotSource, gotExt)
+	}
+	if gotNotes != "great pirate saga\nshonen" {
+		t.Fatalf("notes unexpected: %q", gotNotes)
 	}
 }
 
@@ -315,6 +321,43 @@ func TestImportAnimeDuplicateSkip_FillsMissingCover(t *testing.T) {
 	}
 	if source != "anilist" || ext != "99" {
 		t.Fatalf("expected source/id merge, got %s/%s", source, ext)
+	}
+}
+
+func TestImportAnimeDuplicateSkip_FillsNotesAndRating(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, rating, notes, user_id, source, updated_at)
+		 VALUES ('NoNotes', 1, 'En cours', 'TV', 0, '', 1, 'mal', CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	report := ImportReport{}
+	app.importOneAnimeWork(1, 1, exportAnimeWork{
+		Title:   "NoNotes",
+		Episode: 99,
+		Rating:  5,
+		Notes:   "imported comment",
+		Source:  "mal",
+	}, DuplicateSkip, &report)
+	if report.Updated != 1 {
+		t.Fatalf("expected notes/rating update, report=%+v", report)
+	}
+	var notes string
+	var rating, ep int
+	err = db.QueryRow(`SELECT COALESCE(notes,''), COALESCE(rating,0), episode FROM anime_works WHERE title='NoNotes'`).
+		Scan(&notes, &rating, &ep)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if notes != "imported comment" || rating != 5 {
+		t.Fatalf("notes/rating not filled: %q / %d", notes, rating)
+	}
+	if ep != 1 {
+		t.Fatalf("skip must not overwrite episode, got %d", ep)
 	}
 }
 

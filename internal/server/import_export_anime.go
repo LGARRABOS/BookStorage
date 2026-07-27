@@ -163,6 +163,8 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 	idxType := headerIndex(headers, "series_type")
 	idxTotal := headerIndex(headers, "series_episodes")
 	idxMALID := headerIndex(headers, "series_animedb_id", "series_anime_db_id", "anime_id", "mal_id")
+	idxComments := headerIndex(headers, "my_comments", "comments", "notes")
+	idxTags := headerIndex(headers, "my_tags", "tags")
 
 	var out []exportAnimeWork
 	for i := 1; i < len(records); i++ {
@@ -190,6 +192,14 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 				w.Link = "https://myanimelist.net/anime/" + w.ExternalID
 			}
 		}
+		notes := strings.TrimSpace(safeCell(row, idxComments))
+		if tags := strings.TrimSpace(safeCell(row, idxTags)); tags != "" {
+			if notes != "" {
+				notes += "\n"
+			}
+			notes += tags
+		}
+		w.Notes = notes
 		out = append(out, w)
 	}
 	return out
@@ -435,7 +445,14 @@ func (a *App) importOneAnimeWork(userID int, lineNum int, w exportAnimeWork, mod
 	}
 	if err == nil {
 		if mode == DuplicateSkip {
+			updated := false
 			if a.fillAnimeDuplicateCoverIfMissing(userID, existsID, imagePath, source, externalID) {
+				updated = true
+			}
+			if a.fillAnimeDuplicateNotesRatingIfMissing(userID, existsID, notes, rating) {
+				updated = true
+			}
+			if updated {
 				report.Updated++
 				return
 			}
@@ -514,6 +531,43 @@ func (a *App) fillAnimeDuplicateCoverIfMissing(userID, workID int, imagePath, so
 		)
 	}
 	return false
+}
+
+// fillAnimeDuplicateNotesRatingIfMissing copies MAL/AniList score and comments onto a
+// duplicate that still has an empty notes field and/or a zero rating.
+func (a *App) fillAnimeDuplicateNotesRatingIfMissing(userID, workID int, notes string, rating int) bool {
+	notes = strings.TrimSpace(notes)
+	rating = clampRating(rating)
+	if notes == "" && rating <= 0 {
+		return false
+	}
+	var existingNotes string
+	var existingRating int
+	err := a.DB.QueryRow(
+		`SELECT COALESCE(notes, ''), COALESCE(rating, 0) FROM anime_works WHERE id = ? AND user_id = ?`,
+		workID, userID,
+	).Scan(&existingNotes, &existingRating)
+	if err != nil {
+		return false
+	}
+	setNotes := notes != "" && strings.TrimSpace(existingNotes) == ""
+	setRating := rating > 0 && existingRating <= 0
+	if !setNotes && !setRating {
+		return false
+	}
+	res, err := a.DB.Exec(
+		`UPDATE anime_works SET
+         notes = CASE WHEN ? THEN ? ELSE notes END,
+         rating = CASE WHEN ? THEN ? ELSE rating END,
+         updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ?`,
+		setNotes, notes, setRating, rating, workID, userID,
+	)
+	if err != nil {
+		return false
+	}
+	n, _ := res.RowsAffected()
+	return n > 0
 }
 
 func (a *App) ImportAnimeFromCSVRecords(w http.ResponseWriter, r *http.Request, userID int, records [][]string, mode DuplicateMode) {

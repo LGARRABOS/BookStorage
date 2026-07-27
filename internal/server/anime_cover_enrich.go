@@ -116,13 +116,16 @@ func (c *animeCoverJobController) enqueue(a *App, userID int) {
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.running && c.userID == userID {
-		return
-	}
 	for _, id := range c.queue {
 		if id == userID {
 			return
 		}
+	}
+	// Already running for this user: schedule a follow-up pass after it finishes
+	// so a concurrent re-import still gets cover enrichment.
+	if c.running && c.userID == userID {
+		c.queue = append(c.queue, userID)
+		return
 	}
 	c.queue = append(c.queue, userID)
 	if !c.workerOn {
