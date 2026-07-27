@@ -25,9 +25,24 @@ var (
 
 // resolveAnimeCoverURL looks up a cover image URL via AniList (MAL id, AniList id, or title search).
 // Overridable in tests. A rate-limit error should be retried by the caller; other empty results are final for this pass.
+// IsAdult is set when AniList metadata is available so enrichment can flag +18 entries.
 var resolveAnimeCoverURL = resolveAnimeCoverURLDefault
 
-func resolveAnimeCoverURLDefault(source, externalID, title string) (string, error) {
+type animeCoverResolve struct {
+	URL     string
+	IsAdult *bool
+}
+
+func adultBoolPtr(v bool) *bool { return &v }
+
+func resolveFromAnilistAnime(res *catalog.AnilistAnimeResult) animeCoverResolve {
+	if res == nil {
+		return animeCoverResolve{}
+	}
+	return animeCoverResolve{URL: strings.TrimSpace(res.ImageURL), IsAdult: adultBoolPtr(res.IsAdult)}
+}
+
+func resolveAnimeCoverURLDefault(source, externalID, title string) (animeCoverResolve, error) {
 	source = strings.ToLower(strings.TrimSpace(source))
 	ext := strings.TrimSpace(externalID)
 	if id, err := strconv.Atoi(ext); err == nil && id > 0 {
@@ -35,44 +50,40 @@ func resolveAnimeCoverURLDefault(source, externalID, title string) (string, erro
 		case "anilist":
 			res, err := catalog.GetAnilistAnimeByID(id)
 			if err != nil {
-				return "", err
+				return animeCoverResolve{}, err
 			}
-			if res != nil {
-				return strings.TrimSpace(res.ImageURL), nil
-			}
+			return resolveFromAnilistAnime(res), nil
 		case "mal", "myanimelist":
 			res, err := catalog.GetAnilistAnimeByMALID(id)
 			if err != nil {
-				return "", err
+				return animeCoverResolve{}, err
 			}
-			if res != nil {
-				return strings.TrimSpace(res.ImageURL), nil
-			}
+			return resolveFromAnilistAnime(res), nil
 		default:
 			if res, err := catalog.GetAnilistAnimeByID(id); err != nil {
-				return "", err
+				return animeCoverResolve{}, err
 			} else if res != nil {
-				return strings.TrimSpace(res.ImageURL), nil
+				return resolveFromAnilistAnime(res), nil
 			}
 			if res, err := catalog.GetAnilistAnimeByMALID(id); err != nil {
-				return "", err
+				return animeCoverResolve{}, err
 			} else if res != nil {
-				return strings.TrimSpace(res.ImageURL), nil
+				return resolveFromAnilistAnime(res), nil
 			}
 		}
 	}
 	title = strings.TrimSpace(title)
 	if title == "" {
-		return "", nil
+		return animeCoverResolve{}, nil
 	}
 	results, err := catalog.SearchAnilistAnime(title, 1)
 	if err != nil {
-		return "", err
+		return animeCoverResolve{}, err
 	}
 	if len(results) == 0 {
-		return "", nil
+		return animeCoverResolve{}, nil
 	}
-	return strings.TrimSpace(results[0].ImageURL), nil
+	return resolveFromAnilistAnime(&results[0]), nil
 }
 
 // animeCoverJobSnapshot is the admin-facing view of cover enrichment progress.
@@ -370,7 +381,7 @@ func (a *App) enrichOneAnimeCover(userID int, p animeCoverPending) {
 	a.animeCoverJobs.setCurrent(p.title)
 	backoff := animeCoverEnrichInitialBackoff
 	for attempt := 0; attempt < animeCoverEnrichRateRetries; attempt++ {
-		cover, err := resolveAnimeCoverURL(p.source, p.externalID, p.title)
+		got, err := resolveAnimeCoverURL(p.source, p.externalID, p.title)
 		if catalog.IsAnilistRateLimit(err) {
 			a.animeCoverJobs.setRateLimited(true)
 			log.Printf("[anime-covers] rate limit user=%d id=%d attempt=%d; sleeping %s", userID, p.id, attempt+1, backoff)
@@ -381,14 +392,25 @@ func (a *App) enrichOneAnimeCover(userID int, p animeCoverPending) {
 			continue
 		}
 		a.animeCoverJobs.setRateLimited(false)
-		if err != nil || cover == "" {
+		if err != nil || got.URL == "" {
 			a.animeCoverJobs.markSkipped()
 			return
 		}
+		adultArg := any(nil)
+		if got.IsAdult != nil {
+			if *got.IsAdult {
+				adultArg = 1
+			} else {
+				adultArg = 0
+			}
+		}
 		res, err := a.DB.Exec(
-			`UPDATE anime_works SET image_path = ?, updated_at = CURRENT_TIMESTAMP
+			`UPDATE anime_works SET
+             image_path = ?,
+             is_adult = COALESCE(?, is_adult),
+             updated_at = CURRENT_TIMESTAMP
              WHERE id = ? AND user_id = ? AND (image_path IS NULL OR TRIM(image_path) = '')`,
-			cover, p.id, userID,
+			got.URL, adultArg, p.id, userID,
 		)
 		if err != nil {
 			a.animeCoverJobs.markSkipped()

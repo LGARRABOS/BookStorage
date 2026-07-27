@@ -225,7 +225,26 @@
 
   function init() {
     var els = getEls();
-    restoreState(els);
+    var restored = restoreState(els);
+    var adultInURL =
+      new URL(window.location.href).searchParams.get("adult") === "only";
+    if (adultInURL) {
+      // URL is the source of truth for the server-side +18 filter.
+      if (els.adultOnlyCheck) els.adultOnlyCheck.checked = true;
+      // Don't hide +18 results behind the default "En cours" client filter.
+      if (els.status) {
+        els.status.value = "";
+        syncQuickTabs(els, "");
+      }
+    } else if (
+      restored &&
+      els.adultOnlyCheck &&
+      els.adultOnlyCheck.checked
+    ) {
+      // Session had +18 on but the page was rendered without adult=only — reload.
+      reloadWithServerParams(els);
+      return;
+    }
     applyClientFilters(els);
     bindEpisodeControls();
     initFiltersSheet(els);

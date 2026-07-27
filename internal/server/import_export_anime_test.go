@@ -26,6 +26,28 @@ func TestMalScoreToStars(t *testing.T) {
 	}
 }
 
+func TestMalAnimeIsAdult(t *testing.T) {
+	cases := []struct {
+		seriesType, tags string
+		want             bool
+	}{
+		{"TV", "", false},
+		{"Hentai", "", true},
+		{"erotica", "", true},
+		{"RX", "", true},
+		{"OVA", "comedy", false},
+		{"OVA", "Hentai, comedy", true},
+		{"TV", "nsfw", true},
+		{"TV", "tag 18+", true},
+		{"TV", "tag +18 stuff", true},
+	}
+	for _, tc := range cases {
+		if got := malAnimeIsAdult(tc.seriesType, tc.tags); got != tc.want {
+			t.Fatalf("malAnimeIsAdult(%q, %q)=%v want %v", tc.seriesType, tc.tags, got, tc.want)
+		}
+	}
+}
+
 func TestParseMALAnimeXML(t *testing.T) {
 	xmlData := `<?xml version="1.0" encoding="UTF-8" ?>
 <myanimelist>
@@ -75,11 +97,43 @@ func TestParseMALAnimeXML(t *testing.T) {
 	if rows[0].Notes != "nice" {
 		t.Fatalf("row0 notes: %q", rows[0].Notes)
 	}
+	if rows[0].IsAdult {
+		t.Fatalf("row0 should not be adult")
+	}
 	if !strings.Contains(rows[0].Link, "/anime/53802") {
 		t.Fatalf("row0 link: %s", rows[0].Link)
 	}
 	if rows[1].Status != "À voir" || rows[1].AnimeType != "Film" || rows[1].StartedAt != "" {
 		t.Fatalf("row1 unexpected: %+v", rows[1])
+	}
+}
+
+func TestParseMALAnimeXML_HentaiIsAdult(t *testing.T) {
+	xmlData := `<?xml version="1.0" encoding="UTF-8" ?>
+<myanimelist>
+  <anime>
+    <series_animedb_id>999</series_animedb_id>
+    <series_title><![CDATA[Adult Title]]></series_title>
+    <series_type>Hentai</series_type>
+    <series_episodes>1</series_episodes>
+    <my_watched_episodes>1</my_watched_episodes>
+    <my_start_date>0000-00-00</my_start_date>
+    <my_finish_date>0000-00-00</my_finish_date>
+    <my_score>0</my_score>
+    <my_status>Completed</my_status>
+    <my_comments><![CDATA[]]></my_comments>
+    <my_tags><![CDATA[]]></my_tags>
+  </anime>
+</myanimelist>`
+	rows, ok := parseMALAnimeXML([]byte(xmlData))
+	if !ok || len(rows) != 1 {
+		t.Fatalf("parse ok=%v len=%d", ok, len(rows))
+	}
+	if !rows[0].IsAdult {
+		t.Fatalf("expected IsAdult for Hentai type, got %+v", rows[0])
+	}
+	if rows[0].AnimeType != "OVA" {
+		t.Fatalf("expected mapped type OVA, got %q", rows[0].AnimeType)
 	}
 }
 
@@ -361,6 +415,37 @@ func TestImportAnimeDuplicateSkip_FillsNotesAndRating(t *testing.T) {
 	}
 }
 
+func TestImportAnimeDuplicateSkip_FillsAdult(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	_, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, is_adult, user_id, source, updated_at)
+		 VALUES ('AdultMissing', 1, 'Terminé', 'OVA', 0, 1, 'mal', CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	report := ImportReport{}
+	app.importOneAnimeWork(1, 1, exportAnimeWork{
+		Title:   "AdultMissing",
+		Episode: 1,
+		IsAdult: true,
+		Source:  "mal",
+	}, DuplicateSkip, &report)
+	if report.Updated != 1 {
+		t.Fatalf("expected adult flag update, report=%+v", report)
+	}
+	var adult int
+	err = db.QueryRow(`SELECT COALESCE(is_adult,0) FROM anime_works WHERE title='AdultMissing'`).Scan(&adult)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if adult != 1 {
+		t.Fatalf("expected is_adult=1, got %d", adult)
+	}
+}
+
 func TestImportAnimeDuplicateSkip_KeepsExistingCover(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
@@ -407,9 +492,9 @@ func TestImportAnimeDuplicateSkip_SchedulesEnrichment(t *testing.T) {
 		resolveAnimeCoverURL = orig
 		animeCoverEnrichPace = origPace
 	}()
-	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
+	resolveAnimeCoverURL = func(source, externalID, title string) (animeCoverResolve, error) {
 		defer close(done)
-		return "https://cdn.test/enriched.jpg", nil
+		return animeCoverResolve{URL: "https://cdn.test/enriched.jpg"}, nil
 	}
 
 	var b bytes.Buffer

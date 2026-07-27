@@ -33,14 +33,14 @@ func TestEnrichAnimeCoversMissing(t *testing.T) {
 	}()
 	var mu sync.Mutex
 	calls := 0
-	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
+	resolveAnimeCoverURL = func(source, externalID, title string) (animeCoverResolve, error) {
 		mu.Lock()
 		calls++
 		mu.Unlock()
 		if title == "Needs Cover" && source == "mal" && externalID == "21" {
-			return "https://cdn.test/one-piece.jpg", nil
+			return animeCoverResolve{URL: "https://cdn.test/one-piece.jpg"}, nil
 		}
-		return "", nil
+		return animeCoverResolve{}, nil
 	}
 
 	app.enrichAnimeCoversMissing(1)
@@ -92,11 +92,11 @@ func TestEnrichAnimeCoversMissing_RetriesRateLimit(t *testing.T) {
 	}()
 
 	var attempts atomic.Int32
-	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
+	resolveAnimeCoverURL = func(source, externalID, title string) (animeCoverResolve, error) {
 		if attempts.Add(1) == 1 {
-			return "", catalog.ErrAnilistRateLimit
+			return animeCoverResolve{}, catalog.ErrAnilistRateLimit
 		}
-		return "https://cdn.test/after-retry.jpg", nil
+		return animeCoverResolve{URL: "https://cdn.test/after-retry.jpg"}, nil
 	}
 
 	app.enrichOneAnimeCover(1, animeCoverPending{
@@ -132,9 +132,9 @@ func TestScheduleAnimeCoverEnrichment(t *testing.T) {
 		resolveAnimeCoverURL = orig
 		animeCoverEnrichPace = origPace
 	}()
-	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
+	resolveAnimeCoverURL = func(source, externalID, title string) (animeCoverResolve, error) {
 		defer close(done)
-		return "https://cdn.test/async.jpg", nil
+		return animeCoverResolve{URL: "https://cdn.test/async.jpg"}, nil
 	}
 
 	app.scheduleAnimeCoverEnrichment(1)

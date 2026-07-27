@@ -79,7 +79,7 @@
                 <div class="filter-group">
                     <select id="status-filter" aria-label="{{ t .T "dashboard.filter.all" }}">
                         <option value="">{{ t .T "dashboard.filter.all" }}</option>
-                        <option value="En cours" selected>{{ t .T "status.reading" }}</option>
+                        <option value="En cours">{{ t .T "status.reading" }}</option>
                         <option value="Terminé">{{ t .T "status.completed" }}</option>
                         <option value="En pause">{{ t .T "status.on_hold" }}</option>
                         <option value="Abandonné">{{ t .T "status.dropped" }}</option>
@@ -94,7 +94,7 @@
                         <option value="modified_desc" {{ if eq .SortBy "modified_desc" }}selected{{ end }}>{{ t .T "anime.sort.modified" }}</option>
                     </select>
                 </div>
-                <label class="filter-check">
+                <label class="filter-check" title="{{ t .T "dashboard.filter.only_adult" }}">
                     <input type="checkbox" name="adult" value="only" {{ if eq .AdultFilter "only" }}checked{{ end }} onchange="document.getElementById('anime-filters').submit()">
                     +18
                 </label>
@@ -103,7 +103,7 @@
             {{ if .Works }}
             <div class="anime-grid" id="anime-grid">
                 {{ range .Works }}
-                <article class="anime-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}">
+                <article class="anime-card" data-title="{{ .Title }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
                     <div class="anime-cover">
                         {{ if and .ImagePath.Valid .ImagePath.String }}
                         <img src="{{ work_image_url .ImagePath.String }}" alt="" loading="lazy">
@@ -113,6 +113,7 @@
                         <div class="anime-badges">
                             {{ if .AnimeType.Valid }}<span class="anime-badge">{{ .AnimeType.String }}</span>{{ end }}
                             {{ if .Status.Valid }}<span class="anime-badge">{{ translateStatus .Status.String $.T }}</span>{{ end }}
+                            {{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}<span class="anime-badge">+18</span>{{ end }}
                         </div>
                     </div>
                     <div class="anime-body">
@@ -199,7 +200,13 @@
             var search = document.getElementById('anime-search');
             var statusFilter = document.getElementById('status-filter');
             var grid = document.getElementById('anime-grid');
+            var adultOnly = {{ if eq .AdultFilter "only" }}true{{ else }}false{{ end }};
             if (!grid) return;
+            // When showing +18 only, default to all statuses so the filter is visible.
+            // Otherwise keep the usual "En cours" quick filter.
+            if (statusFilter) {
+                statusFilter.value = adultOnly ? '' : 'En cours';
+            }
             function filterAnime() {
                 var q = search ? search.value.trim().toLowerCase() : '';
                 var status = statusFilter ? statusFilter.value : '';

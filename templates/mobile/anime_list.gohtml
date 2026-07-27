@@ -2,7 +2,7 @@
 {{ if .Works }}
 <section class="works-mobile-list" id="anime-mobile-list">
     {{ range .Works }}
-    <article class="work-mobile-row anime-mobile-row" data-anime-id="{{ .ID }}" data-title="{{ .Title }}" data-episode="{{ .Episode }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .AnimeType.Valid }}{{ .AnimeType.String }}{{ end }}">
+    <article class="work-mobile-row anime-mobile-row" data-anime-id="{{ .ID }}" data-title="{{ .Title }}" data-episode="{{ .Episode }}" data-status="{{ if .Status.Valid }}{{ .Status.String }}{{ end }}" data-type="{{ if .AnimeType.Valid }}{{ .AnimeType.String }}{{ end }}" data-adult="{{ if and .IsAdult.Valid (eq .IsAdult.Int64 1) }}1{{ else }}0{{ end }}">
         <a href="/anime/edit/{{ .ID }}" class="anime-mobile-row-main">
             <div class="work-mobile-cover">
                 {{ if and .ImagePath.Valid .ImagePath.String }}

@@ -100,9 +100,26 @@ func mapMALAnimeType(s string) string {
 		return "ONA"
 	case "special", "music":
 		return "Spécial"
+	case "hentai", "erotica":
+		// Keep a listable type; adult flag is set separately via malAnimeIsAdult.
+		return "OVA"
 	default:
 		return normalizeAnimeTypeForWrite(s)
 	}
+}
+
+func malAnimeIsAdult(seriesType, tags string) bool {
+	t := strings.ToLower(strings.TrimSpace(seriesType))
+	if t == "hentai" || t == "erotica" || t == "rx" {
+		return true
+	}
+	tagBlob := strings.ToLower(tags)
+	for _, needle := range []string{"hentai", "erotica", "nsfw", "18+", "+18"} {
+		if strings.Contains(tagBlob, needle) {
+			return true
+		}
+	}
+	return false
 }
 
 func mapAniListAnimeStatus(s string) string {
@@ -182,6 +199,7 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 			AnimeType: normalizeAnimeTypeForWrite(mapMALAnimeType(safeCell(row, idxType))),
 			Rating:    malScoreToStars(rating),
 			Source:    "mal",
+			IsAdult:   malAnimeIsAdult(safeCell(row, idxType), safeCell(row, idxTags)),
 		}
 		if tot, err := strconv.Atoi(safeCell(row, idxTotal)); err == nil && tot > 0 {
 			w.TotalEpisodes = &tot
@@ -452,6 +470,9 @@ func (a *App) importOneAnimeWork(userID int, lineNum int, w exportAnimeWork, mod
 			if a.fillAnimeDuplicateNotesRatingIfMissing(userID, existsID, notes, rating) {
 				updated = true
 			}
+			if a.fillAnimeDuplicateAdultIfMissing(userID, existsID, w.IsAdult) {
+				updated = true
+			}
 			if updated {
 				report.Updated++
 				return
@@ -531,6 +552,24 @@ func (a *App) fillAnimeDuplicateCoverIfMissing(userID, workID int, imagePath, so
 		)
 	}
 	return false
+}
+
+// fillAnimeDuplicateAdultIfMissing sets is_adult=1 on a duplicate that is still marked
+// non-adult when the import clearly flags the title as +18 (MAL Hentai/Erotica/tags).
+func (a *App) fillAnimeDuplicateAdultIfMissing(userID, workID int, isAdult bool) bool {
+	if !isAdult {
+		return false
+	}
+	res, err := a.DB.Exec(
+		`UPDATE anime_works SET is_adult = 1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ? AND COALESCE(is_adult, 0) = 0`,
+		workID, userID,
+	)
+	if err != nil {
+		return false
+	}
+	n, _ := res.RowsAffected()
+	return n > 0
 }
 
 // fillAnimeDuplicateNotesRatingIfMissing copies MAL/AniList score and comments onto a
@@ -693,6 +732,7 @@ func parseMALAnimeXML(data []byte) ([]exportAnimeWork, bool) {
 			StartedAt:  malAnimeDate(e.MyStartDate),
 			FinishedAt: malAnimeDate(e.MyFinishDate),
 			Source:     "mal",
+			IsAdult:    malAnimeIsAdult(e.SeriesType, e.MyTags),
 		}
 		if e.SeriesEpisodes > 0 {
 			tot := e.SeriesEpisodes
