@@ -21,7 +21,9 @@ func (a *App) HandleAdminMigratePostgres(w http.ResponseWriter, r *http.Request)
 		http.Redirect(w, r, "/admin/database", http.StatusFound)
 		return
 	}
-	a.renderTemplate(w, r, "admin_migrate_postgres", a.mergeData(r, nil))
+	a.renderTemplate(w, r, "admin_migrate_postgres", a.mergeData(r, map[string]any{
+		"AdminTab": "migrate",
+	}))
 }
 
 // HandleAPIAdminMigratePostgresTest checks connectivity to the target PostgreSQL server.

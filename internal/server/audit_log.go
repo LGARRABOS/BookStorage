@@ -99,5 +99,6 @@ func (a *App) HandleAdminAuditLog(w http.ResponseWriter, r *http.Request) {
 	}
 	a.renderTemplate(w, r, "admin_audit", a.mergeData(r, map[string]any{
 		"AuditEntries": entries,
+		"AdminTab":     "audit",
 	}))
 }

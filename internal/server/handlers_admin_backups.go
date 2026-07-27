@@ -66,6 +66,7 @@ func (a *App) HandleAdminBackups(w http.ResponseWriter, r *http.Request) {
 	a.renderTemplate(w, r, "admin_backups", a.mergeData(r, map[string]any{
 		"BackupDir":   adminBackupDir(),
 		"BackupFiles": files,
+		"AdminTab":    "backups",
 	}))
 }
 

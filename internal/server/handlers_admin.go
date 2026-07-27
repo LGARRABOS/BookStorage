@@ -315,7 +315,8 @@ func (a *App) HandleAdminAccounts(w http.ResponseWriter, r *http.Request) {
 	}
 
 	a.renderTemplate(w, r, "admin_accounts", a.mergeData(r, map[string]any{
-		"Users": users,
+		"Users":    users,
+		"AdminTab": "accounts",
 	}))
 }
 
@@ -412,6 +413,7 @@ func (a *App) HandleAdminDatabase(w http.ResponseWriter, r *http.Request) {
 	}
 	a.renderTemplate(w, r, "admin_database", a.mergeData(r, map[string]any{
 		"DBSections": sections,
+		"AdminTab":   "database",
 	}))
 }
 

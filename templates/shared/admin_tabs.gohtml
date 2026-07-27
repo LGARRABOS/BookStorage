@@ -1,0 +1,10 @@
+{{ define "admin_tabs" }}
+<nav class="admin-tabs" aria-label="{{ t .T "admin.title" }}">
+    <a class="admin-tab{{ if eq .AdminTab "accounts" }} active{{ end }}" href="/admin/accounts">{{ t .T "admin.accounts" }}</a>
+    <a class="admin-tab{{ if eq .AdminTab "database" }} active{{ end }}" href="/admin/database">{{ t .T "admin.database" }}</a>
+    <a class="admin-tab{{ if eq .AdminTab "backups" }} active{{ end }}" href="/admin/backups">{{ t .T "admin.backups" }}</a>
+    <a class="admin-tab{{ if eq .AdminTab "audit" }} active{{ end }}" href="/admin/audit">{{ t .T "admin.audit.tab" }}</a>
+    <a class="admin-tab{{ if eq .AdminTab "jobs" }} active{{ end }}" href="/admin/jobs">{{ t .T "admin.jobs.tab" }}</a>
+    {{ if .ShowPostgresMigrate }}<a class="admin-tab{{ if eq .AdminTab "migrate" }} active{{ end }}" href="/admin/migrate-postgres">{{ t .T "admin.migrate_pg.tab" }}</a>{{ end }}
+</nav>
+{{ end }}
