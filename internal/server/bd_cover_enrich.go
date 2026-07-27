@@ -22,7 +22,7 @@ var (
 	bdCoverEnrichRateLimitSleep = time.Sleep
 )
 
-// resolveBdCoverURL looks up a cover image URL via Open Library (work key or title search).
+// resolveBdCoverURL looks up a cover via BnF / Google Books / Open Library.
 // Overridable in tests.
 var resolveBdCoverURL = resolveBdCoverURLDefault
 
@@ -68,9 +68,43 @@ func bdCoverSearchTitles(title string) []string {
 	return out
 }
 
-func resolveBdCoverURLDefault(source, externalID, title string) (bdCoverResolve, error) {
+func firstCoverURL(fns ...func() (string, error)) (string, error) {
+	var lastErr error
+	for _, fn := range fns {
+		u, err := fn()
+		if err != nil {
+			if catalog.IsOpenLibraryRateLimit(err) {
+				return "", err
+			}
+			lastErr = err
+			continue
+		}
+		if strings.TrimSpace(u) != "" {
+			return strings.TrimSpace(u), nil
+		}
+	}
+	return "", lastErr
+}
+
+func resolveBdCoverURLDefault(source, externalID, title, isbn string) (bdCoverResolve, error) {
 	source = strings.ToLower(strings.TrimSpace(source))
 	ext := strings.TrimSpace(externalID)
+	isbn = strings.TrimSpace(isbn)
+
+	if isbn != "" {
+		u, err := firstCoverURL(
+			func() (string, error) { return catalog.LookupBnFCoverByISBN(isbn) },
+			func() (string, error) { return catalog.LookupGoogleBooksCoverByISBN(isbn) },
+			func() (string, error) { return catalog.OpenLibraryCoverByISBN(isbn) },
+		)
+		if err != nil {
+			return bdCoverResolve{}, err
+		}
+		if u != "" {
+			return bdCoverResolve{URL: u}, nil
+		}
+	}
+
 	// Only treat as Open Library id when source says so, or the key looks like /works/OL…W.
 	if ext != "" && (source == "openlibrary" || source == "ol" || strings.HasPrefix(ext, "/works/")) {
 		res, err := catalog.GetOpenLibraryBDByID(ext)
@@ -86,6 +120,16 @@ func resolveBdCoverURLDefault(source, externalID, title string) (bdCoverResolve,
 
 	var lastErr error
 	for _, q := range bdCoverSearchTitles(title) {
+		u, err := catalog.LookupGoogleBooksCoverByTitle(q)
+		if err != nil {
+			lastErr = err
+			if catalog.IsOpenLibraryRateLimit(err) {
+				return bdCoverResolve{}, err
+			}
+		} else if strings.TrimSpace(u) != "" {
+			return bdCoverResolve{URL: strings.TrimSpace(u)}, nil
+		}
+
 		results, err := catalog.SearchOpenLibraryBDCover(q, 5)
 		if err != nil {
 			lastErr = err
@@ -111,6 +155,7 @@ type bdCoverJobSnapshot struct {
 	Running       bool   `json:"running"`
 	UserID        int    `json:"user_id,omitempty"`
 	Username      string `json:"username,omitempty"`
+	Mode          string `json:"mode,omitempty"` // "missing" | "replace"
 	PendingStart  int    `json:"pending_at_start"`
 	PendingNow    int    `json:"pending_now"`
 	Processed     int    `json:"processed"`
@@ -124,12 +169,18 @@ type bdCoverJobSnapshot struct {
 	GlobalMissing int    `json:"global_missing"`
 }
 
+type bdCoverQueueItem struct {
+	userID  int
+	replace bool
+}
+
 type bdCoverJobController struct {
 	mu sync.Mutex
 
 	running  bool
 	userID   int
-	queue    []int
+	replace  bool
+	queue    []bdCoverQueueItem
 	workerOn bool
 
 	pendingStart int
@@ -141,33 +192,38 @@ type bdCoverJobController struct {
 	rateLimited  bool
 }
 
-func (c *bdCoverJobController) enqueue(a *App, userID int) {
+func (c *bdCoverJobController) enqueue(a *App, userID int, replace bool) {
 	if a == nil || userID <= 0 {
 		return
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	for _, id := range c.queue {
-		if id == userID {
+	for i, item := range c.queue {
+		if item.userID == userID {
+			if replace {
+				c.queue[i].replace = true
+			}
 			return
 		}
 	}
-	if c.running && c.userID == userID {
-		c.queue = append(c.queue, userID)
+	if c.running && c.userID == userID && c.replace == replace {
+		// Same mode already running: queue another pass so late imports are covered.
+		c.queue = append(c.queue, bdCoverQueueItem{userID: userID, replace: replace})
 		return
 	}
-	c.queue = append(c.queue, userID)
+	c.queue = append(c.queue, bdCoverQueueItem{userID: userID, replace: replace})
 	if !c.workerOn {
 		c.workerOn = true
 		go a.runBdCoverJobQueue()
 	}
 }
 
-func (c *bdCoverJobController) begin(userID, pending int) {
+func (c *bdCoverJobController) begin(userID, pending int, replace bool) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.running = true
 	c.userID = userID
+	c.replace = replace
 	c.pendingStart = pending
 	c.processed = 0
 	c.filled = 0
@@ -182,6 +238,7 @@ func (c *bdCoverJobController) finish() {
 	defer c.mu.Unlock()
 	c.running = false
 	c.userID = 0
+	c.replace = false
 	c.currentTitle = ""
 	c.rateLimited = false
 }
@@ -228,10 +285,23 @@ func (c *bdCoverJobController) markSkipped() {
 func (c *bdCoverJobController) snapshot(pendingNow, globalMissing int, username string) bdCoverJobSnapshot {
 	c.mu.Lock()
 	defer c.mu.Unlock()
+	mode := ""
+	if c.running {
+		if c.replace {
+			mode = "replace"
+		} else {
+			mode = "missing"
+		}
+	}
+	queued := make([]int, 0, len(c.queue))
+	for _, item := range c.queue {
+		queued = append(queued, item.userID)
+	}
 	s := bdCoverJobSnapshot{
 		Running:       c.running,
 		UserID:        c.userID,
 		Username:      username,
+		Mode:          mode,
 		PendingStart:  c.pendingStart,
 		PendingNow:    pendingNow,
 		Processed:     c.processed,
@@ -240,7 +310,7 @@ func (c *bdCoverJobController) snapshot(pendingNow, globalMissing int, username 
 		CurrentTitle:  c.currentTitle,
 		RateLimited:   c.rateLimited,
 		GlobalMissing: globalMissing,
-		QueuedUsers:   append([]int(nil), c.queue...),
+		QueuedUsers:   queued,
 	}
 	if !c.startedAt.IsZero() && c.running {
 		s.StartedAt = c.startedAt.UTC().Format(time.RFC3339)
@@ -260,7 +330,15 @@ func (a *App) scheduleBdCoverEnrichment(userID int) {
 	if a == nil || a.DB == nil || userID <= 0 {
 		return
 	}
-	a.bdCoverJobs.enqueue(a, userID)
+	a.bdCoverJobs.enqueue(a, userID, false)
+}
+
+// scheduleBdCoverReplace refreshes covers for all BD works of a user (overwrites existing images).
+func (a *App) scheduleBdCoverReplace(userID int) {
+	if a == nil || a.DB == nil || userID <= 0 {
+		return
+	}
+	a.bdCoverJobs.enqueue(a, userID, true)
 }
 
 func (a *App) runBdCoverJobQueue() {
@@ -271,47 +349,61 @@ func (a *App) runBdCoverJobQueue() {
 			a.bdCoverJobs.mu.Unlock()
 			return
 		}
-		uid := a.bdCoverJobs.queue[0]
+		item := a.bdCoverJobs.queue[0]
 		a.bdCoverJobs.queue = a.bdCoverJobs.queue[1:]
 		a.bdCoverJobs.mu.Unlock()
 
-		pending := a.countBdMissingCovers(uid)
-		a.bdCoverJobs.begin(uid, pending)
+		pending := a.countBdCoverTargets(item.userID, item.replace)
+		a.bdCoverJobs.begin(item.userID, pending, item.replace)
 		func() {
 			defer func() {
 				if rec := recover(); rec != nil {
-					log.Printf("[bd-covers] queue panic user=%d: %v", uid, rec)
+					log.Printf("[bd-covers] queue panic user=%d replace=%v: %v", item.userID, item.replace, rec)
 				}
 			}()
-			a.enrichBdCoversMissing(uid)
+			a.enrichBdCovers(item.userID, item.replace)
 		}()
 		a.bdCoverJobs.finish()
 	}
 }
 
 func (a *App) countBdMissingCovers(userID int) int {
+	return a.countBdCoverTargets(userID, false)
+}
+
+func (a *App) countBdCoverTargets(userID int, replace bool) int {
 	var n int
+	missingClause := `AND (image_path IS NULL OR TRIM(image_path) = '')`
+	if replace {
+		missingClause = ""
+	}
 	if userID > 0 {
 		_ = a.DB.QueryRow(
-			`SELECT COUNT(*) FROM bd_works
-             WHERE user_id = ? AND (image_path IS NULL OR TRIM(image_path) = '')`,
+			`SELECT COUNT(*) FROM bd_works WHERE user_id = ? `+missingClause,
 			userID,
 		).Scan(&n)
 		return n
 	}
-	_ = a.DB.QueryRow(
-		`SELECT COUNT(*) FROM bd_works
-         WHERE image_path IS NULL OR TRIM(image_path) = ''`,
-	).Scan(&n)
+	_ = a.DB.QueryRow(`SELECT COUNT(*) FROM bd_works WHERE 1=1 ` + missingClause).Scan(&n)
 	return n
 }
 
 func (a *App) listUsersWithMissingBdCovers() []int {
-	rows, err := a.DB.Query(
-		`SELECT DISTINCT user_id FROM bd_works
+	return a.listUsersWithBdCoverTargets(false)
+}
+
+func (a *App) listUsersWithBdWorks() []int {
+	return a.listUsersWithBdCoverTargets(true)
+}
+
+func (a *App) listUsersWithBdCoverTargets(replace bool) []int {
+	q := `SELECT DISTINCT user_id FROM bd_works
          WHERE image_path IS NULL OR TRIM(image_path) = ''
-         ORDER BY user_id`,
-	)
+         ORDER BY user_id`
+	if replace {
+		q = `SELECT DISTINCT user_id FROM bd_works ORDER BY user_id`
+	}
+	rows, err := a.DB.Query(q)
 	if err != nil {
 		return nil
 	}
@@ -333,9 +425,10 @@ func (a *App) bdCoverJobStatus() bdCoverJobSnapshot {
 	a.bdCoverJobs.mu.Lock()
 	running := a.bdCoverJobs.running
 	uid := a.bdCoverJobs.userID
+	replace := a.bdCoverJobs.replace
 	a.bdCoverJobs.mu.Unlock()
 	if running && uid > 0 {
-		pendingUser = a.countBdMissingCovers(uid)
+		pendingUser = a.countBdCoverTargets(uid, replace)
 		_ = a.DB.QueryRow(`SELECT username FROM users WHERE id = ?`, uid).Scan(&username)
 	}
 	global := a.countBdMissingCovers(0)
@@ -347,20 +440,24 @@ func (a *App) bdCoverJobStatus() bdCoverJobSnapshot {
 }
 
 func (a *App) enrichBdCoversMissing(userID int) {
+	a.enrichBdCovers(userID, false)
+}
+
+func (a *App) enrichBdCovers(userID int, replace bool) {
 	defer func() {
 		if rec := recover(); rec != nil {
-			log.Printf("[bd-covers] panic user=%d: %v", userID, rec)
+			log.Printf("[bd-covers] panic user=%d replace=%v: %v", userID, replace, rec)
 		}
 	}()
 	lastID := 0
 	for pass := 0; pass < bdCoverEnrichMaxPasses; pass++ {
-		list, err := a.loadBdMissingCovers(userID, lastID, bdCoverEnrichBatchSize)
+		list, err := a.loadBdCoverTargets(userID, lastID, bdCoverEnrichBatchSize, replace)
 		if err != nil || len(list) == 0 {
 			return
 		}
 		for _, p := range list {
 			lastID = p.id
-			a.enrichOneBdCover(userID, p)
+			a.enrichOneBdCover(userID, p, replace)
 			time.Sleep(bdCoverEnrichPace)
 		}
 		if len(list) < bdCoverEnrichBatchSize {
@@ -374,13 +471,18 @@ type bdCoverPending struct {
 	title      string
 	source     string
 	externalID string
+	isbn       string
 }
 
-func (a *App) loadBdMissingCovers(userID, afterID, limit int) ([]bdCoverPending, error) {
+func (a *App) loadBdCoverTargets(userID, afterID, limit int, replace bool) ([]bdCoverPending, error) {
+	missingClause := `AND (image_path IS NULL OR TRIM(image_path) = '')`
+	if replace {
+		missingClause = ""
+	}
 	rows, err := a.DB.Query(
-		`SELECT id, title, COALESCE(source, ''), COALESCE(external_id, '')
+		`SELECT id, title, COALESCE(source, ''), COALESCE(external_id, ''), COALESCE(isbn, '')
          FROM bd_works
-         WHERE user_id = ? AND id > ? AND (image_path IS NULL OR TRIM(image_path) = '')
+         WHERE user_id = ? AND id > ? `+missingClause+`
          ORDER BY id
          LIMIT ?`,
 		userID, afterID, limit,
@@ -393,7 +495,7 @@ func (a *App) loadBdMissingCovers(userID, afterID, limit int) ([]bdCoverPending,
 	var list []bdCoverPending
 	for rows.Next() {
 		var p bdCoverPending
-		if err := rows.Scan(&p.id, &p.title, &p.source, &p.externalID); err != nil {
+		if err := rows.Scan(&p.id, &p.title, &p.source, &p.externalID, &p.isbn); err != nil {
 			return nil, err
 		}
 		list = append(list, p)
@@ -401,7 +503,7 @@ func (a *App) loadBdMissingCovers(userID, afterID, limit int) ([]bdCoverPending,
 	return list, rows.Err()
 }
 
-func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
+func (a *App) enrichOneBdCover(userID int, p bdCoverPending, replace bool) {
 	defer func() {
 		if rec := recover(); rec != nil {
 			log.Printf("[bd-covers] panic user=%d id=%d title=%q: %v", userID, p.id, p.title, rec)
@@ -411,7 +513,7 @@ func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
 	a.bdCoverJobs.setCurrent(p.title)
 	backoff := bdCoverEnrichInitialBackoff
 	for attempt := 0; attempt < bdCoverEnrichRateRetries; attempt++ {
-		got, err := resolveBdCoverURL(p.source, p.externalID, p.title)
+		got, err := resolveBdCoverURL(p.source, p.externalID, p.title, p.isbn)
 		if catalog.IsOpenLibraryRateLimit(err) {
 			a.bdCoverJobs.setRateLimited(true)
 			log.Printf("[bd-covers] rate limit user=%d id=%d attempt=%d; sleeping %s", userID, p.id, attempt+1, backoff)
@@ -439,14 +541,16 @@ func (a *App) enrichOneBdCover(userID int, p bdCoverPending) {
 				adultArg = 0
 			}
 		}
-		res, err := a.DB.Exec(
-			`UPDATE bd_works SET
+		q := `UPDATE bd_works SET
              image_path = ?,
              is_adult = COALESCE(?, is_adult),
              updated_at = CURRENT_TIMESTAMP
-             WHERE id = ? AND user_id = ? AND (image_path IS NULL OR TRIM(image_path) = '')`,
-			got.URL, adultArg, p.id, userID,
-		)
+             WHERE id = ? AND user_id = ?`
+		args := []any{got.URL, adultArg, p.id, userID}
+		if !replace {
+			q += ` AND (image_path IS NULL OR TRIM(image_path) = '')`
+		}
+		res, err := a.DB.Exec(q, args...)
 		if err != nil {
 			log.Printf("[bd-covers] db update failed user=%d id=%d: %v", userID, p.id, err)
 			a.bdCoverJobs.markSkipped()

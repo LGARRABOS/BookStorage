@@ -107,6 +107,7 @@ var postgresSchemaStatements = []string{
 		is_adult INTEGER NOT NULL DEFAULT 0,
 		source TEXT NOT NULL DEFAULT 'manual',
 		external_id TEXT,
+		isbn TEXT,
 		user_id BIGINT NOT NULL REFERENCES users(id),
 		updated_at TIMESTAMPTZ,
 		started_at TIMESTAMPTZ,
@@ -358,7 +359,10 @@ func ensurePostgresExtraColumns(c *Conn) error {
 	if err := ensureColumnsPostgres(c, "catalog", postgresCatalogColumns); err != nil {
 		return err
 	}
-	return ensureColumnsPostgres(c, "works", postgresWorkColumns)
+	if err := ensureColumnsPostgres(c, "works", postgresWorkColumns); err != nil {
+		return err
+	}
+	return ensureColumnsPostgres(c, "bd_works", map[string]string{"isbn": "TEXT"})
 }
 
 func ensureColumnsPostgres(c *Conn, table string, cols map[string]string) error {

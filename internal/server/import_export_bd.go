@@ -25,6 +25,7 @@ type exportBdWork struct {
 	ImagePath  string `json:"image_path,omitempty"`
 	Source     string `json:"source,omitempty"`
 	ExternalID string `json:"external_id,omitempty"`
+	ISBN       string `json:"isbn,omitempty"`
 	UpdatedAt  string `json:"updated_at,omitempty"`
 	StartedAt  string `json:"started_at,omitempty"`
 	FinishedAt string `json:"finished_at,omitempty"`
@@ -48,6 +49,7 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 		source = "manual"
 	}
 	externalID := strings.TrimSpace(w.ExternalID)
+	isbn := strings.TrimSpace(w.ISBN)
 	isAdult := 0
 	if w.IsAdult {
 		isAdult = 1
@@ -63,6 +65,10 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 	var extArg any
 	if externalID != "" {
 		extArg = externalID
+	}
+	var isbnArg any
+	if isbn != "" {
+		isbnArg = isbn
 	}
 	startedAt := nullIfEmpty(strings.TrimSpace(w.StartedAt))
 	finishedAt := nullIfEmpty(strings.TrimSpace(w.FinishedAt))
@@ -85,9 +91,10 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 		_, err = a.DB.Exec(
 			`UPDATE bd_works SET tome = ?, total_tomes = ?, link = ?, status = ?, bd_type = ?,
              rating = ?, notes = ?, is_adult = ?, image_path = COALESCE(NULLIF(?, ''), image_path), source = ?, external_id = ?,
+             isbn = COALESCE(?, isbn),
              started_at = COALESCE(?, started_at), finished_at = COALESCE(?, finished_at), updated_at = CURRENT_TIMESTAMP
              WHERE id = ? AND user_id = ?`,
-			tome, totalArg, link, status, bdType, rating, notes, isAdult, imgArg, source, extArg,
+			tome, totalArg, link, status, bdType, rating, notes, isAdult, imgArg, source, extArg, isbnArg,
 			startedAt, finishedAt, existsID, userID,
 		)
 		if err != nil {
@@ -100,9 +107,9 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 	}
 
 	_, err = a.DB.Exec(
-		`INSERT INTO bd_works (title, tome, total_tomes, status, bd_type, link, image_path, rating, notes, is_adult, source, external_id, user_id, updated_at, started_at, finished_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
-		title, tome, totalArg, status, bdType, link, imgArg, rating, notes, isAdult, source, extArg, userID, startedAt, finishedAt,
+		`INSERT INTO bd_works (title, tome, total_tomes, status, bd_type, link, image_path, rating, notes, is_adult, source, external_id, isbn, user_id, updated_at, started_at, finished_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?)`,
+		title, tome, totalArg, status, bdType, link, imgArg, rating, notes, isAdult, source, extArg, isbnArg, userID, startedAt, finishedAt,
 	)
 	if err != nil {
 		report.SkippedInvalid++
@@ -168,6 +175,7 @@ func parseBdCSVRecords(records [][]string) ([]exportBdWork, bool) {
 	idxImage := headerIndex(headers, "imagepath", "image_path", "cover")
 	idxSource := headerIndex(headers, "source")
 	idxExt := headerIndex(headers, "externalid", "external_id")
+	idxISBN := headerIndex(headers, "isbn", "ean")
 
 	var out []exportBdWork
 	for i := 1; i < len(records); i++ {
@@ -190,6 +198,7 @@ func parseBdCSVRecords(records [][]string) ([]exportBdWork, bool) {
 			ImagePath:  safeCell(row, idxImage),
 			Source:     safeCell(row, idxSource),
 			ExternalID: safeCell(row, idxExt),
+			ISBN:       safeCell(row, idxISBN),
 		}
 		if w.Source == "" {
 			w.Source = "manual"
@@ -292,6 +301,7 @@ func mapBdgestFormat(raw string) string {
 
 func parseBdgestCSVRecords(records [][]string, headers []string) []exportBdWork {
 	idxID := headerIndex(headers, "idalbum", "id_album")
+	idxISBN := headerIndex(headers, "isbn", "ean")
 	idxSerie := headerIndex(headers, "serie")
 	idxNum := headerIndex(headers, "num", "numero", "numéro")
 	idxTitre := headerIndex(headers, "titre")
@@ -306,6 +316,7 @@ func parseBdgestCSVRecords(records [][]string, headers []string) []exportBdWork 
 		row := records[i]
 		if w, ok := bdgestRowToWork(
 			safeCell(row, idxID),
+			safeCell(row, idxISBN),
 			safeCell(row, idxSerie),
 			safeCell(row, idxNum),
 			safeCell(row, idxTitre),
@@ -328,6 +339,7 @@ func parseBdgestPositionalCSVRecords(records [][]string) []exportBdWork {
 		row := records[i]
 		if w, ok := bdgestRowToWork(
 			safeCell(row, 0),  // IdAlbum
+			safeCell(row, 1),  // ISBN
 			safeCell(row, 2),  // Serie
 			safeCell(row, 3),  // Num
 			safeCell(row, 5),  // Titre
@@ -343,7 +355,7 @@ func parseBdgestPositionalCSVRecords(records [][]string) []exportBdWork {
 	return out
 }
 
-func bdgestRowToWork(id, serie, num, titre, note, wishlist, buy, comment, format string) (exportBdWork, bool) {
+func bdgestRowToWork(id, isbn, serie, num, titre, note, wishlist, buy, comment, format string) (exportBdWork, bool) {
 	title := buildBdgestTitle(serie, titre)
 	if title == "" {
 		return exportBdWork{}, false
@@ -362,6 +374,7 @@ func bdgestRowToWork(id, serie, num, titre, note, wishlist, buy, comment, format
 		Notes:      strings.TrimSpace(comment),
 		Source:     "bdgest",
 		ExternalID: strings.TrimSpace(id),
+		ISBN:       strings.TrimSpace(isbn),
 	}
 	return w, true
 }
@@ -385,7 +398,7 @@ func (a *App) HandleBdExport(w http.ResponseWriter, r *http.Request) {
 	rows, err := a.DB.Query(
 		`SELECT title, COALESCE(tome, 0), total_tomes, COALESCE(link, ''), COALESCE(status, ''), COALESCE(bd_type, ''),
                 COALESCE(rating, 0), COALESCE(notes, ''), COALESCE(is_adult, 0), COALESCE(image_path, ''),
-                COALESCE(source, 'manual'), COALESCE(external_id, ''), `+updatedAtExpr+`,
+                COALESCE(source, 'manual'), COALESCE(external_id, ''), COALESCE(isbn, ''), `+updatedAtExpr+`,
                 `+dateExpr("started_at")+`, `+dateExpr("finished_at")+`
          FROM bd_works WHERE user_id = ? ORDER BY title`,
 		userID,
@@ -403,11 +416,11 @@ func (a *App) HandleBdExport(w http.ResponseWriter, r *http.Request) {
 			total                                                        sql.NullInt64
 			adult                                                        int
 			updatedAt, startedAt, finishedAt, link, status, btype, notes string
-			imagePath, source, extID                                     string
+			imagePath, source, extID, isbn                               string
 		)
 		if err := rows.Scan(
 			&wRow.Title, &wRow.Tome, &total, &link, &status, &btype, &wRow.Rating, &notes, &adult,
-			&imagePath, &source, &extID, &updatedAt, &startedAt, &finishedAt,
+			&imagePath, &source, &extID, &isbn, &updatedAt, &startedAt, &finishedAt,
 		); err != nil {
 			w.WriteHeader(http.StatusInternalServerError)
 			return
@@ -420,6 +433,7 @@ func (a *App) HandleBdExport(w http.ResponseWriter, r *http.Request) {
 		wRow.ImagePath = imagePath
 		wRow.Source = source
 		wRow.ExternalID = extID
+		wRow.ISBN = isbn
 		wRow.UpdatedAt = updatedAt
 		wRow.StartedAt = startedAt
 		wRow.FinishedAt = finishedAt
@@ -447,7 +461,7 @@ func (a *App) HandleBdExport(w http.ResponseWriter, r *http.Request) {
 	cw.Comma = ';'
 	_ = cw.Write([]string{
 		"Title", "Tome", "TotalTomes", "Link", "Status", "Type", "Rating", "Notes",
-		"IsAdult", "ImagePath", "Source", "ExternalID", "StartedAt", "FinishedAt",
+		"IsAdult", "ImagePath", "Source", "ExternalID", "ISBN", "StartedAt", "FinishedAt",
 	})
 	for _, row := range list {
 		adult := "0"
@@ -460,7 +474,7 @@ func (a *App) HandleBdExport(w http.ResponseWriter, r *http.Request) {
 		}
 		_ = cw.Write([]string{
 			row.Title, strconv.Itoa(row.Tome), total, row.Link, row.Status, row.BdType,
-			strconv.Itoa(row.Rating), row.Notes, adult, row.ImagePath, row.Source, row.ExternalID,
+			strconv.Itoa(row.Rating), row.Notes, adult, row.ImagePath, row.Source, row.ExternalID, row.ISBN,
 			row.StartedAt, row.FinishedAt,
 		})
 	}

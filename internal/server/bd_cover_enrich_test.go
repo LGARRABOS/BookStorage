@@ -42,7 +42,7 @@ func TestEnrichBdCoversMissing(t *testing.T) {
 	}()
 	var mu sync.Mutex
 	calls := 0
-	resolveBdCoverURL = func(source, externalID, title string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
 		mu.Lock()
 		calls++
 		mu.Unlock()
@@ -77,6 +77,44 @@ func TestEnrichBdCoversMissing(t *testing.T) {
 	}
 }
 
+func TestEnrichBdCoversReplace(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+
+	_, err := db.Exec(
+		`INSERT INTO bd_works (title, tome, status, bd_type, source, isbn, user_id, updated_at, image_path)
+		 VALUES ('Old Cover', 1, 'Terminé', 'Album', 'bdgest', '9782205070000', 1, CURRENT_TIMESTAMP, 'https://cdn.test/old.jpg')`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	orig := resolveBdCoverURL
+	origPace := bdCoverEnrichPace
+	bdCoverEnrichPace = 0
+	defer func() {
+		resolveBdCoverURL = orig
+		bdCoverEnrichPace = origPace
+	}()
+	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
+		if isbn != "9782205070000" {
+			t.Fatalf("isbn=%q", isbn)
+		}
+		return bdCoverResolve{URL: "https://cdn.test/new.jpg"}, nil
+	}
+
+	app.enrichBdCovers(1, true)
+
+	var img string
+	err = db.QueryRow(`SELECT COALESCE(image_path, '') FROM bd_works WHERE title = 'Old Cover'`).Scan(&img)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if img != "https://cdn.test/new.jpg" {
+		t.Fatalf("expected replaced cover, got %q", img)
+	}
+}
+
 func TestEnrichBdCoversMissing_RetriesRateLimit(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
@@ -100,7 +138,7 @@ func TestEnrichBdCoversMissing_RetriesRateLimit(t *testing.T) {
 	}()
 
 	attempts := 0
-	resolveBdCoverURL = func(source, externalID, title string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
 		attempts++
 		if attempts == 1 {
 			return bdCoverResolve{}, catalog.ErrOpenLibraryRateLimit
@@ -112,7 +150,7 @@ func TestEnrichBdCoversMissing_RetriesRateLimit(t *testing.T) {
 	_ = db.QueryRow(`SELECT id FROM bd_works WHERE title = 'Rate Limited'`).Scan(&id)
 	app.enrichOneBdCover(1, bdCoverPending{
 		id: id, title: "Rate Limited", source: "openlibrary", externalID: "/works/OL9W",
-	})
+	}, false)
 
 	var img string
 	err = db.QueryRow(`SELECT COALESCE(image_path, '') FROM bd_works WHERE title = 'Rate Limited'`).Scan(&img)
@@ -143,7 +181,7 @@ func TestScheduleBdCoverEnrichment(t *testing.T) {
 		resolveBdCoverURL = orig
 		bdCoverEnrichPace = origPace
 	}()
-	resolveBdCoverURL = func(source, externalID, title string) (bdCoverResolve, error) {
+	resolveBdCoverURL = func(source, externalID, title, isbn string) (bdCoverResolve, error) {
 		return bdCoverResolve{URL: "https://cdn.test/async-bd.jpg"}, nil
 	}
 

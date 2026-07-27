@@ -140,6 +140,9 @@
                     <form method="POST" action="/admin/jobs/bd-covers/run">
                         <button type="submit" class="btn btn-primary" {{ if eq .BdCoverGlobalMissing 0 }}disabled{{ end }}>{{ t .T "admin.jobs.bd_covers.run" }}</button>
                     </form>
+                    <form method="POST" action="/admin/jobs/bd-covers/replace">
+                        <button type="submit" class="btn btn-secondary">{{ t .T "admin.jobs.bd_covers.replace" }}</button>
+                    </form>
                     <span class="jobs-meta">{{ t .T "admin.jobs.bd_covers.run_hint" }}</span>
                 </div>
                 </div>

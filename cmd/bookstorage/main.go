@@ -49,6 +49,7 @@ ENVIRONMENT VARIABLES
     BOOKSTORAGE_PUBLIC_ORIGIN         Public site URL without trailing slash (required for Google OAuth), e.g. https://books.example.com
     BOOKSTORAGE_GOOGLE_CLIENT_ID      Google OAuth 2.0 Web client ID (optional; with secret and public origin enables Sign in with Google)
     BOOKSTORAGE_GOOGLE_CLIENT_SECRET  Google OAuth client secret
+    BOOKSTORAGE_GOOGLE_BOOKS_API_KEY  Optional Google Books API key (higher quota for BD cover lookup)
     BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC  Seconds to read the full request (default 15)
     BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC Seconds until response must be fully written (default 120; includes handler time — raise for slow admin batches)
 
@@ -250,6 +251,7 @@ func main() {
 	mux.HandleFunc("/admin/jobs", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminJobs)))
 	mux.HandleFunc("POST /admin/jobs/covers/run", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminJobsRunCovers)))
 	mux.HandleFunc("POST /admin/jobs/bd-covers/run", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminJobsRunBdCovers)))
+	mux.HandleFunc("POST /admin/jobs/bd-covers/replace", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminJobsReplaceBdCovers)))
 	mux.HandleFunc("GET /api/admin/instance-stats", app.RequireAdmin(app.HandleAPIAdminInstanceStats))
 	mux.HandleFunc("GET /api/admin/jobs", app.RequireAdmin(app.HandleAPIAdminJobs))
 	mux.HandleFunc("POST /auth/webauthn/register/begin", app.RequireLogin(app.HandleWebAuthnRegisterBegin))

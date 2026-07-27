@@ -79,6 +79,7 @@ CREATE TABLE IF NOT EXISTS bd_works (
     is_adult INTEGER DEFAULT 0,
     source TEXT DEFAULT 'manual',
     external_id TEXT,
+    isbn TEXT,
     user_id INTEGER NOT NULL,
     updated_at DATETIME,
     started_at DATETIME,
@@ -188,6 +189,10 @@ var workColumns = map[string]string{
 	"link_probe_at":          "DATETIME",
 	"link_probe_http_status": "INTEGER",
 	"link_probe_detail":      "TEXT",
+}
+
+var bdWorksColumns = map[string]string{
+	"isbn": "TEXT",
 }
 
 // sqliteDataSourceName appends go-sqlite3 DSN options (WAL, busy wait, foreign keys).
@@ -306,6 +311,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 		return err
 	}
 	if _, err := db.Exec(createBdWorksTableSQL); err != nil {
+		return err
+	}
+	if err := ensureColumnsSQLite(db, "bd_works", bdWorksColumns); err != nil {
 		return err
 	}
 	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {

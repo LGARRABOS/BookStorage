@@ -34,6 +34,9 @@ func TestParseBdgestCSVRecords(t *testing.T) {
 	if got.Title != "Astérix — Le combat des chefs" {
 		t.Fatalf("title=%q", got.Title)
 	}
+	if got.ISBN != "9782205070000" {
+		t.Fatalf("isbn=%q", got.ISBN)
+	}
 	if got.Tome != 7 || got.Status != "Terminé" || got.Source != "bdgest" || got.ExternalID != "12345" {
 		t.Fatalf("owned row: %+v", got)
 	}
@@ -76,6 +79,7 @@ func TestParseBdgestPositionalCSV(t *testing.T) {
 	// IdAlbum;ISBN;Serie;Num;NumA;Titre;… Note@15 … Wishlist@18 … Format@24 … Commentaire@26
 	row := make([]string, 27)
 	row[0] = "777"
+	row[1] = "9782205070999"
 	row[2] = "Thorgal"
 	row[3] = "1"
 	row[5] = "La magicienne trahie"
@@ -90,6 +94,9 @@ func TestParseBdgestPositionalCSV(t *testing.T) {
 	}
 	if rows[0].Title != "Thorgal — La magicienne trahie" || rows[0].Tome != 1 || rows[0].ExternalID != "777" {
 		t.Fatalf("got %+v", rows[0])
+	}
+	if rows[0].ISBN != "9782205070999" {
+		t.Fatalf("isbn=%q", rows[0].ISBN)
 	}
 	if rows[0].Rating != 5 { // 9/10 → (9+1)/2 = 5
 		t.Fatalf("rating=%d", rows[0].Rating)
@@ -135,16 +142,19 @@ func TestImportFromCSV_Bdgest(t *testing.T) {
 		t.Fatalf("status %d", rec.Code)
 	}
 
-	var title, status, source, extID, notes string
+	var title, status, source, extID, notes, isbn string
 	var tome, rating int
 	err = db.QueryRow(
-		`SELECT title, tome, status, rating, notes, source, COALESCE(external_id, '') FROM bd_works WHERE user_id = 1 LIMIT 1`,
-	).Scan(&title, &tome, &status, &rating, &notes, &source, &extID)
+		`SELECT title, tome, status, rating, notes, source, COALESCE(external_id, ''), COALESCE(isbn, '') FROM bd_works WHERE user_id = 1 LIMIT 1`,
+	).Scan(&title, &tome, &status, &rating, &notes, &source, &extID, &isbn)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if title != "Lucky Luke — Les collines noires" || tome != 12 || status != "Terminé" || source != "bdgest" || extID != "55" {
 		t.Fatalf("got title=%q tome=%d status=%q source=%q ext=%q", title, tome, status, source, extID)
+	}
+	if isbn != "9782" {
+		t.Fatalf("isbn=%q", isbn)
 	}
 	if rating != 4 || notes != "Western" { // 7/10 → 4★
 		t.Fatalf("rating=%d notes=%q", rating, notes)

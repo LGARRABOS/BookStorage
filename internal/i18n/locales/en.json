@@ -1046,7 +1046,7 @@
   "tools.section.bd.desc": "Import and export your BD collection.",
   "tools.bd.export.subtitle": "Download your BD list as CSV or JSON.",
   "tools.bd.import.subtitle": "Import a BookStorage export (CSV or JSON) or a BDGest Online backup CSV.",
-  "tools.import.format_hint_bd": "Ratings are out of 5. Also: BDGest backup CSV (Tools → Backup). Missing covers can be fetched via Open Library (admin → Jobs). Typical source: openlibrary, bdgest, or manual.",
+  "tools.import.format_hint_bd": "Ratings are out of 5. Also: BDGest backup CSV (Tools → Backup). Missing covers can be fetched via BnF/Google Books/Open Library (admin → Jobs). Typical source: openlibrary, bdgest, or manual.",
   "mobile.bd.tab.watching": "Reading",
   "mobile.bd.tab.all": "All",
   "mobile.bd.tab.plan": "Plan to read",
@@ -1056,8 +1056,9 @@
   "bd.album_number": "Vol.",
   "bd.series_tomes": "series",
   "admin.jobs.bd_covers.title": "BD covers",
-  "admin.jobs.bd_covers.desc": "Open Library requests to fill missing images (BDGest import, manual entries, etc.).",
-  "admin.jobs.bd_covers.rate_limited": "Paused (Open Library rate limit)…",
-  "admin.jobs.bd_covers.run": "Start / resume BD",
-  "admin.jobs.bd_covers.run_hint": "Queues every account that still has missing BD covers."
+  "admin.jobs.bd_covers.desc": "BnF → Google Books → Open Library (ISBN then title). Fill missing covers or replace existing images.",
+  "admin.jobs.bd_covers.rate_limited": "Paused (cover API rate limit)…",
+  "admin.jobs.bd_covers.run": "Missing only",
+  "admin.jobs.bd_covers.replace": "Replace all",
+  "admin.jobs.bd_covers.run_hint": "Missing: accounts without an image. Replace: re-fetch and overwrite every BD cover."
 }

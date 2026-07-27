@@ -68,6 +68,18 @@ func (a *App) HandleAdminJobsRunBdCovers(w http.ResponseWriter, r *http.Request)
 	http.Redirect(w, r, "/admin/jobs?started=1", http.StatusFound)
 }
 
+// HandleAdminJobsReplaceBdCovers re-fetches covers for all BD works (overwrites existing images).
+func (a *App) HandleAdminJobsReplaceBdCovers(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+	for _, uid := range a.listUsersWithBdWorks() {
+		a.scheduleBdCoverReplace(uid)
+	}
+	http.Redirect(w, r, "/admin/jobs?started=1", http.StatusFound)
+}
+
 func formatDurationSeconds(sec *int) string {
 	if sec == nil {
 		return ""

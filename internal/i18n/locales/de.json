@@ -997,8 +997,9 @@
   "bd.album_number": "Vol.",
   "bd.series_tomes": "series",
   "admin.jobs.bd_covers.title": "BD covers",
-  "admin.jobs.bd_covers.desc": "Open Library requests to fill missing images (BDGest import, manual entries, etc.).",
-  "admin.jobs.bd_covers.rate_limited": "Paused (Open Library rate limit)…",
-  "admin.jobs.bd_covers.run": "Start / resume BD",
-  "admin.jobs.bd_covers.run_hint": "Queues every account that still has missing BD covers."
+  "admin.jobs.bd_covers.desc": "BnF → Google Books → Open Library (ISBN then title). Fill missing covers or replace existing images.",
+  "admin.jobs.bd_covers.rate_limited": "Paused (cover API rate limit)…",
+  "admin.jobs.bd_covers.run": "Missing only",
+  "admin.jobs.bd_covers.replace": "Replace all",
+  "admin.jobs.bd_covers.run_hint": "Missing: accounts without an image. Replace: re-fetch and overwrite every BD cover."
 }
