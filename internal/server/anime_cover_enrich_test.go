@@ -2,8 +2,11 @@ package server
 
 import (
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
+
+	"bookstorage/internal/catalog"
 )
 
 func TestEnrichAnimeCoversMissing(t *testing.T) {
@@ -22,17 +25,22 @@ func TestEnrichAnimeCoversMissing(t *testing.T) {
 	_, _ = db.Exec(`UPDATE anime_works SET image_path = 'https://cdn.test/existing.jpg' WHERE title = 'Has Cover'`)
 
 	orig := resolveAnimeCoverURL
-	defer func() { resolveAnimeCoverURL = orig }()
+	origPace := animeCoverEnrichPace
+	animeCoverEnrichPace = 0
+	defer func() {
+		resolveAnimeCoverURL = orig
+		animeCoverEnrichPace = origPace
+	}()
 	var mu sync.Mutex
 	calls := 0
-	resolveAnimeCoverURL = func(source, externalID, title string) string {
+	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
 		mu.Lock()
 		calls++
 		mu.Unlock()
 		if title == "Needs Cover" && source == "mal" && externalID == "21" {
-			return "https://cdn.test/one-piece.jpg"
+			return "https://cdn.test/one-piece.jpg", nil
 		}
-		return ""
+		return "", nil
 	}
 
 	app.enrichAnimeCoversMissing(1)
@@ -60,6 +68,51 @@ func TestEnrichAnimeCoversMissing(t *testing.T) {
 	}
 }
 
+func TestEnrichAnimeCoversMissing_RetriesRateLimit(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	res, err := db.Exec(
+		`INSERT INTO anime_works (title, episode, status, anime_type, source, external_id, user_id, updated_at)
+		 VALUES ('Rate Limited', 1, 'En cours', 'TV', 'mal', '21', 1, CURRENT_TIMESTAMP)`,
+	)
+	if err != nil {
+		t.Fatal(err)
+	}
+	workID, _ := res.LastInsertId()
+
+	orig := resolveAnimeCoverURL
+	origSleep := animeCoverEnrichRateLimitSleep
+	origBackoff := animeCoverEnrichInitialBackoff
+	animeCoverEnrichRateLimitSleep = func(time.Duration) {}
+	animeCoverEnrichInitialBackoff = time.Millisecond
+	defer func() {
+		resolveAnimeCoverURL = orig
+		animeCoverEnrichRateLimitSleep = origSleep
+		animeCoverEnrichInitialBackoff = origBackoff
+	}()
+
+	var attempts atomic.Int32
+	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
+		if attempts.Add(1) == 1 {
+			return "", catalog.ErrAnilistRateLimit
+		}
+		return "https://cdn.test/after-retry.jpg", nil
+	}
+
+	app.enrichOneAnimeCover(1, animeCoverPending{
+		id: int(workID), title: "Rate Limited", source: "mal", externalID: "21",
+	})
+
+	if attempts.Load() != 2 {
+		t.Fatalf("expected 2 attempts (rate-limit then ok), got %d", attempts.Load())
+	}
+	var img string
+	_ = db.QueryRow(`SELECT COALESCE(image_path,'') FROM anime_works WHERE id = ?`, workID).Scan(&img)
+	if img != "https://cdn.test/after-retry.jpg" {
+		t.Fatalf("got %q", img)
+	}
+}
+
 func TestScheduleAnimeCoverEnrichment(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
@@ -73,10 +126,15 @@ func TestScheduleAnimeCoverEnrichment(t *testing.T) {
 
 	done := make(chan struct{})
 	orig := resolveAnimeCoverURL
-	defer func() { resolveAnimeCoverURL = orig }()
-	resolveAnimeCoverURL = func(source, externalID, title string) string {
+	origPace := animeCoverEnrichPace
+	animeCoverEnrichPace = 0
+	defer func() {
+		resolveAnimeCoverURL = orig
+		animeCoverEnrichPace = origPace
+	}()
+	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
 		defer close(done)
-		return "https://cdn.test/async.jpg"
+		return "https://cdn.test/async.jpg", nil
 	}
 
 	app.scheduleAnimeCoverEnrichment(1)
@@ -85,7 +143,6 @@ func TestScheduleAnimeCoverEnrichment(t *testing.T) {
 	case <-time.After(2 * time.Second):
 		t.Fatal("enrichment did not run")
 	}
-	// allow UPDATE to commit
 	deadline := time.Now().Add(2 * time.Second)
 	for time.Now().Before(deadline) {
 		var img string
@@ -96,4 +153,26 @@ func TestScheduleAnimeCoverEnrichment(t *testing.T) {
 		time.Sleep(20 * time.Millisecond)
 	}
 	t.Fatal("async cover not applied")
+}
+
+func TestParseMALAnimeCSVRecords_SetsExternalID(t *testing.T) {
+	records := [][]string{
+		{"series_animedb_id", "series_title", "series_type", "series_episodes", "my_watched_episodes", "my_score", "my_status"},
+		{"21", "One Piece", "TV", "1000", "10", "9", "Watching"},
+		{"", "No ID Show", "TV", "12", "1", "0", "Plan to Watch"},
+	}
+	headers := make([]string, len(records[0]))
+	for i, h := range records[0] {
+		headers[i] = normalizeHeader(h)
+	}
+	out := parseMALAnimeCSVRecords(records, headers)
+	if len(out) != 2 {
+		t.Fatalf("got %d rows", len(out))
+	}
+	if out[0].Source != "mal" || out[0].ExternalID != "21" {
+		t.Fatalf("row0 source/id = %q/%q", out[0].Source, out[0].ExternalID)
+	}
+	if out[1].Source != "mal" || out[1].ExternalID != "" {
+		t.Fatalf("row1 source/id = %q/%q", out[1].Source, out[1].ExternalID)
+	}
 }

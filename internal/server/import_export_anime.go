@@ -162,6 +162,7 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 	idxScore := headerIndex(headers, "my_score")
 	idxType := headerIndex(headers, "series_type")
 	idxTotal := headerIndex(headers, "series_episodes")
+	idxMALID := headerIndex(headers, "series_animedb_id", "series_anime_db_id", "anime_id", "mal_id")
 
 	var out []exportAnimeWork
 	for i := 1; i < len(records); i++ {
@@ -178,10 +179,16 @@ func parseMALAnimeCSVRecords(records [][]string, headers []string) []exportAnime
 			Status:    normalizeAnimeStatusForWrite(mapMALAnimeStatus(safeCell(row, idxStatus))),
 			AnimeType: normalizeAnimeTypeForWrite(mapMALAnimeType(safeCell(row, idxType))),
 			Rating:    malScoreToStars(rating),
-			Source:    "manual",
+			Source:    "mal",
 		}
 		if tot, err := strconv.Atoi(safeCell(row, idxTotal)); err == nil && tot > 0 {
 			w.TotalEpisodes = &tot
+		}
+		if malID := strings.TrimSpace(safeCell(row, idxMALID)); malID != "" {
+			if id, err := strconv.Atoi(malID); err == nil && id > 0 {
+				w.ExternalID = strconv.Itoa(id)
+				w.Link = "https://myanimelist.net/anime/" + w.ExternalID
+			}
 		}
 		out = append(out, w)
 	}

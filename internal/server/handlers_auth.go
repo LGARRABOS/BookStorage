@@ -85,7 +85,10 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 	case http.MethodGet:
 		// Messages de feedback via query string
 		q := r.URL.Query()
-		loginNext := safePostLoginRedirect(q.Get("next"))
+		loginNext := resolvePostLoginRedirect(q.Get("next"))
+		if loginNext == pathHub {
+			loginNext = ""
+		}
 		googleAuthURL := "/auth/google"
 		if loginNext != "" {
 			googleAuthURL = "/auth/google?next=" + url.QueryEscape(loginNext)
@@ -158,11 +161,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.setSessionCookie(w, token, sessionSlidingTTL)
-		dest := safePostLoginRedirect(strings.TrimSpace(r.FormValue("next")))
-		if dest == "" {
-			dest = pathHub
-		}
-		http.Redirect(w, r, dest, http.StatusFound)
+		http.Redirect(w, r, resolvePostLoginRedirect(strings.TrimSpace(r.FormValue("next"))), http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}

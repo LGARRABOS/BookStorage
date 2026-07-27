@@ -1,7 +1,6 @@
 package server
 
 import (
-	"bookstorage/internal/i18n"
 	"net/http"
 )
 
@@ -30,13 +29,10 @@ func (a *App) HandleHub(w http.ResponseWriter, r *http.Request) {
 		userID, "En cours",
 	).Scan(&animeInProgress)
 
-	tr := i18n.T(a.currentLang(r))
-
 	w.Header().Set("Cache-Control", "no-store")
 	a.renderTemplate(w, r, "hub", a.mergeData(r, map[string]any{
-		"IsAdmin":           isAdmin == 1,
-		"HubWorksProgress":  worksInProgress,
-		"HubAnimeProgress":  animeInProgress,
-		"MobileTopbarTitle": tr["hub.title"],
+		"IsAdmin":          isAdmin == 1,
+		"HubWorksProgress": worksInProgress,
+		"HubAnimeProgress": animeInProgress,
 	}))
 }

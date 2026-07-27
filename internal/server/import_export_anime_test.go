@@ -358,10 +358,15 @@ func TestImportAnimeDuplicateSkip_SchedulesEnrichment(t *testing.T) {
 
 	done := make(chan struct{})
 	orig := resolveAnimeCoverURL
-	defer func() { resolveAnimeCoverURL = orig }()
-	resolveAnimeCoverURL = func(source, externalID, title string) string {
+	origPace := animeCoverEnrichPace
+	animeCoverEnrichPace = 0
+	defer func() {
+		resolveAnimeCoverURL = orig
+		animeCoverEnrichPace = origPace
+	}()
+	resolveAnimeCoverURL = func(source, externalID, title string) (string, error) {
 		defer close(done)
-		return "https://cdn.test/enriched.jpg"
+		return "https://cdn.test/enriched.jpg", nil
 	}
 
 	var b bytes.Buffer

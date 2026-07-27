@@ -226,12 +226,46 @@ func safePostLoginRedirect(s string) string {
 	return s
 }
 
+func postLoginPathOnly(dest string) string {
+	pathOnly := dest
+	if i := strings.IndexByte(dest, '?'); i >= 0 {
+		pathOnly = dest[:i]
+	}
+	pathOnly = strings.TrimSuffix(strings.TrimSpace(pathOnly), "/")
+	if pathOnly == "" {
+		return pathHub
+	}
+	return pathOnly
+}
+
+// isSectionHomePath reports whether path (no query) is a module home. After login
+// these should open the hub so the user chooses Manga vs Anime instead of
+// landing directly inside one section (common with PWA start URLs / bookmarks).
+func isSectionHomePath(p string) bool {
+	switch postLoginPathOnly(p) {
+	case pathHub, "/dashboard", pathMangaDashboard, pathAnimeDashboard:
+		return true
+	default:
+		return false
+	}
+}
+
+// resolvePostLoginRedirect returns the destination after a successful login.
+// Empty or unsafe values, and module section homes, resolve to the hub.
+func resolvePostLoginRedirect(s string) string {
+	dest := safePostLoginRedirect(s)
+	if dest == "" || isSectionHomePath(dest) {
+		return pathHub
+	}
+	return dest
+}
+
 // safeLanguageRedirect returns a path+query from Referer only if same host as r; otherwise fallback.
 // Prevents open redirects via Referer after POST/GET /lang/{lang}.
 func safeLanguageRedirect(r *http.Request, fallback string) string {
 	fallback = strings.TrimSpace(fallback)
 	if fallback == "" || !strings.HasPrefix(fallback, "/") || strings.HasPrefix(fallback, "//") {
-		fallback = "/dashboard"
+		fallback = pathHub
 	}
 	ref := strings.TrimSpace(r.Header.Get("Referer"))
 	if ref == "" {
@@ -269,7 +303,7 @@ func loginRedirectURL(r *http.Request) string {
 		next += "?" + r.URL.RawQuery
 	}
 	next = safePostLoginRedirect(next)
-	if next == "" {
+	if next == "" || isSectionHomePath(next) {
 		return "/login"
 	}
 	return "/login?next=" + url.QueryEscape(next)

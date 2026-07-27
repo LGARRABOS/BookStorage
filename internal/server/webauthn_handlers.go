@@ -283,11 +283,10 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	a.setSessionCookie(w, token, sessionSlidingTTL)
-	redirect := safePostLoginRedirect(r.URL.Query().Get("next"))
-	if redirect == "" {
-		redirect = pathHub
-	}
-	a.apiWriteJSON(w, http.StatusOK, map[string]any{"ok": true, "redirect": redirect})
+	a.apiWriteJSON(w, http.StatusOK, map[string]any{
+		"ok":       true,
+		"redirect": resolvePostLoginRedirect(r.URL.Query().Get("next")),
+	})
 }
 
 func (a *App) webAuthnManagePath(r *http.Request) string {

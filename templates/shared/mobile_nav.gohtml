@@ -134,9 +134,9 @@
         <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
         <span>{{ t .T "mobile.nav.catalog" }}</span>
     </a>
-    <a href="/manga/stats" class="mobile-bottom-link" data-nav="/manga/stats">
-        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
-        <span>{{ t .T "mobile.nav.stats" }}</span>
+    <a href="/" class="mobile-bottom-link" data-nav="/">
+        <svg class="mobile-nav-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7"/><path d="M9 22V12h6v10"/></svg>
+        <span>{{ t .T "mobile.nav.home" }}</span>
     </a>
     {{ end }}
     <button type="button" class="mobile-bottom-link" id="mobile-account-open" data-nav="/account" aria-label="{{ t .T "mobile.nav.account" }}">

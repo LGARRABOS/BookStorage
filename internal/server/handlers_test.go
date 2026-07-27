@@ -957,6 +957,26 @@ func TestSafePostLoginRedirect(t *testing.T) {
 	}
 }
 
+func TestResolvePostLoginRedirect(t *testing.T) {
+	cases := []struct {
+		in, want string
+	}{
+		{"", pathHub},
+		{"/manga/dashboard", pathHub},
+		{"/manga/dashboard?view=mobile", pathHub},
+		{"/anime/dashboard", pathHub},
+		{"/dashboard", pathHub},
+		{"/admin/accounts", "/admin/accounts"},
+		{"/manga/work/12", "/manga/work/12"},
+		{"//evil.com", pathHub},
+	}
+	for _, tc := range cases {
+		if got := resolvePostLoginRedirect(tc.in); got != tc.want {
+			t.Fatalf("resolvePostLoginRedirect(%q) = %q, want %q", tc.in, got, tc.want)
+		}
+	}
+}
+
 func TestSafeLanguageRedirect(t *testing.T) {
 	host := "example.com:5000"
 	mk := func(referer string) *http.Request {
@@ -979,7 +999,7 @@ func TestSafeLanguageRedirect(t *testing.T) {
 	if got := safeLanguageRedirect(mk(""), "/custom"); got != "/custom" {
 		t.Fatalf("no Referer: got %q", got)
 	}
-	if got := safeLanguageRedirect(mk(""), ""); got != "/dashboard" {
+	if got := safeLanguageRedirect(mk(""), ""); got != pathHub {
 		t.Fatalf("empty fallback normalizes: got %q", got)
 	}
 }
@@ -1121,6 +1141,25 @@ func TestRequireAdmin_RedirectToLoginIncludesNext(t *testing.T) {
 	}
 	if u.Query().Get("next") != "/admin/accounts" {
 		t.Fatalf("next param: %q", u.Query().Get("next"))
+	}
+}
+
+func TestHandleLogin_PostRedirectsSectionHomeToHub(t *testing.T) {
+	db, s := openTestDB(t)
+	app := &App{Settings: s, DB: db}
+	form := url.Values{}
+	form.Set("username", "admin")
+	form.Set("password", "TestAdmin!99")
+	form.Set("next", "/manga/dashboard")
+	req := httptest.NewRequest(http.MethodPost, "/login", strings.NewReader(form.Encode()))
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	rec := httptest.NewRecorder()
+	app.HandleLogin(rec, req)
+	if rec.Code != http.StatusFound {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	if g := rec.Header().Get("Location"); g != pathHub {
+		t.Fatalf("Location %q, want hub", g)
 	}
 }
 
