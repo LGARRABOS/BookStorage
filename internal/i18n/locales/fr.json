@@ -999,6 +999,7 @@
   "library.subtitle": "Meubles, étagères et cases pour retrouver chaque tome.",
   "library.nav.home": "Meubles",
   "library.nav.unassigned": "Non rangés",
+  "library.nav.view": "Vue 3D",
   "library.search.label": "Où est… ?",
   "library.search.placeholder": "Titre, code A5-6, pièce…",
   "library.search.submit": "Chercher",

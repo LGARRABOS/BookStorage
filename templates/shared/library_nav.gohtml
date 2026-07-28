@@ -1,11 +1,28 @@
 {{ define "library_topbar" }}
-<header class="topbar">
-    <div class="container nav-layout">
-        {{ template "site_brand_dashboard" . }}
-        <nav class="nav-links">
-            <a href="/library/">{{ t .T "library.nav.home" }}</a>
-            <a href="/library/unassigned">{{ t .T "library.nav.unassigned" }}</a>
-            <a href="/">{{ t .T "hub.nav.back" }}</a>
+<header class="topbar library-iso-topbar">
+    <div class="container nav-layout library-iso-nav-layout">
+        <a class="brand library-iso-brand" href="/library/">
+            {{ template "site_brand_inner" . }}
+            <span class="library-iso-brand-label">{{ t .T "library.title" }}</span>
+        </a>
+        <nav class="nav-links library-iso-nav" aria-label="{{ t .T "library.title" }}">
+            <a href="/library/"
+               class="library-iso-nav-link{{ if or (eq .CurrentPath "/library/") (eq .CurrentPath "/library") (hasPrefix .CurrentPath "/library/furniture/new") }} is-active{{ end }}">
+                {{ t .T "library.nav.home" }}
+            </a>
+            <a href="/library/unassigned"
+               class="library-iso-nav-link{{ if eq .CurrentPath "/library/unassigned" }} is-active{{ end }}">
+                {{ t .T "library.nav.unassigned" }}
+            </a>
+            {{ if and .Furniture .Furniture.ID }}
+            {{ $viewPath := printf "/library/furniture/%d" .Furniture.ID }}
+            {{ $editPath := printf "/library/furniture/%d/edit" .Furniture.ID }}
+            <a href="{{ $viewPath }}"
+               class="library-iso-nav-link{{ if or (eq .CurrentPath $viewPath) (eq .CurrentPath $editPath) }} is-active{{ end }}">
+                {{ t .T "library.nav.view" }}
+            </a>
+            {{ end }}
+            <a href="/" class="library-iso-nav-link library-iso-nav-link--muted">{{ t .T "hub.nav.back" }}</a>
             {{ template "nav_settings_dropdown" . }}
         </nav>
     </div>

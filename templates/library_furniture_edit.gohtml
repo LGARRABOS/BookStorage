@@ -4,17 +4,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-    <meta name="theme-color" content="#4f46e5">
+    <meta name="theme-color" content="#0f1419">
     {{ template "site_head_icons" . }}
     <title>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=3">
     <script src="/static/js/appearance-init.js"></script>
 </head>
-<body>
+<body class="library-iso-body">
     {{ template "library_topbar" . }}
-    <main class="page-body">
+    <main class="page-body library-iso-page">
         <div class="container library-page form-page">
             <div class="form-header">
                 <div class="form-header-title">

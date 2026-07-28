@@ -1055,5 +1055,6 @@
   "library.badge.stored": "Stored:",
   "library.badge.link": "View grid",
   "library.iso.pick": "Click a cubby to view or place volumes.",
-  "library.iso.panel_title": "Slot"
+  "library.iso.panel_title": "Slot",
+  "library.nav.view": "Vista 3D"
 }

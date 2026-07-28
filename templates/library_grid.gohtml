@@ -9,12 +9,12 @@
     <title>{{ .Furniture.Name }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=2">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=3">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
     {{ template "library_topbar" . }}
-    <main class="page-body">
+    <main class="page-body library-iso-page">
         <div class="library-iso-layout"
              id="library-grid-root"
              data-furniture-id="{{ .Furniture.ID }}"
