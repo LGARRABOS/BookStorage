@@ -88,7 +88,7 @@
                             <input type="number" id="library-new-cases" min="1" max="50" value="10">
                         </label>
                         <label class="library-cases-label" title="{{ t .T "library.shelves.books_hint" }}">{{ t .T "library.shelves.books_per_case" }}
-                            <input type="number" id="library-new-books" min="2" max="24" value="8">
+                            <input type="number" id="library-new-books" min="2" max="120" value="8">
                         </label>
                         <button type="button" class="btn btn-primary" id="library-add-shelf-btn">{{ t .T "library.shelves.add" }}</button>
                     </div>
@@ -114,7 +114,7 @@
     <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if not .IsNew }}
-    <script src="/static/js/library-edit.js?v=4"></script>
+    <script src="/static/js/library-edit.js?v=5"></script>
     {{ end }}
 </body>
 </html>

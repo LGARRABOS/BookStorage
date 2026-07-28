@@ -37,7 +37,7 @@
   function clampBooks(n) {
     n = parseInt(n, 10);
     if (isNaN(n)) return 8;
-    return Math.max(2, Math.min(24, n));
+    return Math.max(2, Math.min(120, n));
   }
 
   function normalizeShelf(s) {
@@ -90,12 +90,20 @@
 
   function cubbyMetrics(booksPerCase) {
     var cap = clampBooks(booksPerCase);
-    var slot = cap <= 4 ? 15 : cap <= 8 ? 12 : cap <= 12 ? 10 : cap <= 16 ? 8 : 7;
+    var slot =
+      cap <= 4 ? 15 :
+      cap <= 8 ? 12 :
+      cap <= 12 ? 10 :
+      cap <= 16 ? 8 :
+      cap <= 24 ? 7 :
+      cap <= 40 ? 5 :
+      cap <= 70 ? 4 :
+      3;
     return {
       cap: cap,
       slot: slot,
       w: cap * slot + 16,
-      h: Math.round(Math.max(110, (cap * slot + 16) * 1.48)),
+      h: Math.round(Math.max(110, Math.min(220, (cap * slot + 16) * 0.55 + 90))),
     };
   }
 
@@ -206,7 +214,7 @@
         '"></label>';
       html += '<label class="library-shelf-field">' + esc(i18n.books);
       html +=
-        '<input type="number" class="library-books-input" min="2" max="24" value="' +
+        '<input type="number" class="library-books-input" min="2" max="120" value="' +
         shelf.books_per_case +
         '"></label>';
       html +=

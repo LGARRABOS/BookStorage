@@ -160,8 +160,8 @@ func clampLibraryBooksPerCase(n int) int {
 	if n < 2 {
 		return 2
 	}
-	if n > 24 {
-		return 24
+	if n > 120 {
+		return 120
 	}
 	return n
 }
