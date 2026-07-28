@@ -35,7 +35,9 @@ func (a *App) HandleLibraryHome(w http.ResponseWriter, r *http.Request) {
 	}
 	lang := a.currentLang(r)
 	a.renderTemplate(w, r, "library_home", a.mergeData(r, map[string]any{
-		"Furniture":         furniture,
+		// FurnitureList (slice) — do not pass as "Furniture": library_topbar
+		// expects a single furniture row with .ID (slice.ID panics → 500).
+		"FurnitureList":     furniture,
 		"SearchQ":           q,
 		"SearchResults":     searchResults,
 		"MobileTopbarTitle": i18n.T(lang)["library.title"],

@@ -9,7 +9,7 @@
     <title>{{ t .T "library.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=3">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=6">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
@@ -52,9 +52,9 @@
             {{ end }}
 
             <section class="library-furniture-list" aria-label="{{ t .T "library.furniture.list" }}">
-                {{ if .Furniture }}
+                {{ if .FurnitureList }}
                 <div class="library-furniture-grid">
-                    {{ range .Furniture }}
+                    {{ range .FurnitureList }}
                     <a class="library-furniture-card" href="/library/furniture/{{ .ID }}">
                         <span class="library-furniture-card-title">{{ .Name }}</span>
                         {{ if .RoomLabel.Valid }}<span class="library-furniture-card-room">{{ .RoomLabel.String }}</span>{{ end }}

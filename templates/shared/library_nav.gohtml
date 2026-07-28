@@ -14,13 +14,18 @@
                class="library-iso-nav-link{{ if eq .CurrentPath "/library/unassigned" }} is-active{{ end }}">
                 {{ t .T "library.nav.unassigned" }}
             </a>
-            {{ if and .Furniture .Furniture.ID }}
-            {{ $viewPath := printf "/library/furniture/%d" .Furniture.ID }}
-            {{ $editPath := printf "/library/furniture/%d/edit" .Furniture.ID }}
+            {{/* .Furniture must be a single row (never a slice — that 500s on .ID). */}}
+            {{ if .Furniture }}
+            {{ with .Furniture }}
+            {{ if gt .ID 0 }}
+            {{ $viewPath := printf "/library/furniture/%d" .ID }}
+            {{ $editPath := printf "/library/furniture/%d/edit" .ID }}
             <a href="{{ $viewPath }}"
-               class="library-iso-nav-link{{ if or (eq .CurrentPath $viewPath) (eq .CurrentPath $editPath) }} is-active{{ end }}">
-                {{ t .T "library.nav.view" }}
+               class="library-iso-nav-link{{ if or (eq $.CurrentPath $viewPath) (eq $.CurrentPath $editPath) }} is-active{{ end }}">
+                {{ t $.T "library.nav.view" }}
             </a>
+            {{ end }}
+            {{ end }}
             {{ end }}
             <a href="/" class="library-iso-nav-link library-iso-nav-link--muted">{{ t .T "hub.nav.back" }}</a>
             {{ template "nav_settings_dropdown" . }}

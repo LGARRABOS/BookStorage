@@ -720,50 +720,67 @@ body.library-iso-body .library-code {
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.5rem 3rem;
+  perspective: 1400px;
 }
 
 .library-iso-world {
   transform-origin: center center;
   transition: transform 0.15s ease;
-  padding: 2rem 3rem 4rem;
+  padding: 1.5rem 2.5rem 2.5rem;
 }
 
+/* Upright bookcase: shelves stack in height, cases run along width */
 .library-iso-grid {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1.1rem;
-  transform: rotateX(52deg) rotateZ(-32deg);
+  gap: 0.4rem;
+  padding: 0.55rem 0.55rem 0.7rem 0.55rem;
+  background:
+    linear-gradient(180deg, #6b4a2e 0%, #4a3220 40%, #3a2718 100%);
+  border: 3px solid #2a1a10;
+  border-radius: 6px;
+  box-shadow:
+    10px 14px 0 rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+  transform: rotateY(-22deg) rotateX(6deg);
   transform-style: preserve-3d;
-  perspective: 900px;
 }
 
 .library-iso-row {
   display: flex;
-  align-items: flex-end;
-  gap: 0.55rem;
-  transform-style: preserve-3d;
-}
-
-.library-iso-row-label {
-  width: 2rem;
-  flex-shrink: 0;
-  font-weight: 800;
-  font-size: 0.95rem;
-  color: var(--lib-accent);
-  text-shadow: 0 1px 0 rgba(0, 0, 0, 0.4);
-  transform: rotateZ(32deg) rotateX(-52deg);
-  align-self: center;
-}
-
-.library-iso-cubbies {
-  display: flex;
+  align-items: stretch;
   gap: 0.45rem;
   transform-style: preserve-3d;
 }
 
+.library-iso-row-label {
+  width: 1.65rem;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--lib-accent);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  align-self: stretch;
+}
+
+.library-iso-cubbies {
+  display: flex;
+  gap: 0.28rem;
+  flex: 1;
+  transform-style: preserve-3d;
+  padding: 0.2rem;
+  background: rgba(0, 0, 0, 0.22);
+  border-radius: 3px;
+  border: 1px solid rgba(0, 0, 0, 0.35);
+}
+
 .library-iso-cubby {
-  --cubby-w: 64px;
-  --cubby-h: 72px;
+  --cubby-w: 54px;
+  --cubby-h: 92px;
   position: relative;
   width: var(--cubby-w);
   height: var(--cubby-h);
@@ -810,13 +827,14 @@ body.library-iso-body .library-code {
 
 .library-iso-cubby-code {
   position: absolute;
-  top: 3px;
-  left: 4px;
+  top: 4px;
+  left: 5px;
   z-index: 2;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.58rem;
-  font-weight: 700;
-  color: rgba(40, 24, 10, 0.7);
+  font-size: 0.62rem;
+  font-weight: 800;
+  color: rgba(28, 16, 6, 0.88);
+  letter-spacing: 0.02em;
   pointer-events: none;
 }
 
@@ -848,30 +866,41 @@ body.library-iso-body .library-code {
 
 .library-iso-empty-hint {
   position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.65rem;
-  color: rgba(60, 40, 20, 0.35);
+  left: 50%;
+  top: 54%;
+  transform: translate(-50%, -50%);
+  z-index: 2;
+  padding: 0.2rem 0.4rem;
+  border-radius: 0.35rem;
+  background: rgba(20, 14, 8, 0.55);
+  color: #f5efe6;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   pointer-events: none;
+  white-space: nowrap;
 }
 
 .library-iso-axis {
-  margin-top: 0.35rem;
-  padding-left: 2.5rem;
+  margin-top: 0.75rem;
+  padding-left: 2.2rem;
   display: flex;
-  gap: 0.45rem;
-  transform: rotateX(52deg) rotateZ(-32deg);
+  gap: 0.28rem;
   color: var(--lib-muted);
-  font-size: 0.7rem;
+  font-size: 0.72rem;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 }
 
 .library-iso-axis span {
-  width: 64px;
+  width: 54px;
   text-align: center;
-  transform: rotateZ(32deg) rotateX(-52deg);
+}
+
+.library-iso-orient-hint {
+  margin: 0 0 0.65rem;
+  color: var(--lib-muted);
+  font-size: 0.82rem;
 }
 
 /* Right panel */
@@ -1062,12 +1091,16 @@ body.library-iso-body .library-code {
   }
 
   .library-iso-cubby {
-    --cubby-w: 52px;
-    --cubby-h: 60px;
+    --cubby-w: 46px;
+    --cubby-h: 78px;
   }
 
   .library-iso-axis span {
-    width: 52px;
+    width: 46px;
+  }
+
+  .library-iso-grid {
+    transform: rotateY(-14deg) rotateX(4deg);
   }
 }
 
@@ -1083,6 +1116,6 @@ body.library-iso-body .library-code {
   }
 
   .library-iso-grid {
-    transform: rotateX(48deg) rotateZ(-28deg) scale(0.92);
+    transform: rotateY(-10deg) rotateX(3deg) scale(0.94);
   }
 }

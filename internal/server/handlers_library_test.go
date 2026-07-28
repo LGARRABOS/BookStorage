@@ -140,7 +140,7 @@ func TestHandleLibraryHome_Render(t *testing.T) {
 	db, s := openTestDB(t)
 	tpl := template.Must(template.New("").Funcs(template.FuncMap{
 		"t": func(m map[string]string, k string) string { return k },
-	}).Parse(`{{ define "library_home" }}HOME={{ len .Furniture }}{{ end }}{{ define "mobile_library_home" }}{{ template "library_home" . }}{{ end }}{{ define "library_topbar" }}{{ end }}`))
+	}).Parse(`{{ define "library_home" }}HOME={{ len .FurnitureList }}{{ end }}{{ define "mobile_library_home" }}{{ template "library_home" . }}{{ end }}{{ define "library_topbar" }}{{ end }}`))
 	app := &App{Settings: s, DB: db, TemplatesWeb: tpl, TemplatesMobile: tpl}
 	_, _ = db.Exec(`INSERT INTO library_furniture (user_id, name, sort_order) VALUES (1, 'Bureau', 0)`)
 
@@ -153,6 +153,34 @@ func TestHandleLibraryHome_Render(t *testing.T) {
 	}
 	if !strings.Contains(rec.Body.String(), "HOME=1") {
 		t.Fatalf("body=%s", rec.Body.String())
+	}
+}
+
+// Regression: topbar must not read .Furniture.ID when home passes only FurnitureList
+// (a slice has no ID field and used to 500 /library/).
+func TestLibraryTopbar_HomeDataNoPanic(t *testing.T) {
+	tpl := template.Must(template.New("").Funcs(template.FuncMap{
+		"t": func(m map[string]string, k string) string { return k },
+	}).Parse(`
+		{{ define "library_topbar" }}
+		{{ if .Furniture }}{{ with .Furniture }}{{ if gt .ID 0 }}VIEW{{ end }}{{ end }}{{ end }}
+		LIST={{ len .FurnitureList }}
+		{{ end }}
+	`))
+	var buf strings.Builder
+	err := tpl.ExecuteTemplate(&buf, "library_topbar", map[string]any{
+		"FurnitureList": []libraryFurnitureRow{{ID: 1, Name: "Bureau"}},
+		"T":             map[string]string{},
+		"CurrentPath":   "/library/",
+	})
+	if err != nil {
+		t.Fatalf("execute: %v", err)
+	}
+	if !strings.Contains(buf.String(), "LIST=1") {
+		t.Fatalf("body=%s", buf.String())
+	}
+	if strings.Contains(buf.String(), "VIEW") {
+		t.Fatalf("view link should be hidden on home: %s", buf.String())
 	}
 }
 
