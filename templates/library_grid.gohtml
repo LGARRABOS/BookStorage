@@ -9,7 +9,7 @@
     <title>{{ .Furniture.Name }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=7">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=8">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
@@ -44,10 +44,20 @@
                 </header>
 
                 <div class="library-iso-stage-wrap">
-                    <div class="library-iso-zoom" aria-label="Zoom">
-                        <button type="button" id="library-zoom-in" title="+">+</button>
-                        <button type="button" id="library-zoom-out" title="−">−</button>
+                    <div class="library-iso-tools">
+                        <div class="library-iso-capacity" title="{{ t .T "library.iso.capacity_hint" }}">
+                            <label for="library-capacity">{{ t .T "library.iso.capacity" }}</label>
+                            <button type="button" id="library-cap-minus" aria-label="−">−</button>
+                            <input type="number" id="library-capacity" min="2" max="24" step="1" value="8"
+                                   aria-label="{{ t .T "library.iso.capacity" }}">
+                            <button type="button" id="library-cap-plus" aria-label="+">+</button>
+                        </div>
+                        <div class="library-iso-zoom" aria-label="Zoom">
+                            <button type="button" id="library-zoom-in" title="+">+</button>
+                            <button type="button" id="library-zoom-out" title="−">−</button>
+                        </div>
                     </div>
+                    <p class="library-iso-nav-hint">{{ t .T "library.iso.nav_hint" }}</p>
                     <div class="library-iso-stage" id="library-iso-stage">
                         <p class="library-empty">{{ t .T "library.grid.loading" }}</p>
                     </div>
@@ -82,7 +92,7 @@
 
     <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
-    <script src="/static/js/library-grid.js?v=4"></script>
+    <script src="/static/js/library-grid.js?v=5"></script>
 </body>
 </html>
 {{ end }}

@@ -675,7 +675,7 @@ body.library-iso-body .library-code {
 .library-iso-stage-wrap {
   position: relative;
   flex: 1;
-  min-height: 420px;
+  min-height: 520px;
   border-radius: 1.1rem;
   border: 1px solid var(--lib-panel-border);
   background:
@@ -684,49 +684,114 @@ body.library-iso-body .library-code {
   overflow: hidden;
 }
 
-.library-iso-zoom {
+.library-iso-tools {
   position: absolute;
   top: 0.75rem;
   right: 0.75rem;
   z-index: 5;
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  align-items: flex-end;
+  gap: 0.5rem;
 }
 
-.library-iso-zoom button {
-  width: 36px;
-  height: 36px;
-  border-radius: 0.5rem;
+.library-iso-capacity {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.35rem 0.45rem;
+  border-radius: 0.55rem;
   border: 1px solid var(--lib-panel-border);
-  background: rgba(26, 34, 45, 0.9);
+  background: rgba(26, 34, 45, 0.92);
   color: var(--lib-text);
-  font-size: 1.1rem;
+  font-size: 0.78rem;
+}
+
+.library-iso-capacity label {
+  margin: 0 0.15rem 0 0;
+  color: var(--lib-muted);
+  white-space: nowrap;
+}
+
+.library-iso-capacity input {
+  width: 2.4rem;
+  padding: 0.2rem 0.15rem;
+  border-radius: 0.35rem;
+  border: 1px solid var(--lib-panel-border);
+  background: rgba(0, 0, 0, 0.35);
+  color: var(--lib-text);
+  text-align: center;
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.library-iso-capacity button,
+.library-iso-zoom button {
+  width: 32px;
+  height: 32px;
+  border-radius: 0.45rem;
+  border: 1px solid var(--lib-panel-border);
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--lib-text);
+  font-size: 1.05rem;
   cursor: pointer;
   line-height: 1;
 }
 
+.library-iso-capacity button:hover,
 .library-iso-zoom button:hover {
   border-color: var(--lib-accent);
   color: var(--lib-accent);
 }
 
+.library-iso-zoom {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.library-iso-nav-hint {
+  position: absolute;
+  left: 0.85rem;
+  bottom: 0.65rem;
+  z-index: 4;
+  margin: 0;
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.4rem;
+  background: rgba(12, 16, 22, 0.72);
+  color: var(--lib-muted);
+  font-size: 0.72rem;
+  pointer-events: none;
+}
+
 .library-iso-stage {
   width: 100%;
   height: 100%;
-  min-height: 420px;
-  overflow: auto;
+  min-height: 520px;
+  overflow: hidden;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 2.5rem 1.5rem 3rem;
   perspective: 1400px;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+}
+
+.library-iso-stage.is-panning {
+  cursor: grabbing;
+}
+
+.library-iso-stage.is-panning .library-iso-world {
+  transition: none;
 }
 
 .library-iso-world {
   transform-origin: center center;
-  transition: transform 0.15s ease;
+  transition: transform 0.12s ease;
   padding: 1.5rem 2.5rem 2.5rem;
+  will-change: transform;
 }
 
 /* Upright bookcase: shelves stack in height, cases run along width */
@@ -779,8 +844,8 @@ body.library-iso-body .library-code {
 }
 
 .library-iso-cubby {
-  --cubby-w: 68px;
-  --cubby-h: 108px;
+  --cubby-w: 88px;
+  --cubby-h: 130px;
   position: relative;
   width: var(--cubby-w);
   height: var(--cubby-h);
@@ -925,7 +990,7 @@ body.library-iso-body .library-code {
 }
 
 .library-iso-axis span {
-  width: 68px;
+  width: var(--cubby-w, 88px);
   text-align: center;
 }
 
@@ -1100,11 +1165,11 @@ body.library-iso-body .library-code {
   }
 
   .library-iso-stage-wrap {
-    min-height: 340px;
+    min-height: 380px;
   }
 
   .library-iso-stage {
-    min-height: 340px;
+    min-height: 380px;
     justify-content: flex-start;
     padding-top: 1.5rem;
   }
@@ -1118,17 +1183,21 @@ body.library-iso-body .library-code {
     display: none;
   }
 
-  .library-iso-zoom {
+  .library-iso-tools {
+    top: 0.5rem;
+    right: 0.5rem;
+  }
+
+  .library-iso-capacity label {
     display: none;
   }
 
-  .library-iso-cubby {
-    --cubby-w: 56px;
-    --cubby-h: 92px;
+  .library-iso-nav-hint {
+    display: none;
   }
 
   .library-iso-axis span {
-    width: 56px;
+    width: var(--cubby-w, 56px);
   }
 
   .library-iso-grid {

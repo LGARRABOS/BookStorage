@@ -17,6 +17,9 @@
   var countEl = document.getElementById("library-iso-count");
   var zoomIn = document.getElementById("library-zoom-in");
   var zoomOut = document.getElementById("library-zoom-out");
+  var capInput = document.getElementById("library-capacity");
+  var capMinus = document.getElementById("library-cap-minus");
+  var capPlus = document.getElementById("library-cap-plus");
 
   var i18n = {
     empty: root.getAttribute("data-i18n-empty") || "empty",
@@ -34,14 +37,72 @@
     "#b45309", "#4338ca", "#be123c", "#047857",
   ];
 
+  var CAP_KEY = "library-cap-" + furnitureId;
+  var VIEW_KEY = "library-view-" + furnitureId;
+
+  function clampCapacity(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return 8;
+    return Math.max(2, Math.min(24, n));
+  }
+
+  function loadSavedCapacity() {
+    try {
+      var v = localStorage.getItem(CAP_KEY);
+      if (v != null) return clampCapacity(v);
+    } catch (e) {}
+    return 8;
+  }
+
+  function saveCapacity(n) {
+    try {
+      localStorage.setItem(CAP_KEY, String(n));
+    } catch (e) {}
+  }
+
+  function loadSavedView() {
+    try {
+      var raw = localStorage.getItem(VIEW_KEY);
+      if (!raw) return null;
+      return JSON.parse(raw);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  function saveView() {
+    try {
+      localStorage.setItem(
+        VIEW_KEY,
+        JSON.stringify({
+          zoom: state.zoom,
+          panX: state.panX,
+          panY: state.panY,
+        })
+      );
+    } catch (e) {}
+  }
+
+  var savedView = loadSavedView();
   var state = {
     shelves: [],
     placements: [],
     active: null,
     kind: "manga",
-    zoom: 1,
+    zoom: savedView && savedView.zoom ? savedView.zoom : 1.15,
+    panX: savedView && typeof savedView.panX === "number" ? savedView.panX : 0,
+    panY: savedView && typeof savedView.panY === "number" ? savedView.panY : 0,
+    capacity: loadSavedCapacity(),
+    spineSlot: 11,
   };
   var searchTimer = null;
+  var saveViewTimer = null;
+  var drag = {
+    active: false,
+    moved: false,
+    x: 0,
+    y: 0,
+  };
 
   function esc(s) {
     return String(s == null ? "" : s)
@@ -81,11 +142,11 @@
     return head;
   }
 
-  function spineMarkup(p, totalInCase) {
+  function spineMarkup(p) {
     var h = hashStr(String(p.title) + String(p.id));
-    var width = totalInCase <= 3 ? 13 : totalInCase <= 5 ? 10 : totalInCase <= 8 ? 8 : 6;
+    var width = Math.max(5, state.spineSlot - 1);
     var heightPct = 78 + (h % 18);
-    var showLabel = totalInCase <= 5 && width >= 9;
+    var showLabel = state.capacity <= 6 && width >= 9;
     var style =
       "background-color:" +
       spineColor(p.title, p.id) +
@@ -126,11 +187,40 @@
     return n;
   }
 
-  function applyZoom() {
-    var world = stage.querySelector(".library-iso-world");
-    if (world) {
-      world.style.transform = "scale(" + state.zoom + ")";
+  function applySizes() {
+    var cap = state.capacity;
+    var slot = cap <= 4 ? 15 : cap <= 8 ? 12 : cap <= 12 ? 10 : cap <= 16 ? 8 : 7;
+    var w = cap * slot + 16;
+    var h = Math.round(Math.max(110, w * 1.48));
+    state.spineSlot = slot;
+    if (stage) {
+      stage.style.setProperty("--cubby-w", w + "px");
+      stage.style.setProperty("--cubby-h", h + "px");
+      stage.style.setProperty("--spine-slot", slot + "px");
     }
+  }
+
+  function applyView() {
+    var world = stage && stage.querySelector(".library-iso-world");
+    if (!world) return;
+    world.style.transform =
+      "translate(" +
+      state.panX +
+      "px," +
+      state.panY +
+      "px) scale(" +
+      state.zoom +
+      ")";
+    clearTimeout(saveViewTimer);
+    saveViewTimer = setTimeout(saveView, 400);
+  }
+
+  function setCapacity(n, rerender) {
+    state.capacity = clampCapacity(n);
+    if (capInput) capInput.value = String(state.capacity);
+    saveCapacity(state.capacity);
+    applySizes();
+    if (rerender) renderGrid();
   }
 
   function renderGrid() {
@@ -139,6 +229,7 @@
       return;
     }
 
+    applySizes();
     var html = '<div class="library-iso-world"><div class="library-iso-grid">';
     state.shelves.forEach(function (shelf) {
       html += '<div class="library-iso-row">';
@@ -172,13 +263,13 @@
           "</span>";
         if (filled) {
           html += '<span class="library-iso-spines">';
-          items.slice(0, 12).forEach(function (p) {
-            html += spineMarkup(p, items.length);
+          items.slice(0, state.capacity).forEach(function (p) {
+            html += spineMarkup(p);
           });
-          if (items.length > 12) {
+          if (items.length > state.capacity) {
             html +=
               '<span class="library-iso-spine-more" title="+' +
-              (items.length - 12) +
+              (items.length - state.capacity) +
               '">+</span>';
           }
           html += "</span>";
@@ -200,10 +291,15 @@
     html += "</div>";
 
     stage.innerHTML = html;
-    applyZoom();
+    applyView();
 
     stage.querySelectorAll(".library-iso-cubby").forEach(function (btn) {
-      btn.addEventListener("click", function () {
+      btn.addEventListener("click", function (e) {
+        if (drag.moved) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
         openCase(
           parseInt(btn.getAttribute("data-shelf-id"), 10),
           parseInt(btn.getAttribute("data-case-num"), 10),
@@ -450,19 +546,94 @@
 
   if (closeBtn) closeBtn.addEventListener("click", closePanel);
 
+  if (capInput) {
+    capInput.value = String(state.capacity);
+    capInput.addEventListener("change", function () {
+      setCapacity(capInput.value, true);
+    });
+  }
+  if (capMinus) {
+    capMinus.addEventListener("click", function () {
+      setCapacity(state.capacity - 1, true);
+    });
+  }
+  if (capPlus) {
+    capPlus.addEventListener("click", function () {
+      setCapacity(state.capacity + 1, true);
+    });
+  }
+
   if (zoomIn) {
     zoomIn.addEventListener("click", function () {
-      state.zoom = Math.min(1.6, state.zoom + 0.1);
-      applyZoom();
+      state.zoom = Math.min(2.4, Math.round((state.zoom + 0.12) * 100) / 100);
+      applyView();
     });
   }
   if (zoomOut) {
     zoomOut.addEventListener("click", function () {
-      state.zoom = Math.max(0.55, state.zoom - 0.1);
-      applyZoom();
+      state.zoom = Math.max(0.45, Math.round((state.zoom - 0.12) * 100) / 100);
+      applyView();
     });
   }
 
+  if (stage) {
+    stage.addEventListener(
+      "wheel",
+      function (e) {
+        e.preventDefault();
+        var delta = e.deltaY > 0 ? -0.08 : 0.08;
+        state.zoom = Math.max(
+          0.45,
+          Math.min(2.4, Math.round((state.zoom + delta) * 100) / 100)
+        );
+        applyView();
+      },
+      { passive: false }
+    );
+
+    stage.addEventListener("pointerdown", function (e) {
+      if (e.button !== 0) return;
+      drag.active = true;
+      drag.moved = false;
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      try {
+        stage.setPointerCapture(e.pointerId);
+      } catch (err) {}
+      stage.classList.add("is-panning");
+    });
+
+    stage.addEventListener("pointermove", function (e) {
+      if (!drag.active) return;
+      var dx = e.clientX - drag.x;
+      var dy = e.clientY - drag.y;
+      if (!drag.moved && Math.hypot(dx, dy) < 6) return;
+      drag.moved = true;
+      state.panX += dx;
+      state.panY += dy;
+      drag.x = e.clientX;
+      drag.y = e.clientY;
+      applyView();
+    });
+
+    function endPan(e) {
+      if (!drag.active) return;
+      drag.active = false;
+      stage.classList.remove("is-panning");
+      try {
+        stage.releasePointerCapture(e.pointerId);
+      } catch (err) {}
+      // Keep drag.moved true until click handlers run, then clear.
+      setTimeout(function () {
+        drag.moved = false;
+      }, 0);
+    }
+
+    stage.addEventListener("pointerup", endPan);
+    stage.addEventListener("pointercancel", endPan);
+  }
+
   setPanelOpen(false);
+  if (capInput) capInput.value = String(state.capacity);
   load();
 })();
