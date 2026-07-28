@@ -1,0 +1,75 @@
+{{ define "library_home" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "library.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "library_topbar" . }}
+    <main class="page-body">
+        <div class="container library-page">
+            <div class="form-header">
+                <div class="form-header-title">
+                    <h1>🗄️ {{ t .T "library.title" }}</h1>
+                    <p>{{ t .T "library.subtitle" }}</p>
+                </div>
+                <a href="/library/furniture/new" class="btn btn-primary">+ {{ t .T "library.furniture.new" }}</a>
+            </div>
+
+            <form class="library-search" method="get" action="/library/">
+                <label for="library-q">{{ t .T "library.search.label" }}</label>
+                <div class="library-search-row">
+                    <input id="library-q" type="search" name="q" value="{{ .SearchQ }}" placeholder="{{ t .T "library.search.placeholder" }}" autocomplete="off">
+                    <button type="submit" class="btn btn-secondary">{{ t .T "library.search.submit" }}</button>
+                </div>
+            </form>
+
+            {{ if .SearchQ }}
+            <section class="library-search-results" aria-label="{{ t .T "library.search.results" }}">
+                <h2>{{ t .T "library.search.results" }}</h2>
+                {{ if .SearchResults }}
+                <ul class="library-result-list">
+                    {{ range .SearchResults }}
+                    <li>
+                        <strong>{{ .Title }}</strong>
+                        {{ if eq .MediaKind "manga" }} · T{{ .Volume }}{{ else if .Volume }} · T{{ .Volume }}{{ end }}
+                        <span class="library-code">{{ .LocationLabel }}</span>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p class="library-empty">{{ t .T "library.search.empty" }}</p>
+                {{ end }}
+            </section>
+            {{ end }}
+
+            <section class="library-furniture-list" aria-label="{{ t .T "library.furniture.list" }}">
+                {{ if .Furniture }}
+                <div class="library-furniture-grid">
+                    {{ range .Furniture }}
+                    <a class="library-furniture-card" href="/library/furniture/{{ .ID }}">
+                        <span class="library-furniture-card-title">{{ .Name }}</span>
+                        {{ if .RoomLabel.Valid }}<span class="library-furniture-card-room">{{ .RoomLabel.String }}</span>{{ end }}
+                        <span class="library-furniture-card-meta">{{ .ShelfN }} {{ t $.T "library.furniture.shelves" }} · {{ .PlaceN }} {{ t $.T "library.furniture.volumes" }}</span>
+                    </a>
+                    {{ end }}
+                </div>
+                {{ else }}
+                <p class="library-empty">{{ t .T "library.furniture.empty" }}</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

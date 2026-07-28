@@ -1,0 +1,99 @@
+{{ define "library_furniture_edit" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "library_topbar" . }}
+    <main class="page-body">
+        <div class="container library-page form-page">
+            <div class="form-header">
+                <div class="form-header-title">
+                    <h1>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }}</h1>
+                </div>
+                <a href="{{ if .IsNew }}/library/{{ else }}/library/furniture/{{ .Furniture.ID }}{{ end }}" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+            </div>
+
+            {{ if eq .Error "name" }}<div class="form-alert form-alert--error">{{ t .T "library.error.name" }}</div>{{ end }}
+            {{ if eq .Error "label" }}<div class="form-alert form-alert--error">{{ t .T "library.error.label" }}</div>{{ end }}
+            {{ if eq .Error "dup" }}<div class="form-alert form-alert--error">{{ t .T "library.error.dup_shelf" }}</div>{{ end }}
+
+            {{ if .IsNew }}
+            <form method="post" action="/library/furniture/new" class="form-card">
+                <div class="form-group">
+                    <label for="name">{{ t .T "library.field.name" }} <span class="required">*</span></label>
+                    <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}">
+                </div>
+                <div class="form-group">
+                    <label for="room_label">{{ t .T "library.field.room" }}</label>
+                    <input id="room_label" name="room_label" maxlength="120" placeholder="{{ t .T "library.field.room_ph" }}">
+                </div>
+                <button type="submit" class="btn btn-primary">{{ t .T "common.save" }}</button>
+            </form>
+            {{ else }}
+            <form method="post" action="/library/furniture/{{ .Furniture.ID }}/edit" class="form-card">
+                <input type="hidden" name="action" value="save_meta">
+                <div class="form-group">
+                    <label for="name">{{ t .T "library.field.name" }} <span class="required">*</span></label>
+                    <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}">
+                </div>
+                <div class="form-group">
+                    <label for="room_label">{{ t .T "library.field.room" }}</label>
+                    <input id="room_label" name="room_label" maxlength="120" value="{{ if .Furniture.RoomLabel.Valid }}{{ .Furniture.RoomLabel.String }}{{ end }}" placeholder="{{ t .T "library.field.room_ph" }}">
+                </div>
+                <button type="submit" class="btn btn-primary">{{ t .T "common.save" }}</button>
+            </form>
+
+            <section class="form-card">
+                <h2>{{ t .T "library.shelves.title" }}</h2>
+                <ul class="library-shelf-config">
+                    {{ range .Shelves }}
+                    <li>
+                        <form method="post" action="/library/furniture/{{ $.Furniture.ID }}/edit" class="library-shelf-row">
+                            <input type="hidden" name="action" value="update_shelf">
+                            <input type="hidden" name="shelf_id" value="{{ .ID }}">
+                            <strong class="library-shelf-label">{{ .Label }}</strong>
+                            <label>{{ t $.T "library.shelves.cases" }}
+                                <input type="number" name="case_count" min="1" max="50" value="{{ .CaseCount }}">
+                            </label>
+                            <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "common.save" }}</button>
+                        </form>
+                        <form method="post" action="/library/furniture/{{ $.Furniture.ID }}/edit" onsubmit="return confirm({{ jsstr (t $.T "library.shelves.delete_confirm") }});">
+                            <input type="hidden" name="action" value="delete_shelf">
+                            <input type="hidden" name="shelf_id" value="{{ .ID }}">
+                            <button type="submit" class="btn btn-danger btn-sm">{{ t $.T "common.delete" }}</button>
+                        </form>
+                    </li>
+                    {{ end }}
+                </ul>
+                <form method="post" action="/library/furniture/{{ .Furniture.ID }}/edit" class="library-add-shelf">
+                    <input type="hidden" name="action" value="add_shelf">
+                    <label>{{ t .T "library.shelves.label" }}
+                        <input name="label" maxlength="1" placeholder="B" required>
+                    </label>
+                    <label>{{ t .T "library.shelves.cases" }}
+                        <input type="number" name="case_count" min="1" max="50" value="10">
+                    </label>
+                    <button type="submit" class="btn btn-primary">{{ t .T "library.shelves.add" }}</button>
+                </form>
+            </section>
+
+            <form method="post" action="/library/furniture/{{ .Furniture.ID }}/delete" class="form-card" onsubmit="return confirm({{ jsstr (t .T "library.furniture.delete_confirm") }});">
+                <button type="submit" class="btn btn-danger">{{ t .T "library.furniture.delete" }}</button>
+            </form>
+            {{ end }}
+        </div>
+    </main>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

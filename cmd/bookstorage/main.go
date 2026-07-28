@@ -237,6 +237,14 @@ func main() {
 	mux.HandleFunc("GET /api/bd/catalog/browse", app.RequireLogin(app.HandleBdCatalogBrowse))
 	mux.HandleFunc("GET /api/bd/catalog/search", app.RequireLogin(app.HandleBdCatalogSearch))
 	mux.HandleFunc("POST /api/bd/delete/{id}", app.RequireLogin(app.HandleBdDeleteAPI))
+	mux.HandleFunc("GET /api/library/furniture/{id}", app.RequireLogin(app.HandleAPILibraryFurniture))
+	mux.HandleFunc("POST /api/library/placements", app.RequireLogin(app.HandleAPILibraryPlacementsCreate))
+	mux.HandleFunc("PATCH /api/library/placements/{id}", app.RequireLogin(app.HandleAPILibraryPlacementsPatch))
+	mux.HandleFunc("POST /api/library/placements/{id}", app.RequireLogin(app.HandleAPILibraryPlacementsPatch))
+	mux.HandleFunc("DELETE /api/library/placements/{id}", app.RequireLogin(app.HandleAPILibraryPlacementsDelete))
+	mux.HandleFunc("POST /api/library/placements/{id}/delete", app.RequireLogin(app.HandleAPILibraryPlacementsDelete))
+	mux.HandleFunc("GET /api/library/search", app.RequireLogin(app.HandleAPILibrarySearch))
+	mux.HandleFunc("GET /api/library/works", app.RequireLogin(app.HandleAPILibraryWorksSearch))
 	mux.HandleFunc("/admin/accounts", app.RequireAdmin(app.MobileRedirectToMangaDashboard(app.HandleAdminAccounts)))
 	mux.HandleFunc("/admin/database", app.RequireAdmin(app.RequireWebOnly(app.HandleAdminDatabase)))
 	mux.HandleFunc("/admin/migrate-postgres", app.RequireAdmin(app.RequireSuperadmin(app.RequireWebOnly(app.HandleAdminMigratePostgres))))
@@ -272,6 +280,9 @@ func main() {
 
 	// BD (bande dessinée) module pages live under /bd/.
 	app.RegisterBdRoutes(mux)
+
+	// Physical library module pages live under /library/.
+	app.RegisterLibraryRoutes(mux)
 
 	// Background prober: check all reading sites every 5 minutes.
 	proberCtx, proberCancel := context.WithCancel(context.Background())

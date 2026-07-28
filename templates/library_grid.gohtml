@@ -1,0 +1,76 @@
+{{ define "library_grid" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ .Furniture.Name }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "library_topbar" . }}
+    <main class="page-body">
+        <div class="container library-page">
+            <div class="form-header">
+                <div class="form-header-title">
+                    <h1>{{ .Furniture.Name }}</h1>
+                    {{ if .Furniture.RoomLabel.Valid }}<p>{{ .Furniture.RoomLabel.String }}</p>{{ end }}
+                </div>
+                <div class="library-header-actions">
+                    <a href="/library/furniture/{{ .Furniture.ID }}/edit" class="btn btn-secondary">{{ t .T "library.furniture.edit" }}</a>
+                    <a href="/library/" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+                </div>
+            </div>
+
+            <div id="library-grid-root"
+                 data-furniture-id="{{ .Furniture.ID }}"
+                 data-i18n-empty="{{ t .T "library.case.empty" }}"
+                 data-i18n-add="{{ t .T "library.case.add" }}"
+                 data-i18n-remove="{{ t .T "library.case.remove" }}"
+                 data-i18n-up="{{ t .T "library.case.up" }}"
+                 data-i18n-down="{{ t .T "library.case.down" }}"
+                 data-i18n-search="{{ t .T "library.case.search_work" }}"
+                 data-i18n-volume="{{ t .T "library.case.volume" }}"
+                 data-i18n-manga="{{ t .T "library.media.manga" }}"
+                 data-i18n-bd="{{ t .T "library.media.bd" }}">
+                <p class="library-empty">{{ t .T "library.grid.loading" }}</p>
+            </div>
+        </div>
+    </main>
+
+    <aside id="library-case-panel" class="library-case-panel" hidden aria-hidden="true">
+        <div class="library-case-panel-inner">
+            <header class="library-case-panel-head">
+                <h2 id="library-case-panel-title">—</h2>
+                <button type="button" class="btn btn-secondary btn-sm" id="library-case-panel-close" aria-label="{{ t .T "common.close" }}">✕</button>
+            </header>
+            <div id="library-case-panel-list"></div>
+            <div class="library-case-add">
+                <div class="library-case-add-tabs">
+                    <button type="button" class="btn btn-secondary btn-sm is-active" data-kind="manga">{{ t .T "library.media.manga" }}</button>
+                    <button type="button" class="btn btn-secondary btn-sm" data-kind="bd">{{ t .T "library.media.bd" }}</button>
+                </div>
+                <label class="library-case-add-search">
+                    <span>{{ t .T "library.case.search_work" }}</span>
+                    <input type="search" id="library-work-q" autocomplete="off">
+                </label>
+                <label class="library-case-add-volume" id="library-volume-wrap">
+                    <span>{{ t .T "library.case.volume" }}</span>
+                    <input type="number" id="library-work-volume" min="1" value="1">
+                </label>
+                <ul id="library-work-results" class="library-work-results"></ul>
+            </div>
+        </div>
+    </aside>
+    <div id="library-case-backdrop" class="library-case-backdrop" hidden></div>
+
+    <script src="/static/js/appearance.js"></script>
+    <script src="/static/js/library-grid.js"></script>
+</body>
+</html>
+{{ end }}

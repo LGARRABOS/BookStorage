@@ -1,0 +1,63 @@
+{{ define "library_unassigned" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "library.unassigned.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css">
+    <script src="/static/js/appearance-init.js"></script>
+</head>
+<body>
+    {{ template "library_topbar" . }}
+    <main class="page-body">
+        <div class="container library-page">
+            <div class="form-header">
+                <div class="form-header-title">
+                    <h1>{{ t .T "library.unassigned.title" }}</h1>
+                    <p>{{ t .T "library.unassigned.subtitle" }}</p>
+                </div>
+                <a href="/library/" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+            </div>
+
+            <section class="form-card">
+                <h2>{{ t .T "library.media.manga" }}</h2>
+                {{ if .Manga }}
+                <ul class="library-unassigned-list">
+                    {{ range .Manga }}
+                    <li>
+                        <span>{{ .Title }}</span>
+                        <a href="{{ .EditURL }}">{{ t $.T "library.unassigned.open" }}</a>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p class="library-empty">{{ t .T "library.unassigned.empty_manga" }}</p>
+                {{ end }}
+            </section>
+
+            <section class="form-card">
+                <h2>{{ t .T "library.media.bd" }}</h2>
+                {{ if .Bd }}
+                <ul class="library-unassigned-list">
+                    {{ range .Bd }}
+                    <li>
+                        <span>{{ .Title }}{{ if .Volume }} · T{{ .Volume }}{{ end }}</span>
+                        <a href="{{ .EditURL }}">{{ t $.T "library.unassigned.open" }}</a>
+                    </li>
+                    {{ end }}
+                </ul>
+                {{ else }}
+                <p class="library-empty">{{ t .T "library.unassigned.empty_bd" }}</p>
+                {{ end }}
+            </section>
+        </div>
+    </main>
+    <script src="/static/js/appearance.js"></script>
+</body>
+</html>
+{{ end }}

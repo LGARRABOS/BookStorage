@@ -132,6 +132,15 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 	if err := ensureColumnsSQLite(db, "bd_works", bdWorksColumns); err != nil {
 		return err
 	}
+	if _, err := db.Exec(createLibraryFurnitureTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createLibraryShelvesTableSQL); err != nil {
+		return err
+	}
+	if _, err := db.Exec(createLibraryPlacementsTableSQL); err != nil {
+		return err
+	}
 	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {
 		return err
 	}

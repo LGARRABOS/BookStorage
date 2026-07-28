@@ -113,6 +113,37 @@ var postgresSchemaStatements = []string{
 		started_at TIMESTAMPTZ,
 		finished_at TIMESTAMPTZ
 	)`,
+	`CREATE TABLE IF NOT EXISTS library_furniture (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		name TEXT NOT NULL,
+		room_label TEXT,
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ
+	)`,
+	`CREATE TABLE IF NOT EXISTS library_shelves (
+		id BIGSERIAL PRIMARY KEY,
+		furniture_id BIGINT NOT NULL REFERENCES library_furniture(id) ON DELETE CASCADE,
+		label TEXT NOT NULL,
+		case_count INTEGER NOT NULL DEFAULT 1,
+		sort_order INTEGER NOT NULL DEFAULT 0,
+		UNIQUE (furniture_id, label)
+	)`,
+	`CREATE TABLE IF NOT EXISTS library_placements (
+		id BIGSERIAL PRIMARY KEY,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		shelf_id BIGINT NOT NULL REFERENCES library_shelves(id) ON DELETE CASCADE,
+		case_num INTEGER NOT NULL,
+		position INTEGER NOT NULL DEFAULT 1,
+		media_kind TEXT NOT NULL,
+		work_id INTEGER NOT NULL,
+		volume INTEGER NOT NULL DEFAULT 1,
+		created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+		updated_at TIMESTAMPTZ,
+		UNIQUE (user_id, media_kind, work_id, volume),
+		UNIQUE (shelf_id, case_num, position)
+	)`,
 	`CREATE TABLE IF NOT EXISTS dismissed_recommendations (
 		id BIGSERIAL PRIMARY KEY,
 		user_id BIGINT NOT NULL REFERENCES users(id),
@@ -245,6 +276,12 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_works_user_id ON works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_anime_works_user_id ON anime_works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_bd_works_user_id ON bd_works(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_library_furniture_user_id ON library_furniture(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_library_shelves_furniture_id ON library_shelves(furniture_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_library_placements_user_media
+		ON library_placements(user_id, media_kind, work_id, volume)`,
+	`CREATE INDEX IF NOT EXISTS idx_library_placements_shelf_case
+		ON library_placements(shelf_id, case_num, position)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_status ON works(user_id, status)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_type ON works(user_id, reading_type)`,
 	`CREATE INDEX IF NOT EXISTS idx_works_user_updated_at ON works(user_id, updated_at)`,

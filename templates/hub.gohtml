@@ -68,6 +68,20 @@
                     </span>
                     <span class="hub-tile-go" aria-hidden="true">→</span>
                 </a>
+
+                <a class="hub-tile hub-tile--featured hub-tile--library" href="/library/">
+                    <span class="hub-tile-glow" aria-hidden="true"></span>
+                    <span class="hub-tile-icon" aria-hidden="true">🗄️</span>
+                    <span class="hub-tile-body">
+                        <span class="hub-tile-title">{{ t .T "hub.section.library" }}</span>
+                        <span class="hub-tile-desc">{{ t .T "hub.section.library.desc" }}</span>
+                        <span class="hub-tile-stat">
+                            <span class="hub-tile-stat-value">{{ .HubLibraryCount }}</span>
+                            <span class="hub-tile-stat-label">{{ t .T "hub.section.library.count" }}</span>
+                        </span>
+                    </span>
+                    <span class="hub-tile-go" aria-hidden="true">→</span>
+                </a>
             </section>
 
             <section class="hub-secondary" aria-labelledby="hub-more-heading">

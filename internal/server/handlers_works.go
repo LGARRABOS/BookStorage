@@ -186,6 +186,7 @@ func (a *App) HandleEditWork(w http.ResponseWriter, r *http.Request) {
 			"CatalogPageURL":            catalogPageURL,
 			"CatalogAnilistImageURL":    catalogAnilistImageURL,
 			"CatalogAnilistImageLocked": catalogAnilistImageLocked,
+			"LibraryPlacements":         a.libraryPlacementSummaryForWork(userID, libraryMediaManga, workID),
 			"MobileTopbarTitle":         i18n.T(lang)["work.edit.title"],
 		}))
 	case http.MethodPost:

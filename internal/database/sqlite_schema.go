@@ -77,6 +77,53 @@ CREATE TABLE IF NOT EXISTS bd_works (
 );
 CREATE INDEX IF NOT EXISTS idx_bd_works_user_id ON bd_works(user_id);`
 
+const createLibraryFurnitureTableSQL = `
+CREATE TABLE IF NOT EXISTS library_furniture (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    room_label TEXT,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_library_furniture_user_id ON library_furniture(user_id);`
+
+const createLibraryShelvesTableSQL = `
+CREATE TABLE IF NOT EXISTS library_shelves (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    furniture_id INTEGER NOT NULL,
+    label TEXT NOT NULL,
+    case_count INTEGER NOT NULL DEFAULT 1,
+    sort_order INTEGER NOT NULL DEFAULT 0,
+    FOREIGN KEY (furniture_id) REFERENCES library_furniture (id) ON DELETE CASCADE,
+    UNIQUE (furniture_id, label)
+);
+CREATE INDEX IF NOT EXISTS idx_library_shelves_furniture_id ON library_shelves(furniture_id);`
+
+const createLibraryPlacementsTableSQL = `
+CREATE TABLE IF NOT EXISTS library_placements (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    user_id INTEGER NOT NULL,
+    shelf_id INTEGER NOT NULL,
+    case_num INTEGER NOT NULL,
+    position INTEGER NOT NULL DEFAULT 1,
+    media_kind TEXT NOT NULL,
+    work_id INTEGER NOT NULL,
+    volume INTEGER NOT NULL DEFAULT 1,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id),
+    FOREIGN KEY (shelf_id) REFERENCES library_shelves (id) ON DELETE CASCADE,
+    UNIQUE (user_id, media_kind, work_id, volume),
+    UNIQUE (shelf_id, case_num, position)
+);
+CREATE INDEX IF NOT EXISTS idx_library_placements_user_media
+    ON library_placements(user_id, media_kind, work_id, volume);
+CREATE INDEX IF NOT EXISTS idx_library_placements_shelf_case
+    ON library_placements(shelf_id, case_num, position);`
+
 const createCatalogTableSQL = `
 CREATE TABLE IF NOT EXISTS catalog (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

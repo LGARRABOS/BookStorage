@@ -18,6 +18,7 @@
     {{ end }}
     <title>{{ t .T "work.edit.title" }} - BookStorage</title>
     {{ if not .IsMobileView }}<link rel="stylesheet" href="/static/css/mobile.css">{{ end }}
+    <link rel="stylesheet" href="/static/css/library-grid.css">
     <style>
         .form-page { max-width: 900px; margin: 0 auto; }
         .form-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 2rem; flex-wrap: wrap; gap: 1rem; }
@@ -142,6 +143,7 @@
                 <a href="/manga/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
 
+            {{ template "library_placement_badge" . }}
             {{ template "edit_work_form" . }}
         </div>
     </main>

@@ -9,6 +9,7 @@
     <title>{{ t .T "bd.edit.title" }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
+    <link rel="stylesheet" href="/static/css/library-grid.css">
     <script src="/static/js/appearance-init.js"></script>
     {{ template "bd_form_styles" . }}
 </head>
@@ -20,6 +21,7 @@
                 <div class="form-header-title"><h1>✏️ {{ t .T "bd.edit.title" }}</h1></div>
                 <a href="/bd/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
+            {{ template "library_placement_badge" . }}
             {{ if .ErrorExists }}
             <div class="form-alert form-alert--error" role="alert">{{ t .T "bd.error.exists" }}</div>
             {{ end }}

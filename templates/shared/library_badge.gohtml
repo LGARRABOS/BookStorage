@@ -1,0 +1,14 @@
+{{ define "library_placement_badge" }}
+{{ if .LibraryPlacements }}
+<div class="library-placement-badge" role="status">
+    <span>{{ t .T "library.badge.stored" }}</span>
+    {{ range $i, $p := .LibraryPlacements }}
+        {{ if $i }} · {{ end }}
+        <strong>{{ $p.LocationLabel }}</strong>
+    {{ end }}
+    {{ with index .LibraryPlacements 0 }}
+    <a href="/library/furniture/{{ .FurnitureID }}">{{ t $.T "library.badge.link" }}</a>
+    {{ end }}
+</div>
+{{ end }}
+{{ end }}

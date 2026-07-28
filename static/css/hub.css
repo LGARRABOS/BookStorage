@@ -7,6 +7,8 @@
   --hub-anime-soft: rgba(14, 116, 144, 0.14);
   --hub-bd: #b45309;
   --hub-bd-soft: rgba(180, 83, 9, 0.14);
+  --hub-library: #0f766e;
+  --hub-library-soft: rgba(15, 118, 110, 0.14);
   --hub-tools: #0284c7;
   --hub-tools-soft: rgba(2, 132, 199, 0.12);
   --hub-sites: #0d9488;
@@ -332,6 +334,31 @@
 
 .hub-tile--bd:hover .hub-tile-go {
   color: var(--hub-bd);
+}
+
+.hub-tile--library {
+  --hub-accent: var(--hub-library);
+  --hub-accent-soft: var(--hub-library-soft);
+}
+
+.hub-tile--library .hub-tile-glow {
+  background: radial-gradient(circle at 20% 20%, var(--hub-library-soft), transparent 60%);
+}
+
+.hub-tile--library .hub-tile-icon {
+  background: var(--hub-library-soft);
+}
+
+.hub-tile--library .hub-tile-stat {
+  color: var(--hub-library);
+}
+
+.hub-tile--library:hover {
+  border-color: color-mix(in srgb, var(--hub-library) 45%, var(--border-subtle));
+}
+
+.hub-tile--library:hover .hub-tile-go {
+  color: var(--hub-library);
 }
 
 /* Compact utility tiles */

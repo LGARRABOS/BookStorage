@@ -159,6 +159,7 @@ func (a *App) HandleBdEditWork(w http.ResponseWriter, r *http.Request) {
 			"Statuses":          bdStatuses,
 			"CatalogPageURL":    catalogPageURL,
 			"ErrorExists":       r.URL.Query().Get("error") == "exists",
+			"LibraryPlacements": a.libraryPlacementSummaryForWork(userID, libraryMediaBD, workID),
 			"MobileTopbarTitle": i18n.T(lang)["bd.edit.title"],
 		}))
 	case http.MethodPost:
