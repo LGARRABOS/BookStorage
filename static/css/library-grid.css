@@ -374,8 +374,87 @@ body.library-iso-body .library-shelf-label {
   color: #a3e635 !important;
 }
 
-/* Edit layout: controls + live iso preview */
-.library-edit-layout {
+/* Edit panel: force readable text (layout is outside .library-page) */
+body.library-iso-body .library-edit-controls,
+body.library-iso-body .library-edit-controls * {
+  color: #e8eef5;
+}
+
+body.library-iso-body .library-edit-controls h1,
+body.library-iso-body .library-edit-controls h2,
+body.library-iso-body .library-edit-controls .form-header-title h1,
+body.library-iso-body .library-edit-controls .form-header-title p,
+body.library-iso-body .library-edit-controls label,
+body.library-iso-body .library-edit-controls .library-cases-label,
+body.library-iso-body .library-edit-controls .library-edit-next,
+body.library-iso-body .library-edit-controls .form-group label {
+  color: #f1f5f9 !important;
+}
+
+body.library-iso-body .library-edit-controls .form-header-title p,
+body.library-iso-body .library-edit-controls .library-edit-next {
+  color: #94a3b8 !important;
+}
+
+body.library-iso-body .library-edit-controls .library-shelf-label,
+body.library-iso-body .library-edit-controls .library-edit-next strong,
+body.library-iso-body .library-edit-controls .library-edit-status {
+  color: #a3e635 !important;
+}
+
+body.library-iso-body .library-edit-controls .btn,
+body.library-iso-body .library-edit-controls .btn-secondary,
+body.library-iso-body .library-edit-controls .btn-sm {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border: 1px solid #64748b !important;
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc !important;
+}
+
+body.library-iso-body .library-edit-controls .btn-primary,
+body.library-iso-body .library-edit-controls .btn-primary * {
+  background: #a3e635 !important;
+  border-color: #a3e635 !important;
+  color: #14201a !important;
+  -webkit-text-fill-color: #14201a !important;
+}
+
+body.library-iso-body .library-edit-controls .btn-danger,
+body.library-iso-body .library-edit-controls .btn-danger * {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.45) !important;
+  color: #fecaca !important;
+  -webkit-text-fill-color: #fecaca !important;
+}
+
+body.library-iso-body .library-edit-preview-head h2 {
+  color: #f8fafc !important;
+}
+
+body.library-iso-body .library-edit-preview-head p {
+  color: #94a3b8 !important;
+}
+
+/* Also fix list pages still using .library-page */
+body.library-iso-body .library-page .form-header-title h1,
+body.library-iso-body .library-page h1,
+body.library-iso-body .library-page h2,
+body.library-iso-body .library-page .btn-secondary,
+body.library-iso-body .library-page .btn-secondary * {
+  color: #f8fafc !important;
+  -webkit-text-fill-color: #f8fafc;
+}
+
+body.library-iso-body .library-page .btn-secondary {
+  background: rgba(255, 255, 255, 0.1) !important;
+  border-color: #64748b !important;
+}
+
+body.library-iso-body .library-page .btn-primary,
+body.library-iso-body .library-page .btn-primary * {
+  color: #14201a !important;
+  -webkit-text-fill-color: #14201a !important;
+}
   display: grid;
   grid-template-columns: minmax(280px, 400px) minmax(0, 1fr);
   gap: 1rem;
