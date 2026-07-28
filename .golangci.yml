@@ -32,7 +32,10 @@ linters:
       - linters: [gosec]
         text: "G203"
       - path: _test\.go
-        linters: [gosec]
+        linters: [gosec, dupl]
+      # Sections anime/BD/manga : mêmes flux volontaires, tables et chemins distincts.
+      - path: internal/server/(anime_row|bd_row|handlers_anime_works|handlers_bd_works|import_export_(anime|bd)_[^/]+|import_export_manga_parse)\.go
+        linters: [dupl]
     paths:
       - third_party$
       - builtin$

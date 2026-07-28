@@ -61,8 +61,7 @@ func parseBdCSVRecords(records [][]string) ([]exportBdWork, bool) {
 	idxISBN := headerIndex(headers, "isbn", "ean")
 
 	var out []exportBdWork
-	for i := 1; i < len(records); i++ {
-		row := records[i]
+	for _, row := range records[1:] {
 		title := safeCell(row, idxTitle)
 		if title == "" {
 			continue
