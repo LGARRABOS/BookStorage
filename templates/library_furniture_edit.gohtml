@@ -9,7 +9,7 @@
     <title>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=8">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=9">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
@@ -47,6 +47,7 @@
              data-i18n-preview="{{ t .T "library.edit.preview" }}"
              data-i18n-saved="{{ t .T "library.edit.saved" }}"
              data-i18n-cases="{{ t .T "library.shelves.cases" }}"
+             data-i18n-books="{{ t .T "library.shelves.books_per_case" }}"
              data-i18n-delete-confirm="{{ t .T "library.shelves.delete_confirm" }}">
 
             <aside class="library-edit-controls">
@@ -86,6 +87,9 @@
                         <label class="library-cases-label">{{ t .T "library.shelves.cases" }}
                             <input type="number" id="library-new-cases" min="1" max="50" value="10">
                         </label>
+                        <label class="library-cases-label" title="{{ t .T "library.shelves.books_hint" }}">{{ t .T "library.shelves.books_per_case" }}
+                            <input type="number" id="library-new-books" min="2" max="24" value="8">
+                        </label>
                         <button type="button" class="btn btn-primary" id="library-add-shelf-btn">{{ t .T "library.shelves.add" }}</button>
                     </div>
                 </section>
@@ -110,7 +114,7 @@
     <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if not .IsNew }}
-    <script src="/static/js/library-edit.js?v=3"></script>
+    <script src="/static/js/library-edit.js?v=4"></script>
     {{ end }}
 </body>
 </html>

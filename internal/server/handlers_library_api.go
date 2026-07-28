@@ -76,10 +76,11 @@ func (a *App) HandleAPILibraryFurniture(w http.ResponseWriter, r *http.Request) 
 	shelfOut := make([]map[string]any, 0, len(shelves))
 	for _, s := range shelves {
 		shelfOut = append(shelfOut, map[string]any{
-			"id":         s.ID,
-			"label":      s.Label,
-			"case_count": s.CaseCount,
-			"sort_order": s.SortOrder,
+			"id":             s.ID,
+			"label":          s.Label,
+			"case_count":     s.CaseCount,
+			"books_per_case": s.BooksPerCase,
+			"sort_order":     s.SortOrder,
 		})
 	}
 	placeOut := make([]libraryPlacementAPI, 0, len(places))

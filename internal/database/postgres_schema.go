@@ -127,6 +127,7 @@ var postgresSchemaStatements = []string{
 		furniture_id BIGINT NOT NULL REFERENCES library_furniture(id) ON DELETE CASCADE,
 		label TEXT NOT NULL,
 		case_count INTEGER NOT NULL DEFAULT 1,
+		books_per_case INTEGER NOT NULL DEFAULT 8,
 		sort_order INTEGER NOT NULL DEFAULT 0,
 		UNIQUE (furniture_id, label)
 	)`,
@@ -399,7 +400,12 @@ func ensurePostgresExtraColumns(c *Conn) error {
 	if err := ensureColumnsPostgres(c, "works", postgresWorkColumns); err != nil {
 		return err
 	}
-	return ensureColumnsPostgres(c, "bd_works", map[string]string{"isbn": "TEXT"})
+	if err := ensureColumnsPostgres(c, "bd_works", map[string]string{"isbn": "TEXT"}); err != nil {
+		return err
+	}
+	return ensureColumnsPostgres(c, "library_shelves", map[string]string{
+		"books_per_case": "INTEGER NOT NULL DEFAULT 8",
+	})
 }
 
 func ensureColumnsPostgres(c *Conn, table string, cols map[string]string) error {

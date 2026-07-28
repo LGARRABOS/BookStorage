@@ -79,11 +79,12 @@ type libraryFurnitureRow struct {
 }
 
 type libraryShelfRow struct {
-	ID          int    `json:"id"`
-	FurnitureID int    `json:"furniture_id"`
-	Label       string `json:"label"`
-	CaseCount   int    `json:"case_count"`
-	SortOrder   int    `json:"sort_order"`
+	ID           int    `json:"id"`
+	FurnitureID  int    `json:"furniture_id"`
+	Label        string `json:"label"`
+	CaseCount    int    `json:"case_count"`
+	BooksPerCase int    `json:"books_per_case"`
+	SortOrder    int    `json:"sort_order"`
 }
 
 type libraryPlacementRow struct {
@@ -155,9 +156,19 @@ func (a *App) getLibraryFurniture(userID, furnitureID int) (libraryFurnitureRow,
 	return r, err
 }
 
+func clampLibraryBooksPerCase(n int) int {
+	if n < 2 {
+		return 2
+	}
+	if n > 24 {
+		return 24
+	}
+	return n
+}
+
 func (a *App) listLibraryShelves(furnitureID int) ([]libraryShelfRow, error) {
 	rows, err := a.DB.Query(
-		`SELECT id, furniture_id, label, case_count, sort_order
+		`SELECT id, furniture_id, label, case_count, COALESCE(books_per_case, 8), sort_order
 		 FROM library_shelves WHERE furniture_id = ?
 		 ORDER BY sort_order, label, id`,
 		furnitureID,
@@ -169,9 +180,10 @@ func (a *App) listLibraryShelves(furnitureID int) ([]libraryShelfRow, error) {
 	var out []libraryShelfRow
 	for rows.Next() {
 		var r libraryShelfRow
-		if err := rows.Scan(&r.ID, &r.FurnitureID, &r.Label, &r.CaseCount, &r.SortOrder); err != nil {
+		if err := rows.Scan(&r.ID, &r.FurnitureID, &r.Label, &r.CaseCount, &r.BooksPerCase, &r.SortOrder); err != nil {
 			return nil, err
 		}
+		r.BooksPerCase = clampLibraryBooksPerCase(r.BooksPerCase)
 		out = append(out, r)
 	}
 	return out, rows.Err()
@@ -315,12 +327,15 @@ func (a *App) ownershipOKForLibraryWork(userID int, kind string, workID int) boo
 func (a *App) shelfOwnedByUser(userID, shelfID int) (libraryShelfRow, bool) {
 	var r libraryShelfRow
 	err := a.DB.QueryRow(
-		`SELECT s.id, s.furniture_id, s.label, s.case_count, s.sort_order
+		`SELECT s.id, s.furniture_id, s.label, s.case_count, COALESCE(s.books_per_case, 8), s.sort_order
 		 FROM library_shelves s
 		 JOIN library_furniture f ON f.id = s.furniture_id
 		 WHERE s.id = ? AND f.user_id = ?`,
 		shelfID, userID,
-	).Scan(&r.ID, &r.FurnitureID, &r.Label, &r.CaseCount, &r.SortOrder)
+	).Scan(&r.ID, &r.FurnitureID, &r.Label, &r.CaseCount, &r.BooksPerCase, &r.SortOrder)
+	if err == nil {
+		r.BooksPerCase = clampLibraryBooksPerCase(r.BooksPerCase)
+	}
 	return r, err == nil
 }
 

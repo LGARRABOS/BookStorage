@@ -43,7 +43,7 @@ func TestLibraryPlacementsAPI_CreateSearchUnique(t *testing.T) {
 		t.Fatal(err)
 	}
 	fid, _ := res.LastInsertId()
-	res, err = db.Exec(`INSERT INTO library_shelves (furniture_id, label, case_count, sort_order) VALUES (?, 'A', 10, 0)`, fid)
+	res, err = db.Exec(`INSERT INTO library_shelves (furniture_id, label, case_count, books_per_case, sort_order) VALUES (?, 'A', 10, 8, 0)`, fid)
 	if err != nil {
 		t.Fatal(err)
 	}

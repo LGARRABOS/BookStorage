@@ -82,7 +82,7 @@ func (a *App) HandleLibraryFurnitureNew(w http.ResponseWriter, r *http.Request) 
 		}
 		// Seed shelf A with 10 cases by default.
 		_, _ = a.DB.Exec(
-			`INSERT INTO library_shelves (furniture_id, label, case_count, sort_order) VALUES (?, 'A', 10, 0)`,
+			`INSERT INTO library_shelves (furniture_id, label, case_count, books_per_case, sort_order) VALUES (?, 'A', 10, 8, 0)`,
 			id,
 		)
 		http.Redirect(w, r, pathLibraryFurniturePrefix+strconv.FormatInt(id, 10)+"/edit", http.StatusFound)
@@ -196,6 +196,7 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 		case "add_shelf":
 			label := normalizeShelfLabel(r.FormValue("label"))
 			cases := atoiDefault(r.FormValue("case_count"), 10)
+			booksPerCase := clampLibraryBooksPerCase(atoiDefault(r.FormValue("books_per_case"), 8))
 			if cases < 1 {
 				cases = 1
 			}
@@ -213,8 +214,8 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 			var maxSort int
 			_ = a.DB.QueryRow(`SELECT COALESCE(MAX(sort_order), -1) FROM library_shelves WHERE furniture_id = ?`, furnitureID).Scan(&maxSort)
 			_, err = a.DB.Exec(
-				`INSERT INTO library_shelves (furniture_id, label, case_count, sort_order) VALUES (?, ?, ?, ?)`,
-				furnitureID, label, cases, maxSort+1,
+				`INSERT INTO library_shelves (furniture_id, label, case_count, books_per_case, sort_order) VALUES (?, ?, ?, ?, ?)`,
+				furnitureID, label, cases, booksPerCase, maxSort+1,
 			)
 			if err != nil {
 				if strings.EqualFold(r.Header.Get("X-Requested-With"), "XMLHttpRequest") {
@@ -227,6 +228,7 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 		case "update_shelf":
 			shelfID := atoiDefault(r.FormValue("shelf_id"), 0)
 			cases := atoiDefault(r.FormValue("case_count"), 1)
+			booksPerCase := clampLibraryBooksPerCase(atoiDefault(r.FormValue("books_per_case"), 8))
 			if cases < 1 {
 				cases = 1
 			}
@@ -234,9 +236,9 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 				cases = 50
 			}
 			_, err = a.DB.Exec(
-				`UPDATE library_shelves SET case_count = ?
+				`UPDATE library_shelves SET case_count = ?, books_per_case = ?
 				 WHERE id = ? AND furniture_id = ?`,
-				cases, shelfID, furnitureID,
+				cases, booksPerCase, shelfID, furnitureID,
 			)
 			if err == nil {
 				_, _ = a.DB.Exec(

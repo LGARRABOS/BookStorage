@@ -138,6 +138,11 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 	if _, err := db.Exec(createLibraryShelvesTableSQL); err != nil {
 		return err
 	}
+	if err := ensureColumnsSQLite(db, "library_shelves", map[string]string{
+		"books_per_case": "INTEGER NOT NULL DEFAULT 8",
+	}); err != nil {
+		return err
+	}
 	if _, err := db.Exec(createLibraryPlacementsTableSQL); err != nil {
 		return err
 	}

@@ -8,6 +8,7 @@
   var statusEl = document.getElementById("library-edit-status");
   var nextLabelEl = document.getElementById("library-next-label");
   var newCasesEl = document.getElementById("library-new-cases");
+  var newBooksEl = document.getElementById("library-new-books");
   var addBtn = document.getElementById("library-add-shelf-btn");
 
   var i18n = {
@@ -15,6 +16,7 @@
     preview: root.getAttribute("data-i18n-preview") || "Preview",
     saved: root.getAttribute("data-i18n-saved") || "Saved",
     cases: root.getAttribute("data-i18n-cases") || "Slots",
+    books: root.getAttribute("data-i18n-books") || "Books / slot",
     deleteConfirm:
       root.getAttribute("data-i18n-delete-confirm") || "Delete this shelf?",
   };
@@ -32,15 +34,25 @@
     placements = [];
   }
 
-  // Normalize Go json tags (ID vs id) — struct uses capital fields without json tags.
-  shelves = shelves.map(function (s) {
+  function clampBooks(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return 8;
+    return Math.max(2, Math.min(24, n));
+  }
+
+  function normalizeShelf(s) {
     return {
       id: s.id || s.ID || 0,
       label: s.label || s.Label || "?",
       case_count: s.case_count || s.CaseCount || 1,
+      books_per_case: clampBooks(
+        s.books_per_case || s.BooksPerCase || 8
+      ),
       sort_order: s.sort_order || s.SortOrder || 0,
     };
-  });
+  }
+
+  shelves = shelves.map(normalizeShelf);
 
   var saveTimer = null;
   var statusTimer = null;
@@ -74,6 +86,17 @@
 
   function spineColor(title, id) {
     return SPINE_COLORS[hashStr(String(title || "") + "#" + String(id || "")) % SPINE_COLORS.length];
+  }
+
+  function cubbyMetrics(booksPerCase) {
+    var cap = clampBooks(booksPerCase);
+    var slot = cap <= 4 ? 15 : cap <= 8 ? 12 : cap <= 12 ? 10 : cap <= 16 ? 8 : 7;
+    return {
+      cap: cap,
+      slot: slot,
+      w: cap * slot + 16,
+      h: Math.round(Math.max(110, (cap * slot + 16) * 1.48)),
+    };
   }
 
   function setStatus(msg) {
@@ -117,6 +140,7 @@
     }
     var html = '<div class="library-iso-world"><div class="library-iso-grid">';
     shelves.forEach(function (shelf) {
+      var m = cubbyMetrics(shelf.books_per_case);
       html += '<div class="library-iso-row">';
       html += '<div class="library-iso-row-label">' + esc(shelf.label) + "</div>";
       html += '<div class="library-iso-cubbies">';
@@ -126,7 +150,11 @@
         html +=
           '<div class="library-iso-cubby' +
           (filled ? " is-filled" : " is-empty") +
-          '" aria-label="' +
+          '" style="--cubby-w:' +
+          m.w +
+          "px;--cubby-h:" +
+          m.h +
+          'px" aria-label="' +
           esc(caseCode(shelf.label, c)) +
           '">';
         html += '<span class="library-iso-cubby-box">';
@@ -136,14 +164,13 @@
           "</span>";
         if (filled) {
           html += '<span class="library-iso-spines">';
-          items.slice(0, 12).forEach(function (p) {
+          items.slice(0, m.cap).forEach(function (p) {
             var h = hashStr(String(p.title) + String(p.id));
-            var w = items.length <= 3 ? 13 : items.length <= 5 ? 10 : 8;
             html +=
               '<span class="library-iso-spine" style="background-color:' +
               spineColor(p.title, p.id) +
               ";width:" +
-              w +
+              Math.max(5, m.slot - 1) +
               "px;height:" +
               (78 + (h % 18)) +
               '%" title="' +
@@ -172,42 +199,38 @@
     shelves.forEach(function (shelf) {
       html += '<li class="library-shelf-editor" data-shelf-id="' + shelf.id + '">';
       html += '<span class="library-shelf-label">' + esc(shelf.label) + "</span>";
-      html += '<div class="library-cases-stepper">';
-      html +=
-        '<button type="button" class="btn btn-secondary btn-sm" data-delta="-1" aria-label="-">−</button>';
+      html += '<label class="library-shelf-field">' + esc(i18n.cases);
       html +=
         '<input type="number" class="library-cases-input" min="1" max="50" value="' +
         shelf.case_count +
-        '" aria-label="' +
-        esc(i18n.cases) +
-        '">';
+        '"></label>';
+      html += '<label class="library-shelf-field">' + esc(i18n.books);
       html +=
-        '<button type="button" class="btn btn-secondary btn-sm" data-delta="1" aria-label="+">+</button>';
-      html += "</div>";
+        '<input type="number" class="library-books-input" min="2" max="24" value="' +
+        shelf.books_per_case +
+        '"></label>';
       html +=
-        '<button type="button" class="btn btn-danger btn-sm" data-delete="1">' +
-        "✕" +
-        "</button>";
+        '<button type="button" class="btn btn-danger btn-sm" data-delete="1">✕</button>';
       html += "</li>";
     });
     listEl.innerHTML = html;
 
     listEl.querySelectorAll(".library-shelf-editor").forEach(function (row) {
       var id = parseInt(row.getAttribute("data-shelf-id"), 10);
-      var input = row.querySelector(".library-cases-input");
-      row.querySelectorAll("[data-delta]").forEach(function (btn) {
-        btn.addEventListener("click", function () {
-          var d = parseInt(btn.getAttribute("data-delta"), 10);
-          var v = parseInt(input.value, 10) || 1;
-          v = Math.max(1, Math.min(50, v + d));
-          input.value = String(v);
-          setCaseCount(id, v, true);
-        });
+      var casesInput = row.querySelector(".library-cases-input");
+      var booksInput = row.querySelector(".library-books-input");
+      function sync(debounce) {
+        var cases = Math.max(1, Math.min(50, parseInt(casesInput.value, 10) || 1));
+        var books = clampBooks(booksInput.value);
+        casesInput.value = String(cases);
+        booksInput.value = String(books);
+        updateShelf(id, cases, books, debounce);
+      }
+      casesInput.addEventListener("input", function () {
+        sync(true);
       });
-      input.addEventListener("input", function () {
-        var v = parseInt(input.value, 10) || 1;
-        v = Math.max(1, Math.min(50, v));
-        setCaseCount(id, v, true);
+      booksInput.addEventListener("input", function () {
+        sync(true);
       });
       row.querySelector("[data-delete]").addEventListener("click", function () {
         if (!confirm(i18n.deleteConfirm)) return;
@@ -219,29 +242,33 @@
     renderPreview();
   }
 
-  function setCaseCount(shelfId, count, debounceSave) {
+  function updateShelf(shelfId, caseCount, booksPerCase, debounceSave) {
     shelves = shelves.map(function (s) {
       if (s.id === shelfId) {
-        return Object.assign({}, s, { case_count: count });
+        return Object.assign({}, s, {
+          case_count: caseCount,
+          books_per_case: booksPerCase,
+        });
       }
       return s;
     });
     renderPreview();
     if (!debounceSave) {
-      persistCaseCount(shelfId, count);
+      persistShelf(shelfId, caseCount, booksPerCase);
       return;
     }
     clearTimeout(saveTimer);
     saveTimer = setTimeout(function () {
-      persistCaseCount(shelfId, count);
+      persistShelf(shelfId, caseCount, booksPerCase);
     }, 350);
   }
 
-  function persistCaseCount(shelfId, count) {
+  function persistShelf(shelfId, caseCount, booksPerCase) {
     var body = new URLSearchParams();
     body.set("action", "update_shelf");
     body.set("shelf_id", String(shelfId));
-    body.set("case_count", String(count));
+    body.set("case_count", String(caseCount));
+    body.set("books_per_case", String(booksPerCase));
     fetch("/library/furniture/" + encodeURIComponent(furnitureId) + "/edit", {
       method: "POST",
       headers: {
@@ -283,10 +310,12 @@
     var label = nextLabel();
     var cases = parseInt(newCasesEl && newCasesEl.value ? newCasesEl.value : "10", 10) || 10;
     cases = Math.max(1, Math.min(50, cases));
+    var books = clampBooks(newBooksEl && newBooksEl.value ? newBooksEl.value : 8);
     var body = new URLSearchParams();
     body.set("action", "add_shelf");
     body.set("label", label);
     body.set("case_count", String(cases));
+    body.set("books_per_case", String(books));
     fetch("/library/furniture/" + encodeURIComponent(furnitureId) + "/edit", {
       method: "POST",
       headers: {
@@ -305,14 +334,7 @@
         return r.json();
       })
       .then(function (data) {
-        shelves = (data.shelves || []).map(function (s) {
-          return {
-            id: s.id,
-            label: s.label,
-            case_count: s.case_count,
-            sort_order: s.sort_order || 0,
-          };
-        });
+        shelves = (data.shelves || []).map(normalizeShelf);
         placements = data.placements || [];
         renderShelfList();
         setStatus(i18n.saved);
@@ -321,6 +343,5 @@
 
   if (addBtn) addBtn.addEventListener("click", addShelf);
 
-  // Use a clearer confirm for delete — pull from data if present later
   renderShelfList();
 })();

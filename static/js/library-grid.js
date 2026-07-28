@@ -17,9 +17,6 @@
   var countEl = document.getElementById("library-iso-count");
   var zoomIn = document.getElementById("library-zoom-in");
   var zoomOut = document.getElementById("library-zoom-out");
-  var capInput = document.getElementById("library-capacity");
-  var capMinus = document.getElementById("library-cap-minus");
-  var capPlus = document.getElementById("library-cap-plus");
 
   var i18n = {
     empty: root.getAttribute("data-i18n-empty") || "empty",
@@ -37,28 +34,7 @@
     "#b45309", "#4338ca", "#be123c", "#047857",
   ];
 
-  var CAP_KEY = "library-cap-" + furnitureId;
   var VIEW_KEY = "library-view-" + furnitureId;
-
-  function clampCapacity(n) {
-    n = parseInt(n, 10);
-    if (isNaN(n)) return 8;
-    return Math.max(2, Math.min(24, n));
-  }
-
-  function loadSavedCapacity() {
-    try {
-      var v = localStorage.getItem(CAP_KEY);
-      if (v != null) return clampCapacity(v);
-    } catch (e) {}
-    return 8;
-  }
-
-  function saveCapacity(n) {
-    try {
-      localStorage.setItem(CAP_KEY, String(n));
-    } catch (e) {}
-  }
 
   function loadSavedView() {
     try {
@@ -83,6 +59,23 @@
     } catch (e) {}
   }
 
+  function clampBooks(n) {
+    n = parseInt(n, 10);
+    if (isNaN(n)) return 8;
+    return Math.max(2, Math.min(24, n));
+  }
+
+  function cubbyMetrics(booksPerCase) {
+    var cap = clampBooks(booksPerCase);
+    var slot = cap <= 4 ? 15 : cap <= 8 ? 12 : cap <= 12 ? 10 : cap <= 16 ? 8 : 7;
+    return {
+      cap: cap,
+      slot: slot,
+      w: cap * slot + 16,
+      h: Math.round(Math.max(110, (cap * slot + 16) * 1.48)),
+    };
+  }
+
   var savedView = loadSavedView();
   var state = {
     shelves: [],
@@ -92,8 +85,6 @@
     zoom: savedView && savedView.zoom ? savedView.zoom : 1.15,
     panX: savedView && typeof savedView.panX === "number" ? savedView.panX : 0,
     panY: savedView && typeof savedView.panY === "number" ? savedView.panY : 0,
-    capacity: loadSavedCapacity(),
-    spineSlot: 11,
   };
   var searchTimer = null;
   var saveViewTimer = null;
@@ -142,11 +133,11 @@
     return head;
   }
 
-  function spineMarkup(p) {
+  function spineMarkup(p, metrics) {
     var h = hashStr(String(p.title) + String(p.id));
-    var width = Math.max(5, state.spineSlot - 1);
+    var width = Math.max(5, metrics.slot - 1);
     var heightPct = 78 + (h % 18);
-    var showLabel = state.capacity <= 6 && width >= 9;
+    var showLabel = metrics.cap <= 6 && width >= 9;
     var style =
       "background-color:" +
       spineColor(p.title, p.id) +
@@ -187,19 +178,6 @@
     return n;
   }
 
-  function applySizes() {
-    var cap = state.capacity;
-    var slot = cap <= 4 ? 15 : cap <= 8 ? 12 : cap <= 12 ? 10 : cap <= 16 ? 8 : 7;
-    var w = cap * slot + 16;
-    var h = Math.round(Math.max(110, w * 1.48));
-    state.spineSlot = slot;
-    if (stage) {
-      stage.style.setProperty("--cubby-w", w + "px");
-      stage.style.setProperty("--cubby-h", h + "px");
-      stage.style.setProperty("--spine-slot", slot + "px");
-    }
-  }
-
   function applyView() {
     var world = stage && stage.querySelector(".library-iso-world");
     if (!world) return;
@@ -215,23 +193,17 @@
     saveViewTimer = setTimeout(saveView, 400);
   }
 
-  function setCapacity(n, rerender) {
-    state.capacity = clampCapacity(n);
-    if (capInput) capInput.value = String(state.capacity);
-    saveCapacity(state.capacity);
-    applySizes();
-    if (rerender) renderGrid();
-  }
-
   function renderGrid() {
     if (!state.shelves.length) {
       stage.innerHTML = '<p class="library-empty">—</p>';
       return;
     }
 
-    applySizes();
     var html = '<div class="library-iso-world"><div class="library-iso-grid">';
+    var axisW = 88;
     state.shelves.forEach(function (shelf) {
+      var m = cubbyMetrics(shelf.books_per_case || 8);
+      if (m.w > axisW) axisW = m.w;
       html += '<div class="library-iso-row">';
       html += '<div class="library-iso-row-label">' + esc(shelf.label) + "</div>";
       html += '<div class="library-iso-cubbies">';
@@ -246,7 +218,11 @@
           '<button type="button" class="library-iso-cubby' +
           (filled ? " is-filled" : " is-empty") +
           (selected ? " is-selected" : "") +
-          '" data-shelf-id="' +
+          '" style="--cubby-w:' +
+          m.w +
+          "px;--cubby-h:" +
+          m.h +
+          'px" data-shelf-id="' +
           shelf.id +
           '" data-case-num="' +
           c +
@@ -263,13 +239,13 @@
           "</span>";
         if (filled) {
           html += '<span class="library-iso-spines">';
-          items.slice(0, state.capacity).forEach(function (p) {
-            html += spineMarkup(p);
+          items.slice(0, m.cap).forEach(function (p) {
+            html += spineMarkup(p, m);
           });
-          if (items.length > state.capacity) {
+          if (items.length > m.cap) {
             html +=
               '<span class="library-iso-spine-more" title="+' +
-              (items.length - state.capacity) +
+              (items.length - m.cap) +
               '">+</span>';
           }
           html += "</span>";
@@ -282,7 +258,10 @@
 
     var cols = maxCases();
     if (cols > 0) {
-      html += '<div class="library-iso-axis" aria-hidden="true">';
+      html +=
+        '<div class="library-iso-axis" style="--cubby-w:' +
+        axisW +
+        'px" aria-hidden="true">';
       for (var i = 1; i <= cols; i++) {
         html += "<span>" + i + "</span>";
       }
@@ -546,23 +525,6 @@
 
   if (closeBtn) closeBtn.addEventListener("click", closePanel);
 
-  if (capInput) {
-    capInput.value = String(state.capacity);
-    capInput.addEventListener("change", function () {
-      setCapacity(capInput.value, true);
-    });
-  }
-  if (capMinus) {
-    capMinus.addEventListener("click", function () {
-      setCapacity(state.capacity - 1, true);
-    });
-  }
-  if (capPlus) {
-    capPlus.addEventListener("click", function () {
-      setCapacity(state.capacity + 1, true);
-    });
-  }
-
   if (zoomIn) {
     zoomIn.addEventListener("click", function () {
       state.zoom = Math.min(2.4, Math.round((state.zoom + 0.12) * 100) / 100);
@@ -634,6 +596,5 @@
   }
 
   setPanelOpen(false);
-  if (capInput) capInput.value = String(state.capacity);
   load();
 })();

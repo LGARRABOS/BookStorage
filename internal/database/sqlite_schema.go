@@ -96,6 +96,7 @@ CREATE TABLE IF NOT EXISTS library_shelves (
     furniture_id INTEGER NOT NULL,
     label TEXT NOT NULL,
     case_count INTEGER NOT NULL DEFAULT 1,
+    books_per_case INTEGER NOT NULL DEFAULT 8,
     sort_order INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (furniture_id) REFERENCES library_furniture (id) ON DELETE CASCADE,
     UNIQUE (furniture_id, label)
