@@ -161,7 +161,7 @@ func (a *App) HandleAPILibraryPlacementsCreate(w http.ResponseWriter, r *http.Re
 			return
 		}
 	}
-	res, err := a.DB.Exec(
+	id, err := a.insertLibraryRowID(
 		`INSERT INTO library_placements (user_id, shelf_id, case_num, position, media_kind, work_id, volume, updated_at)
 		 VALUES (?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)`,
 		userID, body.ShelfID, body.CaseNum, pos, kind, body.WorkID, vol,
@@ -172,7 +172,6 @@ func (a *App) HandleAPILibraryPlacementsCreate(w http.ResponseWriter, r *http.Re
 		_ = json.NewEncoder(w).Encode(map[string]any{"ok": false, "error": "conflict"})
 		return
 	}
-	id, _ := res.LastInsertId()
 	p, err := a.getLibraryPlacement(userID, int(id))
 	if err != nil {
 		w.Header().Set("Content-Type", "application/json")

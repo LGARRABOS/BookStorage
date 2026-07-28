@@ -7,6 +7,8 @@ import (
 	"strconv"
 	"strings"
 	"unicode"
+
+	"bookstorage/internal/database"
 )
 
 const (
@@ -344,4 +346,22 @@ func (a *App) libraryPlacementSummaryForWork(userID int, kind string, workID int
 	defer func() { _ = rows.Close() }()
 	out, _ := scanLibraryPlacementRows(rows)
 	return out
+}
+
+// insertLibraryRowID inserts a row and returns its id. PostgreSQL (lib/pq) does not
+// support LastInsertId, so we use RETURNING there.
+func (a *App) insertLibraryRowID(query string, args ...any) (int64, error) {
+	if a == nil || a.DB == nil {
+		return 0, sql.ErrConnDone
+	}
+	if a.DB.B == database.BackendPostgres {
+		var id int64
+		err := a.DB.QueryRow(query+` RETURNING id`, args...).Scan(&id)
+		return id, err
+	}
+	res, err := a.DB.Exec(query, args...)
+	if err != nil {
+		return 0, err
+	}
+	return res.LastInsertId()
 }

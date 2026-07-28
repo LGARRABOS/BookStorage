@@ -1296,8 +1296,13 @@ body {
   }
 
   .page-body {
-    padding-top: 1.5rem;
+    /* Desktop topbar stays position:fixed on narrow viewports; keep content clear. */
+    padding-top: max(5.5rem, calc(4.75rem + env(safe-area-inset-top, 0px)));
     padding-bottom: 2rem;
+  }
+
+  .page-body.mobile-page {
+    padding-top: 0.35rem;
   }
 
   table {

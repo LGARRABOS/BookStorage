@@ -1053,5 +1053,7 @@
   "library.error.label": "Enter a shelf letter (A–Z).",
   "library.error.dup_shelf": "That shelf letter already exists.",
   "library.badge.stored": "Stored:",
-  "library.badge.link": "View grid"
+  "library.badge.link": "View grid",
+  "library.iso.pick": "Click a cubby to view or place volumes.",
+  "library.iso.panel_title": "Slot"
 }

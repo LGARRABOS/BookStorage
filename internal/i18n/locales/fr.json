@@ -1041,6 +1041,8 @@
   "library.error.dup_shelf": "Cette lettre d’étagère existe déjà.",
   "library.badge.stored": "Rangé :",
   "library.badge.link": "Voir la grille",
+  "library.iso.pick": "Cliquez une alvéole pour voir ou ranger des volumes.",
+  "library.iso.panel_title": "Case",
   "bd.nav.dashboard": "Tableau de bord",
   "bd.nav.catalog": "Catalogue",
   "bd.title": "Bandes dessinées",

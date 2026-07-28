@@ -64,7 +64,7 @@ func (a *App) HandleLibraryFurnitureNew(w http.ResponseWriter, r *http.Request) 
 			http.Redirect(w, r, pathLibraryFurnitureNew+"?error=name", http.StatusFound)
 			return
 		}
-		res, err := a.DB.Exec(
+		res, err := a.insertLibraryRowID(
 			`INSERT INTO library_furniture (user_id, name, room_label, sort_order, updated_at)
 			 VALUES (?, ?, ?, 0, CURRENT_TIMESTAMP)`,
 			userID, name, nullIfEmpty(room),
@@ -73,7 +73,11 @@ func (a *App) HandleLibraryFurnitureNew(w http.ResponseWriter, r *http.Request) 
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
-		id, _ := res.LastInsertId()
+		id := res
+		if id <= 0 {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
 		// Seed shelf A with 10 cases by default.
 		_, _ = a.DB.Exec(
 			`INSERT INTO library_shelves (furniture_id, label, case_count, sort_order) VALUES (?, 'A', 10, 0)`,
@@ -92,6 +96,10 @@ func (a *App) HandleLibraryFurnitureView(w http.ResponseWriter, r *http.Request)
 	}
 	userID, _ := a.currentUserID(r)
 	furnitureID, _ := strconv.Atoi(r.PathValue("id"))
+	if furnitureID <= 0 {
+		http.Redirect(w, r, pathLibraryHome, http.StatusFound)
+		return
+	}
 	furn, err := a.getLibraryFurniture(userID, furnitureID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -125,6 +133,10 @@ func (a *App) HandleLibraryFurnitureView(w http.ResponseWriter, r *http.Request)
 func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	furnitureID, _ := strconv.Atoi(r.PathValue("id"))
+	if furnitureID <= 0 {
+		http.Redirect(w, r, pathLibraryHome, http.StatusFound)
+		return
+	}
 	furn, err := a.getLibraryFurniture(userID, furnitureID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -239,6 +251,10 @@ func (a *App) HandleLibraryFurnitureDelete(w http.ResponseWriter, r *http.Reques
 	}
 	userID, _ := a.currentUserID(r)
 	furnitureID, _ := strconv.Atoi(r.PathValue("id"))
+	if furnitureID <= 0 {
+		http.Redirect(w, r, pathLibraryHome, http.StatusFound)
+		return
+	}
 	_, err := a.DB.Exec(`DELETE FROM library_furniture WHERE id = ? AND user_id = ?`, furnitureID, userID)
 	if err != nil {
 		http.Error(w, "Database error", http.StatusInternalServerError)
