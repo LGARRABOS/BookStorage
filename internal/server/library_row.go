@@ -79,11 +79,11 @@ type libraryFurnitureRow struct {
 }
 
 type libraryShelfRow struct {
-	ID          int
-	FurnitureID int
-	Label       string
-	CaseCount   int
-	SortOrder   int
+	ID          int    `json:"id"`
+	FurnitureID int    `json:"furniture_id"`
+	Label       string `json:"label"`
+	CaseCount   int    `json:"case_count"`
+	SortOrder   int    `json:"sort_order"`
 }
 
 type libraryPlacementRow struct {

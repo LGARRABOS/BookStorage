@@ -155,10 +155,20 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
+		places, err := a.listLibraryPlacementsForFurniture(userID, furnitureID)
+		if err != nil {
+			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		placeAPI := make([]libraryPlacementAPI, 0, len(places))
+		for _, p := range places {
+			placeAPI = append(placeAPI, placementToAPI(p))
+		}
 		a.renderTemplate(w, r, "library_furniture_edit", a.mergeData(r, map[string]any{
 			"IsNew":             false,
 			"Furniture":         furn,
 			"Shelves":           shelves,
+			"PlacementAPI":      placeAPI,
 			"Error":             r.URL.Query().Get("error"),
 			"MobileTopbarTitle": i18n.T(lang)["library.furniture.edit"],
 		}))
@@ -191,6 +201,10 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 				cases = 50
 			}
 			if label == "" {
+				if strings.EqualFold(r.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+					w.WriteHeader(http.StatusBadRequest)
+					return
+				}
 				http.Redirect(w, r, pathLibraryFurniturePrefix+strconv.Itoa(furnitureID)+"/edit?error=label", http.StatusFound)
 				return
 			}
@@ -201,6 +215,10 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 				furnitureID, label, cases, maxSort+1,
 			)
 			if err != nil {
+				if strings.EqualFold(r.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+					w.WriteHeader(http.StatusConflict)
+					return
+				}
 				http.Redirect(w, r, pathLibraryFurniturePrefix+strconv.Itoa(furnitureID)+"/edit?error=dup", http.StatusFound)
 				return
 			}
@@ -236,6 +254,10 @@ func (a *App) HandleLibraryFurnitureEdit(w http.ResponseWriter, r *http.Request)
 		}
 		if err != nil {
 			http.Error(w, "Database error", http.StatusInternalServerError)
+			return
+		}
+		if strings.EqualFold(r.Header.Get("X-Requested-With"), "XMLHttpRequest") {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		http.Redirect(w, r, pathLibraryFurniturePrefix+strconv.Itoa(furnitureID)+"/edit", http.StatusFound)

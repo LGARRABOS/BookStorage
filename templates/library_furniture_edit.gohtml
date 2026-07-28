@@ -9,91 +9,109 @@
     <title>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=3">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=4">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
     {{ template "library_topbar" . }}
     <main class="page-body library-iso-page">
+        {{ if .IsNew }}
         <div class="container library-page form-page">
             <div class="form-header">
                 <div class="form-header-title">
-                    <h1>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }}</h1>
+                    <h1>{{ t .T "library.furniture.new" }}</h1>
+                    <p>{{ t .T "library.edit.new_hint" }}</p>
                 </div>
-                <a href="{{ if .IsNew }}/library/{{ else }}/library/furniture/{{ .Furniture.ID }}{{ end }}" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+                <a href="/library/" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
             </div>
-
             {{ if eq .Error "name" }}<div class="form-alert form-alert--error">{{ t .T "library.error.name" }}</div>{{ end }}
-            {{ if eq .Error "label" }}<div class="form-alert form-alert--error">{{ t .T "library.error.label" }}</div>{{ end }}
-            {{ if eq .Error "dup" }}<div class="form-alert form-alert--error">{{ t .T "library.error.dup_shelf" }}</div>{{ end }}
-
-            {{ if .IsNew }}
-            <form method="post" action="/library/furniture/new" class="form-card">
+            <form method="post" action="/library/furniture/new" class="form-card library-edit-meta">
                 <div class="form-group">
                     <label for="name">{{ t .T "library.field.name" }} <span class="required">*</span></label>
-                    <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}">
+                    <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}" autocomplete="off">
                 </div>
                 <div class="form-group">
                     <label for="room_label">{{ t .T "library.field.room" }}</label>
                     <input id="room_label" name="room_label" maxlength="120" placeholder="{{ t .T "library.field.room_ph" }}">
                 </div>
-                <button type="submit" class="btn btn-primary">{{ t .T "common.save" }}</button>
+                <button type="submit" class="btn btn-primary">{{ t .T "library.edit.create_continue" }}</button>
             </form>
-            {{ else }}
-            <form method="post" action="/library/furniture/{{ .Furniture.ID }}/edit" class="form-card">
-                <input type="hidden" name="action" value="save_meta">
-                <div class="form-group">
-                    <label for="name">{{ t .T "library.field.name" }} <span class="required">*</span></label>
-                    <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}">
-                </div>
-                <div class="form-group">
-                    <label for="room_label">{{ t .T "library.field.room" }}</label>
-                    <input id="room_label" name="room_label" maxlength="120" value="{{ if .Furniture.RoomLabel.Valid }}{{ .Furniture.RoomLabel.String }}{{ end }}" placeholder="{{ t .T "library.field.room_ph" }}">
-                </div>
-                <button type="submit" class="btn btn-primary">{{ t .T "common.save" }}</button>
-            </form>
-
-            <section class="form-card">
-                <h2>{{ t .T "library.shelves.title" }}</h2>
-                <ul class="library-shelf-config">
-                    {{ range .Shelves }}
-                    <li>
-                        <form method="post" action="/library/furniture/{{ $.Furniture.ID }}/edit" class="library-shelf-row">
-                            <input type="hidden" name="action" value="update_shelf">
-                            <input type="hidden" name="shelf_id" value="{{ .ID }}">
-                            <strong class="library-shelf-label">{{ .Label }}</strong>
-                            <label>{{ t $.T "library.shelves.cases" }}
-                                <input type="number" name="case_count" min="1" max="50" value="{{ .CaseCount }}">
-                            </label>
-                            <button type="submit" class="btn btn-secondary btn-sm">{{ t $.T "common.save" }}</button>
-                        </form>
-                        <form method="post" action="/library/furniture/{{ $.Furniture.ID }}/edit" onsubmit="return confirm({{ jsstr (t $.T "library.shelves.delete_confirm") }});">
-                            <input type="hidden" name="action" value="delete_shelf">
-                            <input type="hidden" name="shelf_id" value="{{ .ID }}">
-                            <button type="submit" class="btn btn-danger btn-sm">{{ t $.T "common.delete" }}</button>
-                        </form>
-                    </li>
-                    {{ end }}
-                </ul>
-                <form method="post" action="/library/furniture/{{ .Furniture.ID }}/edit" class="library-add-shelf">
-                    <input type="hidden" name="action" value="add_shelf">
-                    <label>{{ t .T "library.shelves.label" }}
-                        <input name="label" maxlength="1" placeholder="B" required>
-                    </label>
-                    <label>{{ t .T "library.shelves.cases" }}
-                        <input type="number" name="case_count" min="1" max="50" value="10">
-                    </label>
-                    <button type="submit" class="btn btn-primary">{{ t .T "library.shelves.add" }}</button>
-                </form>
-            </section>
-
-            <form method="post" action="/library/furniture/{{ .Furniture.ID }}/delete" class="form-card" onsubmit="return confirm({{ jsstr (t .T "library.furniture.delete_confirm") }});">
-                <button type="submit" class="btn btn-danger">{{ t .T "library.furniture.delete" }}</button>
-            </form>
-            {{ end }}
         </div>
+        {{ else }}
+        <div class="library-edit-layout"
+             id="library-edit-root"
+             data-furniture-id="{{ .Furniture.ID }}"
+             data-shelves="{{ toJSON .Shelves }}"
+             data-placements="{{ toJSON .PlacementAPI }}"
+             data-i18n-empty="{{ t .T "library.case.empty" }}"
+             data-i18n-preview="{{ t .T "library.edit.preview" }}"
+             data-i18n-saved="{{ t .T "library.edit.saved" }}"
+             data-i18n-cases="{{ t .T "library.shelves.cases" }}"
+             data-i18n-delete-confirm="{{ t .T "library.shelves.delete_confirm" }}">
+
+            <aside class="library-edit-controls">
+                <div class="form-header">
+                    <div class="form-header-title">
+                        <h1>{{ t .T "library.furniture.edit" }}</h1>
+                        <p>{{ t .T "library.edit.live_hint" }}</p>
+                    </div>
+                    <a href="/library/furniture/{{ .Furniture.ID }}" class="btn btn-primary btn-sm">{{ t .T "library.nav.view" }}</a>
+                </div>
+
+                {{ if eq .Error "name" }}<div class="form-alert form-alert--error">{{ t .T "library.error.name" }}</div>{{ end }}
+                {{ if eq .Error "label" }}<div class="form-alert form-alert--error">{{ t .T "library.error.label" }}</div>{{ end }}
+                {{ if eq .Error "dup" }}<div class="form-alert form-alert--error">{{ t .T "library.error.dup_shelf" }}</div>{{ end }}
+
+                <form method="post" action="/library/furniture/{{ .Furniture.ID }}/edit" class="form-card library-edit-meta" id="library-meta-form">
+                    <input type="hidden" name="action" value="save_meta">
+                    <div class="form-group">
+                        <label for="name">{{ t .T "library.field.name" }} <span class="required">*</span></label>
+                        <input id="name" name="name" required maxlength="120" value="{{ .Furniture.Name }}" autocomplete="off">
+                    </div>
+                    <div class="form-group">
+                        <label for="room_label">{{ t .T "library.field.room" }}</label>
+                        <input id="room_label" name="room_label" maxlength="120" value="{{ if .Furniture.RoomLabel.Valid }}{{ .Furniture.RoomLabel.String }}{{ end }}" placeholder="{{ t .T "library.field.room_ph" }}">
+                    </div>
+                    <button type="submit" class="btn btn-secondary">{{ t .T "library.edit.save_meta" }}</button>
+                </form>
+
+                <section class="form-card">
+                    <div class="library-edit-section-head">
+                        <h2>{{ t .T "library.shelves.title" }}</h2>
+                        <span class="library-edit-status" id="library-edit-status" aria-live="polite"></span>
+                    </div>
+                    <ul class="library-shelf-config" id="library-shelf-list"></ul>
+                    <div class="library-add-shelf library-add-shelf--easy">
+                        <p class="library-edit-next">{{ t .T "library.edit.next_shelf" }} <strong id="library-next-label">B</strong></p>
+                        <label class="library-cases-label">{{ t .T "library.shelves.cases" }}
+                            <input type="number" id="library-new-cases" min="1" max="50" value="10">
+                        </label>
+                        <button type="button" class="btn btn-primary" id="library-add-shelf-btn">{{ t .T "library.shelves.add" }}</button>
+                    </div>
+                </section>
+
+                <form method="post" action="/library/furniture/{{ .Furniture.ID }}/delete" class="form-card" onsubmit="return confirm({{ jsstr (t .T "library.furniture.delete_confirm") }});">
+                    <button type="submit" class="btn btn-danger">{{ t .T "library.furniture.delete" }}</button>
+                </form>
+            </aside>
+
+            <section class="library-edit-preview" aria-label="{{ t .T "library.edit.preview" }}">
+                <header class="library-edit-preview-head">
+                    <h2>{{ t .T "library.edit.preview" }}</h2>
+                    <p>{{ t .T "library.edit.preview_hint" }}</p>
+                </header>
+                <div class="library-iso-stage-wrap library-edit-stage-wrap">
+                    <div class="library-iso-stage" id="library-edit-stage"></div>
+                </div>
+            </section>
+        </div>
+        {{ end }}
     </main>
+    <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
+    {{ if not .IsNew }}
+    <script src="/static/js/library-edit.js?v=1"></script>
+    {{ end }}
 </body>
 </html>
 {{ end }}
