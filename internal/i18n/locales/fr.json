@@ -1050,7 +1050,7 @@
   "library.error.dup_shelf": "Cette lettre d’étagère existe déjà.",
   "library.badge.stored": "Rangé :",
   "library.badge.link": "Voir la grille",
-  "library.iso.pick": "Cliquez une alvéole pour voir ou ranger des volumes.",
+  "library.iso.pick": "Cliquez une case : les couvertures et actions sont dans le panneau.",
   "library.iso.panel_title": "Case",
   "library.edit.new_hint": "Donnez un nom, puis configurez les étagères avec aperçu en direct.",
   "library.edit.create_continue": "Créer et configurer",

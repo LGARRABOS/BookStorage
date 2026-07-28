@@ -57,6 +57,25 @@
     return String(label || "?").charAt(0).toUpperCase() + caseNum;
   }
 
+  var SPINE_COLORS = [
+    "#2563eb", "#dc2626", "#ea580c", "#7c3aed", "#16a34a",
+    "#0891b2", "#ca8a04", "#db2777", "#4f46e5", "#0d9488",
+    "#b45309", "#4338ca", "#be123c", "#047857",
+  ];
+
+  function hashStr(s) {
+    var h = 0;
+    var str = String(s || "");
+    for (var i = 0; i < str.length; i++) {
+      h = (h * 31 + str.charCodeAt(i)) >>> 0;
+    }
+    return h;
+  }
+
+  function spineColor(title, id) {
+    return SPINE_COLORS[hashStr(String(title || "") + "#" + String(id || "")) % SPINE_COLORS.length];
+  }
+
   function setStatus(msg) {
     if (!statusEl) return;
     statusEl.textContent = msg || "";
@@ -106,7 +125,7 @@
         var filled = items.length > 0;
         html +=
           '<div class="library-iso-cubby' +
-          (filled ? " is-filled" : "") +
+          (filled ? " is-filled" : " is-empty") +
           '" aria-label="' +
           esc(caseCode(shelf.label, c)) +
           '">';
@@ -117,13 +136,21 @@
           "</span>";
         if (filled) {
           html += '<span class="library-iso-spines">';
-          for (var i = 0; i < Math.min(items.length, 8); i++) {
-            html += '<span class="library-iso-spine" style="background:#3b82f6"></span>';
-          }
+          items.slice(0, 12).forEach(function (p) {
+            var h = hashStr(String(p.title) + String(p.id));
+            var w = items.length <= 3 ? 13 : items.length <= 5 ? 10 : 8;
+            html +=
+              '<span class="library-iso-spine" style="background-color:' +
+              spineColor(p.title, p.id) +
+              ";width:" +
+              w +
+              "px;height:" +
+              (78 + (h % 18)) +
+              '%" title="' +
+              esc(p.title || "") +
+              '"></span>';
+          });
           html += "</span>";
-        } else {
-          html +=
-            '<span class="library-iso-empty-hint">' + esc(i18n.empty) + "</span>";
         }
         html += "</span></div>";
       }

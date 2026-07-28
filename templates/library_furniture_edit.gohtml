@@ -9,7 +9,7 @@
     <title>{{ if .IsNew }}{{ t .T "library.furniture.new" }}{{ else }}{{ t .T "library.furniture.edit" }}{{ end }} - BookStorage</title>
     <link rel="stylesheet" href="/static/css/base.css">
     <link rel="stylesheet" href="/static/css/mobile.css">
-    <link rel="stylesheet" href="/static/css/library-grid.css?v=6">
+    <link rel="stylesheet" href="/static/css/library-grid.css?v=7">
     <script src="/static/js/appearance-init.js"></script>
 </head>
 <body class="library-iso-body">
@@ -110,7 +110,7 @@
     <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
     {{ if not .IsNew }}
-    <script src="/static/js/library-edit.js?v=2"></script>
+    <script src="/static/js/library-edit.js?v=3"></script>
     {{ end }}
 </body>
 </html>

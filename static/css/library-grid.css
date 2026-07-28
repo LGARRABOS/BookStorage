@@ -779,8 +779,8 @@ body.library-iso-body .library-code {
 }
 
 .library-iso-cubby {
-  --cubby-w: 54px;
-  --cubby-h: 92px;
+  --cubby-w: 68px;
+  --cubby-h: 108px;
   position: relative;
   width: var(--cubby-w);
   height: var(--cubby-h);
@@ -797,89 +797,121 @@ body.library-iso-body .library-code {
   outline-offset: 3px;
 }
 
+/* Recessed shelf slot — spines sit inside, covers only in the side panel */
 .library-iso-cubby-box {
   position: absolute;
   inset: 0;
   background:
-    linear-gradient(145deg, var(--lib-wood-face) 0%, var(--lib-wood) 55%, var(--lib-wood-dark) 100%);
-  border: 2px solid var(--lib-wood-deep);
-  border-radius: 3px;
+    linear-gradient(180deg, #1a120c 0%, #2c1d14 55%, #23180f 100%);
+  border: 2px solid #5c4033;
+  border-radius: 2px;
   box-shadow:
-    inset 0 0 0 1px rgba(255, 255, 255, 0.18),
-    4px 6px 0 rgba(0, 0, 0, 0.25);
+    inset 0 10px 16px rgba(0, 0, 0, 0.45),
+    inset 0 -2px 0 rgba(255, 255, 255, 0.06),
+    3px 4px 0 rgba(0, 0, 0, 0.28);
   overflow: hidden;
   transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .library-iso-cubby.is-filled .library-iso-cubby-box {
   background:
-    linear-gradient(145deg, #d8c09a 0%, #b8955e 60%, #7a5a28 100%);
+    linear-gradient(180deg, #18110b 0%, #2a1c12 60%, #1f160e 100%);
+}
+
+.library-iso-cubby.is-empty .library-iso-cubby-box::after {
+  content: "";
+  position: absolute;
+  inset: 18px 8px 8px;
+  border: 1px dashed rgba(212, 184, 150, 0.18);
+  border-radius: 2px;
+  pointer-events: none;
 }
 
 .library-iso-cubby.is-selected .library-iso-cubby-box {
   border-color: var(--lib-accent);
   box-shadow:
-    inset 0 0 0 1px rgba(163, 230, 53, 0.35),
+    inset 0 10px 16px rgba(0, 0, 0, 0.4),
     0 0 0 3px var(--lib-accent-soft),
-    0 0 18px rgba(163, 230, 53, 0.45),
-    4px 6px 0 rgba(0, 0, 0, 0.25);
+    0 0 16px rgba(163, 230, 53, 0.35),
+    3px 4px 0 rgba(0, 0, 0, 0.28);
 }
 
 .library-iso-cubby-code {
   position: absolute;
-  top: 4px;
-  left: 5px;
+  top: 3px;
+  left: 0;
+  right: 0;
   z-index: 2;
+  text-align: center;
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
-  font-size: 0.62rem;
+  font-size: 0.58rem;
   font-weight: 800;
-  color: rgba(28, 16, 6, 0.88);
-  letter-spacing: 0.02em;
+  color: rgba(232, 214, 180, 0.72);
+  letter-spacing: 0.04em;
   pointer-events: none;
 }
 
 .library-iso-spines {
   position: absolute;
-  left: 6px;
-  right: 6px;
-  bottom: 5px;
+  left: 4px;
+  right: 4px;
+  bottom: 4px;
   top: 16px;
   display: flex;
   align-items: flex-end;
-  gap: 2px;
+  justify-content: center;
+  gap: 1px;
   z-index: 1;
 }
 
 .library-iso-spine {
-  flex: 1 1 0;
+  flex: 0 0 auto;
+  position: relative;
   min-width: 5px;
-  max-width: 10px;
-  height: 85%;
+  max-width: 14px;
   border-radius: 1px 1px 0 0;
-  box-shadow: inset -1px 0 0 rgba(0, 0, 0, 0.25);
+  background-image:
+    linear-gradient(
+      90deg,
+      rgba(255, 255, 255, 0.22) 0%,
+      rgba(255, 255, 255, 0.05) 28%,
+      transparent 50%,
+      rgba(0, 0, 0, 0.28) 100%
+    );
+  box-shadow:
+    inset -1px 0 0 rgba(0, 0, 0, 0.35),
+    1px 0 0 rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.library-iso-spine.has-cover {
-  background-size: cover;
-  background-position: center;
+.library-iso-spine-label {
+  writing-mode: vertical-rl;
+  text-orientation: mixed;
+  transform: rotate(180deg);
+  font-size: 0.48rem;
+  font-weight: 700;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.92);
+  text-shadow: 0 0 2px rgba(0, 0, 0, 0.85);
+  max-height: 92%;
+  overflow: hidden;
+  letter-spacing: 0.02em;
+  pointer-events: none;
+}
+
+.library-iso-spine-more {
+  align-self: center;
+  font-size: 0.65rem;
+  font-weight: 800;
+  color: rgba(232, 214, 180, 0.7);
+  padding: 0 2px;
 }
 
 .library-iso-empty-hint {
-  position: absolute;
-  left: 50%;
-  top: 54%;
-  transform: translate(-50%, -50%);
-  z-index: 2;
-  padding: 0.2rem 0.4rem;
-  border-radius: 0.35rem;
-  background: rgba(20, 14, 8, 0.55);
-  color: #f5efe6;
-  font-size: 0.68rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  pointer-events: none;
-  white-space: nowrap;
+  display: none;
 }
 
 .library-iso-axis {
@@ -893,7 +925,7 @@ body.library-iso-body .library-code {
 }
 
 .library-iso-axis span {
-  width: 54px;
+  width: 68px;
   text-align: center;
 }
 
@@ -1091,12 +1123,12 @@ body.library-iso-body .library-code {
   }
 
   .library-iso-cubby {
-    --cubby-w: 46px;
-    --cubby-h: 78px;
+    --cubby-w: 56px;
+    --cubby-h: 92px;
   }
 
   .library-iso-axis span {
-    width: 46px;
+    width: 56px;
   }
 
   .library-iso-grid {

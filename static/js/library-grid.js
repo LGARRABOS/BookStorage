@@ -29,8 +29,9 @@
   };
 
   var SPINE_COLORS = [
-    "#3b82f6", "#ef4444", "#f97316", "#a855f7", "#22c55e",
-    "#06b6d4", "#eab308", "#ec4899", "#6366f1", "#14b8a6",
+    "#2563eb", "#dc2626", "#ea580c", "#7c3aed", "#16a34a",
+    "#0891b2", "#ca8a04", "#db2777", "#4f46e5", "#0d9488",
+    "#b45309", "#4338ca", "#be123c", "#047857",
   ];
 
   var state = {
@@ -58,13 +59,53 @@
     return String(label || "?").charAt(0).toUpperCase() + caseNum;
   }
 
-  function spineColor(title, id) {
+  function hashStr(s) {
     var h = 0;
-    var s = String(title || "") + String(id || "");
-    for (var i = 0; i < s.length; i++) {
-      h = (h * 31 + s.charCodeAt(i)) >>> 0;
+    var str = String(s || "");
+    for (var i = 0; i < str.length; i++) {
+      h = (h * 31 + str.charCodeAt(i)) >>> 0;
     }
-    return SPINE_COLORS[h % SPINE_COLORS.length];
+    return h;
+  }
+
+  function spineColor(title, id) {
+    return SPINE_COLORS[hashStr(String(title || "") + "#" + String(id || "")) % SPINE_COLORS.length];
+  }
+
+  /** Short label for vertical spine text (grid only — no covers). */
+  function spineShort(title) {
+    var t = String(title || "").trim();
+    if (!t) return "";
+    var head = t.split(/\s*[—–|]\s*/)[0].trim();
+    if (head.length > 11) head = head.slice(0, 10) + "…";
+    return head;
+  }
+
+  function spineMarkup(p, totalInCase) {
+    var h = hashStr(String(p.title) + String(p.id));
+    var width = totalInCase <= 3 ? 13 : totalInCase <= 5 ? 10 : totalInCase <= 8 ? 8 : 6;
+    var heightPct = 78 + (h % 18);
+    var showLabel = totalInCase <= 5 && width >= 9;
+    var style =
+      "background-color:" +
+      spineColor(p.title, p.id) +
+      ";width:" +
+      width +
+      "px;height:" +
+      heightPct +
+      "%;";
+    var html =
+      '<span class="library-iso-spine" style="' +
+      style +
+      '" title="' +
+      esc(p.title) +
+      '">';
+    if (showLabel) {
+      html +=
+        '<span class="library-iso-spine-label">' + esc(spineShort(p.title)) + "</span>";
+    }
+    html += "</span>";
+    return html;
   }
 
   function placementsInCase(shelfId, caseNum) {
@@ -112,7 +153,7 @@
           state.active.caseNum === c;
         html +=
           '<button type="button" class="library-iso-cubby' +
-          (filled ? " is-filled" : "") +
+          (filled ? " is-filled" : " is-empty") +
           (selected ? " is-selected" : "") +
           '" data-shelf-id="' +
           shelf.id +
@@ -122,6 +163,7 @@
           esc(shelf.label) +
           '" aria-label="' +
           esc(caseCode(shelf.label, c)) +
+          (filled ? "" : " (" + esc(i18n.empty) + ")") +
           '">';
         html += '<span class="library-iso-cubby-box">';
         html +=
@@ -130,27 +172,16 @@
           "</span>";
         if (filled) {
           html += '<span class="library-iso-spines">';
-          items.slice(0, 8).forEach(function (p) {
-            var style = "background:" + spineColor(p.title, p.id) + ";";
-            if (p.image_path) {
-              style =
-                "background-image:linear-gradient(90deg,rgba(0,0,0,.25),transparent 40%),url('" +
-                esc(p.image_path) +
-                "');background-size:cover;background-position:center;";
-            }
-            html +=
-              '<span class="library-iso-spine' +
-              (p.image_path ? " has-cover" : "") +
-              '" style="' +
-              style +
-              '" title="' +
-              esc(p.title) +
-              '"></span>';
+          items.slice(0, 12).forEach(function (p) {
+            html += spineMarkup(p, items.length);
           });
+          if (items.length > 12) {
+            html +=
+              '<span class="library-iso-spine-more" title="+' +
+              (items.length - 12) +
+              '">+</span>';
+          }
           html += "</span>";
-        } else {
-          html +=
-            '<span class="library-iso-empty-hint">' + esc(i18n.empty) + "</span>";
         }
         html += "</span></button>";
       }
