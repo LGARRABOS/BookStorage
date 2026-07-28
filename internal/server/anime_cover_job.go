@@ -2,9 +2,6 @@ package server
 
 import (
 	"log"
-	"strconv"
-	"strings"
-	"sync"
 	"time"
 
 	"bookstorage/internal/catalog"
@@ -23,102 +20,27 @@ var (
 	animeCoverEnrichRateLimitSleep = time.Sleep
 )
 
-// resolveAnimeCoverURL looks up a cover image URL via AniList (MAL id, AniList id, or title search).
-// Overridable in tests. A rate-limit error should be retried by the caller; other empty results are final for this pass.
-// IsAdult is set when AniList metadata is available so enrichment can flag +18 entries.
-var resolveAnimeCoverURL = resolveAnimeCoverURLDefault
-
-type animeCoverResolve struct {
-	URL     string
-	IsAdult *bool
-}
-
-func adultBoolPtr(v bool) *bool { return &v }
-
-func resolveFromAnilistAnime(res *catalog.AnilistAnimeResult) animeCoverResolve {
-	if res == nil {
-		return animeCoverResolve{}
-	}
-	return animeCoverResolve{URL: strings.TrimSpace(res.ImageURL), IsAdult: adultBoolPtr(res.IsAdult)}
-}
-
-func resolveAnimeCoverURLDefault(source, externalID, title string) (animeCoverResolve, error) {
-	source = strings.ToLower(strings.TrimSpace(source))
-	ext := strings.TrimSpace(externalID)
-	if id, err := strconv.Atoi(ext); err == nil && id > 0 {
-		switch source {
-		case "anilist":
-			res, err := catalog.GetAnilistAnimeByID(id)
-			if err != nil {
-				return animeCoverResolve{}, err
-			}
-			return resolveFromAnilistAnime(res), nil
-		case "mal", "myanimelist":
-			res, err := catalog.GetAnilistAnimeByMALID(id)
-			if err != nil {
-				return animeCoverResolve{}, err
-			}
-			return resolveFromAnilistAnime(res), nil
-		default:
-			if res, err := catalog.GetAnilistAnimeByID(id); err != nil {
-				return animeCoverResolve{}, err
-			} else if res != nil {
-				return resolveFromAnilistAnime(res), nil
-			}
-			if res, err := catalog.GetAnilistAnimeByMALID(id); err != nil {
-				return animeCoverResolve{}, err
-			} else if res != nil {
-				return resolveFromAnilistAnime(res), nil
-			}
-		}
-	}
-	title = strings.TrimSpace(title)
-	if title == "" {
-		return animeCoverResolve{}, nil
-	}
-	results, err := catalog.SearchAnilistAnime(title, 1)
-	if err != nil {
-		return animeCoverResolve{}, err
-	}
-	if len(results) == 0 {
-		return animeCoverResolve{}, nil
-	}
-	return resolveFromAnilistAnime(&results[0]), nil
-}
-
 // animeCoverJobSnapshot is the admin-facing view of cover enrichment progress.
 type animeCoverJobSnapshot struct {
-	Running      bool     `json:"running"`
-	UserID       int      `json:"user_id,omitempty"`
-	Username     string   `json:"username,omitempty"`
-	PendingStart int      `json:"pending_at_start"`
-	PendingNow   int      `json:"pending_now"`
-	Processed    int      `json:"processed"`
-	Filled       int      `json:"filled"`
-	Skipped      int      `json:"skipped"`
-	CurrentTitle string   `json:"current_title,omitempty"`
-	StartedAt    string   `json:"started_at,omitempty"`
-	ETASeconds   *int     `json:"eta_seconds,omitempty"`
-	RateLimited  bool     `json:"rate_limited"`
-	QueuedUsers  []int    `json:"queued_user_ids,omitempty"`
-	GlobalMissing int     `json:"global_missing"`
+	Running       bool   `json:"running"`
+	UserID        int    `json:"user_id,omitempty"`
+	Username      string `json:"username,omitempty"`
+	PendingStart  int    `json:"pending_at_start"`
+	PendingNow    int    `json:"pending_now"`
+	Processed     int    `json:"processed"`
+	Filled        int    `json:"filled"`
+	Skipped       int    `json:"skipped"`
+	CurrentTitle  string `json:"current_title,omitempty"`
+	StartedAt     string `json:"started_at,omitempty"`
+	ETASeconds    *int   `json:"eta_seconds,omitempty"`
+	RateLimited   bool   `json:"rate_limited"`
+	QueuedUsers   []int  `json:"queued_user_ids,omitempty"`
+	GlobalMissing int    `json:"global_missing"`
 }
 
 type animeCoverJobController struct {
-	mu sync.Mutex
-
-	running   bool
-	userID    int
-	queue     []int
-	workerOn  bool
-
-	pendingStart int
-	processed    int
-	filled       int
-	skipped      int
-	currentTitle string
-	startedAt    time.Time
-	rateLimited  bool
+	coverJobCore
+	queue []int
 }
 
 func (c *animeCoverJobController) enqueue(a *App, userID int) {
@@ -146,66 +68,32 @@ func (c *animeCoverJobController) enqueue(a *App, userID int) {
 }
 
 func (c *animeCoverJobController) begin(userID, pending int) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.running = true
-	c.userID = userID
-	c.pendingStart = pending
-	c.processed = 0
-	c.filled = 0
-	c.skipped = 0
-	c.currentTitle = ""
-	c.startedAt = time.Now().UTC()
-	c.rateLimited = false
+	c.beginJob(userID, pending)
 }
 
 func (c *animeCoverJobController) finish() {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.running = false
-	c.userID = 0
-	c.currentTitle = ""
-	c.rateLimited = false
+	c.finishJob()
 }
 
 // waitIdle blocks until the cover job worker has drained its queue (or timeout).
 func (c *animeCoverJobController) waitIdle(timeout time.Duration) {
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
-		c.mu.Lock()
-		idle := !c.running && !c.workerOn && len(c.queue) == 0
-		c.mu.Unlock()
-		if idle {
-			return
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
+	c.coverJobCore.waitIdle(func() bool { return len(c.queue) == 0 }, timeout)
 }
 
 func (c *animeCoverJobController) setCurrent(title string) {
-	c.mu.Lock()
-	c.currentTitle = title
-	c.mu.Unlock()
+	c.coverJobCore.setCurrent(title)
 }
 
 func (c *animeCoverJobController) setRateLimited(v bool) {
-	c.mu.Lock()
-	c.rateLimited = v
-	c.mu.Unlock()
+	c.coverJobCore.setRateLimited(v)
 }
 
 func (c *animeCoverJobController) markFilled() {
-	c.mu.Lock()
-	c.processed++
-	c.filled++
-	c.mu.Unlock()
+	c.coverJobCore.markFilled()
 }
 
 func (c *animeCoverJobController) markSkipped() {
-	c.mu.Lock()
-	c.processed++
-	c.skipped++
-	c.mu.Unlock()
+	c.coverJobCore.markSkipped()
 }
 
 func (c *animeCoverJobController) snapshot(pendingNow, globalMissing int, username string) animeCoverJobSnapshot {
@@ -236,25 +124,6 @@ func (c *animeCoverJobController) snapshot(pendingNow, globalMissing int, userna
 		s.ETASeconds = &eta
 	}
 	return s
-}
-
-func estimateAnimeCoverETA(pending, processed int, startedAt time.Time, pace time.Duration) int {
-	if pending <= 0 {
-		return 0
-	}
-	if processed >= 3 && !startedAt.IsZero() {
-		elapsed := time.Since(startedAt).Seconds()
-		if elapsed > 0 {
-			perItem := elapsed / float64(processed)
-			if perItem > 0 {
-				return int(float64(pending) * perItem)
-			}
-		}
-	}
-	if pace <= 0 {
-		return -1
-	}
-	return int(float64(pending) * pace.Seconds())
 }
 
 // scheduleAnimeCoverEnrichment fills missing anime covers in the background after import.

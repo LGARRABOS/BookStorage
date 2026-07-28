@@ -70,6 +70,7 @@ La documentation complète est disponible sur le **[Wiki](https://github.com/LGA
 - [Usage](https://github.com/LGARRABOS/BookStorage/wiki/Usage) — tableau de bord, PWA, export/import, raccourcis
 - [Référence API](https://github.com/LGARRABOS/BookStorage/wiki/API-Reference) — endpoints REST
 - [Spécification OpenAPI](./docs/openapi.yaml) — schéma API (jetons Bearer, bulk, webhooks)
+- [Organisation backend](./docs/architecture-backend.md) — packages Go, conventions de fichiers
 - [Architecture](https://github.com/LGARRABOS/BookStorage/wiki/Architecture) — stack technique, structure du projet
 - [Database](https://github.com/LGARRABOS/BookStorage/wiki/Database) — schéma, migrations, recherche plein texte
 - [Authentication & Security](https://github.com/LGARRABOS/BookStorage/wiki/Authentication-and-Security) — authentification, sessions, sécurité
