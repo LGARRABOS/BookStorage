@@ -13,11 +13,17 @@ import (
 
 func TestBdDashboardTemplateRendersSeries(t *testing.T) {
 	fm := template.FuncMap{
-		"work_image_url":  func(s string) string { return s },
-		"bd_album_title":  bdAlbumTitle,
-		"bd_dash_url":     bdDashboardURL,
-		"url_for":         func(name string, args ...string) string { return "/" },
-		"seq":             func(n int) []int { out := make([]int, n); for i := range out { out[i] = i + 1 }; return out },
+		"work_image_url": func(s string) string { return s },
+		"bd_album_title": bdAlbumTitle,
+		"bd_dash_url":    bdDashboardURL,
+		"url_for":        func(name string, args ...string) string { return "/" },
+		"seq": func(n int) []int {
+			out := make([]int, n)
+			for i := range out {
+				out[i] = i + 1
+			}
+			return out
+		},
 		"le":              func(a, b int) bool { return a <= b },
 		"ge":              func(a, b int) bool { return a >= b },
 		"divf":            func(a, b int) float64 { return 0 },
@@ -53,8 +59,8 @@ func TestBdDashboardTemplateRendersSeries(t *testing.T) {
 	for i := 1; i <= 40; i++ {
 		works = append(works, bdWorkRow{
 			ID: i, Title: fmt.Sprintf("Aldébaran — Livre %d", i), Tome: i,
-			Status: sql.NullString{String: "Terminé", Valid: true},
-			BdType: sql.NullString{String: "Album", Valid: true},
+			Status:    sql.NullString{String: "Terminé", Valid: true},
+			BdType:    sql.NullString{String: "Album", Valid: true},
 			ImagePath: sql.NullString{String: "https://example.com/c.jpg", Valid: true},
 		})
 	}
@@ -106,13 +112,13 @@ func TestHandleBdDashboard_RendersHTMLNotEmpty(t *testing.T) {
 	// Use real templates from repo when available via NewApp-like load is heavy;
 	// at least ensure handler + stub template produce non-empty output.
 	tpl := template.Must(template.New("").Funcs(template.FuncMap{
-		"bd_album_title": bdAlbumTitle,
-		"bd_dash_url":    bdDashboardURL,
-		"t":              func(tr map[string]string, key string) string { return key },
-		"work_image_url": func(s string) string { return s },
-		"jsstr":          func(s string) template.JS { return `""` },
-		"seq":            func(n int) []int { return []int{1, 2, 3, 4, 5} },
-		"ge":             func(a, b int) bool { return a >= b },
+		"bd_album_title":  bdAlbumTitle,
+		"bd_dash_url":     bdDashboardURL,
+		"t":               func(tr map[string]string, key string) string { return key },
+		"work_image_url":  func(s string) string { return s },
+		"jsstr":           func(s string) template.JS { return `""` },
+		"seq":             func(n int) []int { return []int{1, 2, 3, 4, 5} },
+		"ge":              func(a, b int) bool { return a >= b },
 		"translateStatus": func(s string, tr map[string]string) string { return s },
 	}).Parse(`
 {{ define "bd_dashboard" }}<!DOCTYPE html><html><body>

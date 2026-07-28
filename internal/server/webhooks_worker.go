@@ -16,10 +16,10 @@ import (
 )
 
 const (
-	webhookSignatureHeader         = "X-BookStorage-Signature"
-	webhookMaxAttempts             = 5
-	webhookDeliveryTimeout         = 15 * time.Second
-	webhookWorkerInterval          = 10 * time.Second
+	webhookSignatureHeader = "X-BookStorage-Signature"
+	webhookMaxAttempts     = 5
+	webhookDeliveryTimeout = 15 * time.Second
+	webhookWorkerInterval  = 10 * time.Second
 )
 
 func isWebhookURLSafe(rawURL string) bool {
