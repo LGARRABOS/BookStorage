@@ -24,6 +24,7 @@ type profileUser struct {
 	Bio         sql.NullString
 	AvatarPath  sql.NullString
 	IsPublic    sql.NullInt64
+	HomeSection string
 }
 
 // readingTimelineDay holds sparse daily aggregates for Chart.js (started / finished / last activity).
@@ -251,17 +252,18 @@ func (a *App) renderProfilePage(w http.ResponseWriter, r *http.Request, userID i
 		u = v
 	} else {
 		err := a.DB.QueryRow(
-			`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public
+			`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public, COALESCE(home_section, 'hub')
 			 FROM users WHERE id = ?`,
 			userID,
 		).Scan(
 			&u.ID, &u.Username, &u.Password, &u.GoogleSub, &u.GoogleEmail,
-			&u.DisplayName, &u.Email, &u.Bio, &u.AvatarPath, &u.IsPublic,
+			&u.DisplayName, &u.Email, &u.Bio, &u.AvatarPath, &u.IsPublic, &u.HomeSection,
 		)
 		if err != nil {
 			http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 			return
 		}
+		u.HomeSection = normalizeHomeSection(u.HomeSection)
 	}
 
 	var totalWorks int
@@ -331,7 +333,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 
 	var u profileUser
 	err := a.DB.QueryRow(
-		`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public
+		`SELECT id, username, password, google_sub, google_email, display_name, email, bio, avatar_path, is_public, COALESCE(home_section, 'hub')
          FROM users WHERE id = ?`,
 		userID,
 	).Scan(
@@ -345,11 +347,13 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		&u.Bio,
 		&u.AvatarPath,
 		&u.IsPublic,
+		&u.HomeSection,
 	)
 	if err != nil {
 		http.Redirect(w, r, loginRedirectURL(r), http.StatusFound)
 		return
 	}
+	u.HomeSection = normalizeHomeSection(u.HomeSection)
 
 	switch r.Method {
 	case http.MethodGet:
@@ -375,6 +379,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 		newPassword := r.FormValue("new_password")
 		confirmPassword := r.FormValue("confirm_password")
 		visibility := r.FormValue("is_public")
+		homeSection := normalizeHomeSection(r.FormValue("home_section"))
 
 		if newUsername == "" {
 			http.Redirect(w, r, "/profile", http.StatusFound)
@@ -447,6 +452,7 @@ func (a *App) HandleProfile(w http.ResponseWriter, r *http.Request) {
 				updates["is_public"] = 0
 			}
 		}
+		updates["home_section"] = homeSection
 
 		previousAvatar := u.AvatarPath.String
 		newAvatarPath := previousAvatar

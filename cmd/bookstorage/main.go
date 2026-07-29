@@ -185,6 +185,7 @@ func main() {
 		_ = json.NewEncoder(w).Encode(payload)
 	})
 	mux.HandleFunc("/", app.HandleHome)
+	mux.HandleFunc("/hub", app.RequireLogin(app.HandleHub))
 	mux.HandleFunc("/legal", app.MobileRedirectToMangaDashboard(app.HandleLegal))
 	mux.HandleFunc("/lang/{lang}", app.HandleSetLanguage)
 	mux.HandleFunc("/register", app.HandleRegister)

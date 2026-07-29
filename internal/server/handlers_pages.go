@@ -13,8 +13,11 @@ func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if _, ok := a.currentUserID(r); ok {
-		// Logged-in users land on the central hub.
+	if userID, ok := a.currentUserID(r); ok {
+		if dest := a.userHomePath(userID); dest != pathHub {
+			http.Redirect(w, r, dest, http.StatusFound)
+			return
+		}
 		a.HandleHub(w, r)
 		return
 	}

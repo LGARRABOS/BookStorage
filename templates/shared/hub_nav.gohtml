@@ -1,7 +1,7 @@
 {{ define "hub_topbar" }}
 <header class="topbar">
     <div class="container nav-layout">
-        <a class="brand" href="/">{{ template "site_brand_inner" . }}</a>
+        <a class="brand" href="/hub">{{ template "site_brand_inner" . }}</a>
         <nav class="nav-links">
             <a href="/profile">{{ t .T "nav.profile" }}</a>
             {{ if .IsAdmin }}<a href="/admin/accounts">{{ t .T "nav.admin" }}</a>{{ end }}

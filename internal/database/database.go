@@ -171,6 +171,10 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 	if err := ApplyMigrations(c); err != nil {
 		return err
 	}
+	// Re-apply after migrations: e.g. migration 9 rebuilds users without later columns.
+	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {
+		return err
+	}
 	if err := ensureWorksFTS5(db); err != nil {
 		return err
 	}

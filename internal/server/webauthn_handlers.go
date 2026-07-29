@@ -285,7 +285,7 @@ func (a *App) HandleWebAuthnLoginFinish(w http.ResponseWriter, r *http.Request) 
 	a.setSessionCookie(w, token, sessionSlidingTTL)
 	a.apiWriteJSON(w, http.StatusOK, map[string]any{
 		"ok":       true,
-		"redirect": resolvePostLoginRedirect(r.URL.Query().Get("next")),
+		"redirect": a.resolvePostLoginRedirectForUser(userID, r.URL.Query().Get("next")),
 	})
 }
 

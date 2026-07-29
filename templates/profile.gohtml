@@ -207,6 +207,18 @@
                                         <label for="private"><span class="opt-title">{{ t .T "profile.private" }}</span><span class="opt-desc">{{ t .T "profile.private.desc" }}</span></label>
                                     </div>
                                 </div>
+                                <div class="form-group" style="margin-top:1.25rem;">
+                                    <label for="home_section">{{ t .T "profile.home_section" }}</label>
+                                    <select id="home_section" name="home_section">
+                                        <option value="hub" {{ if eq .User.HomeSection "hub" }}selected{{ end }}>{{ t .T "profile.home_section.hub" }}</option>
+                                        <option value="manga" {{ if eq .User.HomeSection "manga" }}selected{{ end }}>{{ t .T "profile.home_section.manga" }}</option>
+                                        <option value="manga_phys" {{ if eq .User.HomeSection "manga_phys" }}selected{{ end }}>{{ t .T "profile.home_section.manga_phys" }}</option>
+                                        <option value="anime" {{ if eq .User.HomeSection "anime" }}selected{{ end }}>{{ t .T "profile.home_section.anime" }}</option>
+                                        <option value="bd" {{ if eq .User.HomeSection "bd" }}selected{{ end }}>{{ t .T "profile.home_section.bd" }}</option>
+                                        <option value="library" {{ if eq .User.HomeSection "library" }}selected{{ end }}>{{ t .T "profile.home_section.library" }}</option>
+                                    </select>
+                                    <p class="opt-desc" style="margin-top:0.45rem;">{{ t .T "profile.home_section.desc" }}</p>
+                                </div>
                             </section>
 
                             <section class="tab-panel" id="panel-auth">

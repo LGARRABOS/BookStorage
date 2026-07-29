@@ -8,7 +8,8 @@ package server
 // tokens and integrations keep working. Global, cross-module pages (profile,
 // admin) also stay at the root.
 const (
-	pathHub = "/"
+	pathHub         = "/"
+	pathHubExplicit = "/hub"
 
 	pathMangaDashboard    = "/manga/dashboard"
 	pathMangaStats        = "/manga/stats"

@@ -288,7 +288,7 @@ func (a *App) handleGoogleLoginCallback(w http.ResponseWriter, r *http.Request, 
 			return
 		}
 		a.setSessionCookie(w, token, sessionSlidingTTL)
-		http.Redirect(w, r, resolvePostLoginRedirect(nextPath), http.StatusFound)
+		http.Redirect(w, r, a.resolvePostLoginRedirectForUser(u.id, nextPath), http.StatusFound)
 		return
 	}
 	if !errors.Is(err, sql.ErrNoRows) {
@@ -330,7 +330,7 @@ func (a *App) handleGoogleLoginCallback(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	a.setSessionCookie(w, token, sessionSlidingTTL)
-	http.Redirect(w, r, resolvePostLoginRedirect(nextPath), http.StatusFound)
+	http.Redirect(w, r, a.resolvePostLoginRedirectForUser(int(newID), nextPath), http.StatusFound)
 }
 
 // HandleGoogleUnlink removes the Google link when a local password exists (POST /profile/google/unlink).

@@ -239,11 +239,10 @@ func postLoginPathOnly(dest string) string {
 }
 
 // isSectionHomePath reports whether path (no query) is a module home. After login
-// these should open the hub so the user chooses Manga vs Anime instead of
-// landing directly inside one section (common with PWA start URLs / bookmarks).
+// these fall back to the user's preferred home section (or the hub).
 func isSectionHomePath(p string) bool {
 	switch postLoginPathOnly(p) {
-	case pathHub, "/dashboard", pathMangaDashboard, pathAnimeDashboard, pathBdDashboard:
+	case pathHub, pathHubExplicit, "/dashboard", pathMangaDashboard, pathMangaPhysDashboard, pathAnimeDashboard, pathBdDashboard, pathLibraryHome, "/library":
 		return true
 	default:
 		return false
@@ -251,13 +250,24 @@ func isSectionHomePath(p string) bool {
 }
 
 // resolvePostLoginRedirect returns the destination after a successful login.
-// Empty or unsafe values, and module section homes, resolve to the hub.
+// Empty or unsafe values, and module section homes, resolve to fallback (usually the hub).
 func resolvePostLoginRedirect(s string) string {
+	return resolvePostLoginRedirectWithFallback(s, pathHub)
+}
+
+func resolvePostLoginRedirectWithFallback(s, fallback string) string {
 	dest := safePostLoginRedirect(s)
 	if dest == "" || isSectionHomePath(dest) {
-		return pathHub
+		if fallback == "" {
+			return pathHub
+		}
+		return fallback
 	}
 	return dest
+}
+
+func (a *App) resolvePostLoginRedirectForUser(userID int, next string) string {
+	return resolvePostLoginRedirectWithFallback(next, a.userHomePath(userID))
 }
 
 // safeLanguageRedirect returns a path+query from Referer only if same host as r; otherwise fallback.

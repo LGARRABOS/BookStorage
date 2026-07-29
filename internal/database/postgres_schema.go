@@ -389,6 +389,7 @@ var postgresProfileColumns = map[string]string{
 	"bio":          "TEXT",
 	"avatar_path":  "TEXT",
 	"is_public":    "INTEGER DEFAULT 1",
+	"home_section": "TEXT DEFAULT 'hub'",
 }
 
 var postgresCatalogColumns = map[string]string{

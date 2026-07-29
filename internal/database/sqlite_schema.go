@@ -223,11 +223,12 @@ CREATE INDEX IF NOT EXISTS idx_sessions_user_revoked ON sessions(user_id, revoke
 CREATE INDEX IF NOT EXISTS idx_sessions_expires_at ON sessions(expires_at);`
 
 var profileColumns = map[string]string{
-	"display_name": "TEXT",
-	"email":        "TEXT",
-	"bio":          "TEXT",
-	"avatar_path":  "TEXT",
-	"is_public":    "INTEGER DEFAULT 1",
+	"display_name":  "TEXT",
+	"email":         "TEXT",
+	"bio":           "TEXT",
+	"avatar_path":   "TEXT",
+	"is_public":     "INTEGER DEFAULT 1",
+	"home_section": "TEXT DEFAULT 'hub'",
 }
 
 var workColumns = map[string]string{

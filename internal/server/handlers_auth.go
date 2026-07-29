@@ -161,7 +161,7 @@ func (a *App) HandleLogin(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		a.setSessionCookie(w, token, sessionSlidingTTL)
-		http.Redirect(w, r, resolvePostLoginRedirect(strings.TrimSpace(r.FormValue("next"))), http.StatusFound)
+		http.Redirect(w, r, a.resolvePostLoginRedirectForUser(u.ID, strings.TrimSpace(r.FormValue("next"))), http.StatusFound)
 	default:
 		w.WriteHeader(http.StatusMethodNotAllowed)
 	}
