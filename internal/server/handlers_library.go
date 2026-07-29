@@ -307,14 +307,14 @@ func (a *App) HandleLibraryUnassigned(w http.ResponseWriter, r *http.Request) {
 
 	var manga []unassignedItem
 	rows, err := a.DB.Query(
-		`SELECT w.id, w.title, COALESCE(w.image_path, '')
-		 FROM works w
+		`SELECT w.id, w.title, w.tome, COALESCE(w.image_path, '')
+		 FROM manga_phys_works w
 		 WHERE w.user_id = ?
 		   AND NOT EXISTS (
 		     SELECT 1 FROM library_placements p
 		     WHERE p.user_id = w.user_id AND p.media_kind = 'manga' AND p.work_id = w.id
 		   )
-		 ORDER BY LOWER(w.title) LIMIT 200`,
+		 ORDER BY LOWER(w.title), w.tome LIMIT 200`,
 		userID,
 	)
 	if err != nil {
@@ -323,13 +323,13 @@ func (a *App) HandleLibraryUnassigned(w http.ResponseWriter, r *http.Request) {
 	}
 	for rows.Next() {
 		var it unassignedItem
-		if err := rows.Scan(&it.ID, &it.Title, &it.ImagePath); err != nil {
+		if err := rows.Scan(&it.ID, &it.Title, &it.Volume, &it.ImagePath); err != nil {
 			_ = rows.Close()
 			http.Error(w, "Database error", http.StatusInternalServerError)
 			return
 		}
 		it.MediaKind = libraryMediaManga
-		it.EditURL = pathMangaEditPrefix + strconv.Itoa(it.ID)
+		it.EditURL = pathMangaPhysEditPrefix + strconv.Itoa(it.ID)
 		manga = append(manga, it)
 	}
 	_ = rows.Close()

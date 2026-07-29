@@ -113,6 +113,25 @@ var postgresSchemaStatements = []string{
 		started_at TIMESTAMPTZ,
 		finished_at TIMESTAMPTZ
 	)`,
+	`CREATE TABLE IF NOT EXISTS manga_phys_works (
+		id BIGSERIAL PRIMARY KEY,
+		title TEXT NOT NULL,
+		tome INTEGER NOT NULL DEFAULT 0,
+		total_tomes INTEGER,
+		status TEXT,
+		manga_type TEXT,
+		link TEXT,
+		image_path TEXT,
+		rating INTEGER DEFAULT 0,
+		notes TEXT,
+		is_adult INTEGER NOT NULL DEFAULT 0,
+		source TEXT NOT NULL DEFAULT 'manual',
+		external_id TEXT,
+		user_id BIGINT NOT NULL REFERENCES users(id),
+		updated_at TIMESTAMPTZ,
+		started_at TIMESTAMPTZ,
+		finished_at TIMESTAMPTZ
+	)`,
 	`CREATE TABLE IF NOT EXISTS library_furniture (
 		id BIGSERIAL PRIMARY KEY,
 		user_id BIGINT NOT NULL REFERENCES users(id),
@@ -277,6 +296,7 @@ var postgresSchemaStatements = []string{
 	`CREATE INDEX IF NOT EXISTS idx_works_user_id ON works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_anime_works_user_id ON anime_works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_bd_works_user_id ON bd_works(user_id)`,
+	`CREATE INDEX IF NOT EXISTS idx_manga_phys_works_user_id ON manga_phys_works(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_library_furniture_user_id ON library_furniture(user_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_library_shelves_furniture_id ON library_shelves(furniture_id)`,
 	`CREATE INDEX IF NOT EXISTS idx_library_placements_user_media
@@ -348,6 +368,16 @@ func ensurePostgresSchema(c *Conn) error {
 	for _, stmt := range postgresSchemaAfterExtraColumns {
 		if _, err := c.Exec(stmt); err != nil {
 			return fmt.Errorf("postgres schema: %w", err)
+		}
+	}
+	// One-shot: drop legacy manga placements that pointed at virtual works (migration 26).
+	var has26 int
+	if err := c.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE version = 26`).Scan(&has26); err != nil {
+		return fmt.Errorf("postgres schema check migration 26: %w", err)
+	}
+	if has26 == 0 {
+		if _, err := c.Exec(`DELETE FROM library_placements WHERE media_kind = 'manga'`); err != nil {
+			return fmt.Errorf("postgres schema cleanup manga placements: %w", err)
 		}
 	}
 	return nil

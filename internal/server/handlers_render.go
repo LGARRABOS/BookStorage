@@ -327,6 +327,21 @@ var bdStatuses = []string{
 	"À lire",
 }
 
+var mangaPhysTypes = []string{
+	"Manga",
+	"Webtoon",
+	"One-shot",
+	"Omnibus",
+}
+
+var mangaPhysStatuses = []string{
+	"En cours",
+	"Terminé",
+	"En pause",
+	"Abandonné",
+	"À lire",
+}
+
 func buildMediaRelativePath(filename, urlPath string) string {
 	urlPath = strings.Trim(urlPath, "/")
 	if urlPath == "" {

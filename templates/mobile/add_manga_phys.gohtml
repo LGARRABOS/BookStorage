@@ -1,0 +1,39 @@
+﻿{{ define "mobile_add_manga_phys" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "manga_phys.add.title" }} - BookStorage</title>
+    {{ template "manga_phys_form_styles" . }}
+</head>
+<body class="mobile-app-body">
+    {{ template "mobile_topbar" . }}
+    {{ template "mobile_settings_sheet" . }}
+
+    <main class="page-body mobile-page">
+        <div class="container form-page">
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "manga_phys.error.exists" }}</div>
+            {{ end }}
+
+            <form method="POST" enctype="multipart/form-data" id="manga-phys-form">
+                <input type="hidden" name="catalog_source" id="catalog_source" value="{{ if .PrefillCatalogSource }}{{ .PrefillCatalogSource }}{{ end }}">
+                <input type="hidden" name="catalog_external_id" id="catalog_external_id" value="{{ if .PrefillCatalogExternalID }}{{ .PrefillCatalogExternalID }}{{ end }}">
+                {{ template "manga_phys_form_fields" . }}
+                <div class="form-actions">
+                    <a href="/manga-phys/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                    <div class="form-actions-right">
+                        <button type="submit" class="btn btn-primary">✓ {{ t .T "manga_phys.form.submit.add" }}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    {{ template "manga_phys_form_scripts" . }}
+    
+</body>
+</html>
+{{ end }}

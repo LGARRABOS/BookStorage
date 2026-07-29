@@ -1,0 +1,41 @@
+﻿{{ define "mobile_edit_manga_phys" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ template "mobile_shell_head" . }}
+    <title>{{ t .T "manga_phys.edit.title" }} - BookStorage</title>
+    {{ template "manga_phys_form_styles" . }}
+</head>
+<body class="mobile-app-body">
+    {{ template "mobile_topbar" . }}
+    {{ template "mobile_settings_sheet" . }}
+
+    <main class="page-body mobile-page">
+        <div class="container form-page">
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "manga_phys.error.exists" }}</div>
+            {{ end }}
+            {{ template "edit_manga_phys_form" . }}
+        </div>
+    </main>
+
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    {{ template "manga_phys_form_scripts" . }}
+    <script nonce="{{ .CSPNonce }}">
+        var deleteConfirmMsg = {{ jsstr (t .T "manga_phys.delete.confirm") }};
+        var delBtn = document.getElementById('manga-phys-delete-btn');
+        if (delBtn) {
+            delBtn.addEventListener('click', function() {
+                var id = delBtn.getAttribute('data-id');
+                var title = delBtn.getAttribute('data-title') || '';
+                if (!confirm(deleteConfirmMsg.replace('%s', title))) return;
+                fetch('/api/manga-phys/delete/' + id, { method: 'POST', headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) { if (data && data.ok) window.location.href = '/manga-phys/dashboard'; });
+            });
+        }
+    </script>
+</body>
+</html>
+{{ end }}

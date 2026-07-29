@@ -140,9 +140,13 @@ func (a *App) HandleAPILibraryPlacementsCreate(w http.ResponseWriter, r *http.Re
 		return
 	}
 	vol := body.Volume
-	if kind == libraryMediaBD {
+	if kind == libraryMediaBD || kind == libraryMediaManga {
 		var tome int
-		_ = a.DB.QueryRow(`SELECT tome FROM bd_works WHERE id = ? AND user_id = ?`, body.WorkID, userID).Scan(&tome)
+		table := "bd_works"
+		if kind == libraryMediaManga {
+			table = "manga_phys_works"
+		}
+		_ = a.DB.QueryRow(`SELECT tome FROM `+table+` WHERE id = ? AND user_id = ?`, body.WorkID, userID).Scan(&tome)
 		if vol < 1 {
 			vol = tome
 		}
@@ -387,9 +391,9 @@ func (a *App) HandleAPILibraryWorksSearch(w http.ResponseWriter, r *http.Request
 		}
 	default:
 		rows, err := a.DB.Query(
-			`SELECT id, title, COALESCE(image_path, '') FROM works
+			`SELECT id, title, tome, COALESCE(image_path, '') FROM manga_phys_works
 			 WHERE user_id = ? AND LOWER(title) LIKE ?
-			 ORDER BY LOWER(title) LIMIT 30`,
+			 ORDER BY LOWER(title), tome LIMIT 30`,
 			userID, like,
 		)
 		if err != nil {
@@ -400,7 +404,7 @@ func (a *App) HandleAPILibraryWorksSearch(w http.ResponseWriter, r *http.Request
 		for rows.Next() {
 			var it item
 			var img string
-			if err := rows.Scan(&it.ID, &it.Title, &img); err != nil {
+			if err := rows.Scan(&it.ID, &it.Title, &it.Volume, &img); err != nil {
 				http.Error(w, "database error", http.StatusInternalServerError)
 				return
 			}

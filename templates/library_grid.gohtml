@@ -1,4 +1,4 @@
-{{ define "library_grid" }}
+﻿{{ define "library_grid" }}
 <!DOCTYPE html>
 <html lang="{{ .Lang }}">
 <head>
@@ -39,7 +39,7 @@
                     </div>
                     <div class="library-iso-header-actions">
                         <a href="/library/furniture/{{ .Furniture.ID }}/edit" class="btn btn-secondary">{{ t .T "library.furniture.edit" }}</a>
-                        <a href="/library/" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+                        <a href="/library/" class="btn btn-secondary">â† {{ t .T "common.back" }}</a>
                     </div>
                 </header>
 
@@ -47,7 +47,7 @@
                     <div class="library-iso-tools">
                         <div class="library-iso-zoom" aria-label="Zoom">
                             <button type="button" id="library-zoom-in" title="+">+</button>
-                            <button type="button" id="library-zoom-out" title="−">−</button>
+                            <button type="button" id="library-zoom-out" title="âˆ’">âˆ’</button>
                         </div>
                     </div>
                     <p class="library-iso-nav-hint">{{ t .T "library.iso.nav_hint" }}</p>
@@ -60,7 +60,7 @@
             <aside class="library-iso-panel" id="library-case-panel" aria-live="polite">
                 <header class="library-iso-panel-head">
                     <h2 id="library-case-panel-title">{{ t .T "library.iso.panel_title" }}</h2>
-                    <button type="button" class="btn btn-secondary btn-sm" id="library-case-panel-close" hidden aria-label="{{ t .T "common.close" }}">✕</button>
+                    <button type="button" class="btn btn-secondary btn-sm" id="library-case-panel-close" hidden aria-label="{{ t .T "common.close" }}">âœ•</button>
                 </header>
                 <p class="library-iso-panel-placeholder" id="library-panel-placeholder">{{ t .T "library.iso.pick" }}</p>
                 <div id="library-case-panel-list" hidden></div>
@@ -85,7 +85,7 @@
 
     <footer class="page-footer"><div class="container"><p>BookStorage</p></div></footer>
     <script src="/static/js/appearance.js"></script>
-    <script src="/static/js/library-grid.js?v=7"></script>
+    <script src="/static/js/library-grid.js?v=8"></script>
 </body>
 </html>
 {{ end }}

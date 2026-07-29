@@ -34,7 +34,7 @@ linters:
       - path: _test\.go
         linters: [gosec, dupl]
       # Sections anime/BD/manga : mêmes flux volontaires, tables et chemins distincts.
-      - path: internal/server/(anime_row|bd_row|handlers_anime_works|handlers_bd_works|import_export_(anime|bd)_[^/]+|import_export_manga_parse)\.go
+      - path: internal/server/(anime_row|bd_row|bd_series|handlers_anime_works|handlers_bd_works|handlers_bd_dashboard|manga_phys_row|manga_phys_series|handlers_manga_phys_works|handlers_manga_phys_dashboard|import_export_(anime|bd)_[^/]+|import_export_manga_parse)\.go
         linters: [dupl]
     paths:
       - third_party$

@@ -1,0 +1,48 @@
+﻿{{ define "add_manga_phys" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{ template "site_head_icons" . }}
+    <title>{{ t .T "manga_phys.add.title" }} - BookStorage</title>
+    <link rel="stylesheet" href="/static/css/base.css">
+    <link rel="stylesheet" href="/static/css/mobile.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ template "manga_phys_form_styles" . }}
+</head>
+<body>
+    {{ template "manga_phys_topbar" . }}
+    <main class="page-body">
+        <div class="container form-page">
+            <div class="form-header">
+                <div class="form-header-title"><h1>➕ {{ t .T "manga_phys.add.title" }}</h1></div>
+                <a href="/manga-phys/dashboard" class="btn btn-secondary">← {{ t .T "common.back" }}</a>
+            </div>
+
+            {{ if .ErrorExists }}
+            <div class="form-alert form-alert--error" role="alert">{{ t .T "manga_phys.error.exists" }}</div>
+            {{ end }}
+
+            <form method="POST" enctype="multipart/form-data" id="manga-phys-form">
+                <input type="hidden" name="catalog_source" value="manual">
+                <input type="hidden" name="catalog_external_id" value="">
+                {{ template "manga_phys_form_fields" . }}
+                <div class="form-actions">
+                    <a href="/manga-phys/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+                    <div class="form-actions-right">
+                        <button type="submit" class="btn btn-primary">✓ {{ t .T "manga_phys.form.submit.add" }}</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </main>
+
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+
+    <script src="/static/js/appearance.js"></script>
+    {{ template "manga_phys_form_scripts" . }}
+</body>
+</html>
+{{ end }}

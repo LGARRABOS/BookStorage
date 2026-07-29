@@ -51,7 +51,7 @@ ENVIRONMENT VARIABLES
     BOOKSTORAGE_GOOGLE_CLIENT_SECRET  Google OAuth client secret
     BOOKSTORAGE_GOOGLE_BOOKS_API_KEY  Optional Google Books API key (higher quota for BD cover lookup)
     BOOKSTORAGE_HTTP_READ_TIMEOUT_SEC  Seconds to read the full request (default 15)
-    BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC Seconds until response must be fully written (default 120; includes handler time — raise for slow admin batches)
+    BOOKSTORAGE_HTTP_WRITE_TIMEOUT_SEC Seconds until response must be fully written (default 120; includes handler time â€” raise for slow admin batches)
 
 EXAMPLES
     # Run with default settings
@@ -138,7 +138,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("config error: %v", err)
 	}
-	// Always record resolved .env path so admin SQLite → Postgres migration can merge BOOKSTORAGE_POSTGRES_URL
+	// Always record resolved .env path so admin SQLite â†’ Postgres migration can merge BOOKSTORAGE_POSTGRES_URL
 	// even when the file was missing or unreadable at startup (LoadDotEnvFile skips without error).
 	settings.EnvFilePath = envFile
 
@@ -237,6 +237,7 @@ func main() {
 	mux.HandleFunc("GET /api/bd/catalog/browse", app.RequireLogin(app.HandleBdCatalogBrowse))
 	mux.HandleFunc("GET /api/bd/catalog/search", app.RequireLogin(app.HandleBdCatalogSearch))
 	mux.HandleFunc("POST /api/bd/delete/{id}", app.RequireLogin(app.HandleBdDeleteAPI))
+	mux.HandleFunc("POST /api/manga-phys/delete/{id}", app.RequireLogin(app.HandleMangaPhysDeleteAPI))
 	mux.HandleFunc("GET /api/library/furniture/{id}", app.RequireLogin(app.HandleAPILibraryFurniture))
 	mux.HandleFunc("POST /api/library/placements", app.RequireLogin(app.HandleAPILibraryPlacementsCreate))
 	mux.HandleFunc("PATCH /api/library/placements/{id}", app.RequireLogin(app.HandleAPILibraryPlacementsPatch))
@@ -278,8 +279,9 @@ func main() {
 	// Anime module pages live under /anime/.
 	app.RegisterAnimeRoutes(mux)
 
-	// BD (bande dessinée) module pages live under /bd/.
+	// BD (bande dessinÃ©e) module pages live under /bd/.
 	app.RegisterBdRoutes(mux)
+	app.RegisterMangaPhysRoutes(mux)
 
 	// Physical library module pages live under /library/.
 	app.RegisterLibraryRoutes(mux)

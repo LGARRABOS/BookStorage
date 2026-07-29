@@ -33,8 +33,9 @@ func NewApp(settings *config.Settings, siteConfig *config.SiteConfig, db *databa
 		"work_image_url": func(stored string) string {
 			return workImageURL(settings, stored)
 		},
-		"bd_album_title": bdAlbumTitle,
-		"bd_dash_url":    bdDashboardURL,
+		"bd_album_title":      bdAlbumTitle,
+		"bd_dash_url":         bdDashboardURL,
+		"manga_phys_dash_url": mangaPhysDashboardURL,
 		"url_for": func(name string, args ...string) string {
 			switch name {
 			case "static":

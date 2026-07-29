@@ -132,6 +132,9 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 	if err := ensureColumnsSQLite(db, "bd_works", bdWorksColumns); err != nil {
 		return err
 	}
+	if _, err := db.Exec(createMangaPhysWorksTableSQL); err != nil {
+		return err
+	}
 	if _, err := db.Exec(createLibraryFurnitureTableSQL); err != nil {
 		return err
 	}
@@ -145,6 +148,19 @@ func EnsureSchema(c *Conn, s *config.Settings) error {
 	}
 	if _, err := db.Exec(createLibraryPlacementsTableSQL); err != nil {
 		return err
+	}
+	// One-shot: drop legacy manga placements that pointed at virtual works (migration 26 marker).
+	if _, err := db.Exec(createSchemaMigrationsTableSQL); err != nil {
+		return err
+	}
+	var has26 int
+	if err := db.QueryRow(`SELECT COUNT(*) FROM schema_migrations WHERE version = 26`).Scan(&has26); err != nil {
+		return err
+	}
+	if has26 == 0 {
+		if _, err := db.Exec(`DELETE FROM library_placements WHERE media_kind = 'manga'`); err != nil {
+			return err
+		}
 	}
 	if err := ensureColumnsSQLite(db, "users", profileColumns); err != nil {
 		return err

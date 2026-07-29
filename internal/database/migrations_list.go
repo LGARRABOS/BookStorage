@@ -220,4 +220,6 @@ CREATE TABLE IF NOT EXISTS login_attempts (
 	locked_until DATETIME
 );
 `},
+	// Marker only: actual DELETE runs in EnsureSchema after library_placements exists (one-shot).
+	{Version: 26, Name: "cleanup_legacy_manga_library_placements", Up: ""},
 }

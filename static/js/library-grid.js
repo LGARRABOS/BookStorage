@@ -440,7 +440,7 @@
     document.querySelectorAll(".library-case-add-tabs [data-kind]").forEach(function (b) {
       b.classList.toggle("is-active", b.getAttribute("data-kind") === kind);
     });
-    if (volumeWrap) volumeWrap.style.display = kind === "manga" ? "" : "none";
+    if (volumeWrap) volumeWrap.style.display = "none";
   }
 
   function searchWorks(q) {
@@ -482,7 +482,7 @@
             if (!state.active) return;
             var volume =
               parseInt(workVol && workVol.value ? workVol.value : "1", 10) || 1;
-            if (state.kind === "bd") {
+            if (state.kind === "bd" || state.kind === "manga") {
               volume = parseInt(btn.getAttribute("data-volume"), 10) || 1;
             }
             fetch("/api/library/placements", {

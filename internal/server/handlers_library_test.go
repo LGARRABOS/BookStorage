@@ -29,7 +29,7 @@ func TestLibraryPlacementsAPI_CreateSearchUnique(t *testing.T) {
 	tpl := template.Must(template.New("").Parse(`{{ define "library_home" }}ok{{ end }}`))
 	app := &App{Settings: s, DB: db, TemplatesWeb: tpl, TemplatesMobile: tpl}
 
-	_, err := db.Exec(`INSERT INTO works (title, chapter, user_id) VALUES ('One Piece', 100, 1)`)
+	_, err := db.Exec(`INSERT INTO manga_phys_works (title, tome, status, manga_type, user_id, updated_at) VALUES ('One Piece', 15, 'En cours', 'Manga', 1, CURRENT_TIMESTAMP)`)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -190,7 +190,7 @@ func TestLibraryUnassignedListsMissing(t *testing.T) {
 		"t": func(m map[string]string, k string) string { return k },
 	}).Parse(`{{ define "library_unassigned" }}M={{ len .Manga }}B={{ len .Bd }}{{ end }}{{ define "mobile_library_unassigned" }}{{ template "library_unassigned" . }}{{ end }}{{ define "library_topbar" }}{{ end }}`))
 	app := &App{Settings: s, DB: db, TemplatesWeb: tpl, TemplatesMobile: tpl}
-	_, _ = db.Exec(`INSERT INTO works (title, chapter, user_id) VALUES ('Unplaced', 1, 1)`)
+	_, _ = db.Exec(`INSERT INTO manga_phys_works (title, tome, status, manga_type, user_id, updated_at) VALUES ('Unplaced', 1, 'À lire', 'Manga', 1, CURRENT_TIMESTAMP)`)
 	_, _ = db.Exec(`INSERT INTO bd_works (title, tome, status, bd_type, user_id, updated_at) VALUES ('Unplaced BD', 1, 'À lire', 'Album', 1, CURRENT_TIMESTAMP)`)
 
 	req := httptest.NewRequest(http.MethodGet, "/library/unassigned", nil)

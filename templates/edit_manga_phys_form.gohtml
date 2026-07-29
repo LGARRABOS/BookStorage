@@ -1,0 +1,12 @@
+﻿{{ define "edit_manga_phys_form" }}
+<form method="POST" enctype="multipart/form-data" id="bd-form" action="/manga-phys/edit/{{ .Work.ID }}">
+    {{ template "manga_phys_form_fields" . }}
+    <div class="form-actions">
+        <a href="/manga-phys/dashboard" class="btn btn-secondary">{{ t .T "common.cancel" }}</a>
+        <div class="form-actions-right">
+            <button type="button" class="btn btn-danger" id="bd-delete-btn" data-id="{{ .Work.ID }}" data-title="{{ .Work.Title }}">🗑️ {{ t .T "common.delete" }}</button>
+            <button type="submit" class="btn btn-primary">✓ {{ t .T "manga_phys.form.submit.save" }}</button>
+        </div>
+    </div>
+</form>
+{{ end }}

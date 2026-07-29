@@ -77,6 +77,29 @@ CREATE TABLE IF NOT EXISTS bd_works (
 );
 CREATE INDEX IF NOT EXISTS idx_bd_works_user_id ON bd_works(user_id);`
 
+const createMangaPhysWorksTableSQL = `
+CREATE TABLE IF NOT EXISTS manga_phys_works (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    tome INTEGER DEFAULT 0,
+    total_tomes INTEGER,
+    status TEXT,
+    manga_type TEXT,
+    link TEXT,
+    image_path TEXT,
+    rating INTEGER DEFAULT 0,
+    notes TEXT,
+    is_adult INTEGER DEFAULT 0,
+    source TEXT DEFAULT 'manual',
+    external_id TEXT,
+    user_id INTEGER NOT NULL,
+    updated_at DATETIME,
+    started_at DATETIME,
+    finished_at DATETIME,
+    FOREIGN KEY (user_id) REFERENCES users (id)
+);
+CREATE INDEX IF NOT EXISTS idx_manga_phys_works_user_id ON manga_phys_works(user_id);`
+
 const createLibraryFurnitureTableSQL = `
 CREATE TABLE IF NOT EXISTS library_furniture (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

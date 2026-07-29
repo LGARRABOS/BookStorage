@@ -111,12 +111,12 @@ func (p libraryPlacementRow) Code() string {
 func (p libraryPlacementRow) LocationLabel() string {
 	name := strings.TrimSpace(p.Furniture)
 	if p.RoomLabel.Valid && strings.TrimSpace(p.RoomLabel.String) != "" {
-		name = strings.TrimSpace(p.RoomLabel.String) + " · " + name
+		name = strings.TrimSpace(p.RoomLabel.String) + " Â· " + name
 	}
 	if name == "" {
 		return p.Code()
 	}
-	return name + " · " + p.Code()
+	return name + " Â· " + p.Code()
 }
 
 func (a *App) listLibraryFurniture(userID int) ([]libraryFurnitureRow, error) {
@@ -194,10 +194,10 @@ func (a *App) listLibraryPlacementsForFurniture(userID, furnitureID int) ([]libr
 		`SELECT p.id, p.user_id, p.shelf_id, p.case_num, p.position, p.media_kind, p.work_id, p.volume,
 		        s.label, f.id, f.name, f.room_label,
 		        COALESCE(
-		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		               WHEN p.media_kind = 'bd' THEN (SELECT title FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		               ELSE '' END, ''),
-		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		             WHEN p.media_kind = 'bd' THEN (SELECT image_path FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		             ELSE NULL END
 		 FROM library_placements p
@@ -224,10 +224,10 @@ func (a *App) searchLibraryPlacements(userID int, q string) ([]libraryPlacementR
 		`SELECT p.id, p.user_id, p.shelf_id, p.case_num, p.position, p.media_kind, p.work_id, p.volume,
 		        s.label, f.id, f.name, f.room_label,
 		        COALESCE(
-		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		               WHEN p.media_kind = 'bd' THEN (SELECT title FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		               ELSE '' END, ''),
-		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		             WHEN p.media_kind = 'bd' THEN (SELECT image_path FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		             ELSE NULL END
 		 FROM library_placements p
@@ -236,7 +236,7 @@ func (a *App) searchLibraryPlacements(userID int, q string) ([]libraryPlacementR
 		 WHERE p.user_id = ?
 		   AND (
 		     LOWER(COALESCE(
-		       CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		       CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		            WHEN p.media_kind = 'bd' THEN (SELECT title FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		            ELSE '' END, '')) LIKE ?
 		     OR LOWER(f.name) LIKE ?
@@ -275,10 +275,10 @@ func (a *App) getLibraryPlacement(userID, placementID int) (libraryPlacementRow,
 		`SELECT p.id, p.user_id, p.shelf_id, p.case_num, p.position, p.media_kind, p.work_id, p.volume,
 		        s.label, f.id, f.name, f.room_label,
 		        COALESCE(
-		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		          CASE WHEN p.media_kind = 'manga' THEN (SELECT title FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		               WHEN p.media_kind = 'bd' THEN (SELECT title FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		               ELSE '' END, ''),
-		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
+		        CASE WHEN p.media_kind = 'manga' THEN (SELECT image_path FROM manga_phys_works w WHERE w.id = p.work_id AND w.user_id = p.user_id)
 		             WHEN p.media_kind = 'bd' THEN (SELECT image_path FROM bd_works b WHERE b.id = p.work_id AND b.user_id = p.user_id)
 		             ELSE NULL END
 		 FROM library_placements p
@@ -315,7 +315,7 @@ func (a *App) ownershipOKForLibraryWork(userID int, kind string, workID int) boo
 	var n int
 	switch kind {
 	case libraryMediaManga:
-		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&n)
+		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM manga_phys_works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&n)
 	case libraryMediaBD:
 		_ = a.DB.QueryRow(`SELECT COUNT(*) FROM bd_works WHERE id = ? AND user_id = ?`, workID, userID).Scan(&n)
 	default:
