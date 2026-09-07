@@ -15,8 +15,8 @@
       var href = links[i].getAttribute("data-nav");
       if (!href) continue;
       var isActive = false;
-      if (href === "/") {
-        isActive = current === "/" || current === "";
+      if (href === "/" || href === "/hub") {
+        isActive = current === "/" || current === "" || current === "/hub";
       } else if (href === "/anime/dashboard") {
         isActive =
           current === "/anime/dashboard" ||

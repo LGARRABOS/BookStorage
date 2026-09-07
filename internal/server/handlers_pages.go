@@ -13,11 +13,10 @@ func (a *App) HandleHome(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
-	if userID, ok := a.currentUserID(r); ok {
-		if dest := a.userHomePath(userID); dest != pathHub {
-			http.Redirect(w, r, dest, http.StatusFound)
-			return
-		}
+	if _, ok := a.currentUserID(r); ok {
+		// "/" is always the hub for a logged-in user. Preferred home_section
+		// applies after login only; otherwise the logo / URL bar cannot leave
+		// the chosen module.
 		a.HandleHub(w, r)
 		return
 	}
