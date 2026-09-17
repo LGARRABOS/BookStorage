@@ -2,6 +2,7 @@ package server
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -36,13 +37,14 @@ func (a *App) HandleDuplicates(w http.ResponseWriter, r *http.Request) {
 		        COUNT(*) AS cnt
 		 FROM works
 		 WHERE user_id = ?
-		 GROUP BY norm_title, reading_type
-		 HAVING cnt > 1
-		 ORDER BY cnt DESC
+		 GROUP BY LOWER(TRIM(title)), COALESCE(reading_type, '')
+		 HAVING COUNT(*) > 1
+		 ORDER BY COUNT(*) DESC
 		 LIMIT 50`,
 		userID,
 	)
 	if err != nil {
+		log.Printf("duplicates list: %v", err)
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

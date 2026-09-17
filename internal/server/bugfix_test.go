@@ -1,6 +1,7 @@
 package server
 
 import (
+	"html/template"
 	"net/http"
 	"net/http/httptest"
 	"net/url"
@@ -127,6 +128,33 @@ func TestHandleDeleteProfile_withRelatedModuleRows(t *testing.T) {
 	_ = db.QueryRow(`SELECT COUNT(*) FROM bd_works WHERE user_id = 20`).Scan(&bd)
 	if users != 0 || anime != 0 || bd != 0 {
 		t.Fatalf("expected cascade delete, users=%d anime=%d bd=%d", users, anime, bd)
+	}
+}
+
+func TestHandleDuplicates_listsNormalizedGroups(t *testing.T) {
+	db, s := openTestDB(t)
+	tpl := template.Must(template.New("").Parse(`{{ define "duplicates" }}{{ range .Groups }}{{ .NormTitle }}={{ .Count }};{{ end }}{{ end }}`))
+	app := &App{Settings: s, DB: db, TemplatesWeb: tpl, TemplatesMobile: tpl}
+
+	for _, title := range []string{" One Piece ", "one piece", "Naruto"} {
+		if _, err := db.Exec(`INSERT INTO works (title, chapter, user_id, status, reading_type) VALUES (?, 1, 1, 'En cours', 'Manga')`, title); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	req := httptest.NewRequest(http.MethodGet, pathToolsMangaDup, nil)
+	req.AddCookie(&http.Cookie{Name: "session", Value: mustCreateSession(t, app, 1)})
+	rec := httptest.NewRecorder()
+	app.HandleDuplicates(rec, req)
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status %d body=%s", rec.Code, rec.Body.String())
+	}
+	body := rec.Body.String()
+	if !strings.Contains(body, "one piece=2") {
+		t.Fatalf("expected grouped duplicates, got %q", body)
+	}
+	if strings.Contains(body, "naruto") {
+		t.Fatalf("unique title should not be listed: %q", body)
 	}
 }
 
