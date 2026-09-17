@@ -72,8 +72,8 @@ func (a *App) importOneWork(userID int, lineNum int, w exportWork, mode Duplicat
 
 	var existsID int
 	err := a.DB.QueryRow(
-		`SELECT id FROM works WHERE user_id = ? AND title = ?`,
-		userID, title,
+		`SELECT id FROM works WHERE user_id = ? AND title = ? AND COALESCE(link, '') = ?`,
+		userID, title, link,
 	).Scan(&existsID)
 	if err != nil && err != sql.ErrNoRows {
 		report.SkippedInvalid++
@@ -228,34 +228,35 @@ func (a *App) HandleExport(w http.ResponseWriter, r *http.Request) {
 
 	var works []exportWork
 	for rows.Next() {
-		var w exportWork
+		var row exportWork
 		var link, status, readingType, notes, imagePath sql.NullString
 		var catalogID sql.NullInt64
 		var isAdult int
-		if err := rows.Scan(&w.Title, &w.Chapter, &link, &status, &readingType, &w.Rating, &notes, &w.UpdatedAt, &catalogID, &isAdult, &imagePath, &w.StartedAt, &w.LastChapterAt, &w.FinishedAt); err != nil {
-			continue
+		if err := rows.Scan(&row.Title, &row.Chapter, &link, &status, &readingType, &row.Rating, &notes, &row.UpdatedAt, &catalogID, &isAdult, &imagePath, &row.StartedAt, &row.LastChapterAt, &row.FinishedAt); err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			return
 		}
 		if link.Valid {
-			w.Link = link.String
+			row.Link = link.String
 		}
 		if status.Valid {
-			w.Status = status.String
+			row.Status = status.String
 		}
 		if readingType.Valid {
-			w.ReadingType = readingType.String
+			row.ReadingType = readingType.String
 		}
 		if notes.Valid {
-			w.Notes = notes.String
+			row.Notes = notes.String
 		}
 		if catalogID.Valid && catalogID.Int64 > 0 {
 			cid := int(catalogID.Int64)
-			w.CatalogID = &cid
+			row.CatalogID = &cid
 		}
-		w.IsAdult = isAdult != 0
+		row.IsAdult = isAdult != 0
 		if imagePath.Valid {
-			w.ImagePath = imagePath.String
+			row.ImagePath = imagePath.String
 		}
-		works = append(works, w)
+		works = append(works, row)
 	}
 
 	dateStr := time.Now().Format("2006-01-02")

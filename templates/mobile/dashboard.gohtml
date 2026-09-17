@@ -25,7 +25,7 @@
             <div class="mobile-collection-header">
                 <div class="mobile-collection-tabs" id="mobile-quick-filters" role="tablist">
                     <button type="button" class="mobile-collection-tab is-active" data-status="En cours" role="tab" aria-selected="true">{{ t .T "mobile.tab.collection" }}</button>
-                    <button type="button" class="mobile-collection-tab" data-status="" role="tab" aria-selected="false">{{ t .T "mobile.tab.complete" }}</button>
+                    <button type="button" class="mobile-collection-tab" data-status="" role="tab" aria-selected="false">{{ t .T "mobile.tab.all" }}</button>
                     <button type="button" class="mobile-collection-tab" data-status="À lire" role="tab" aria-selected="false">{{ t .T "mobile.tab.wishlist" }}</button>
                 </div>
                 <button type="button" class="mobile-filters-btn" id="mobile-filters-open" aria-haspopup="dialog" aria-label="{{ t .T "mobile.filters.button" }}">
@@ -100,7 +100,7 @@
     {{ template "mobile_install_banner" . }}
     {{ template "mobile_bottom_nav" . }}
     {{ template "mobile_shell_scripts" . }}
-    <script src="/static/js/mobile-filters.js?v=3"></script>
+    <script src="/static/js/mobile-filters.js?v=4"></script>
 </body>
 </html>
 {{ end }}

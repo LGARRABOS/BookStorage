@@ -475,15 +475,41 @@ func (a *App) HandleDecrement(w http.ResponseWriter, r *http.Request) {
 	userID, _ := a.currentUserID(r)
 	workID, _ := strconv.Atoi(r.PathValue("id"))
 
-	_, err := a.DB.Exec(
+	var chapter int
+	var lastAt nullFlexTime
+	err := a.DB.QueryRow(
+		`SELECT chapter, last_chapter_at FROM works WHERE id = ? AND user_id = ?`,
+		workID, userID,
+	).Scan(&chapter, &lastAt)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			_, _ = w.Write([]byte("ok"))
+			return
+		}
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if chapter <= 0 {
+		_, _ = w.Write([]byte("ok"))
+		return
+	}
+
+	res, err := a.DB.Exec(
 		`UPDATE works
-         SET chapter = CASE WHEN chapter > 0 THEN chapter - 1 ELSE 0 END, updated_at = CURRENT_TIMESTAMP
-         WHERE id = ? AND user_id = ?`,
+         SET chapter = chapter - 1, updated_at = CURRENT_TIMESTAMP
+         WHERE id = ? AND user_id = ? AND chapter > 0`,
 		workID, userID,
 	)
 	if err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
+	}
+	if n, _ := res.RowsAffected(); n > 0 {
+		a.applyChapterDeltaToReadingStats(userID, -1, lastAt)
+		a.EmitWebhookEvent(userID, webhookEventWorkChapterChanged, map[string]any{
+			"work_id": workID,
+			"chapter": chapter - 1,
+		})
 	}
 	_, _ = w.Write([]byte("ok"))
 }

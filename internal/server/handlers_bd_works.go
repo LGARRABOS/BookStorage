@@ -81,7 +81,7 @@ func (a *App) HandleBdAddWork(w http.ResponseWriter, r *http.Request) {
 			externalIDArg = externalID
 		}
 
-		if existingID, found := a.findBdInLibrary(userID, title, source, externalID); found {
+		if existingID, found := a.findBdVolumeInLibrary(userID, title, source, externalID, tome); found {
 			http.Redirect(w, r, pathBdEditPrefix+strconv.Itoa(existingID)+"?error=exists", http.StatusFound)
 			return
 		}

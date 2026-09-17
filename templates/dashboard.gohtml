@@ -273,7 +273,7 @@
                         <option value="none">{{ t .T "dashboard.filter.no_site" }}</option>
                         {{ range .ReadingSites }}<option value="{{ .ID }}">{{ .Name }}</option>{{ end }}
                     </select>
-                    <select id="sort-select" onchange="applyDashboardFilters()">
+                    <select id="sort-select">
                         <option value="title" {{ if eq .SortBy "title" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} A→Z</option>
                         <option value="title_desc" {{ if eq .SortBy "title_desc" }}selected{{ end }}>{{ t .T "dashboard.sort.alpha" }} Z→A</option>
                         <option value="modified_desc" {{ if or (eq .SortBy "modified_desc") (eq .SortBy "modified") }}selected{{ end }}>{{ t .T "dashboard.sort.modified_desc" }}</option>
@@ -651,6 +651,8 @@
         };
 
         if (adultOnlyCheck) adultOnlyCheck.addEventListener('change', applyDashboardFilters);
+        var sortSelectEl = document.getElementById('sort-select');
+        if (sortSelectEl) sortSelectEl.addEventListener('change', applyDashboardFilters);
         
         // Chapter increment/decrement buttons
         document.querySelectorAll('.chapter-btn.plus').forEach(btn => {
@@ -801,6 +803,19 @@
                 st.addEventListener('change', syncNotifyRow);
                 syncNotifyRow();
             }
+            const urlPre = container.querySelector('#image_url');
+            if (urlPre) urlPre.addEventListener('change', function() { previewImageUrl(this); });
+            const fileInput = container.querySelector('#image');
+            if (fileInput) fileInput.addEventListener('change', function() { previewImage(this); });
+            const uploadArea = container.querySelector('.image-upload-area');
+            if (uploadArea && fileInput) {
+                uploadArea.addEventListener('click', function(e) {
+                    if (e.target === fileInput) return;
+                    fileInput.click();
+                });
+            }
+            const clearBtn = container.querySelector('#star-picker .clear-btn');
+            if (clearBtn) clearBtn.addEventListener('click', clearRating);
         }
         const editModal = document.getElementById('edit-modal');
         const modalContent = editModal ? editModal.querySelector('.modal-content') : null;

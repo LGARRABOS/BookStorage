@@ -285,8 +285,14 @@
       },
       body: body.toString(),
       redirect: "manual",
-    }).then(function () {
+    }).then(function (r) {
+      if (!r || !r.ok) {
+        setStatus(i18n.saved === "Saved" ? "Error" : "Erreur");
+        return;
+      }
       setStatus(i18n.saved);
+    }).catch(function () {
+      setStatus("Error");
     });
   }
 
@@ -302,7 +308,11 @@
       },
       body: body.toString(),
       redirect: "manual",
-    }).then(function () {
+    }).then(function (r) {
+      if (!r || !r.ok) {
+        setStatus("Error");
+        return;
+      }
       shelves = shelves.filter(function (s) {
         return s.id !== shelfId;
       });
@@ -311,6 +321,8 @@
       });
       renderShelfList();
       setStatus(i18n.saved);
+    }).catch(function () {
+      setStatus("Error");
     });
   }
 

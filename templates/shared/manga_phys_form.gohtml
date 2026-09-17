@@ -105,14 +105,14 @@
     {{ if .CatalogPageURL }}<p class="form-hint"><a href="{{ .CatalogPageURL }}" target="_blank" rel="noopener">openlibrary ↗</a></p>{{ end }}
     <div class="form-group">
         <label for="image_url">{{ t .T "manga_phys.form.image_url" }}</label>
-        <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" value="{{ if .Work }}{{ if hasPrefix .Work.ImagePath.String "http" }}{{ .Work.ImagePath.String }}{{ end }}{{ else }}{{ with .PrefillImageURL }}{{ . }}{{ end }}{{ end }}" onchange="previewImageUrl(this)">
+        <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" value="{{ if .Work }}{{ if hasPrefix .Work.ImagePath.String "http" }}{{ .Work.ImagePath.String }}{{ end }}{{ else }}{{ with .PrefillImageURL }}{{ . }}{{ end }}{{ end }}">
     </div>
     <div class="form-group">
         <label>{{ t .T "manga_phys.form.upload" }}</label>
-        <div class="image-upload-area" onclick="document.getElementById('image').click()">
+        <div class="image-upload-area">
             <div style="font-size:2rem;opacity:0.5;">🖼️</div>
             <p style="color:var(--text-muted);margin:0.5rem 0 0;">{{ t .T "manga_phys.form.upload.click" }}</p>
-            <input id="image" type="file" name="image" accept="image/*" onchange="previewImage(this)">
+            <input id="image" type="file" name="image" accept="image/*">
         </div>
         <div class="image-preview" id="image-preview"><img src="" alt=""></div>
     </div>
@@ -130,7 +130,7 @@
             <div class="stars">
                 {{ range $i := seq 5 }}<span class="star {{ if ge $rating $i }}active{{ end }}" data-value="{{ $i }}">★</span>{{ end }}
             </div>
-            <button type="button" class="clear-btn" onclick="clearRating()">{{ t .T "manga_phys.form.rating.clear" }}</button>
+            <button type="button" class="clear-btn">{{ t .T "manga_phys.form.rating.clear" }}</button>
         </div>
     </div>
     <div class="form-group">
@@ -177,7 +177,19 @@
         });
         picker.addEventListener('mouseleave', function() { updateStars(parseInt(input.value, 10) || 0); });
         var urlPre = document.getElementById('image_url');
+        if (urlPre) urlPre.addEventListener('change', function() { previewImageUrl(this); });
         if (urlPre && urlPre.value) previewImageUrl(urlPre);
+        var fileInput = document.getElementById('image');
+        if (fileInput) fileInput.addEventListener('change', function() { previewImage(this); });
+        var uploadArea = document.querySelector('.image-upload-area');
+        if (uploadArea && fileInput) {
+            uploadArea.addEventListener('click', function(e) {
+                if (e.target === fileInput) return;
+                fileInput.click();
+            });
+        }
+        var clearBtn = document.querySelector('#star-picker .clear-btn');
+        if (clearBtn) clearBtn.addEventListener('click', clearRating);
     });
 </script>
 {{ end }}

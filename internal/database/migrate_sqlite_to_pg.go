@@ -8,6 +8,100 @@ import (
 	"bookstorage/internal/config"
 )
 
+type sqliteCopySpec struct {
+	table string
+	cols  []string
+}
+
+// sqliteToPostgresCopyTables is the ordered list of application tables copied
+// during SQLite → PostgreSQL migration (parents before children).
+var sqliteToPostgresCopyTables = []sqliteCopySpec{
+	{table: "users", cols: []string{
+		"id", "username", "password", "validated", "is_admin", "is_superadmin",
+		"display_name", "email", "bio", "avatar_path", "is_public", "google_sub", "google_email", "home_section",
+	}},
+	{table: "catalog", cols: []string{
+		"id", "title", "reading_type", "image_url", "source", "external_id",
+		"synopsis", "alt_titles", "genres", "tags", "fetched_at", "created_at",
+	}},
+	{table: "reading_sites", cols: []string{
+		"id", "user_id", "name", "base_url", "last_probe_at", "probe_status", "probe_http_status", "probe_detail",
+	}},
+	{table: "works", cols: []string{
+		"id", "title", "chapter", "link", "status", "image_path", "reading_type", "user_id",
+		"rating", "notes", "updated_at", "is_adult", "catalog_id", "anilist_enrich_opt_out",
+		"parent_work_id", "series_sort", "notify_new_chapters", "reading_site_id",
+		"started_at", "last_chapter_at", "finished_at",
+		"link_probe_status", "link_probe_at", "link_probe_http_status", "link_probe_detail",
+	}},
+	{table: "anime_works", cols: []string{
+		"id", "title", "episode", "total_episodes", "status", "anime_type", "link", "image_path",
+		"rating", "notes", "is_adult", "source", "external_id", "user_id", "updated_at", "started_at", "finished_at",
+	}},
+	{table: "bd_works", cols: []string{
+		"id", "title", "tome", "total_tomes", "status", "bd_type", "link", "image_path",
+		"rating", "notes", "is_adult", "source", "external_id", "isbn", "user_id", "updated_at", "started_at", "finished_at",
+	}},
+	{table: "manga_phys_works", cols: []string{
+		"id", "title", "tome", "total_tomes", "status", "manga_type", "link", "image_path",
+		"rating", "notes", "is_adult", "source", "external_id", "user_id", "updated_at", "started_at", "finished_at",
+	}},
+	{table: "library_furniture", cols: []string{
+		"id", "user_id", "name", "room_label", "sort_order", "created_at", "updated_at",
+	}},
+	{table: "library_shelves", cols: []string{
+		"id", "furniture_id", "label", "case_count", "books_per_case", "sort_order",
+	}},
+	{table: "library_placements", cols: []string{
+		"id", "user_id", "shelf_id", "case_num", "position", "media_kind", "work_id", "volume", "created_at", "updated_at",
+	}},
+	{table: "dismissed_recommendations", cols: []string{"id", "user_id", "source", "external_id", "created_at"}},
+	{table: "sessions", cols: []string{
+		"id", "user_id", "token_hash", "created_at", "last_seen_at", "expires_at", "ip", "user_agent", "revoked_at",
+	}},
+	{table: "translation_cache", cols: []string{"source_hash", "target_lang", "translated_text", "created_at"}},
+	{table: "csv_import_sessions", cols: []string{"id", "user_id", "raw_csv", "created_at"}},
+	{table: "oauth_states", cols: []string{"state_hash", "purpose", "user_id", "next", "expires_at_unix", "code_verifier"}},
+	{table: "reading_activity_daily", cols: []string{"user_id", "day", "chapter_increments"}},
+	{table: "api_tokens", cols: []string{
+		"id", "user_id", "name", "token_hash", "scopes", "created_at", "last_used_at", "revoked_at", "expires_at",
+	}},
+	{table: "login_attempts", cols: []string{"username", "fail_count", "locked_until"}},
+	{table: "webhook_endpoints", cols: []string{"id", "user_id", "url", "secret", "events", "enabled", "created_at"}},
+	{table: "webhook_deliveries", cols: []string{
+		"id", "endpoint_id", "event", "payload", "status", "attempts", "next_retry_at", "created_at",
+	}},
+	{table: "user_catalog_blocklist", cols: []string{"user_id", "label_type", "label_name", "created_at"}},
+	{table: "admin_audit_log", cols: []string{
+		"id", "actor_user_id", "action", "target_type", "target_id", "detail_json", "ip", "created_at",
+	}},
+	{table: "webauthn_credentials", cols: []string{
+		"id", "user_id", "credential_id", "public_key", "sign_count", "name",
+		"backup_eligible", "backup_state", "created_at", "last_used_at",
+	}},
+	{table: "password_reset_tokens", cols: []string{"token_hash", "user_id", "created_at", "expires_at", "used_at"}},
+	{table: "webauthn_challenges", cols: []string{"challenge_key", "user_id", "session_data", "expires_at"}},
+}
+
+var postgresSerialTables = []string{
+	"users", "catalog", "reading_sites", "works", "anime_works", "bd_works", "manga_phys_works",
+	"library_furniture", "library_shelves", "library_placements", "dismissed_recommendations",
+	"sessions", "api_tokens", "webhook_endpoints", "webhook_deliveries", "admin_audit_log",
+	"webauthn_credentials",
+}
+
+const postgresTruncateForMigration = `TRUNCATE TABLE
+	webhook_deliveries, webhook_endpoints,
+	library_placements, library_shelves, library_furniture,
+	works, anime_works, bd_works, manga_phys_works,
+	reading_activity_daily, api_tokens, login_attempts,
+	user_catalog_blocklist, admin_audit_log,
+	webauthn_credentials, webauthn_challenges, password_reset_tokens,
+	dismissed_recommendations, sessions, csv_import_sessions,
+	oauth_states, translation_cache, reading_sites, catalog, users,
+	schema_migrations
+RESTART IDENTITY CASCADE`
+
 // MigrateSQLiteToPostgres copies all application data from the SQLite connection into an empty
 // PostgreSQL database reachable via pgDSN, then applies migration markers and full-text setup.
 // It does not modify .env: the caller must persist BOOKSTORAGE_POSTGRES_URL (returned normalized DSN)
@@ -37,43 +131,15 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN stri
 	if err := ensurePostgresSchema(pgConn); err != nil {
 		return "", fmt.Errorf("target schema: %w", err)
 	}
-	clearPostgresUserData := []string{
-		`TRUNCATE oauth_states, csv_import_sessions, translation_cache, sessions, dismissed_recommendations, works, reading_sites, catalog, users, schema_migrations RESTART IDENTITY CASCADE`,
-	}
-	for _, q := range clearPostgresUserData {
-		if _, err := pgConn.Exec(q); err != nil {
-			return "", fmt.Errorf("truncate target: %w", err)
-		}
+	if _, err := pgConn.Exec(postgresTruncateForMigration); err != nil {
+		return "", fmt.Errorf("truncate target: %w", err)
 	}
 
 	sl := sqliteConn.Std()
-
-	if err := copyUsers(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyCatalog(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyReadingSites(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyWorks(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyDismissed(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copySessions(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyTranslationCache(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyCSVImportSessions(sl, pgConn); err != nil {
-		return "", err
-	}
-	if err := copyOAuthStates(sl, pgConn); err != nil {
-		return "", err
+	for _, spec := range sqliteToPostgresCopyTables {
+		if err := copyTable(sl, pgConn, spec.table, spec.cols); err != nil {
+			return "", err
+		}
 	}
 
 	if err := applyPostgresMigrationMarkers(pgConn); err != nil {
@@ -94,8 +160,8 @@ func MigrateSQLiteToPostgres(sqliteConn *Conn, pgDSN string) (normalizedDSN stri
 }
 
 func verifyMigrationCounts(sl *sql.DB, pg *Conn) error {
-	tables := []string{"users", "catalog", "reading_sites", "works", "dismissed_recommendations", "sessions", "translation_cache", "csv_import_sessions", "oauth_states"}
-	for _, t := range tables {
+	for _, spec := range sqliteToPostgresCopyTables {
+		t := spec.table
 		var a, b int
 		if err := sl.QueryRow(`SELECT COUNT(*) FROM ` + quoteSQLiteIdentRaw(t)).Scan(&a); err != nil {
 			return fmt.Errorf("sqlite count %s: %w", t, err)
@@ -111,7 +177,7 @@ func verifyMigrationCounts(sl *sql.DB, pg *Conn) error {
 }
 
 func syncPostgresSequences(pg *Conn) error {
-	for _, tbl := range []string{"users", "catalog", "reading_sites", "works", "dismissed_recommendations", "sessions"} {
+	for _, tbl := range postgresSerialTables {
 		q := fmt.Sprintf(
 			`SELECT setval(pg_get_serial_sequence('%s', 'id'), COALESCE((SELECT MAX(id) FROM %s), 1), true)`,
 			tbl, quoteSQLiteIdentRaw(tbl),
@@ -130,245 +196,57 @@ func quoteSQLiteIdentRaw(name string) string {
 	return `"` + strings.ReplaceAll(name, `"`, `""`) + `"`
 }
 
-func copyUsers(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, username, password, validated, is_admin, is_superadmin, display_name, email, bio, avatar_path, is_public, google_sub, google_email FROM users`)
+func copyTable(sl *sql.DB, pg *Conn, table string, columns []string) error {
+	if sl == nil || pg == nil {
+		return fmt.Errorf("copy %s: nil connection", table)
+	}
+	if len(columns) == 0 {
+		return fmt.Errorf("copy %s: no columns", table)
+	}
+	quoted := make([]string, len(columns))
+	placeholders := make([]string, len(columns))
+	for i, c := range columns {
+		quoted[i] = quoteSQLiteIdentRaw(c)
+		placeholders[i] = "?"
+	}
+	sel := "SELECT " + strings.Join(quoted, ", ") + " FROM " + quoteSQLiteIdentRaw(table)
+	ins := "INSERT INTO " + quoteSQLiteIdentRaw(table) + " (" + strings.Join(quoted, ", ") + ") VALUES (" + strings.Join(placeholders, ", ") + ")"
+	rows, err := sl.Query(sel)
 	if err != nil {
-		return err
+		return fmt.Errorf("select %s: %w", table, err)
 	}
 	defer func() { _ = rows.Close() }()
+
+	vals := make([]any, len(columns))
+	ptrs := make([]any, len(columns))
+	for i := range vals {
+		ptrs[i] = &vals[i]
+	}
 	for rows.Next() {
-		var id int64
-		var username string
-		var password sql.NullString
-		var validated, isAdmin, isSuper, isPublic int
-		var displayName, email, bio, avatarPath, googleSub, googleEmail sql.NullString
-		if err := rows.Scan(&id, &username, &password, &validated, &isAdmin, &isSuper, &displayName, &email, &bio, &avatarPath, &isPublic, &googleSub, &googleEmail); err != nil {
-			return err
+		if err := rows.Scan(ptrs...); err != nil {
+			return fmt.Errorf("scan %s: %w", table, err)
 		}
-		_, err := pg.Exec(
-			`INSERT INTO users (id, username, password, validated, is_admin, is_superadmin, display_name, email, bio, avatar_path, is_public, google_sub, google_email)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, username, nullStr(password), validated, isAdmin, isSuper, nullStr(displayName), nullStr(email), nullStr(bio), nullStr(avatarPath), isPublic, nullStr(googleSub), nullStr(googleEmail),
-		)
-		if err != nil {
-			return fmt.Errorf("insert users: %w", err)
+		args := make([]any, len(vals))
+		for i, v := range vals {
+			args[i] = copiedSQLValue(v)
+		}
+		if _, err := pg.Exec(ins, args...); err != nil {
+			return fmt.Errorf("insert %s: %w", table, err)
 		}
 	}
-	return rows.Err()
+	if err := rows.Err(); err != nil {
+		return fmt.Errorf("rows %s: %w", table, err)
+	}
+	return nil
 }
 
-func copyCatalog(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, title, reading_type, image_url, source, external_id, created_at FROM catalog`)
-	if err != nil {
-		return err
+func copiedSQLValue(v any) any {
+	switch t := v.(type) {
+	case []byte:
+		out := make([]byte, len(t))
+		copy(out, t)
+		return out
+	default:
+		return v
 	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id int64
-		var title, readingType, source string
-		var imageURL, externalID sql.NullString
-		var createdAt sql.NullString
-		if err := rows.Scan(&id, &title, &readingType, &imageURL, &source, &externalID, &createdAt); err != nil {
-			return err
-		}
-		_, err := pg.Exec(
-			`INSERT INTO catalog (id, title, reading_type, image_url, source, external_id, created_at)
-			 VALUES (?, ?, ?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
-			id, title, readingType, nullStr(imageURL), source, nullStr(externalID), nullStr(createdAt),
-		)
-		if err != nil {
-			return fmt.Errorf("insert catalog: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyReadingSites(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, user_id, name, base_url, last_probe_at, probe_status, probe_http_status, probe_detail FROM reading_sites`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id, userID int64
-		var name, baseURL string
-		var lastProbeAt, probeStatus, probeDetail sql.NullString
-		var probeHTTPStatus sql.NullInt64
-		if err := rows.Scan(&id, &userID, &name, &baseURL, &lastProbeAt, &probeStatus, &probeHTTPStatus, &probeDetail); err != nil {
-			return err
-		}
-		_, err := pg.Exec(
-			`INSERT INTO reading_sites (id, user_id, name, base_url, last_probe_at, probe_status, probe_http_status, probe_detail)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, userID, name, baseURL, nullStr(lastProbeAt), nullStr(probeStatus), nullInt64(probeHTTPStatus), nullStr(probeDetail),
-		)
-		if err != nil {
-			return fmt.Errorf("insert reading_sites id=%d: %w", id, err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyWorks(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, COALESCE(notify_new_chapters, 1), reading_site_id FROM works`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id, chapter, userID, rating, isAdult, anilistOpt, seriesSort, notifyCh int64
-		var title string
-		var link, status, imagePath, readingType, notes, updatedAt sql.NullString
-		var catalogID, parentID, readingSiteID sql.NullInt64
-		if err := rows.Scan(&id, &title, &chapter, &link, &status, &imagePath, &readingType, &userID, &rating, &notes, &updatedAt, &isAdult, &catalogID, &anilistOpt, &parentID, &seriesSort, &notifyCh, &readingSiteID); err != nil {
-			return err
-		}
-		_, err := pg.Exec(
-			`INSERT INTO works (id, title, chapter, link, status, image_path, reading_type, user_id, rating, notes, updated_at, is_adult, catalog_id, anilist_enrich_opt_out, parent_work_id, series_sort, notify_new_chapters, reading_site_id)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, title, chapter, nullStr(link), nullStr(status), nullStr(imagePath), nullStr(readingType), userID, rating, nullStr(notes), nullStr(updatedAt), isAdult, nullInt64(catalogID), anilistOpt, nullInt64(parentID), seriesSort, notifyCh, nullInt64(readingSiteID),
-		)
-		if err != nil {
-			return fmt.Errorf("insert works id=%d: %w", id, err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyDismissed(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, user_id, source, external_id, created_at FROM dismissed_recommendations`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id, userID int64
-		var source, externalID string
-		var createdAt sql.NullString
-		if err := rows.Scan(&id, &userID, &source, &externalID, &createdAt); err != nil {
-			return err
-		}
-		if _, err := pg.Exec(
-			`INSERT INTO dismissed_recommendations (id, user_id, source, external_id, created_at)
-			 VALUES (?, ?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
-			id, userID, source, externalID, nullStr(createdAt),
-		); err != nil {
-			return fmt.Errorf("insert dismissed: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func copySessions(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, user_id, token_hash, created_at, last_seen_at, expires_at, ip, user_agent, revoked_at FROM sessions`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id, userID int64
-		var tokenHash string
-		var createdAt, lastSeen, expiresAt, ip, ua, revoked sql.NullString
-		if err := rows.Scan(&id, &userID, &tokenHash, &createdAt, &lastSeen, &expiresAt, &ip, &ua, &revoked); err != nil {
-			return err
-		}
-		var revokedAny any
-		if revoked.Valid && strings.TrimSpace(revoked.String) != "" {
-			revokedAny = revoked.String
-		}
-		if _, err := pg.Exec(
-			`INSERT INTO sessions (id, user_id, token_hash, created_at, last_seen_at, expires_at, ip, user_agent, revoked_at)
-			 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-			id, userID, tokenHash, nullStr(createdAt), nullStr(lastSeen), nullStr(expiresAt), nullStr(ip), nullStr(ua), revokedAny,
-		); err != nil {
-			return fmt.Errorf("insert sessions: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyTranslationCache(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT source_hash, target_lang, translated_text, created_at FROM translation_cache`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var sh, lang, text string
-		var createdAt sql.NullString
-		if err := rows.Scan(&sh, &lang, &text, &createdAt); err != nil {
-			return err
-		}
-		if _, err := pg.Exec(
-			`INSERT INTO translation_cache (source_hash, target_lang, translated_text, created_at)
-			 VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
-			sh, lang, text, nullStr(createdAt),
-		); err != nil {
-			return fmt.Errorf("insert translation_cache: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyCSVImportSessions(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT id, user_id, raw_csv, created_at FROM csv_import_sessions`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var id string
-		var userID int64
-		var raw string
-		var createdAt sql.NullString
-		if err := rows.Scan(&id, &userID, &raw, &createdAt); err != nil {
-			return err
-		}
-		if _, err := pg.Exec(
-			`INSERT INTO csv_import_sessions (id, user_id, raw_csv, created_at)
-			 VALUES (?, ?, ?, COALESCE(?, CURRENT_TIMESTAMP))`,
-			id, userID, raw, nullStr(createdAt),
-		); err != nil {
-			return fmt.Errorf("insert csv_import_sessions: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func copyOAuthStates(sl *sql.DB, pg *Conn) error {
-	rows, err := sl.Query(`SELECT state_hash, purpose, user_id, next, expires_at_unix, code_verifier FROM oauth_states`)
-	if err != nil {
-		return err
-	}
-	defer func() { _ = rows.Close() }()
-	for rows.Next() {
-		var hash, purpose, next, verifier string
-		var userID sql.NullInt64
-		var exp int64
-		if err := rows.Scan(&hash, &purpose, &userID, &next, &exp, &verifier); err != nil {
-			return err
-		}
-		if _, err := pg.Exec(
-			`INSERT INTO oauth_states (state_hash, purpose, user_id, next, expires_at_unix, code_verifier)
-			 VALUES (?, ?, ?, ?, ?, ?)`,
-			hash, purpose, nullInt64(userID), next, exp, verifier,
-		); err != nil {
-			return fmt.Errorf("insert oauth_states: %w", err)
-		}
-	}
-	return rows.Err()
-}
-
-func nullStr(ns sql.NullString) any {
-	if !ns.Valid {
-		return nil
-	}
-	return ns.String
-}
-
-func nullInt64(n sql.NullInt64) any {
-	if !n.Valid {
-		return nil
-	}
-	return n.Int64
 }

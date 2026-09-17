@@ -576,12 +576,7 @@ func (a *App) HandleDeleteProfile(w http.ResponseWriter, r *http.Request) {
 		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
 		return
 	}
-	if _, err := tx.Exec(`DELETE FROM works WHERE user_id = ?`, userID); err != nil {
-		_ = tx.Rollback()
-		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
-		return
-	}
-	if _, err := tx.Exec(`DELETE FROM users WHERE id = ?`, userID); err != nil {
+	if err := deleteUserOwnedData(tx, userID); err != nil {
 		_ = tx.Rollback()
 		http.Redirect(w, r, "/profile?delete_error=1", http.StatusFound)
 		return

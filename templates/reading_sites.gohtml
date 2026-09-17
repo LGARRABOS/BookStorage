@@ -152,7 +152,7 @@
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-secondary btn-sm" title="{{ t $.T "reading_sites.action.probe" }}">🔄</button>
                                 </form>
-                                <form method="POST" action="/manga/reading-sites/delete" onsubmit="return confirm('{{ t $.T "reading_sites.confirm_delete" }}')">
+                                <form method="POST" action="/manga/reading-sites/delete" class="js-confirm-submit" data-confirm="{{ t $.T "reading_sites.confirm_delete" }}">
                                     <input type="hidden" name="id" value="{{ .ID }}">
                                     <button type="submit" class="btn btn-danger btn-sm">🗑️</button>
                                 </form>
@@ -267,6 +267,13 @@
             if (e.target.id === "siteEditModal") {
                 document.getElementById("siteEditModal").classList.remove("open");
             }
+        });
+
+        document.addEventListener("submit", function (e) {
+            var form = e.target.closest(".js-confirm-submit");
+            if (!form) return;
+            var msg = form.getAttribute("data-confirm") || "";
+            if (msg && !window.confirm(msg)) e.preventDefault();
         });
 
         document.addEventListener("keydown", function (e) {

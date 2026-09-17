@@ -55,7 +55,12 @@
       if (!raw) return false;
       var state = JSON.parse(raw);
       if (els.search && state.search) els.search.value = state.search;
-      if (els.status && state.status) els.status.value = state.status;
+      if (els.status) {
+        els.status.value =
+          state.status === undefined || state.status === null
+            ? "En cours"
+            : state.status;
+      }
       if (els.site && state.site) els.site.value = state.site;
       if (els.followCheck) els.followCheck.checked = !!state.follow;
       if (els.adultOnlyCheck) els.adultOnlyCheck.checked = !!state.adult;
@@ -134,7 +139,7 @@
       var matchSite =
         !siteVal || (siteVal === "none" ? cardSite === "none" : cardSite === siteVal);
       var matchSearch = !q || title.indexOf(q) !== -1;
-      var matchStatus = !q && (!s || cs === s);
+      var matchStatus = !s || cs === s;
       var visible = matchSearch && matchStatus && matchFollow && matchSite;
       row.style.display = visible ? "" : "none";
     });
@@ -161,14 +166,18 @@
     return u.toString();
   }
 
+  var reloadSeq = 0;
+
   function reloadWorksList(els) {
     var url = buildServerUrl(els);
+    var seq = ++reloadSeq;
     saveState(els);
     fetch(url, {
       credentials: "same-origin",
       headers: { "X-Requested-With": "XMLHttpRequest" },
     })
       .then(function (r) {
+        if (seq !== reloadSeq) return null;
         if (r.status === 401) {
           window.location.href = "/login?expired=1";
           return null;
@@ -177,7 +186,7 @@
         return r.text();
       })
       .then(function (html) {
-        if (!html || !els.worksContainer) return;
+        if (seq !== reloadSeq || !html || !els.worksContainer) return;
         els.worksContainer.innerHTML = html;
         applyClientFilters(els);
         var newUrl = new URL(buildServerUrl(els));
@@ -185,6 +194,7 @@
         window.history.replaceState({}, "", newUrl.toString());
       })
       .catch(function () {
+        if (seq !== reloadSeq) return;
         var u = new URL(buildServerUrl(els));
         u.searchParams.delete("partial");
         window.location.href = u.toString();
@@ -229,9 +239,26 @@
   function init() {
     var els = getEls();
     var hadState = restoreState(els);
-    if (!hadState) {
+    var adultInURL =
+      new URL(window.location.href).searchParams.get("adult") === "only";
+    if (adultInURL) {
+      if (els.adultOnlyCheck) els.adultOnlyCheck.checked = true;
+      if (els.status) {
+        els.status.value = "";
+        syncQuickTabs(els, "");
+      }
+    } else if (!hadState) {
       if (els.status) els.status.value = "En cours";
       syncQuickTabs(els, "En cours");
+    }
+    if (
+      !adultInURL &&
+      hadState &&
+      els.adultOnlyCheck &&
+      els.adultOnlyCheck.checked
+    ) {
+      reloadWorksList(els);
+      return;
     }
     updateBadge(els);
 

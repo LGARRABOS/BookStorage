@@ -145,7 +145,7 @@
         {{ end }}
         <div class="form-group">
             <label for="link">{{ t .T "work.form.link" }}</label>
-            <input id="link" type="url" name="link" value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}" oninput="detectReadingSite(this)">
+            <input id="link" type="url" name="link" value="{{ if .Work.Link.Valid }}{{ .Work.Link.String }}{{ end }}">
             <p class="form-hint reading-site-hint" id="reading-site-hint" style="display:none;"></p>
         </div>
         <div class="form-group">
@@ -154,7 +154,7 @@
             <input id="image_url" type="url" class="input-readonly-catalog" value="{{ .CatalogAnilistImageURL }}" readonly aria-readonly="true" autocomplete="off">
             <p class="form-hint">{{ t .T "work.form.image_url.anilist_hint" }}</p>
             {{ else }}
-            <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg" onchange="previewImageUrl(this)">
+            <input id="image_url" type="url" name="image_url" placeholder="https://example.com/cover.jpg">
             {{ end }}
         </div>
         <div class="form-group">
@@ -172,10 +172,10 @@
                     {{ if .Work.ImagePath.Valid }}{{ $imgUrl := work_image_url .Work.ImagePath.String }}{{ if $imgUrl }}<img src="{{ $imgUrl }}" alt="Cover"><p>{{ t .T "work.form.image.current" }}</p>{{ else }}<div class="no-image">📖</div>{{ end }}{{ else }}<div class="no-image">📖</div>{{ end }}
                 </div>
                 <div>
-                    <div class="image-upload-area" onclick="document.getElementById('image').click()">
+                    <div class="image-upload-area">
                         <div class="upload-icon">📤</div>
                         <p>{{ t .T "work.form.image.change" }}</p>
-                        <input id="image" type="file" name="image" accept="image/*" onchange="previewImage(this)">
+                        <input id="image" type="file" name="image" accept="image/*">
                     </div>
                     <div class="image-preview" id="image-preview"><img src="" alt="New"></div>
                 </div>
@@ -200,7 +200,7 @@
                     <span class="star {{ if ge $rating 4 }}active{{ end }}" data-value="4">★</span>
                     <span class="star {{ if ge $rating 5 }}active{{ end }}" data-value="5">★</span>
                 </div>
-                <button type="button" class="clear-btn" onclick="clearRating()">{{ t .T "work.form.rating.clear" }}</button>
+                <button type="button" class="clear-btn">{{ t .T "work.form.rating.clear" }}</button>
             </div>
         </div>
         <div class="form-group">
@@ -276,7 +276,10 @@
         }, 400);
     };
     var linkInput = document.getElementById('link');
-    if (linkInput && linkInput.value) detectReadingSite(linkInput);
+    if (linkInput) {
+        linkInput.addEventListener('input', function() { detectReadingSite(this); });
+        if (linkInput.value) detectReadingSite(linkInput);
+    }
 })();
 </script>
 {{ end }}

@@ -54,17 +54,9 @@ func (a *App) importOneBdWork(userID, lineNum int, w exportBdWork, mode Duplicat
 	startedAt := nullIfEmpty(strings.TrimSpace(w.StartedAt))
 	finishedAt := nullIfEmpty(strings.TrimSpace(w.FinishedAt))
 
-	var existsID int
-	err := a.DB.QueryRow(
-		`SELECT id FROM bd_works WHERE user_id = ? AND title = ?`,
-		userID, title,
-	).Scan(&existsID)
-	if err != nil && err != sql.ErrNoRows {
-		report.SkippedInvalid++
-		appendImportError(report, lineNum, "db_lookup")
-		return
-	}
-	if err == nil {
+	existsID, found := a.findBdVolumeInLibrary(userID, title, source, externalID, tome)
+	var err error
+	if found {
 		if mode == DuplicateSkip {
 			report.SkippedDuplicate++
 			return

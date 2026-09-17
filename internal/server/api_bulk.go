@@ -84,6 +84,7 @@ func (a *App) HandleAPIWorksBulk(w http.ResponseWriter, r *http.Request) {
 				errs = append(errs, bulkWorkError{ID: workID, Error: "not_found"})
 				continue
 			}
+			a.EmitWebhookEvent(userID, webhookEventWorkDeleted, map[string]any{"id": workID})
 			updated++
 			continue
 		}

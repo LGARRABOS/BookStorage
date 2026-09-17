@@ -443,11 +443,15 @@
     if (volumeWrap) volumeWrap.style.display = "none";
   }
 
+  var searchSeq = 0;
+
   function searchWorks(q) {
     if (!q) {
       workResults.innerHTML = "";
+      searchSeq += 1;
       return;
     }
+    var seq = ++searchSeq;
     fetch(
       "/api/library/works?kind=" +
         encodeURIComponent(state.kind) +
@@ -459,6 +463,7 @@
         return r.json();
       })
       .then(function (data) {
+        if (seq !== searchSeq) return;
         var results = data.results || [];
         if (!results.length) {
           workResults.innerHTML = "";

@@ -245,7 +245,7 @@ func (a *App) HandleImportWork(w http.ResponseWriter, r *http.Request) {
 		src.Title,
 		src.Chapter,
 		nullableString(src.Link),
-		nullableString(src.Status),
+		stCopy,
 		nullableString(src.ImagePath),
 		readingType,
 		src.Rating,

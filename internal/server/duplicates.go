@@ -208,6 +208,20 @@ func (a *App) HandleMergeDuplicate(w http.ResponseWriter, r *http.Request) {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
+	if _, err := tx.Exec(
+		`UPDATE works SET parent_work_id = NULL WHERE id = ? AND parent_work_id = ? AND user_id = ?`,
+		intoID, fromID, userID,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if _, err := tx.Exec(
+		`UPDATE works SET parent_work_id = ? WHERE parent_work_id = ? AND user_id = ?`,
+		intoID, fromID, userID,
+	); err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
 	if _, err := tx.Exec(`DELETE FROM works WHERE id = ? AND user_id = ?`, fromID, userID); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return

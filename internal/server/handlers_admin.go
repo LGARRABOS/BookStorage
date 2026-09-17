@@ -375,7 +375,17 @@ func (a *App) HandleDeleteAccount(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if _, err := a.DB.Exec(`DELETE FROM users WHERE id = ?`, targetID); err != nil {
+	tx, err := a.DB.Begin()
+	if err != nil {
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err := deleteUserOwnedData(tx, targetID); err != nil {
+		_ = tx.Rollback()
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if err := tx.Commit(); err != nil {
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}

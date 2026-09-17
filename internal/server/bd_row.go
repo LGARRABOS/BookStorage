@@ -86,6 +86,43 @@ func (a *App) findBdInLibrary(userID int, title, source, externalID string) (int
 	return 0, false
 }
 
+// findBdVolumeInLibrary matches a specific album (source+id+tome, else title+tome)
+// so multi-tome series are not collapsed onto the first volume.
+func (a *App) findBdVolumeInLibrary(userID int, title, source, externalID string, tome int) (int, bool) {
+	if a == nil || a.DB == nil || userID <= 0 {
+		return 0, false
+	}
+	source = strings.ToLower(strings.TrimSpace(source))
+	externalID = strings.TrimSpace(externalID)
+	if source != "" && externalID != "" {
+		var id int
+		err := a.DB.QueryRow(
+			`SELECT id FROM bd_works
+             WHERE user_id = ? AND LOWER(COALESCE(source, '')) = ? AND external_id = ? AND COALESCE(tome, 0) = ?
+             LIMIT 1`,
+			userID, source, externalID, tome,
+		).Scan(&id)
+		if err == nil && id > 0 {
+			return id, true
+		}
+	}
+	title = strings.TrimSpace(title)
+	if title == "" {
+		return 0, false
+	}
+	var id int
+	err := a.DB.QueryRow(
+		`SELECT id FROM bd_works
+         WHERE user_id = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?)) AND COALESCE(tome, 0) = ?
+         LIMIT 1`,
+		userID, title, tome,
+	).Scan(&id)
+	if err == nil && id > 0 {
+		return id, true
+	}
+	return 0, false
+}
+
 func (a *App) bdLibraryExternalKeys(userID int) map[string]int {
 	out := map[string]int{}
 	if a == nil || a.DB == nil || userID <= 0 {

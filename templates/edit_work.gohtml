@@ -208,6 +208,20 @@
             });
             picker.addEventListener('mouseleave', function() { updateStars(parseInt(input.value) || 0); });
 
+            var urlPre = document.getElementById('image_url');
+            if (urlPre) urlPre.addEventListener('change', function() { previewImageUrl(this); });
+            var fileInput = document.getElementById('image');
+            if (fileInput) fileInput.addEventListener('change', function() { previewImage(this); });
+            var uploadArea = document.querySelector('.image-upload-area');
+            if (uploadArea && fileInput) {
+                uploadArea.addEventListener('click', function(e) {
+                    if (e.target === fileInput) return;
+                    fileInput.click();
+                });
+            }
+            var clearBtn = document.querySelector('#star-picker .clear-btn');
+            if (clearBtn) clearBtn.addEventListener('click', clearRating);
+
             (function() {
                 var st = document.getElementById('status');
                 var g = document.getElementById('notify-new-chapters-group');

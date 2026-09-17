@@ -57,7 +57,7 @@ func (a *App) HandleMangaPhysAddWork(w http.ResponseWriter, r *http.Request) {
 			externalIDArg = externalID
 		}
 
-		if existingID, found := a.findMangaPhysInLibrary(userID, title, source, externalID); found {
+		if existingID, found := a.findMangaPhysInLibrary(userID, title, source, externalID, tome); found {
 			http.Redirect(w, r, pathMangaPhysEditPrefix+strconv.Itoa(existingID)+"?error=exists", http.StatusFound)
 			return
 		}

@@ -74,16 +74,31 @@
                                 list.forEach(function(item) {
                                     var el = document.createElement('div');
                                     el.className = 'catalog-result-item' + (item.in_library ? ' is-in-library' : '');
-                                    var cover = item.image_url
-                                        ? '<img src="' + item.image_url + '" alt="">'
-                                        : '<span class="no-cover">📘</span>';
+                                    if (item.image_url) {
+                                        var img = document.createElement('img');
+                                        img.src = item.image_url;
+                                        img.alt = '';
+                                        el.appendChild(img);
+                                    } else {
+                                        var noCover = document.createElement('span');
+                                        noCover.className = 'no-cover';
+                                        noCover.textContent = '📘';
+                                        el.appendChild(noCover);
+                                    }
                                     var meta = (item.bd_type || '') + (item.Tomes ? ' · ' + item.Tomes + ' ep.' : '') + (item.is_adult ? ' · 18+' : '');
-                                    var badgeClass = item.in_library ? 'badge in-library' : 'badge';
-                                    var badgeText = item.in_library ? alreadyInLibraryMsg : 'openlibrary';
-                                    el.innerHTML = cover + '<div class="info"><strong></strong><span></span></div><span class="' + badgeClass + '"></span>';
-                                    el.querySelector('strong').textContent = item.title || '';
-                                    el.querySelector('.info span').textContent = meta;
-                                    el.querySelector('.badge').textContent = badgeText;
+                                    var info = document.createElement('div');
+                                    info.className = 'info';
+                                    var strong = document.createElement('strong');
+                                    strong.textContent = item.title || '';
+                                    var metaEl = document.createElement('span');
+                                    metaEl.textContent = meta;
+                                    info.appendChild(strong);
+                                    info.appendChild(metaEl);
+                                    el.appendChild(info);
+                                    var badge = document.createElement('span');
+                                    badge.className = item.in_library ? 'badge in-library' : 'badge';
+                                    badge.textContent = item.in_library ? alreadyInLibraryMsg : 'openlibrary';
+                                    el.appendChild(badge);
                                     if (item.in_library) {
                                         el.addEventListener('click', function() {
                                             if (item.library_id) window.location.href = '/bd/edit/' + item.library_id;

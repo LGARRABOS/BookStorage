@@ -50,7 +50,9 @@ func (a *App) takeWebAuthnChallenge(key string) (webauthn.SessionData, int, bool
 	var raw string
 	var expires time.Time
 	err := a.DB.QueryRow(
-		`SELECT user_id, session_data, expires_at FROM webauthn_challenges WHERE challenge_key = ?`,
+		`DELETE FROM webauthn_challenges
+		 WHERE challenge_key = ?
+		 RETURNING user_id, session_data, expires_at`,
 		key,
 	).Scan(&userID, &raw, &expires)
 	if err != nil {
@@ -59,7 +61,6 @@ func (a *App) takeWebAuthnChallenge(key string) (webauthn.SessionData, int, bool
 		}
 		return webauthn.SessionData{}, 0, false
 	}
-	_, _ = a.DB.Exec(`DELETE FROM webauthn_challenges WHERE challenge_key = ?`, key)
 	if time.Now().After(expires) {
 		return webauthn.SessionData{}, 0, false
 	}

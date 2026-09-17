@@ -173,12 +173,28 @@
       }
       var plus = counter.querySelector(".anime-ep-plus");
       var minus = counter.querySelector(".anime-ep-minus");
+      var busy = false;
+      function withLock(fn) {
+        if (busy) return;
+        busy = true;
+        if (plus) plus.disabled = true;
+        if (minus) minus.disabled = true;
+        Promise.resolve()
+          .then(fn)
+          .finally(function () {
+            busy = false;
+            if (plus) plus.disabled = false;
+            if (minus) minus.disabled = false;
+          });
+      }
       if (plus) {
         plus.addEventListener("click", function (e) {
           e.preventDefault();
           e.stopPropagation();
-          post("/api/anime/increment/" + id).then(function (r) {
-            if (r.ok) setCount((parseInt(countEl.textContent, 10) || 0) + 1);
+          withLock(function () {
+            return post("/api/anime/increment/" + id).then(function (r) {
+              if (r.ok) setCount((parseInt(countEl.textContent, 10) || 0) + 1);
+            });
           });
         });
       }
@@ -188,8 +204,10 @@
           e.stopPropagation();
           var cur = parseInt(countEl.textContent, 10) || 0;
           if (cur <= 0) return;
-          post("/api/anime/decrement/" + id).then(function (r) {
-            if (r.ok) setCount(cur - 1);
+          withLock(function () {
+            return post("/api/anime/decrement/" + id).then(function (r) {
+              if (r.ok) setCount(cur - 1);
+            });
           });
         });
       }

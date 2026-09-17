@@ -35,7 +35,7 @@ func scanMangaPhysRow(w *mangaPhysWorkRow, s interface{ Scan(dest ...any) error 
 	)
 }
 
-func (a *App) findMangaPhysInLibrary(userID int, title, source, externalID string) (int, bool) {
+func (a *App) findMangaPhysInLibrary(userID int, title, source, externalID string, tome int) (int, bool) {
 	if a == nil || a.DB == nil || userID <= 0 {
 		return 0, false
 	}
@@ -45,9 +45,9 @@ func (a *App) findMangaPhysInLibrary(userID int, title, source, externalID strin
 		var id int
 		err := a.DB.QueryRow(
 			`SELECT id FROM manga_phys_works
-             WHERE user_id = ? AND LOWER(COALESCE(source, '')) = ? AND external_id = ?
+             WHERE user_id = ? AND LOWER(COALESCE(source, '')) = ? AND external_id = ? AND COALESCE(tome, 0) = ?
              LIMIT 1`,
-			userID, source, externalID,
+			userID, source, externalID, tome,
 		).Scan(&id)
 		if err == nil && id > 0 {
 			return id, true
@@ -60,9 +60,9 @@ func (a *App) findMangaPhysInLibrary(userID int, title, source, externalID strin
 	var id int
 	err := a.DB.QueryRow(
 		`SELECT id FROM manga_phys_works
-         WHERE user_id = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?))
+         WHERE user_id = ? AND LOWER(TRIM(title)) = LOWER(TRIM(?)) AND COALESCE(tome, 0) = ?
          LIMIT 1`,
-		userID, title,
+		userID, title, tome,
 	).Scan(&id)
 	if err == nil && id > 0 {
 		return id, true

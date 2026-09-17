@@ -178,13 +178,15 @@ func (a *App) listActiveSessions(userID int) ([]sessionRow, error) {
 	if userID <= 0 {
 		return nil, nil
 	}
+	now := time.Now().UTC()
 	rows, err := a.DB.Query(
 		`SELECT id, user_id, created_at, last_seen_at, expires_at, ip, user_agent, revoked_at
 		 FROM sessions
 		 WHERE user_id = ? AND revoked_at IS NULL AND expires_at > ?
+		   AND created_at > ?
 		 ORDER BY last_seen_at DESC
 		 LIMIT 20`,
-		userID, time.Now().UTC(),
+		userID, now, now.Add(-sessionAbsoluteTTL),
 	)
 	if err != nil {
 		return nil, err
