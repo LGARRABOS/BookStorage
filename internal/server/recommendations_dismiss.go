@@ -34,12 +34,12 @@ func loadDismissedRecommendations(db *database.Conn, userID int, source string) 
 	return out, rows.Err()
 }
 
-func filterDismissedSuggestions(res *recommend.ForUserResult, dismissedAnilistIDs map[string]struct{}) {
-	if res == nil || len(res.Results) == 0 || len(dismissedAnilistIDs) == 0 {
-		return
+func filterSuggestionList(list []recommend.Suggestion, dismissedAnilistIDs map[string]struct{}) []recommend.Suggestion {
+	if len(list) == 0 || len(dismissedAnilistIDs) == 0 {
+		return list
 	}
-	out := res.Results[:0]
-	for _, s := range res.Results {
+	out := list[:0]
+	for _, s := range list {
 		if s.AnilistID <= 0 {
 			out = append(out, s)
 			continue
@@ -49,7 +49,15 @@ func filterDismissedSuggestions(res *recommend.ForUserResult, dismissedAnilistID
 		}
 		out = append(out, s)
 	}
-	res.Results = out
+	return out
+}
+
+func filterDismissedSuggestions(res *recommend.ForUserResult, dismissedAnilistIDs map[string]struct{}) {
+	if res == nil || len(dismissedAnilistIDs) == 0 {
+		return
+	}
+	res.Results = filterSuggestionList(res.Results, dismissedAnilistIDs)
+	res.AdultResults = filterSuggestionList(res.AdultResults, dismissedAnilistIDs)
 }
 
 func (a *App) HandleDismissRecommendation(w http.ResponseWriter, r *http.Request) {

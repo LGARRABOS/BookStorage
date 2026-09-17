@@ -2,6 +2,8 @@
         .reco-section { background: var(--surface); border-radius: 1rem; padding: 1rem 1.25rem; border: 1px solid var(--border-subtle); margin-bottom: 1.5rem; }
         .reco-header { margin-bottom: 0.75rem; }
         .reco-title { font-size: 1.05rem; font-weight: 600; margin: 0 0 0.25rem 0; color: var(--text-primary); }
+        .reco-title-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+        .reco-adult-badge { font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em; color: var(--text-muted); border: 1px solid var(--border-subtle); border-radius: 999px; padding: 0.12rem 0.5rem; }
         .reco-hint { font-size: 0.85rem; color: var(--text-muted); margin: 0; }
         .reco-scroll-wrap { display: flex; align-items: stretch; gap: 0.35rem; margin: 0 -0.15rem; }
         .reco-scroll { flex: 1; min-width: 0; display: flex; gap: 0.75rem; overflow-x: auto; overflow-y: hidden; padding-bottom: 0.35rem; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; scroll-behavior: smooth; scrollbar-width: thin; }
@@ -43,13 +45,39 @@
         .reco-detail-scores { font-size: 0.9rem; color: var(--text-secondary); }
         .reco-detail-actions { margin-top: 1.25rem; display: flex; gap: 0.75rem; flex-wrap: wrap; }
         .reco-detail-loading { padding: 2rem; text-align: center; color: var(--text-muted); }
+        .reco-header-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 0.75rem; flex-wrap: wrap; }
+        .reco-quiz-open { flex-shrink: 0; font-size: 0.8rem; padding: 0.35rem 0.7rem; border-radius: 0.55rem; border: 1px solid var(--border-subtle); background: var(--background); color: var(--text-secondary); cursor: pointer; }
+        .reco-quiz-open:hover { border-color: var(--primary); color: var(--primary); background: var(--primary-muted); }
+        .reco-quiz-results { margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px solid var(--border-subtle); }
+        .reco-quiz-results-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; margin-bottom: 0.5rem; }
+        .reco-quiz-results-title { font-size: 0.82rem; font-weight: 600; color: var(--text-secondary); margin: 0; }
+        .reco-quiz-reset { font-size: 0.78rem; border: none; background: none; color: var(--text-muted); cursor: pointer; text-decoration: underline; padding: 0; }
+        .reco-quiz-dialog { max-width: 560px; width: 94%; }
+        .reco-quiz-fieldset { border: none; margin: 0 0 1rem 0; padding: 0; }
+        .reco-quiz-legend { font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); margin: 0 0 0.45rem 0; }
+        .reco-quiz-chips { display: flex; flex-wrap: wrap; gap: 0.45rem; }
+        .reco-quiz-chip { display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.65rem; border: 1px solid var(--border-subtle); border-radius: 2rem; font-size: 0.82rem; color: var(--text-secondary); cursor: pointer; user-select: none; background: var(--background); }
+        .reco-quiz-chip input { width: 14px; height: 14px; margin: 0; accent-color: var(--primary); cursor: pointer; }
+        .reco-quiz-chip:has(input:checked) { border-color: var(--primary); background: var(--primary-muted); color: var(--primary); }
+        .reco-quiz-actions { display: flex; gap: 0.6rem; flex-wrap: wrap; margin-top: 0.5rem; }
+        .reco-quiz-err { color: #b91c1c; font-size: 0.85rem; margin: 0 0 0.5rem 0; }
 {{ end }}
 
 {{ define "recommendations_section" }}
+{{ template "recommendations_section_sfw" . }}
+{{ template "recommendations_section_adult" . }}
+{{ end }}
+
+{{ define "recommendations_section_sfw" }}
             <section class="reco-section" id="reco-section" aria-label="{{ t .T "dashboard.recommendations.title" }}">
                 <div class="reco-header">
-                    <h2 class="reco-title">✨ {{ t .T "dashboard.recommendations.title" }}</h2>
-                    <p class="reco-hint" id="reco-hint">{{ t .T "dashboard.recommendations.hint" }}</p>
+                    <div class="reco-header-top">
+                        <div>
+                            <h2 class="reco-title" id="reco-title">✨ {{ t .T "dashboard.recommendations.title" }}</h2>
+                            <p class="reco-hint" id="reco-hint">{{ t .T "dashboard.recommendations.hint" }}</p>
+                        </div>
+                        <button type="button" class="reco-quiz-open" id="reco-quiz-open-sfw" data-reco-quiz-lane="sfw">{{ t .T "dashboard.recommendations.quiz.open" }}</button>
+                    </div>
                 </div>
                 <div class="reco-scroll-wrap">
                     <button type="button" class="reco-scroll-btn reco-scroll-btn--prev" id="reco-scroll-prev" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_prev" }}">‹</button>
@@ -57,6 +85,50 @@
                         <p class="reco-loading" id="reco-loading">{{ t .T "dashboard.recommendations.loading" }}</p>
                     </div>
                     <button type="button" class="reco-scroll-btn reco-scroll-btn--next" id="reco-scroll-next" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_next" }}">›</button>
+                </div>
+                <div class="reco-quiz-results" id="reco-quiz-sfw" hidden>
+                    <div class="reco-quiz-results-head">
+                        <p class="reco-quiz-results-title">{{ t .T "dashboard.recommendations.quiz.results" }}</p>
+                        <button type="button" class="reco-quiz-reset" id="reco-quiz-reset-sfw" data-reco-quiz-reset="sfw">{{ t .T "dashboard.recommendations.quiz.reset" }}</button>
+                    </div>
+                    <div class="reco-scroll-wrap">
+                        <button type="button" class="reco-scroll-btn reco-scroll-btn--prev" id="reco-scroll-prev-quiz-sfw" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_prev" }}">‹</button>
+                        <div class="reco-scroll" id="reco-inner-quiz-sfw" role="list"></div>
+                        <button type="button" class="reco-scroll-btn reco-scroll-btn--next" id="reco-scroll-next-quiz-sfw" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_next" }}">›</button>
+                    </div>
+                </div>
+            </section>
+{{ end }}
+
+{{ define "recommendations_section_adult" }}
+            <section class="reco-section reco-section--adult" id="reco-section-adult" hidden aria-label="{{ t .T "dashboard.recommendations.title_adult" }}">
+                <div class="reco-header">
+                    <div class="reco-header-top">
+                        <div>
+                            <div class="reco-title-row">
+                                <h2 class="reco-title" id="reco-title-adult">✨ {{ t .T "dashboard.recommendations.title_adult" }}</h2>
+                                <span class="reco-adult-badge">18+</span>
+                            </div>
+                            <p class="reco-hint" id="reco-hint-adult">{{ t .T "dashboard.recommendations.hint_adult" }}</p>
+                        </div>
+                        <button type="button" class="reco-quiz-open" id="reco-quiz-open-adult" data-reco-quiz-lane="adult">{{ t .T "dashboard.recommendations.quiz.open" }}</button>
+                    </div>
+                </div>
+                <div class="reco-scroll-wrap">
+                    <button type="button" class="reco-scroll-btn reco-scroll-btn--prev" id="reco-scroll-prev-adult" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_prev" }}">‹</button>
+                    <div class="reco-scroll" id="reco-inner-adult" role="list"></div>
+                    <button type="button" class="reco-scroll-btn reco-scroll-btn--next" id="reco-scroll-next-adult" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_next" }}">›</button>
+                </div>
+                <div class="reco-quiz-results" id="reco-quiz-adult" hidden>
+                    <div class="reco-quiz-results-head">
+                        <p class="reco-quiz-results-title">{{ t .T "dashboard.recommendations.quiz.results_adult" }}</p>
+                        <button type="button" class="reco-quiz-reset" id="reco-quiz-reset-adult" data-reco-quiz-reset="adult">{{ t .T "dashboard.recommendations.quiz.reset" }}</button>
+                    </div>
+                    <div class="reco-scroll-wrap">
+                        <button type="button" class="reco-scroll-btn reco-scroll-btn--prev" id="reco-scroll-prev-quiz-adult" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_prev" }}">‹</button>
+                        <div class="reco-scroll" id="reco-inner-quiz-adult" role="list"></div>
+                        <button type="button" class="reco-scroll-btn reco-scroll-btn--next" id="reco-scroll-next-quiz-adult" hidden aria-hidden="true" aria-label="{{ t .T "dashboard.recommendations.scroll_next" }}">›</button>
+                    </div>
                 </div>
             </section>
 {{ end }}
@@ -69,6 +141,77 @@
             <div class="modal-content reco-detail-inner">
                 <div id="reco-detail-loading" class="reco-detail-loading"></div>
                 <div id="reco-detail-body" style="display:none;"></div>
+            </div>
+        </div>
+    </div>
+    <div id="reco-quiz-modal" class="modal-overlay" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="reco-quiz-title">
+        <div class="modal-backdrop" id="reco-quiz-backdrop"></div>
+        <div class="modal-dialog reco-quiz-dialog">
+            <button type="button" class="modal-close" id="reco-quiz-close-btn" aria-label="{{ t .T "dashboard.recommendations.detail.close" }}">×</button>
+            <div class="modal-content reco-detail-inner">
+                <h2 id="reco-quiz-title" class="reco-title" style="margin-bottom:0.35rem;">{{ t .T "dashboard.recommendations.quiz.title" }}</h2>
+                <p class="reco-hint" id="reco-quiz-hint" style="margin-bottom:1rem;">{{ t .T "dashboard.recommendations.quiz.hint" }}</p>
+                <p class="reco-quiz-err" id="reco-quiz-err" hidden></p>
+                <form id="reco-quiz-form">
+                    <input type="hidden" id="reco-quiz-lane" value="sfw">
+                    <fieldset class="reco-quiz-fieldset">
+                        <legend class="reco-quiz-legend">{{ t .T "dashboard.recommendations.quiz.moods" }}</legend>
+                        <div class="reco-quiz-chips">
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="action"> {{ t .T "dashboard.recommendations.quiz.mood.action" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="adventure"> {{ t .T "dashboard.recommendations.quiz.mood.adventure" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="romance"> {{ t .T "dashboard.recommendations.quiz.mood.romance" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="comedy"> {{ t .T "dashboard.recommendations.quiz.mood.comedy" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="drama"> {{ t .T "dashboard.recommendations.quiz.mood.drama" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="slice_of_life"> {{ t .T "dashboard.recommendations.quiz.mood.slice_of_life" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="fantasy"> {{ t .T "dashboard.recommendations.quiz.mood.fantasy" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="mystery"> {{ t .T "dashboard.recommendations.quiz.mood.mystery" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="horror"> {{ t .T "dashboard.recommendations.quiz.mood.horror" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="sports"> {{ t .T "dashboard.recommendations.quiz.mood.sports" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="supernatural"> {{ t .T "dashboard.recommendations.quiz.mood.supernatural" }}</label>
+                            <label class="reco-quiz-chip"><input type="checkbox" name="mood" value="sci_fi"> {{ t .T "dashboard.recommendations.quiz.mood.sci_fi" }}</label>
+                        </div>
+                    </fieldset>
+                    <fieldset class="reco-quiz-fieldset">
+                        <legend class="reco-quiz-legend">{{ t .T "dashboard.recommendations.quiz.tone" }}</legend>
+                        <div class="reco-quiz-chips">
+                            <label class="reco-quiz-chip"><input type="radio" name="tone" value="" checked> {{ t .T "dashboard.recommendations.quiz.tone.any" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="tone" value="light"> {{ t .T "dashboard.recommendations.quiz.tone.light" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="tone" value="dark"> {{ t .T "dashboard.recommendations.quiz.tone.dark" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="tone" value="emotional"> {{ t .T "dashboard.recommendations.quiz.tone.emotional" }}</label>
+                        </div>
+                    </fieldset>
+                    <fieldset class="reco-quiz-fieldset">
+                        <legend class="reco-quiz-legend">{{ t .T "dashboard.recommendations.quiz.format" }}</legend>
+                        <div class="reco-quiz-chips">
+                            <label class="reco-quiz-chip"><input type="radio" name="reading_type" value="" checked> {{ t .T "dashboard.recommendations.quiz.format.any" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="reading_type" value="Webtoon"> {{ t .T "type.webtoon" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="reading_type" value="Manga"> {{ t .T "type.manga" }}</label>
+                            <label class="reco-quiz-chip"><input type="radio" name="reading_type" value="Light Novel"> {{ t .T "type.light_novel" }}</label>
+                        </div>
+                    </fieldset>
+                    <div id="reco-quiz-adult-fields" hidden>
+                        <fieldset class="reco-quiz-fieldset">
+                            <legend class="reco-quiz-legend">{{ t .T "dashboard.recommendations.quiz.orient" }}</legend>
+                            <div class="reco-quiz-chips">
+                                <label class="reco-quiz-chip"><input type="checkbox" name="adult_orient" value="heterosexual"> {{ t .T "catalog.explore.adult_orient.heterosexual" }}</label>
+                                <label class="reco-quiz-chip"><input type="checkbox" name="adult_orient" value="boys_love"> {{ t .T "catalog.explore.adult_orient.boys_love" }}</label>
+                                <label class="reco-quiz-chip"><input type="checkbox" name="adult_orient" value="yuri"> {{ t .T "catalog.explore.adult_orient.yuri" }}</label>
+                            </div>
+                        </fieldset>
+                        <fieldset class="reco-quiz-fieldset">
+                            <legend class="reco-quiz-legend">{{ t .T "dashboard.recommendations.quiz.vibe" }}</legend>
+                            <div class="reco-quiz-chips">
+                                <label class="reco-quiz-chip"><input type="radio" name="adult_vibe" value="" checked> {{ t .T "dashboard.recommendations.quiz.vibe.any" }}</label>
+                                <label class="reco-quiz-chip"><input type="radio" name="adult_vibe" value="romantic"> {{ t .T "dashboard.recommendations.quiz.vibe.romantic" }}</label>
+                                <label class="reco-quiz-chip"><input type="radio" name="adult_vibe" value="explicit"> {{ t .T "dashboard.recommendations.quiz.vibe.explicit" }}</label>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div class="reco-quiz-actions">
+                        <button type="submit" class="btn btn-primary" id="reco-quiz-submit">{{ t .T "dashboard.recommendations.quiz.submit" }}</button>
+                        <button type="button" class="btn btn-secondary" id="reco-quiz-cancel">{{ t .T "dashboard.recommendations.detail.close" }}</button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -108,9 +251,30 @@
         var whyRelated = {{ jsstr (t .T "dashboard.recommendations.detail.why_related") }};
         var whyBrowseMatched = {{ jsstr (t .T "dashboard.recommendations.detail.why_browse_matched") }};
         var whyBrowseProfile = {{ jsstr (t .T "dashboard.recommendations.detail.why_browse_profile") }};
+        var whyQuiz = {{ jsstr (t .T "dashboard.recommendations.detail.why_quiz") }};
+        var quizTitleSfw = {{ jsstr (t .T "dashboard.recommendations.quiz.title") }};
+        var quizTitleAdult = {{ jsstr (t .T "dashboard.recommendations.quiz.title_adult") }};
+        var quizEmpty = {{ jsstr (t .T "dashboard.recommendations.quiz.empty") }};
+        var quizErr = {{ jsstr (t .T "dashboard.recommendations.quiz.error") }};
+        var quizNeedPick = {{ jsstr (t .T "dashboard.recommendations.quiz.need_pick") }};
+        var titleSfw = {{ jsstr (t .T "dashboard.recommendations.title_sfw") }};
         var recoListData = [];
+        var recoAdultListData = [];
+        var recoQuizSfwData = [];
+        var recoQuizAdultData = [];
         var recoProfile = {};
-        function buildWhyText(item) {
+        var recoAdultProfile = {};
+        function buildWhyText(item, profile) {
+            profile = profile || recoProfile;
+            if (item.source === 'quiz') {
+                var qParts = [];
+                if (item.matched_genres && item.matched_genres.length)
+                    qParts.push(lblGenres + ': ' + item.matched_genres.join(', '));
+                if (item.matched_tags && item.matched_tags.length)
+                    qParts.push(lblTags + ': ' + item.matched_tags.join(', '));
+                if (qParts.length) return whyQuiz.replace('{details}', qParts.join(' · '));
+                return whyQuiz.replace('{details}', '—');
+            }
             if (item.source === 'recommendation' && item.related_title) {
                 return whyRelated.replace('{title}', item.related_title);
             }
@@ -122,8 +286,8 @@
             if (parts.length) return whyBrowseMatched.replace('{details}', parts.join(' · '));
             if (item.genres && item.genres.length)
                 return lblGenres + ': ' + item.genres.join(', ');
-            var g = (recoProfile.top_genres && recoProfile.top_genres.length) ? recoProfile.top_genres.join(', ') : '—';
-            var t = (recoProfile.top_tags && recoProfile.top_tags.length) ? recoProfile.top_tags.join(', ') : '—';
+            var g = (profile.top_genres && profile.top_genres.length) ? profile.top_genres.join(', ') : '—';
+            var t = (profile.top_tags && profile.top_tags.length) ? profile.top_tags.join(', ') : '—';
             return whyBrowseProfile.replace('{genres}', g).replace('{tags}', t);
         }
         function showRecoMsg(text) {
@@ -156,17 +320,19 @@
                 parent.appendChild(noCover);
             }
         }
-        function buildRecoCard(item, idx) {
+        function buildRecoCard(item, idx, lane) {
             var dismissLbl = document.documentElement.lang === 'fr' ? 'Pas intéressé' : 'Not interested';
             var article = document.createElement('article');
             article.className = 'reco-card';
             article.setAttribute('role', 'listitem');
             article.setAttribute('data-reco-idx', String(idx));
+            article.setAttribute('data-reco-lane', lane || 'sfw');
 
             var coverBtn = document.createElement('button');
             coverBtn.type = 'button';
             coverBtn.className = 'reco-card-cover reco-card-cover--btn';
             coverBtn.setAttribute('data-reco-idx', String(idx));
+            coverBtn.setAttribute('data-reco-lane', lane || 'sfw');
             coverBtn.setAttribute('aria-label', openLbl);
             appendRecoCover(coverBtn, item.image_url);
 
@@ -196,6 +362,7 @@
             dismissBtn.type = 'button';
             dismissBtn.className = 'btn-reco btn-reco--dismiss';
             dismissBtn.setAttribute('data-reco-dismiss', String(idx));
+            dismissBtn.setAttribute('data-reco-lane', lane || 'sfw');
             dismissBtn.setAttribute('aria-label', dismissLbl);
             dismissBtn.setAttribute('title', dismissLbl);
             dismissBtn.textContent = '✕';
@@ -237,7 +404,7 @@
             recoBody.appendChild(p);
             recoBody.appendChild(actions);
         }
-        function renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx) {
+        function renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx, lane) {
             recoBody.replaceChildren();
 
             var header = document.createElement('div');
@@ -324,20 +491,10 @@
                         body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
                     }).then(function(r) {
                         if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
-                        if (dismissIdx >= 0) {
-                            var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
-                            if (card) card.remove();
-                            recoListData[dismissIdx] = null;
-                            setupRecoScroll();
-                        }
+                        if (dismissIdx >= 0) removeRecoCard(lane || 'sfw', dismissIdx);
                         closeRecoDetailModal();
                     }).catch(function() {
-                        if (dismissIdx >= 0) {
-                            var card = document.querySelector('.reco-card[data-reco-idx="' + dismissIdx + '"]');
-                            if (card) card.remove();
-                            recoListData[dismissIdx] = null;
-                            setupRecoScroll();
-                        }
+                        if (dismissIdx >= 0) removeRecoCard(lane || 'sfw', dismissIdx);
                         closeRecoDetailModal();
                     });
                 });
@@ -361,15 +518,16 @@
             recoBody.style.display = 'none';
             recoLoadEl.style.display = 'block';
             recoLoadEl.textContent = detailLoading;
-            var whyText = buildWhyText(item);
+            var whyText = buildWhyText(item, options.profile || recoProfile);
             var dismissable = options.dismissable !== false && item.source !== 'browse';
             var dismissIdx = typeof options.idx === 'number' ? options.idx : -1;
+            var lane = options.lane || 'sfw';
             fetch('/api/recommendations/media?anilist_id=' + encodeURIComponent(item.anilist_id))
                 .then(parseApiJson)
                 .then(function(d) {
                     recoLoadEl.style.display = 'none';
                     recoBody.style.display = 'block';
-                    renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx);
+                    renderRecoDetailBody(d, item, whyText, dismissable, dismissIdx, lane);
                 })
                 .catch(function(e) {
                     recoLoadEl.style.display = 'none';
@@ -378,10 +536,16 @@
                 });
         }
         window.openRecoDetailByItem = openRecoDetailByItem;
-        function openRecoDetail(idx) {
-            var item = recoListData[idx];
+        function openRecoDetail(idx, lane) {
+            var item = recoListForLane(lane)[idx];
             if (!item) return;
-            openRecoDetailByItem(item, { dismissable: true, idx: idx });
+            var adultish = lane === 'adult' || lane === 'quiz-adult';
+            openRecoDetailByItem(item, {
+                dismissable: true,
+                idx: idx,
+                lane: lane || 'sfw',
+                profile: adultish ? recoAdultProfile : recoProfile
+            });
         }
         var recoCloseBtn = document.getElementById('reco-detail-close-btn');
         var recoBackdrop = document.getElementById('reco-detail-backdrop');
@@ -391,10 +555,10 @@
             if (e.key === 'Escape' && recoModal && recoModal.getAttribute('aria-hidden') === 'false') closeRecoDetailModal();
         });
         function hideRecoScrollButtons() {
-            var prev = document.getElementById('reco-scroll-prev');
-            var next = document.getElementById('reco-scroll-next');
-            if (prev) { prev.hidden = true; prev.setAttribute('aria-hidden', 'true'); }
-            if (next) { next.hidden = true; next.setAttribute('aria-hidden', 'true'); }
+            ['reco-scroll-prev', 'reco-scroll-next', 'reco-scroll-prev-adult', 'reco-scroll-next-adult'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) { el.hidden = true; el.setAttribute('aria-hidden', 'true'); }
+            });
         }
         function updateRecoScrollButtons(scrollEl, prevBtn, nextBtn) {
             if (!scrollEl || !prevBtn || !nextBtn) return;
@@ -413,10 +577,10 @@
             prevBtn.disabled = scrollEl.scrollLeft <= 2;
             nextBtn.disabled = scrollEl.scrollLeft >= max - 2;
         }
-        function setupRecoScroll() {
-            var el = document.getElementById('reco-inner');
-            var prev = document.getElementById('reco-scroll-prev');
-            var next = document.getElementById('reco-scroll-next');
+        function setupLaneScroll(innerId, prevId, nextId) {
+            var el = document.getElementById(innerId);
+            var prev = document.getElementById(prevId);
+            var next = document.getElementById(nextId);
             if (!el || !prev || !next) return;
             function onScrollOrResize() { updateRecoScrollButtons(el, prev, next); }
             el.addEventListener('scroll', onScrollOrResize, { passive: true });
@@ -432,57 +596,101 @@
             el.querySelectorAll('img').forEach(function(img) { img.addEventListener('load', onScrollOrResize); });
             requestAnimationFrame(function() { requestAnimationFrame(onScrollOrResize); });
         }
+        function setupRecoScroll() {
+            setupLaneScroll('reco-inner', 'reco-scroll-prev', 'reco-scroll-next');
+            setupLaneScroll('reco-inner-adult', 'reco-scroll-prev-adult', 'reco-scroll-next-adult');
+            setupLaneScroll('reco-inner-quiz-sfw', 'reco-scroll-prev-quiz-sfw', 'reco-scroll-next-quiz-sfw');
+            setupLaneScroll('reco-inner-quiz-adult', 'reco-scroll-prev-quiz-adult', 'reco-scroll-next-quiz-adult');
+        }
+        function recoListForLane(lane) {
+            if (lane === 'adult') return recoAdultListData;
+            if (lane === 'quiz-sfw') return recoQuizSfwData;
+            if (lane === 'quiz-adult') return recoQuizAdultData;
+            return recoListData;
+        }
+        function removeRecoCard(lane, idx) {
+            var card = document.querySelector('.reco-card[data-reco-lane="' + (lane || 'sfw') + '"][data-reco-idx="' + idx + '"]');
+            if (card) card.remove();
+            var list = recoListForLane(lane);
+            if (list) list[idx] = null;
+            setupRecoScroll();
+        }
+        function bindRecoLane(root, list, lane) {
+            if (!root) return;
+            root.replaceChildren();
+            list.forEach(function(item, idx) {
+                root.appendChild(buildRecoCard(item, idx, lane));
+            });
+            root.querySelectorAll('.reco-card-cover--btn').forEach(function(btn) {
+                btn.addEventListener('click', function() {
+                    var i = parseInt(btn.getAttribute('data-reco-idx'), 10);
+                    var ln = btn.getAttribute('data-reco-lane') || lane;
+                    if (!isNaN(i)) openRecoDetail(i, ln);
+                });
+            });
+            root.querySelectorAll('[data-reco-dismiss]').forEach(function(btn) {
+                btn.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    var i = parseInt(btn.getAttribute('data-reco-dismiss'), 10);
+                    var ln = btn.getAttribute('data-reco-lane') || lane;
+                    if (isNaN(i)) return;
+                    var item = recoListForLane(ln)[i];
+                    if (!item || !item.anilist_id) return;
+                    fetch('/api/recommendations/dismiss', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
+                    }).then(function(r) {
+                        if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
+                        removeRecoCard(ln, i);
+                    }).catch(function() {
+                        removeRecoCard(ln, i);
+                    });
+                });
+            });
+        }
         fetch('/api/recommendations')
             .then(parseApiJson)
             .then(function(data) {
                 if (loading) loading.remove();
                 recoProfile = (data && data.profile) ? data.profile : {};
+                recoAdultProfile = (data && data.adult_profile) ? data.adult_profile : {};
+                var adultAvailable = !!(data && data.adult_available);
                 var list = (data && data.results) ? data.results : [];
+                var adultList = (data && data.adult_results) ? data.adult_results : [];
                 recoListData = list;
-                if (!list.length) {
+                recoAdultListData = adultList;
+                var adultSection = document.getElementById('reco-section-adult');
+                var adultInner = document.getElementById('reco-inner-adult');
+                var titleEl = document.getElementById('reco-title');
+                if (!list.length && !adultList.length && !adultAvailable) {
                     showRecoMsg(emptyMsg);
                     hideRecoScrollButtons();
-                    return;
+                } else {
+                    if (!list.length) {
+                        showRecoMsg(emptyMsg);
+                    } else {
+                        if (titleEl && (adultList.length || adultAvailable)) titleEl.textContent = '✨ ' + titleSfw;
+                        inner.replaceChildren();
+                        bindRecoLane(inner, list, 'sfw');
+                        if (hint) hint.style.display = 'none';
+                    }
+                    if ((adultList.length || adultAvailable) && adultSection && adultInner) {
+                        adultSection.hidden = false;
+                        if (adultList.length) {
+                            bindRecoLane(adultInner, adultList, 'adult');
+                        } else {
+                            adultInner.replaceChildren();
+                            var p = document.createElement('p');
+                            p.className = 'reco-msg';
+                            p.textContent = emptyMsg;
+                            adultInner.appendChild(p);
+                        }
+                    } else if (adultSection) {
+                        adultSection.hidden = true;
+                    }
                 }
-                inner.replaceChildren();
-                list.forEach(function(item, idx) {
-                    inner.appendChild(buildRecoCard(item, idx));
-                });
-                inner.querySelectorAll('.reco-card-cover--btn').forEach(function(btn) {
-                    btn.addEventListener('click', function() {
-                        var i = parseInt(btn.getAttribute('data-reco-idx'), 10);
-                        if (!isNaN(i)) openRecoDetail(i);
-                    });
-                });
-                inner.querySelectorAll('[data-reco-dismiss]').forEach(function(btn) {
-                    btn.addEventListener('click', function(e) {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        var i = parseInt(btn.getAttribute('data-reco-dismiss'), 10);
-                        if (isNaN(i)) return;
-                        var item = recoListData[i];
-                        if (!item || !item.anilist_id) return;
-                        fetch('/api/recommendations/dismiss', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json' },
-                            body: JSON.stringify({ source: 'anilist', anilist_id: item.anilist_id })
-                        }).then(function(r) {
-                            if (r.status === 401) { window.location.href = '/login?expired=1'; return; }
-                            // Remove card immediately for UX even if backend already had it.
-                            var card = btn.closest('.reco-card');
-                            if (card) card.remove();
-                            // Keep model in sync (leave a hole rather than reindex all listeners).
-                            recoListData[i] = null;
-                            setupRecoScroll();
-                        }).catch(function() {
-                            var card = btn.closest('.reco-card');
-                            if (card) card.remove();
-                            recoListData[i] = null;
-                            setupRecoScroll();
-                        });
-                    });
-                });
-                if (hint) hint.style.display = 'none';
                 setupRecoScroll();
             })
             .catch(function(e) {
@@ -490,5 +698,120 @@
                 showRecoMsg(pickApiErrMsg(e && e.apiError, errMsg));
                 hideRecoScrollButtons();
             });
+
+        var quizModal = document.getElementById('reco-quiz-modal');
+        var quizForm = document.getElementById('reco-quiz-form');
+        var quizLaneInput = document.getElementById('reco-quiz-lane');
+        var quizAdultFields = document.getElementById('reco-quiz-adult-fields');
+        var quizTitleEl = document.getElementById('reco-quiz-title');
+        var quizErrEl = document.getElementById('reco-quiz-err');
+        var quizSubmit = document.getElementById('reco-quiz-submit');
+        function closeQuizModal() {
+            if (!quizModal) return;
+            quizModal.setAttribute('aria-hidden', 'true');
+            document.body.style.overflow = '';
+        }
+        function openQuizModal(lane) {
+            if (!quizModal || !quizLaneInput) return;
+            quizLaneInput.value = lane === 'adult' ? 'adult' : 'sfw';
+            if (quizTitleEl) quizTitleEl.textContent = lane === 'adult' ? quizTitleAdult : quizTitleSfw;
+            if (quizAdultFields) quizAdultFields.hidden = lane !== 'adult';
+            if (quizErrEl) { quizErrEl.hidden = true; quizErrEl.textContent = ''; }
+            quizModal.setAttribute('aria-hidden', 'false');
+            document.body.style.overflow = 'hidden';
+        }
+        function checkedValues(name) {
+            var out = [];
+            if (!quizForm) return out;
+            quizForm.querySelectorAll('input[name="' + name + '"]:checked').forEach(function(el) {
+                if (el.value) out.push(el.value);
+            });
+            return out;
+        }
+        function radioValue(name) {
+            if (!quizForm) return '';
+            var el = quizForm.querySelector('input[name="' + name + '"]:checked');
+            return el ? (el.value || '') : '';
+        }
+        function showQuizError(msg) {
+            if (!quizErrEl) return;
+            quizErrEl.textContent = msg;
+            quizErrEl.hidden = !msg;
+        }
+        document.querySelectorAll('[data-reco-quiz-lane]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                openQuizModal(btn.getAttribute('data-reco-quiz-lane') || 'sfw');
+            });
+        });
+        var quizClose = document.getElementById('reco-quiz-close-btn');
+        var quizBackdrop = document.getElementById('reco-quiz-backdrop');
+        var quizCancel = document.getElementById('reco-quiz-cancel');
+        if (quizClose) quizClose.addEventListener('click', closeQuizModal);
+        if (quizBackdrop) quizBackdrop.addEventListener('click', closeQuizModal);
+        if (quizCancel) quizCancel.addEventListener('click', closeQuizModal);
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && quizModal && quizModal.getAttribute('aria-hidden') === 'false') closeQuizModal();
+        });
+        document.querySelectorAll('[data-reco-quiz-reset]').forEach(function(btn) {
+            btn.addEventListener('click', function() {
+                var lane = btn.getAttribute('data-reco-quiz-reset') || 'sfw';
+                var wrap = document.getElementById(lane === 'adult' ? 'reco-quiz-adult' : 'reco-quiz-sfw');
+                var innerQuiz = document.getElementById(lane === 'adult' ? 'reco-inner-quiz-adult' : 'reco-inner-quiz-sfw');
+                if (wrap) wrap.hidden = true;
+                if (innerQuiz) innerQuiz.replaceChildren();
+                if (lane === 'adult') recoQuizAdultData = [];
+                else recoQuizSfwData = [];
+            });
+        });
+        if (quizForm) {
+            quizForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                var lane = quizLaneInput ? quizLaneInput.value : 'sfw';
+                var payload = {
+                    lane: lane,
+                    moods: checkedValues('mood'),
+                    tone: radioValue('tone'),
+                    reading_type: radioValue('reading_type'),
+                    adult_orient: lane === 'adult' ? checkedValues('adult_orient') : [],
+                    adult_vibe: lane === 'adult' ? radioValue('adult_vibe') : ''
+                };
+                if (!payload.moods.length && !payload.tone && !payload.reading_type && !payload.adult_orient.length && !payload.adult_vibe) {
+                    showQuizError(quizNeedPick);
+                    return;
+                }
+                showQuizError('');
+                if (quizSubmit) quizSubmit.disabled = true;
+                fetch('/api/recommendations/quiz', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                }).then(parseApiJson).then(function(data) {
+                    if (quizSubmit) quizSubmit.disabled = false;
+                    var results = (data && data.results) ? data.results : [];
+                    var wrap = document.getElementById(lane === 'adult' ? 'reco-quiz-adult' : 'reco-quiz-sfw');
+                    var innerQuiz = document.getElementById(lane === 'adult' ? 'reco-inner-quiz-adult' : 'reco-inner-quiz-sfw');
+                    var quizLane = lane === 'adult' ? 'quiz-adult' : 'quiz-sfw';
+                    if (lane === 'adult') recoQuizAdultData = results;
+                    else recoQuizSfwData = results;
+                    if (!innerQuiz || !wrap) return;
+                    wrap.hidden = false;
+                    if (!results.length) {
+                        innerQuiz.replaceChildren();
+                        var p = document.createElement('p');
+                        p.className = 'reco-msg';
+                        p.textContent = quizEmpty;
+                        innerQuiz.appendChild(p);
+                    } else {
+                        bindRecoLane(innerQuiz, results, quizLane);
+                    }
+                    closeQuizModal();
+                    setupRecoScroll();
+                    wrap.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                }).catch(function(err) {
+                    if (quizSubmit) quizSubmit.disabled = false;
+                    showQuizError(pickApiErrMsg(err && err.apiError, quizErr));
+                });
+            });
+        }
     })();
 {{ end }}

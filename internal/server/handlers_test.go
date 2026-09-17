@@ -420,12 +420,12 @@ func TestHandleAPIWorksList_ReadingSiteFilter(t *testing.T) {
 	}
 }
 
-func TestHandleCatalog_requiresLogin(t *testing.T) {
+func TestHandleSuggestions_requiresLogin(t *testing.T) {
 	db, s := openTestDB(t)
 	app := &App{Settings: s, DB: db}
-	req := httptest.NewRequest(http.MethodGet, "/catalog", nil)
+	req := httptest.NewRequest(http.MethodGet, "/manga/suggestions", nil)
 	rec := httptest.NewRecorder()
-	app.RequireLogin(app.HandleCatalog)(rec, req)
+	app.RequireLogin(app.HandleSuggestions)(rec, req)
 	if rec.Code != http.StatusFound {
 		t.Fatalf("status %d want redirect", rec.Code)
 	}
@@ -697,6 +697,10 @@ func TestFilterDismissedSuggestions_RemovesMatchingIDs(t *testing.T) {
 			{Source: "browse", AnilistID: 222, Title: "Remove"},
 			{Source: "recommendation", AnilistID: 333, Title: "Keep2"},
 		},
+		AdultResults: []recommend.Suggestion{
+			{Source: "browse", AnilistID: 222, Title: "AdultRemove"},
+			{Source: "browse", AnilistID: 444, Title: "AdultKeep"},
+		},
 	}
 	dismissed := map[string]struct{}{"222": {}}
 	filterDismissedSuggestions(res, dismissed)
@@ -705,6 +709,9 @@ func TestFilterDismissedSuggestions_RemovesMatchingIDs(t *testing.T) {
 	}
 	if res.Results[0].AnilistID != 111 || res.Results[1].AnilistID != 333 {
 		t.Fatalf("unexpected results: %+v", res.Results)
+	}
+	if len(res.AdultResults) != 1 || res.AdultResults[0].AnilistID != 444 {
+		t.Fatalf("unexpected adult results: %+v", res.AdultResults)
 	}
 }
 
@@ -1474,7 +1481,8 @@ func TestRegisterLegacyRedirects(t *testing.T) {
 		want   string
 	}{
 		{http.MethodGet, "/dashboard", "/manga/dashboard"},
-		{http.MethodGet, "/catalog", "/manga/catalog"},
+		{http.MethodGet, "/catalog", "/manga/suggestions"},
+		{http.MethodGet, "/manga/catalog", "/manga/suggestions"},
 		{http.MethodGet, "/tools/csv-import", "/tools/manga/csv-import"},
 		{http.MethodGet, "/manga/tools", "/tools/manga"},
 		{http.MethodGet, "/manga/tools/csv-import", "/tools/manga/csv-import"},

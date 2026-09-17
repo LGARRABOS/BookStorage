@@ -8,7 +8,6 @@ import (
 
 	"bookstorage/internal/catalog"
 	"bookstorage/internal/database"
-	"bookstorage/internal/i18n"
 	"bookstorage/internal/recommend"
 )
 
@@ -82,21 +81,6 @@ func hitToBrowseItem(h catalog.CatalogMediaHit) catalogBrowseItem {
 		}
 	}
 	return item
-}
-
-func (a *App) HandleCatalog(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		w.WriteHeader(http.StatusMethodNotAllowed)
-		return
-	}
-	lang := a.currentLang(r)
-	data := map[string]any{
-		"Genres":            catalog.AnilistGenres(),
-		"ReadingTypes":      catalogBrowseReadingTypes,
-		"CatalogSource":     parseCatalogSource(r.URL.Query().Get("source")),
-		"MobileTopbarTitle": i18n.T(lang)["catalog.title"],
-	}
-	a.renderTemplate(w, r, "catalog", a.mergeData(r, data))
 }
 
 func (a *App) HandleCatalogBrowse(w http.ResponseWriter, r *http.Request) {

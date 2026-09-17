@@ -13,12 +13,15 @@ const (
 
 	pathMangaDashboard    = "/manga/dashboard"
 	pathMangaStats        = "/manga/stats"
-	pathMangaCatalog      = "/manga/catalog"
+	pathMangaSuggestions  = "/manga/suggestions"
 	pathMangaAddWork      = "/manga/add_work"
 	pathMangaReadingSites = "/manga/reading-sites"
 	pathMangaUsers        = "/manga/users"
 	pathMangaExport       = "/manga/export"
 	pathMangaImport       = "/manga/import"
+
+	// Legacy catalog URL (308 → /manga/suggestions). Kept for redirects.
+	pathMangaCatalog = "/manga/catalog"
 
 	// Legacy tools URLs (308 → /tools/manga/...). Kept for redirects.
 	pathMangaTools    = "/manga/tools"

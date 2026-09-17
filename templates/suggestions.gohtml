@@ -1,0 +1,362 @@
+{{ define "suggestions" }}
+<!DOCTYPE html>
+<html lang="{{ .Lang }}">
+<head>
+    {{ if .IsMobileView }}
+    {{ template "mobile_shell_head" . }}
+    {{ else }}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+    <meta name="theme-color" content="#4f46e5">
+    {{template "site_head_icons" .}}
+    <link rel="stylesheet" href="/static/css/base.css">
+    <script src="/static/js/appearance-init.js"></script>
+    {{ end }}
+    <title>{{ t .T "suggestions.title" }} - BookStorage</title>
+    {{ if not .IsMobileView }}<link rel="stylesheet" href="/static/css/mobile.css">{{ end }}
+    <link rel="stylesheet" href="/static/css/catalog.css">
+    <link rel="stylesheet" href="/static/css/suggestions.css">
+    <style>
+    {{ template "recommendations_css" }}
+    </style>
+</head>
+<body class="{{ if .IsMobileView }}mobile-app-body{{ end }}">
+    {{ if .IsMobileView }}
+    {{ template "mobile_topbar" . }}
+    {{ else }}
+    <header class="topbar">
+        <div class="container nav-layout">
+            {{template "site_brand_dashboard" .}}
+            <nav class="nav-links">
+                <a href="/manga/dashboard">{{ t .T "nav.dashboard" }}</a>
+                {{template "nav_more_menu" .}}
+                {{template "nav_settings_dropdown" .}}
+            </nav>
+        </div>
+    </header>
+    {{ end }}
+
+    <main class="page-body{{ if .IsMobileView }} mobile-page{{ end }}">
+        <div class="container">
+            <header class="sugg-header">
+                <h1>✨ {{ t .T "suggestions.title" }}</h1>
+                <p>{{ t .T "suggestions.intro" }}</p>
+            </header>
+
+            <div class="sugg-tabs" role="tablist" aria-label="{{ t .T "suggestions.audience.label" }}">
+                <button type="button" class="sugg-tab is-active" id="sugg-tab-sfw" role="tab" aria-selected="true" aria-controls="sugg-panel-sfw" data-sugg-tab="sfw">
+                    {{ t .T "suggestions.audience.sfw" }}
+                </button>
+                <button type="button" class="sugg-tab sugg-tab--adult" id="sugg-tab-adult" role="tab" aria-selected="false" aria-controls="sugg-panel-adult" data-sugg-tab="adult">
+                    {{ t .T "suggestions.audience.adult" }}<span class="sugg-tab-badge">18+</span>
+                </button>
+            </div>
+
+            {{ range .SuggestionLanes }}
+            <div class="sugg-panel sugg-panel--{{ . }}" id="sugg-panel-{{ . }}" role="tabpanel" aria-labelledby="sugg-tab-{{ . }}" data-sugg-panel="{{ . }}"{{ if eq . "adult" }} hidden{{ end }}>
+                {{ if eq . "adult" }}
+                <p class="sugg-notice">{{ t $.T "suggestions.adult.notice" }}</p>
+                {{ if not $.HasAdultWorks }}<p class="sugg-notice sugg-notice--muted">{{ t $.T "suggestions.adult.no_library" }}</p>{{ end }}
+                {{ template "recommendations_section_adult" $ }}
+                {{ else }}
+                {{ template "recommendations_section_sfw" $ }}
+                {{ end }}
+
+                <section class="catalog-explore-section" aria-label="{{ if eq . "adult" }}{{ t $.T "suggestions.explore.title_adult" }}{{ else }}{{ t $.T "suggestions.explore.title_sfw" }}{{ end }}">
+                    <h2 class="catalog-explore-title">
+                        {{ if eq . "adult" }}🔍 {{ t $.T "suggestions.explore.title_adult" }}{{ else }}🔍 {{ t $.T "suggestions.explore.title_sfw" }}{{ end }}
+                    </h2>
+                    <p class="catalog-explore-hint">{{ if eq . "adult" }}{{ t $.T "suggestions.explore.hint_adult" }}{{ else }}{{ t $.T "suggestions.explore.hint_sfw" }}{{ end }}</p>
+
+                    <div class="catalog-genre-chips" id="sugg-genre-chips-{{ . }}">
+                        {{ $lane := . }}
+                        {{ range $.Genres }}
+                        <label class="catalog-genre-chip">
+                            <input type="checkbox" name="sugg-genre-{{ $lane }}" value="{{ . }}">
+                            {{ . }}
+                        </label>
+                        {{ end }}
+                    </div>
+
+                    <p class="catalog-explore-filter-label">{{ t $.T "catalog.explore.type_label" }}</p>
+                    <div class="catalog-type-chips" id="sugg-type-chips-{{ . }}">
+                        {{ $lane := . }}
+                        {{ range $.ReadingTypes }}
+                        <label class="catalog-genre-chip catalog-type-chip">
+                            <input type="checkbox" name="sugg-type-{{ $lane }}" value="{{ . }}">
+                            {{ . }}
+                        </label>
+                        {{ end }}
+                    </div>
+
+                    {{ if eq . "adult" }}
+                    <p class="catalog-explore-filter-label">{{ t $.T "catalog.explore.adult_orient_label" }}</p>
+                    <div class="catalog-adult-orient-chips">
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="sugg-orient-adult" value="heterosexual">
+                            {{ t $.T "catalog.explore.adult_orient.heterosexual" }}
+                        </label>
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="sugg-orient-adult" value="boys_love">
+                            {{ t $.T "catalog.explore.adult_orient.boys_love" }}
+                        </label>
+                        <label class="catalog-genre-chip catalog-adult-orient-chip">
+                            <input type="checkbox" name="sugg-orient-adult" value="yuri">
+                            {{ t $.T "catalog.explore.adult_orient.yuri" }}
+                        </label>
+                    </div>
+                    {{ end }}
+
+                    <div class="catalog-explore-toolbar">
+                        <select id="sugg-source-{{ . }}" aria-label="{{ t $.T "catalog.explore.source_label" }}">
+                            <option value="anilist"{{ if eq $.CatalogSource "anilist" }} selected{{ end }}>{{ t $.T "catalog.explore.source_anilist" }}</option>
+                            <option value="mangadex"{{ if eq $.CatalogSource "mangadex" }} selected{{ end }}>{{ t $.T "catalog.explore.source_mangadex" }}</option>
+                        </select>
+                        <select id="sugg-sort-{{ . }}" aria-label="{{ t $.T "catalog.explore.sort_label" }}">
+                            <option value="POPULARITY_DESC">{{ t $.T "catalog.explore.sort_popularity" }}</option>
+                            <option value="SCORE_DESC">{{ t $.T "catalog.explore.sort_score" }}</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" id="sugg-browse-btn-{{ . }}">{{ t $.T "catalog.explore.discover" }}</button>
+                    </div>
+
+                    <div class="catalog-browse-grid" id="sugg-grid-{{ . }}" hidden></div>
+                    <div class="catalog-browse-pagination" id="sugg-pagination-{{ . }}" hidden>
+                        <button type="button" class="btn btn-secondary" id="sugg-prev-{{ . }}">{{ t $.T "catalog.explore.prev" }}</button>
+                        <button type="button" class="btn btn-secondary" id="sugg-next-{{ . }}">{{ t $.T "catalog.explore.next" }}</button>
+                    </div>
+                </section>
+            </div>
+            {{ end }}
+        </div>
+    </main>
+
+    {{ template "recommendations_modal" . }}
+
+    {{ if not .IsMobileView }}
+    <footer class="page-footer"><div class="container"><p>BookStorage · <a href="/legal" style="color: var(--text-muted);">{{ t .T "footer.legal" }}</a></p></div></footer>
+    {{ end }}
+
+    {{ if .IsMobileView }}
+    {{ template "mobile_settings_sheet" . }}
+    {{ template "mobile_install_banner" . }}
+    {{ template "mobile_bottom_nav" . }}
+    {{ template "mobile_shell_scripts" . }}
+    {{ else }}
+    <script src="/static/js/appearance.js"></script>
+    {{ end }}
+    <script nonce="{{ .CSPNonce }}">
+    {{ template "recommendations_js_body" . }}
+    (function suggestionsTabs() {
+        var tabs = Array.prototype.slice.call(document.querySelectorAll('[data-sugg-tab]'));
+        var panels = Array.prototype.slice.call(document.querySelectorAll('[data-sugg-panel]'));
+        if (!tabs.length || !panels.length) return;
+        function activate(lane) {
+            tabs.forEach(function(tab) {
+                var on = tab.getAttribute('data-sugg-tab') === lane;
+                tab.classList.toggle('is-active', on);
+                tab.setAttribute('aria-selected', on ? 'true' : 'false');
+            });
+            panels.forEach(function(panel) {
+                panel.hidden = panel.getAttribute('data-sugg-panel') !== lane;
+            });
+            // A hidden panel has no measurable width, so its recommendation row
+            // could not size its scroll arrows: let it recompute once visible.
+            window.dispatchEvent(new Event('resize'));
+        }
+        tabs.forEach(function(tab) {
+            tab.addEventListener('click', function() {
+                activate(tab.getAttribute('data-sugg-tab') || 'sfw');
+            });
+        });
+        if (window.location.hash === '#adult') activate('adult');
+    })();
+    (function suggestionsExplore() {
+        var addLabel = {{ jsstr (t .T "dashboard.recommendations.add") }};
+        var openLbl = {{ jsstr (t .T "dashboard.recommendations.detail.open") }};
+        var emptyMsg = {{ jsstr (t .T "catalog.explore.empty") }};
+        var errMsg = {{ jsstr (t .T "catalog.explore.error") }};
+        var rateLimitMsg = {{ jsstr (t .T "anilist.error.rate_limit") }};
+        var loadingMsg = {{ jsstr (t .T "catalog.explore.loading") }};
+
+        function pickApiErrMsg(code, fallback) {
+            return code === 'rate_limit' ? rateLimitMsg : fallback;
+        }
+        function parseApiJson(r) {
+            if (r.status === 401) { window.location.href = '/login?expired=1'; return Promise.reject(); }
+            if (r.status === 400) return r.json().then(function(d) { throw new Error(d.error || 'bad_request'); });
+            return r.json().catch(function() { return {}; }).then(function(d) {
+                if (!r.ok) return Promise.reject({ apiError: (d && d.error) || 'upstream' });
+                return d;
+            });
+        }
+        function appendBrowseCover(parent, imageUrl) {
+            if (imageUrl) {
+                var img = document.createElement('img');
+                img.src = imageUrl;
+                img.alt = '';
+                img.loading = 'lazy';
+                var noCoverHidden = document.createElement('span');
+                noCoverHidden.className = 'no-cover';
+                noCoverHidden.style.display = 'none';
+                noCoverHidden.textContent = '📖';
+                img.onerror = function() {
+                    this.style.display = 'none';
+                    noCoverHidden.style.display = 'flex';
+                };
+                parent.appendChild(img);
+                parent.appendChild(noCoverHidden);
+            } else {
+                var noCover = document.createElement('span');
+                noCover.className = 'no-cover';
+                noCover.textContent = '📖';
+                parent.appendChild(noCover);
+            }
+        }
+        function browseItemKey(item) {
+            if (item.anilist_id) return String(item.anilist_id);
+            return (item.source || '') + ':' + (item.external_id || '');
+        }
+        function addWorkHref(item) {
+            var src = item.source || 'anilist';
+            var ext = item.external_id || (item.anilist_id ? String(item.anilist_id) : '');
+            if (src === 'anilist' && item.anilist_id) {
+                return '/manga/add_work?anilist_id=' + encodeURIComponent(item.anilist_id);
+            }
+            return '/manga/add_work?catalog_source=' + encodeURIComponent(src) + '&catalog_external_id=' + encodeURIComponent(ext);
+        }
+        function buildBrowseCard(item) {
+            var article = document.createElement('article');
+            article.className = 'reco-card';
+
+            var coverBtn = document.createElement('button');
+            coverBtn.type = 'button';
+            coverBtn.className = 'reco-card-cover reco-card-cover--btn';
+            coverBtn.setAttribute('data-browse-key', browseItemKey(item));
+            coverBtn.setAttribute('aria-label', openLbl);
+            appendBrowseCover(coverBtn, item.image_url);
+
+            var body = document.createElement('div');
+            body.className = 'reco-card-body';
+
+            var titleEl = document.createElement('div');
+            titleEl.className = 'reco-card-title';
+            titleEl.textContent = item.title || '';
+
+            var metaEl = document.createElement('div');
+            metaEl.className = 'reco-card-meta';
+            metaEl.textContent = (item.reading_type || '') + (item.is_adult ? ' · 18+' : '');
+
+            var addLink = document.createElement('a');
+            addLink.className = 'btn-reco';
+            addLink.href = addWorkHref(item);
+            addLink.textContent = addLabel;
+
+            body.appendChild(titleEl);
+            body.appendChild(metaEl);
+            body.appendChild(addLink);
+            article.appendChild(coverBtn);
+            article.appendChild(body);
+            return article;
+        }
+        function checkedValues(name) {
+            var out = [];
+            document.querySelectorAll('input[name="' + name + '"]:checked').forEach(function(el) {
+                if (el.value) out.push(el.value);
+            });
+            return out;
+        }
+        function limitGenreChips(name, max) {
+            document.querySelectorAll('input[name="' + name + '"]').forEach(function(el) {
+                el.addEventListener('change', function() {
+                    if (document.querySelectorAll('input[name="' + name + '"]:checked').length > max) {
+                        el.checked = false;
+                    }
+                });
+            });
+        }
+        function initLane(lane) {
+            var grid = document.getElementById('sugg-grid-' + lane);
+            var btn = document.getElementById('sugg-browse-btn-' + lane);
+            if (!grid || !btn) return;
+            var sourceSel = document.getElementById('sugg-source-' + lane);
+            var sortSel = document.getElementById('sugg-sort-' + lane);
+            var pagination = document.getElementById('sugg-pagination-' + lane);
+            var prevBtn = document.getElementById('sugg-prev-' + lane);
+            var nextBtn = document.getElementById('sugg-next-' + lane);
+            var adult = lane === 'adult';
+            var currentPage = 1;
+            var hasNext = false;
+            var itemsByKey = {};
+
+            function showMsg(text) {
+                grid.replaceChildren();
+                var p = document.createElement('p');
+                p.className = 'catalog-browse-msg';
+                p.textContent = text;
+                grid.appendChild(p);
+            }
+            function bindCards() {
+                grid.querySelectorAll('.reco-card-cover--btn[data-browse-key]').forEach(function(el) {
+                    el.addEventListener('click', function() {
+                        var key = el.getAttribute('data-browse-key') || '';
+                        var item = itemsByKey[key];
+                        if (!item || !window.openRecoDetailByItem) return;
+                        window.openRecoDetailByItem(Object.assign({ source: 'browse' }, item), { dismissable: false });
+                    });
+                });
+            }
+            function load(page) {
+                currentPage = page || 1;
+                grid.hidden = false;
+                showMsg(loadingMsg);
+                if (pagination) pagination.hidden = true;
+                btn.disabled = true;
+
+                var params = new URLSearchParams();
+                checkedValues('sugg-genre-' + lane).forEach(function(g) { params.append('genre', g); });
+                checkedValues('sugg-type-' + lane).forEach(function(t) { params.append('reading_type', t); });
+                params.set('page', String(currentPage));
+                if (sortSel && sortSel.value) params.set('sort', sortSel.value);
+                if (sourceSel && sourceSel.value) params.set('source', sourceSel.value);
+                if (adult) {
+                    params.set('adult', 'only');
+                    checkedValues('sugg-orient-adult').forEach(function(o) { params.append('adult_orient', o); });
+                }
+
+                fetch('/api/catalog/browse?' + params.toString())
+                    .then(parseApiJson)
+                    .then(function(data) {
+                        var list = (data && data.results) ? data.results : [];
+                        hasNext = !!(data && data.has_next);
+                        itemsByKey = {};
+                        if (!list.length) {
+                            showMsg(emptyMsg);
+                            if (pagination) pagination.hidden = true;
+                            return;
+                        }
+                        list.forEach(function(item) { itemsByKey[browseItemKey(item)] = item; });
+                        grid.replaceChildren();
+                        list.forEach(function(item) { grid.appendChild(buildBrowseCard(item)); });
+                        bindCards();
+                        if (pagination) pagination.hidden = false;
+                        if (prevBtn) prevBtn.disabled = currentPage <= 1;
+                        if (nextBtn) nextBtn.disabled = !hasNext;
+                    })
+                    .catch(function(e) {
+                        showMsg((e && e.apiError) ? pickApiErrMsg(e.apiError, errMsg) : errMsg);
+                        if (pagination) pagination.hidden = true;
+                    })
+                    .finally(function() { btn.disabled = false; });
+            }
+
+            btn.addEventListener('click', function() { load(1); });
+            if (prevBtn) prevBtn.addEventListener('click', function() { if (currentPage > 1) load(currentPage - 1); });
+            if (nextBtn) nextBtn.addEventListener('click', function() { if (hasNext) load(currentPage + 1); });
+            limitGenreChips('sugg-genre-' + lane, 3);
+        }
+        ['sfw', 'adult'].forEach(initLane);
+    })();
+    </script>
+</body>
+</html>
+{{ end }}

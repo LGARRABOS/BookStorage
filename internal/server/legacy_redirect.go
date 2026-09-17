@@ -29,7 +29,10 @@ func (a *App) RegisterLegacyRedirects(mux *http.ServeMux) {
 	// Bookmarkable GET pages.
 	mux.HandleFunc("/dashboard", redirect(pathMangaDashboard))
 	mux.HandleFunc("/stats", redirect(pathMangaStats))
-	mux.HandleFunc("/catalog", redirect(pathMangaCatalog))
+	mux.HandleFunc("/catalog", redirect(pathMangaSuggestions))
+
+	// Pre-suggestions catalog URLs → /manga/suggestions.
+	mux.HandleFunc(pathMangaCatalog, redirect(pathMangaSuggestions))
 	mux.HandleFunc("/add_work", redirect(pathMangaAddWork))
 	mux.HandleFunc("/export", redirect(pathMangaExport))
 	mux.HandleFunc("/reading-sites", redirect(pathMangaReadingSites))

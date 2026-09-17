@@ -8,7 +8,7 @@ import "net/http"
 func (a *App) RegisterMangaRoutes(mux *http.ServeMux) {
 	mux.HandleFunc(pathMangaDashboard, a.RequireLogin(a.HandleDashboard))
 	mux.HandleFunc(pathMangaStats, a.RequireLogin(a.HandleStats))
-	mux.HandleFunc(pathMangaCatalog, a.RequireLogin(a.HandleCatalog))
+	mux.HandleFunc(pathMangaSuggestions, a.RequireLogin(a.HandleSuggestions))
 	mux.HandleFunc(pathMangaAddWork, a.RequireLogin(a.HandleAddWork))
 	mux.HandleFunc(pathMangaEditPrefix+"{id}", a.RequireLogin(a.HandleEditWork))
 	mux.HandleFunc(pathMangaWorkPrefix+"{id}", a.RequireLogin(a.HandleWorkDetail))

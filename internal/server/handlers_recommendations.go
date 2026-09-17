@@ -46,8 +46,9 @@ func (a *App) HandleRecommendations(w http.ResponseWriter, r *http.Request) {
 	}
 	if res == nil {
 		res = &recommend.ForUserResult{
-			Results: []recommend.Suggestion{},
-			Profile: recommend.ProfileSummary{},
+			Results:      []recommend.Suggestion{},
+			AdultResults: []recommend.Suggestion{},
+			Profile:      recommend.ProfileSummary{},
 		}
 	}
 
